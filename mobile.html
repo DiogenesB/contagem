@@ -1236,7 +1236,7 @@ html.dark .dp-hoje   { color:var(--green-txt); }
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 /* ══════════════════════════════════════════
@@ -1815,93 +1815,101 @@ async function confirmarTransferencia() {
 }
 
 // ── QR CODE ──────────────────────────────
-// ── SCANNER: ZXing (lê QR code + barcode) ────────────────
-let _zxingReader = null;
+// ── SCANNER ──────────────────────────────────────────────
+// Usa BarcodeDetector (nativo Chrome/Android) com fallback jsQR (QR code)
 
 function abrirQR(targetInputId, cb = null) {
   qrTargetId = targetInputId;
   qrCallback  = cb;
   const labels = { 'l-codigo': 'Código do produto', 'l-lote': 'Lote', 'l-armazem': 'Armazém' };
-  document.getElementById('qr-label').textContent = '📷 Lendo: ' + (labels[targetInputId] || 'código');
+  document.getElementById('qr-label').textContent = 'Lendo: ' + (labels[targetInputId] || 'código');
   document.getElementById('qr-overlay').classList.add('open');
-  setTimeout(iniciarZXing, 100);
+  iniciarScanner();
 }
 
-async function iniciarZXing() {
+async function iniciarScanner() {
   try {
-    // Reseta leitor anterior se existir
-    if (_zxingReader) {
-      try { _zxingReader.reset(); } catch(e) {}
-      _zxingReader = null;
-    }
-
-    // Verifica se getUserMedia está disponível
-    if (!navigator.mediaDevices?.getUserMedia) {
-      throw new Error('getUserMedia não suportado');
-    }
-
-    const hints = new Map();
-    const formats = [
-      ZXing.BarcodeFormat.CODE_128,
-      ZXing.BarcodeFormat.CODE_39,
-      ZXing.BarcodeFormat.EAN_13,
-      ZXing.BarcodeFormat.EAN_8,
-      ZXing.BarcodeFormat.ITF,
-      ZXing.BarcodeFormat.DATA_MATRIX,
-      ZXing.BarcodeFormat.QR_CODE,
-      ZXing.BarcodeFormat.PDF_417,
-    ];
-    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
-    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-    _zxingReader = new ZXing.BrowserMultiFormatReader(hints, 500);
-
-    // Pede permissão primeiro com getUserMedia direto
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
     });
-    // Guarda stream para poder parar depois
     qrStream = stream;
-
     const video = document.getElementById('qr-video');
     video.srcObject = stream;
     await video.play();
-
     document.getElementById('qr-label').textContent = 'Aponte para o código';
 
-    // Usa decodeFromStream (mais compatível que decodeFromVideoDevice)
-    _zxingReader.decodeFromStream(stream, video, (result, err) => {
-      if (result) {
-        const val = result.getText().trim();
-        // Se nenhum campo selecionado, avisa o usuário
-        fecharQR();
-        const input = document.getElementById(qrTargetId);
-        if (input) { input.value = val.toUpperCase(); input.classList.add('filled'); }
-        if (qrCallback) qrCallback(val);
-        toast('✓ ' + val, 'ok', 2000);
-      }
-    });
-
-  } catch(e) {
-    console.error('[Scanner] erro:', e.name, e.message);
-    fecharQR();
-    // Mensagem específica por tipo de erro
-    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
-      toast('Permissão de câmera negada. Permita nas configurações do navegador.', 'err', 6000);
-    } else if (e.name === 'NotFoundError') {
-      toast('Nenhuma câmera encontrada no dispositivo.', 'warn', 5000);
-    } else if (e.name === 'NotReadableError') {
-      toast('Câmera em uso por outro app. Feche e tente de novo.', 'warn', 5000);
+    // Escolhe método de leitura
+    if ('BarcodeDetector' in window) {
+      lerComBarcodeDetector(video);
     } else {
-      toast('Erro ao abrir câmera: ' + e.message, 'warn', 5000);
+      lerComJsQR(video);
+    }
+  } catch(e) {
+    fecharQR();
+    if (e.name === 'NotAllowedError') {
+      toast('Permissão de câmera negada. Permita nas configurações.', 'err', 6000);
+    } else if (e.name === 'NotFoundError') {
+      toast('Nenhuma câmera encontrada.', 'warn', 5000);
+    } else if (e.name === 'NotReadableError') {
+      toast('Câmera em uso por outro app.', 'warn', 5000);
+    } else {
+      toast('Erro câmera: ' + e.message, 'warn', 5000);
     }
   }
 }
 
+// ── BarcodeDetector (Chrome Android nativo — lê Code128, EAN, QR, etc) ──
+async function lerComBarcodeDetector(video) {
+  const detector = new BarcodeDetector({
+    formats: ['code_128','code_39','ean_13','ean_8','itf','data_matrix','qr_code','pdf417','aztec']
+  });
+  function tick() {
+    if (!qrStream) return; // scanner fechado
+    detector.detect(video).then(codes => {
+      if (codes.length > 0) {
+        const val = codes[0].rawValue.trim();
+        receberCodigo(val);
+      } else {
+        qrAnimId = requestAnimationFrame(tick);
+      }
+    }).catch(() => {
+      qrAnimId = requestAnimationFrame(tick);
+    });
+  }
+  qrAnimId = requestAnimationFrame(tick);
+}
+
+// ── jsQR fallback (só QR code — para iOS Safari e navegadores sem BarcodeDetector) ──
+function lerComJsQR(video) {
+  const canvas = document.createElement('canvas');
+  const ctx    = canvas.getContext('2d');
+  function tick() {
+    if (!qrStream) return;
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      if (code) { receberCodigo(code.data.trim()); return; }
+    }
+    qrAnimId = requestAnimationFrame(tick);
+  }
+  qrAnimId = requestAnimationFrame(tick);
+}
+
+function receberCodigo(val) {
+  fecharQR();
+  const input = document.getElementById(qrTargetId);
+  if (input) { input.value = val.toUpperCase(); input.classList.add('filled'); }
+  if (qrCallback) qrCallback(val);
+  toast('✓ ' + val, 'ok', 2000);
+}
+
 function fecharQR() {
   document.getElementById('qr-overlay').classList.remove('open');
-  try { if (_zxingReader) { _zxingReader.reset(); _zxingReader = null; } } catch(e) {}
-  if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
   if (qrAnimId) { cancelAnimationFrame(qrAnimId); qrAnimId = null; }
+  if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
 }
 
 function scanQR() {}
