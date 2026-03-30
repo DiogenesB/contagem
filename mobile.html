@@ -1561,33 +1561,60 @@ async function iniciarSessao(agend, recontagem = false) {
 
   if (continuando) {
     // ── CONTINUANDO: busca sessão e lançamentos existentes ──
+
+    // Busca sessão aberta — usa limit(1) SEM .single() para não lançar erro se não achar
     try {
-      // Pega a sessão mais recente deste agendamento
-      const { data: sessaoExist } = await sb
+      const { data: sessoes } = await sb
         .from('sessoes_contagem')
         .select('id, inicio')
         .eq('agendamento_id', agend.id)
         .is('fim', null)
         .order('inicio', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
-      if (sessaoExist) {
-        sessaoId     = sessaoExist.id;
-        sessaoInicio = new Date(sessaoExist.inicio).getTime();
+      if (sessoes?.length > 0) {
+        sessaoId     = sessoes[0].id;
+        sessaoInicio = new Date(sessoes[0].inicio).getTime();
+      }
+    } catch(e) { console.error('[Continuar sessao]', e); }
+
+    // Busca lançamentos por agendamento_id OU por sessao_id (cobre os dois casos)
+    try {
+      let query = sb.from('lancamentos').select('*').eq('status', 'pendente');
+
+      if (sessaoId) {
+        // Busca por sessao_id OU agendamento_id (OR)
+        query = sb.from('lancamentos').select('*')
+          .eq('status', 'pendente')
+          .or(`agendamento_id.eq.${agend.id},sessao_id.eq.${sessaoId}`);
+      } else {
+        query = query.eq('agendamento_id', agend.id);
       }
 
-      // Busca lançamentos pendentes já feitos
-      const { data: lancsExist } = await sb
-        .from('lancamentos')
-        .select('*')
-        .eq('agendamento_id', agend.id)
-        .eq('status', 'pendente');
-
+      const { data: lancsExist } = await query;
       if (lancsExist?.length) {
-        sessaoLancamentos = lancsExist;
+        // Remove duplicatas pelo id
+        const vistos = new Set();
+        sessaoLancamentos = lancsExist.filter(l => {
+          if (vistos.has(l.id)) return false;
+          vistos.add(l.id); return true;
+        });
       }
-    } catch(e) { console.error('[Continuar]', e); }
+    } catch(e) { console.error('[Continuar lancs]', e); }
+
+    // Se não achou sessão, cria uma nova para continuar
+    if (!sessaoId) {
+      try {
+        const { data } = await sb.from('sessoes_contagem').insert({
+          agendamento_id: agend.id,
+          usuario:        usuarioAtual,
+          codigo:         agend.codigo,
+          produto_nome:   agend.produto_nome,
+          inicio:         new Date(sessaoInicio).toISOString(),
+        }).select('id').single();
+        if (data) sessaoId = data.id;
+      } catch(e) { console.error('[Continuar nova sessao]', e); }
+    }
 
   } else {
     // ── NOVO INÍCIO: marca em_contagem e cria sessão ──
