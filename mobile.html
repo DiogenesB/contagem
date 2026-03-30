@@ -1275,9 +1275,8 @@ html.dark .dp-hoje   { color:var(--green-txt); }
         <label>Código / SKU</label>
         <div class="inp-wrap">
           <input type="text" id="l-codigo" placeholder="Ex: PRD-001" autocomplete="off"
-            oninput="onCodigoSessaoInput()" style="text-transform:uppercase"
-            onfocus="selecionarInput('l-codigo', onCodigoSessaoInput)">
-          <button class="qr-btn" id="qrbtn-ativo" onclick="abrirQR(qrTargetId, qrCallback)" title="Escanear">📷</button>
+            oninput="onCodigoSessaoInput()" style="text-transform:uppercase">
+          <button class="qr-btn" onclick="abrirQR('l-codigo', onCodigoSessaoInput)" title="Escanear Código">📷</button>
         </div>
         <div class="produto-tag" id="l-ptag">
           <div class="pt-nome" id="l-pnome">—</div>
@@ -1287,16 +1286,17 @@ html.dark .dp-hoje   { color:var(--green-txt); }
 
       <div class="field">
         <label>Lote</label>
-        <input type="text" id="l-lote" placeholder="Ex: LOT-2024-01" autocomplete="off"
-          style="text-transform:uppercase"
-          onfocus="selecionarInput('l-lote', null)">
+        <div class="inp-wrap">
+          <input type="text" id="l-lote" placeholder="Ex: LOT-2024-01" autocomplete="off"
+            style="text-transform:uppercase">
+          <button class="qr-btn" onclick="abrirQR('l-lote', null)" title="Escanear Lote">📷</button>
+        </div>
       </div>
 
       <div class="field">
         <label>Armazém</label>
         <input type="text" id="l-armazem" placeholder="Ex: 42 ou D2" inputmode="text"
-          style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"
-          onfocus="selecionarInput('l-armazem', null)">
+          style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
       </div>
 
       <div class="field" style="margin-bottom:16px">
@@ -1737,8 +1737,6 @@ function limparFormLancamento() {
   });
   const ptag = document.getElementById('l-ptag');
   if (ptag) ptag.style.display = 'none';
-  // Padrão: código selecionado
-  selecionarInput('l-codigo', onCodigoSessaoInput);
 }
 
 async function onCodigoSessaoInput() {
@@ -1965,26 +1963,11 @@ async function confirmarTransferencia() {
 // ── SCANNER: ZXing (lê QR code + barcode) ────────────────
 let _zxingReader = null;
 
-// Chamado ao focar num campo — define qual campo vai receber o scan
-function selecionarInput(inputId, cb) {
-  qrTargetId = inputId;
-  qrCallback = cb;
-  // Destaca visualmente o campo ativo
-  ['l-codigo','l-lote','l-armazem'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.borderColor = id === inputId ? 'var(--blue-lt)' : '';
-  });
-}
-
-function abrirQR(targetInputId, cb) {
-  if (!targetInputId) {
-    toast('Toque primeiro no campo que quer preencher.', 'warn', 2500);
-    return;
-  }
+function abrirQR(targetInputId, cb = null) {
   qrTargetId = targetInputId;
   qrCallback  = cb;
   const labels = { 'l-codigo': 'Código do produto', 'l-lote': 'Lote', 'l-armazem': 'Armazém' };
-  document.getElementById('qr-label').textContent = '📷 Lendo: ' + (labels[targetInputId] || targetInputId);
+  document.getElementById('qr-label').textContent = '📷 Lendo: ' + (labels[targetInputId] || 'código');
   document.getElementById('qr-overlay').classList.add('open');
   setTimeout(iniciarZXing, 100);
 }
