@@ -853,6 +853,32 @@ html.dark .toast.ok { color:var(--green-txt); }
 .qr-label    { color:#fff; font-size:.98rem; font-weight:700; margin-bottom:5px; }
 .qr-sublabel { color:rgba(255,255,255,.45); font-size:.76rem; margin-bottom:20px; text-align:center; }
 
+/* Seletor de campo no scanner */
+.qr-target-sel {
+  display:flex;
+  gap:8px;
+  margin-bottom:18px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+.qr-target-btn {
+  padding:8px 16px;
+  border-radius:20px;
+  border:1.5px solid rgba(255,255,255,.25);
+  background:rgba(255,255,255,.1);
+  color:rgba(255,255,255,.6);
+  font-family:var(--sans);
+  font-size:.8rem;
+  font-weight:700;
+  cursor:pointer;
+  transition:all .15s;
+}
+.qr-target-btn.active {
+  background:var(--green);
+  border-color:var(--green);
+  color:#041a0e;
+}
+
 .qr-cancel {
   background:rgba(255,255,255,.1);
   border:1px solid rgba(255,255,255,.2);
@@ -1345,7 +1371,15 @@ html.dark .dp-hoje   { color:var(--green-txt); }
     <div class="qr-line"></div>
   </div>
   <div class="qr-label" id="qr-label">Aponte para o código</div>
-  <div class="qr-sublabel">Lê QR Code e código de barras automaticamente</div>
+  <div class="qr-sublabel" id="qr-sublabel">Lê QR Code e código de barras</div>
+
+  <!-- Seletor de destino -->
+  <div class="qr-target-sel" id="qr-target-sel">
+    <button class="qr-target-btn active" id="qrbtn-codigo" onclick="selecionarCampoQR('l-codigo', this)">📦 Código</button>
+    <button class="qr-target-btn" id="qrbtn-lote" onclick="selecionarCampoQR('l-lote', this)">🏷️ Lote</button>
+    <button class="qr-target-btn" id="qrbtn-armazem" onclick="selecionarCampoQR('l-armazem', this)">🏭 Armazém</button>
+  </div>
+
   <button class="qr-cancel" onclick="fecharQR()">Cancelar</button>
 </div>
 
@@ -1940,10 +1974,33 @@ let _zxingReader = null;
 function abrirQR(targetInputId, cb = null) {
   qrTargetId = targetInputId;
   qrCallback = cb;
+
+  // Mostra/oculta seletor dependendo se está na sessão de contagem
+  const naSessao = document.getElementById('screen-sessao').classList.contains('active');
+  document.getElementById('qr-target-sel').style.display = naSessao ? 'flex' : 'none';
+
+  // Destaca o botão correspondente ao campo que chamou
+  document.querySelectorAll('.qr-target-btn').forEach(b => b.classList.remove('active'));
+  const mapa = { 'l-codigo': 'qrbtn-codigo', 'l-lote': 'qrbtn-lote', 'l-armazem': 'qrbtn-armazem' };
+  const btnId = mapa[targetInputId];
+  if (btnId) document.getElementById(btnId)?.classList.add('active');
+
   document.getElementById('qr-overlay').classList.add('open');
   document.getElementById('qr-label').textContent = 'Iniciando câmera…';
-  // Pequeno delay para o overlay renderizar antes de iniciar a câmera
   setTimeout(iniciarZXing, 100);
+}
+
+// Muda o campo destino sem fechar a câmera
+function selecionarCampoQR(novoTargetId, btn) {
+  qrTargetId = novoTargetId;
+  // Atualiza callback se necessário
+  qrCallback = novoTargetId === 'l-codigo' ? onCodigoSessaoInput : null;
+  // Atualiza botões
+  document.querySelectorAll('.qr-target-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Atualiza label
+  const labels = { 'l-codigo': 'Aponte para o código do produto', 'l-lote': 'Aponte para o lote', 'l-armazem': 'Aponte para o armazém' };
+  document.getElementById('qr-label').textContent = labels[novoTargetId] || 'Aponte para o código';
 }
 
 async function iniciarZXing() {
