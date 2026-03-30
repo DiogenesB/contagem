@@ -1271,13 +1271,15 @@ html.dark .dp-hoje   { color:var(--green-txt); }
         <span id="lanc-recont-badge" class="badge-recont" style="display:none;margin-left:4px">⚠ Recontagem</span>
       </div>
 
+      <!-- Botão único de scanner -->
+      <button class="btn btn-blue" style="margin-bottom:14px" onclick="abrirQR(null, null)">
+        📷 Escanear Código / Lote
+      </button>
+
       <div class="field">
         <label>Código / SKU</label>
-        <div class="inp-wrap">
-          <input type="text" id="l-codigo" placeholder="Ex: PRD-001" autocomplete="off"
-            oninput="onCodigoSessaoInput()" style="text-transform:uppercase">
-          <button class="qr-btn" onclick="abrirQR('l-codigo', onCodigoSessaoInput)" title="Ler QR">📷</button>
-        </div>
+        <input type="text" id="l-codigo" placeholder="Ex: PRD-001" autocomplete="off"
+          oninput="onCodigoSessaoInput()" style="text-transform:uppercase">
         <div class="produto-tag" id="l-ptag">
           <div class="pt-nome" id="l-pnome">—</div>
           <div class="pt-cod"  id="l-pcod">—</div>
@@ -1286,11 +1288,8 @@ html.dark .dp-hoje   { color:var(--green-txt); }
 
       <div class="field">
         <label>Lote</label>
-        <div class="inp-wrap">
-          <input type="text" id="l-lote" placeholder="Ex: LOT-2024-01" autocomplete="off"
-            style="text-transform:uppercase">
-          <button class="qr-btn" onclick="abrirQR('l-lote', null)" title="Ler QR">📷</button>
-        </div>
+        <input type="text" id="l-lote" placeholder="Ex: LOT-2024-01" autocomplete="off"
+          style="text-transform:uppercase">
       </div>
 
       <div class="field">
@@ -1972,34 +1971,38 @@ async function confirmarTransferencia() {
 let _zxingReader = null;
 
 function abrirQR(targetInputId, cb = null) {
+  // Se targetInputId é null, começa sem campo selecionado — usuário escolhe no overlay
   qrTargetId = targetInputId;
   qrCallback = cb;
 
-  // Mostra/oculta seletor dependendo se está na sessão de contagem
+  // Sempre mostra o seletor na sessão de contagem
   const naSessao = document.getElementById('screen-sessao').classList.contains('active');
   document.getElementById('qr-target-sel').style.display = naSessao ? 'flex' : 'none';
 
-  // Destaca o botão correspondente ao campo que chamou
+  // Destaca botão correspondente (ou nenhum se null)
   document.querySelectorAll('.qr-target-btn').forEach(b => b.classList.remove('active'));
   const mapa = { 'l-codigo': 'qrbtn-codigo', 'l-lote': 'qrbtn-lote', 'l-armazem': 'qrbtn-armazem' };
-  const btnId = mapa[targetInputId];
-  if (btnId) document.getElementById(btnId)?.classList.add('active');
+  if (targetInputId && mapa[targetInputId]) {
+    document.getElementById(mapa[targetInputId])?.classList.add('active');
+  }
+
+  // Label inicial
+  const labels = { 'l-codigo': 'Aponte para o código', 'l-lote': 'Aponte para o lote', 'l-armazem': 'Aponte para o armazém' };
+  document.getElementById('qr-label').textContent = targetInputId
+    ? (labels[targetInputId] || 'Aponte para o código')
+    : 'Selecione o campo abaixo';
 
   document.getElementById('qr-overlay').classList.add('open');
-  document.getElementById('qr-label').textContent = 'Iniciando câmera…';
   setTimeout(iniciarZXing, 100);
 }
 
-// Muda o campo destino sem fechar a câmera
+// Muda campo destino sem fechar câmera
 function selecionarCampoQR(novoTargetId, btn) {
   qrTargetId = novoTargetId;
-  // Atualiza callback se necessário
   qrCallback = novoTargetId === 'l-codigo' ? onCodigoSessaoInput : null;
-  // Atualiza botões
   document.querySelectorAll('.qr-target-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  // Atualiza label
-  const labels = { 'l-codigo': 'Aponte para o código do produto', 'l-lote': 'Aponte para o lote', 'l-armazem': 'Aponte para o armazém' };
+  const labels = { 'l-codigo': 'Aponte para o código', 'l-lote': 'Aponte para o lote', 'l-armazem': 'Aponte para o armazém' };
   document.getElementById('qr-label').textContent = labels[novoTargetId] || 'Aponte para o código';
 }
 
@@ -2048,11 +2051,16 @@ async function iniciarZXing() {
     _zxingReader.decodeFromStream(stream, video, (result, err) => {
       if (result) {
         const val = result.getText().trim();
+        // Se nenhum campo selecionado, avisa o usuário
+        if (!qrTargetId) {
+          toast('Selecione o campo antes de escanear.', 'warn', 2500);
+          return;
+        }
         fecharQR();
         const input = document.getElementById(qrTargetId);
         if (input) { input.value = val.toUpperCase(); input.classList.add('filled'); }
         if (qrCallback) qrCallback(val);
-        toast('✓ Lido: ' + val, 'ok', 2000);
+        toast('✓ ' + val, 'ok', 2000);
       }
     });
 
