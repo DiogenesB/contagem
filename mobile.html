@@ -1941,44 +1941,54 @@ function abrirQR(targetInputId, cb = null) {
   qrTargetId = targetInputId;
   qrCallback = cb;
   document.getElementById('qr-overlay').classList.add('open');
-  iniciarZXing();
+  document.getElementById('qr-label').textContent = 'Iniciando câmera…';
+  // Pequeno delay para o overlay renderizar antes de iniciar a câmera
+  setTimeout(iniciarZXing, 100);
 }
 
 async function iniciarZXing() {
   try {
-    // Cria o leitor uma vez e reutiliza
-    if (!_zxingReader) {
-      const hints = new Map();
-      // Formatos mais comuns em embalagens industriais
-      const formats = [
-        ZXing.BarcodeFormat.CODE_128,
-        ZXing.BarcodeFormat.CODE_39,
-        ZXing.BarcodeFormat.EAN_13,
-        ZXing.BarcodeFormat.EAN_8,
-        ZXing.BarcodeFormat.ITF,
-        ZXing.BarcodeFormat.DATA_MATRIX,
-        ZXing.BarcodeFormat.QR_CODE,
-        ZXing.BarcodeFormat.PDF_417,
-      ];
-      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
-      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-      _zxingReader = new ZXing.BrowserMultiFormatReader(hints);
+    // Reseta leitor anterior se existir
+    if (_zxingReader) {
+      try { _zxingReader.reset(); } catch(e) {}
+      _zxingReader = null;
     }
 
+    // Verifica se getUserMedia está disponível
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error('getUserMedia não suportado');
+    }
+
+    const hints = new Map();
+    const formats = [
+      ZXing.BarcodeFormat.CODE_128,
+      ZXing.BarcodeFormat.CODE_39,
+      ZXing.BarcodeFormat.EAN_13,
+      ZXing.BarcodeFormat.EAN_8,
+      ZXing.BarcodeFormat.ITF,
+      ZXing.BarcodeFormat.DATA_MATRIX,
+      ZXing.BarcodeFormat.QR_CODE,
+      ZXing.BarcodeFormat.PDF_417,
+    ];
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    _zxingReader = new ZXing.BrowserMultiFormatReader(hints, 500);
+
+    // Pede permissão primeiro com getUserMedia direto
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    // Guarda stream para poder parar depois
+    qrStream = stream;
+
     const video = document.getElementById('qr-video');
+    video.srcObject = stream;
+    await video.play();
 
-    // Pega câmera traseira
-    const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
-    const traseira = devices.find(d =>
-      d.label.toLowerCase().includes('back') ||
-      d.label.toLowerCase().includes('rear') ||
-      d.label.toLowerCase().includes('trás') ||
-      d.label.toLowerCase().includes('environment')
-    ) || devices[devices.length - 1]; // última costuma ser a traseira
+    document.getElementById('qr-label').textContent = 'Aponte para o código';
 
-    const deviceId = traseira?.deviceId || undefined;
-
-    await _zxingReader.decodeFromVideoDevice(deviceId, video, (result, err) => {
+    // Usa decodeFromStream (mais compatível que decodeFromVideoDevice)
+    _zxingReader.decodeFromStream(stream, video, (result, err) => {
       if (result) {
         const val = result.getText().trim();
         fecharQR();
@@ -1987,24 +1997,31 @@ async function iniciarZXing() {
         if (qrCallback) qrCallback(val);
         toast('✓ Lido: ' + val, 'ok', 2000);
       }
-      // err é normal durante scanning (frame sem código) — ignorar
     });
 
   } catch(e) {
+    console.error('[Scanner] erro:', e.name, e.message);
     fecharQR();
-    toast('Câmera indisponível. Use digitação.', 'warn');
-    console.error('[Scanner]', e);
+    // Mensagem específica por tipo de erro
+    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+      toast('Permissão de câmera negada. Permita nas configurações do navegador.', 'err', 6000);
+    } else if (e.name === 'NotFoundError') {
+      toast('Nenhuma câmera encontrada no dispositivo.', 'warn', 5000);
+    } else if (e.name === 'NotReadableError') {
+      toast('Câmera em uso por outro app. Feche e tente de novo.', 'warn', 5000);
+    } else {
+      toast('Erro ao abrir câmera: ' + e.message, 'warn', 5000);
+    }
   }
 }
 
 function fecharQR() {
   document.getElementById('qr-overlay').classList.remove('open');
-  try { if (_zxingReader) _zxingReader.reset(); } catch(e) {}
+  try { if (_zxingReader) { _zxingReader.reset(); _zxingReader = null; } } catch(e) {}
   if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
   if (qrAnimId) { cancelAnimationFrame(qrAnimId); qrAnimId = null; }
 }
 
-// Mantido por compatibilidade (não usado com ZXing)
 function scanQR() {}
 
 
