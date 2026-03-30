@@ -1157,6 +1157,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
     <div class="topbar-right">
       <span class="rt-pill"><span class="rt-dot"></span>Tempo real</span>
       <button class="btn btn-ghost btn-sm" onclick="recarregar()">↺ Atualizar</button>
+      <a href="./mobile.html" target="_blank" class="btn btn-ghost btn-sm">📱 Operador</a>
       <button class="theme-toggle" id="btn-theme" onclick="toggleTheme()" title="Alternar tema claro/escuro">🌙</button>
     </div>
   </div>
@@ -1332,6 +1333,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
               <option value="negativo">Negativo</option>
               <option value="recontagem">Recontagens</option>
             </select>
+            <button class="btn btn-ghost btn-sm" onclick="exportarHistorico()">↓ Excel</button>
             <button class="btn btn-ghost btn-sm" onclick="carregarHistorico()">↺</button>
           </div>
         </div>
@@ -1519,7 +1521,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <span class="tcount" id="ac-cnt">—</span>
           </div>
           <div class="th-right">
-            <button class="btn btn-ghost btn-sm" onclick="exportarAcuracidade()">↓ Exportar</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportarAcuracidade()">↓ Excel</button>
           </div>
         </div>
         <table>
@@ -3315,24 +3317,43 @@ async function salvarJustificativa() {
   }
 }
 
-// ── EXPORTAR CSV ──────────────────────────────────────────
-function exportarAcuracidade() {
-  if (!_acFiltrado.length) { toast('Nenhum dado para exportar.','warn'); return; }
-  const cab = ['Data','Produto','Lote','Armazém','Qtd Contada','Saldo Sistema','Divergência','Tipo','Operador','Justificativa','Observação'];
-  const rows = _acFiltrado.map(r => [
-    fmtTS(r.created_at), r.produto_nome||'', r.lote||'', r.armazem||'',
-    r.quantidade??'', r.saldo_sistema??'', r.divergencia??'',
-    r.tipo||'', r.usuario||'',
-    r.justificativa_acuracia||'', r.observacao||''
-  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+// ── EXPORTAR PARA EXCEL (SheetJS) ────────────────────────
+function exportarXlsx(nomeArq, cabecalhos, linhas) {
+  const ws = XLSX.utils.aoa_to_sheet([cabecalhos, ...linhas]);
+  const colWidths = cabecalhos.map((h, i) => {
+    const max = Math.max(h.length, ...linhas.map(r => String(r[i]??'').length));
+    return { wch: Math.min(max + 2, 50) };
+  });
+  ws['!cols'] = colWidths;
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Dados');
+  XLSX.writeFile(wb, `${nomeArq}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  toast('✓ Excel exportado!', 'ok');
+}
 
-  const csv  = [cab.join(','), ...rows].join('');
-  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href=url; a.download=`acuracia_${new Date().toISOString().split('T')[0]}.csv`;
-  a.click(); URL.revokeObjectURL(url);
-  toast('✓ CSV exportado!','ok');
+function exportarAcuracidade() {
+  if (!_acFiltrado.length) { toast('Nenhum dado para exportar.', 'warn'); return; }
+  const cab = ['Data','Produto','Código','Lote','Armazém','Qtd Contada','Saldo Sistema','Divergência','Tipo','Operador','Justificativa','Observação'];
+  const lin = _acFiltrado.map(r => [
+    fmtTS(r.created_at), r.produto_nome||'', r.codigo||'', r.lote||'', r.armazem||'',
+    r.quantidade??'', r.saldo_sistema??'', r.divergencia??'',
+    r.tipo==='ok'?'Sem divergência':r.tipo==='positivo'?'Positivo':'Negativo',
+    r.usuario||'', r.justificativa_acuracia||'', r.observacao||''
+  ]);
+  exportarXlsx('acuracia', cab, lin);
+}
+
+function exportarHistorico() {
+  if (!todoHistorico?.length) { toast('Carregue o histórico primeiro.', 'warn'); return; }
+  const cab = ['Data','Código','Produto','Lote','Qtd Contada','Saldo Sistema','Divergência','Tipo','Armazém','Operador','Observação','Recontagem'];
+  const lin = todoHistorico.map(h => [
+    fmtTS(h.created_at), h.codigo||'', h.produto_nome||'', h.lote||'',
+    h.quantidade??'', h.saldo_sistema??'', h.divergencia??'',
+    h.tipo==='ok'?'Sem divergência':h.tipo==='positivo'?'Positivo':'Negativo',
+    h.armazem||'', h.usuario||'',
+    h.observacao||h.motivo_recontagem||'', h.is_recontagem?'Sim':'Não'
+  ]);
+  exportarXlsx('historico', cab, lin);
 }
 
 // Fechar modal justificativa pelo fundo
@@ -3470,4 +3491,4 @@ carregarAgendamentos();
 </script>
 
 </body>
-</html>s
+</html>
