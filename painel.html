@@ -1132,6 +1132,9 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
     <button class="nav-item" onclick="switchTab('transferencias',this)">
       <span class="ni">🔄</span> Transferências
     </button>
+    <button class="nav-item" onclick="switchTab('acuracidade',this)">
+      <span class="ni">🎯</span> Acurácia
+    </button>
   </div>
 
   <div class="sidebar-footer">
@@ -1154,7 +1157,6 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
     <div class="topbar-right">
       <span class="rt-pill"><span class="rt-dot"></span>Tempo real</span>
       <button class="btn btn-ghost btn-sm" onclick="recarregar()">↺ Atualizar</button>
-      <a href="./mobile.html" target="_blank" class="btn btn-ghost btn-sm">📱 Operador</a>
       <button class="theme-toggle" id="btn-theme" onclick="toggleTheme()" title="Alternar tema claro/escuro">🌙</button>
     </div>
   </div>
@@ -1436,8 +1438,136 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
       </div>
     </div>
 
+    <!-- ══ TAB: ACURÁCIA ══ -->
+    <div class="tab-panel" id="tab-acuracidade">
+
+      <!-- Filtros -->
+      <div class="table-wrap" style="margin-bottom:16px">
+        <div class="table-hdr" style="flex-wrap:wrap;gap:8px">
+          <div class="th-left">
+            <span class="table-title">Filtros de Acurácia</span>
+          </div>
+          <div class="th-right" style="flex-wrap:wrap;gap:6px">
+            <input type="date" class="filter-sel" id="ac-de"  title="De" onchange="carregarAcuracidade()">
+            <input type="date" class="filter-sel" id="ac-ate" title="Até" onchange="carregarAcuracidade()">
+            <input type="text" class="search-inp" id="ac-prod" placeholder="Produto…" oninput="filtrarAcuracidade()" style="width:160px">
+            <select class="filter-sel" id="ac-arm" onchange="filtrarAcuracidade()"><option value="">Todos arm.</option></select>
+            <select class="filter-sel" id="ac-op"  onchange="filtrarAcuracidade()"><option value="">Todos operadores</option></select>
+            <select class="filter-sel" id="ac-tipo" onchange="filtrarAcuracidade()">
+              <option value="">Todos</option>
+              <option value="ok">Sem divergência</option>
+              <option value="positivo">Positivo</option>
+              <option value="negativo">Negativo</option>
+              <option value="justificado">Justificados</option>
+              <option value="nao_justificado">Não justificados</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="carregarAcuracidade()">↺</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="stat-grid" id="ac-kpis" style="margin-bottom:16px">
+        <div class="stat-card sc-g">
+          <div class="sc-bar" style="background:var(--green);margin-bottom:6px"></div>
+          <div class="sc-val" id="ac-pct" style="color:var(--green)">—%</div>
+          <div class="sc-lbl">Acurácia Geral</div>
+        </div>
+        <div class="stat-card sc-b">
+          <div class="sc-bar" style="background:var(--blue);margin-bottom:6px"></div>
+          <div class="sc-val" id="ac-total" style="color:var(--blue-lt)">—</div>
+          <div class="sc-lbl">Total Contados</div>
+        </div>
+        <div class="stat-card sc-g">
+          <div class="sc-bar" style="background:var(--green);margin-bottom:6px"></div>
+          <div class="sc-val" id="ac-ok" style="color:var(--green)">—</div>
+          <div class="sc-lbl">Sem Divergência</div>
+        </div>
+        <div class="stat-card sc-r">
+          <div class="sc-bar" style="background:var(--red);margin-bottom:6px"></div>
+          <div class="sc-val" id="ac-div" style="color:var(--red)">—</div>
+          <div class="sc-lbl">Com Divergência</div>
+        </div>
+        <div class="stat-card sc-a">
+          <div class="sc-bar" style="background:var(--amber-lt);margin-bottom:6px"></div>
+          <div class="sc-val" id="ac-just" style="color:var(--amber)">—</div>
+          <div class="sc-lbl">Justificados</div>
+        </div>
+        <div class="stat-card sc-g" style="border-color:var(--green-bd)">
+          <div class="sc-bar" style="background:var(--green);margin-bottom:6px"></div>
+          <div class="sc-val" id="ac-pct-real" style="color:var(--green)">—%</div>
+          <div class="sc-lbl">Acurácia c/ Justificativas</div>
+        </div>
+      </div>
+
+      <!-- Gráfico de barras mensal -->
+      <div class="table-wrap" style="margin-bottom:16px">
+        <div class="table-hdr">
+          <div class="th-left"><span class="table-title">Evolução Mensal da Acurácia</span></div>
+        </div>
+        <div style="padding:16px 20px">
+          <div id="ac-chart" style="display:flex;align-items:flex-end;gap:8px;height:160px;overflow-x:auto;padding-bottom:4px"></div>
+          <div id="ac-chart-labels" style="display:flex;gap:8px;margin-top:6px;overflow-x:auto"></div>
+        </div>
+      </div>
+
+      <!-- Tabela detalhada -->
+      <div class="table-wrap">
+        <div class="table-hdr">
+          <div class="th-left">
+            <span class="table-title">Detalhamento por Item</span>
+            <span class="tcount" id="ac-cnt">—</span>
+          </div>
+          <div class="th-right">
+            <button class="btn btn-ghost btn-sm" onclick="exportarAcuracidade()">↓ Exportar</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Data</th><th>Produto</th><th>Lote</th><th>Arm.</th>
+            <th>Qtd Contada</th><th>Saldo Sistema</th><th>Divergência</th>
+            <th>Tipo</th><th>Operador</th><th>Justificativa</th>
+            <th style="text-align:right">Ações</th>
+          </tr></thead>
+          <tbody id="tbody-ac">
+            <tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Selecione o período e clique em Atualizar.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </main>
+</div>
+
+<!-- MODAL: JUSTIFICATIVA ACURÁCIA -->
+<div class="modal-bg" id="modal-justif">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">Justificativa de Divergência</div>
+    <div class="modal-sub" id="mj-sub">—</div>
+    <input type="hidden" id="mj-id">
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 16px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>
+        <div style="font-size:.65rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Divergência</div>
+        <div id="mj-div" style="font-size:1rem;font-weight:800;color:var(--red)">—</div>
+      </div>
+      <div>
+        <div style="font-size:.65rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Tipo</div>
+        <div id="mj-tipo" style="font-size:.88rem;font-weight:700">—</div>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Justificativa <span style="color:var(--red)">*</span></label>
+      <textarea id="mj-texto" placeholder="Ex: Embalagem danificada, produto em quarentena, erro de sistema, ajuste de inventário…" style="min-height:90px"></textarea>
+    </div>
+    <div style="background:var(--blue-bg);border:1px solid var(--blue-bd);border-radius:var(--r-sm);padding:9px 12px;font-size:.76rem;color:var(--blue);margin-bottom:14px;font-weight:600">
+      ℹ️ Itens justificados são contabilizados separadamente e não afetam a acurácia geral.
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-justif')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarJustificativa()"><div class="spin" id="mj-spin"></div>Salvar Justificativa</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL: VALIDAR ITEM -->
@@ -1683,7 +1813,7 @@ let svArmErrado = [];
 const NOMES_TABS = {
   validacao:'Saldo / Validação', registros:'Registros de Contagem',
   historico:'Histórico Validado', performance:'Performance de Operadores',
-  agendamentos:'Agendamentos', transferencias:'Transferências'
+  agendamentos:'Agendamentos', transferencias:'Transferências', acuracidade:'Acurácia de Estoque'
 };
 
 const COL_MAP = {
@@ -1744,6 +1874,7 @@ function switchTab(nome, el) {
   if (nome === 'agendamentos') carregarAgendamentos();
   if (nome === 'transferencias') carregarTransferencias();
   if (nome === 'performance')  carregarPerformance();
+  if (nome === 'acuracidade')  carregarAcuracidade();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2444,7 +2575,10 @@ function filtrarHistorico() {
       <td style="font-size:.82rem;color:var(--text2)">${h.usuario||'—'}</td>
       <td>${obsCell}</td>
       <td class="cts">${fmtTS(h.created_at)}</td>
-      <td class="ca"><button class="btn btn-ghost btn-sm" onclick="abrirEditHistorico(${JSON.stringify(h).replace(/"/g,'&quot;')})">✏</button></td>
+      <td class="ca" style="white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick="abrirEditHistorico(${JSON.stringify(h).replace(/"/g,'&quot;')})">✏</button>
+        <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="excluirHistorico(${h.id})">🗑</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -2467,6 +2601,16 @@ function calcEditDiv() {
   const sal=parseFloat(document.getElementById('eh-sal').value);
   if (!isNaN(sal)) { const d=qtd-sal; document.getElementById('eh-div').value=d; document.getElementById('eh-tipo').value=d===0?'ok':d>0?'positivo':'negativo'; }
 }
+async function excluirHistorico(id) {
+  if (!confirm('Excluir este registro do histórico? Esta ação não pode ser desfeita.')) return;
+  try {
+    const { error } = await sb.from('historico').delete().eq('id', id);
+    if (error) throw error;
+    toast('Registro excluído.', 'warn');
+    carregarHistorico();
+  } catch(e) { toast('Erro: ' + e.message, 'err'); }
+}
+
 async function salvarEditHistorico() {
   const id=document.getElementById('eh-id').value;
   document.getElementById('eh-spin').style.display='block';
@@ -2932,6 +3076,270 @@ async function validarTodos() {
   filtrarValidacao();
 }
 
+// ══════════════════════════════════════════════════════════
+// ACURÁCIA DE ESTOQUE
+// ══════════════════════════════════════════════════════════
+
+let _acDados   = [];   // todos os registros do histórico carregados
+let _acFiltrado= [];   // após filtros locais
+
+async function carregarAcuracidade() {
+  const tbody = document.getElementById('tbody-ac');
+  tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr>';
+
+  // Período padrão: últimos 30 dias se não definido
+  const hoje = new Date().toISOString().split('T')[0];
+  const h30  = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+  const de  = document.getElementById('ac-de').value  || h30;
+  const ate = document.getElementById('ac-ate').value || hoje;
+  if (!document.getElementById('ac-de').value)  document.getElementById('ac-de').value  = h30;
+  if (!document.getElementById('ac-ate').value) document.getElementById('ac-ate').value = hoje;
+
+  try {
+    const { data, error } = await sb
+      .from('historico')
+      .select('*')
+      .gte('created_at', de + 'T00:00:00')
+      .lte('created_at', ate + 'T23:59:59')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    _acDados = data || [];
+
+    // Popula filtros de armazém e operador
+    const arms = [...new Set(_acDados.map(r => r.armazem).filter(Boolean))].sort();
+    const ops  = [...new Set(_acDados.map(r => r.usuario).filter(Boolean))].sort();
+
+    const selArm = document.getElementById('ac-arm');
+    const selOp  = document.getElementById('ac-op');
+    const curArm = selArm.value, curOp = selOp.value;
+    selArm.innerHTML = '<option value="">Todos arm.</option>'       + arms.map(a=>`<option value="${a}"${a===curArm?' selected':''}>${a}</option>`).join('');
+    selOp.innerHTML  = '<option value="">Todos operadores</option>' + ops.map(o=>`<option value="${o}"${o===curOp?' selected':''}>${o}</option>`).join('');
+
+    filtrarAcuracidade();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--red);font-size:.8rem">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+function filtrarAcuracidade() {
+  const q    = (document.getElementById('ac-prod').value||'').toLowerCase();
+  const arm  = document.getElementById('ac-arm').value;
+  const op   = document.getElementById('ac-op').value;
+  const tipo = document.getElementById('ac-tipo').value;
+
+  _acFiltrado = _acDados.filter(r => {
+    if (q   && ![r.produto_nome,r.codigo,r.lote].join(' ').toLowerCase().includes(q)) return false;
+    if (arm && r.armazem !== arm) return false;
+    if (op  && r.usuario !== op)  return false;
+    if (tipo === 'ok')           return r.tipo === 'ok';
+    if (tipo === 'positivo')     return r.tipo === 'positivo';
+    if (tipo === 'negativo')     return r.tipo === 'negativo';
+    if (tipo === 'justificado')  return !!r.justificativa_acuracia;
+    if (tipo === 'nao_justificado') return r.tipo !== 'ok' && !r.justificativa_acuracia;
+    return true;
+  });
+
+  renderAcuracidade();
+}
+
+function renderAcuracidade() {
+  const dados = _acFiltrado;
+  const total = dados.length;
+  const semDiv= dados.filter(r => r.tipo === 'ok').length;
+  const comDiv= dados.filter(r => r.tipo !== 'ok').length;
+  const justif= dados.filter(r => r.tipo !== 'ok' && !!r.justificativa_acuracia).length;
+  const pctGeral= total ? ((semDiv / total)*100).toFixed(1) : '—';
+  // Acurácia real: ok + justificados / total
+  const pctReal = total ? (((semDiv + justif) / total)*100).toFixed(1) : '—';
+
+  document.getElementById('ac-total').textContent  = total;
+  document.getElementById('ac-ok').textContent     = semDiv;
+  document.getElementById('ac-div').textContent    = comDiv;
+  document.getElementById('ac-just').textContent   = justif;
+  document.getElementById('ac-pct').textContent    = pctGeral !== '—' ? pctGeral+'%' : '—';
+  document.getElementById('ac-pct-real').textContent = pctReal !== '—' ? pctReal+'%' : '—';
+
+  // Cor do KPI de acurácia geral
+  const pctNum = parseFloat(pctGeral);
+  const corPct = pctNum >= 95 ? 'var(--green)' : pctNum >= 80 ? 'var(--amber-lt)' : 'var(--red)';
+  document.getElementById('ac-pct').style.color = corPct;
+  document.getElementById('ac-pct-real').style.color = 'var(--green)';
+
+  document.getElementById('ac-cnt').textContent = `${total} item${total!==1?'ns':''}`;
+
+  renderGraficoMensal();
+  renderTabelaAcuracidade(dados);
+}
+
+function renderGraficoMensal() {
+  // Agrupa por mês
+  const meses = {};
+  _acDados.forEach(r => {
+    const mes = (r.created_at||'').substring(0,7); // YYYY-MM
+    if (!mes) return;
+    if (!meses[mes]) meses[mes] = { total:0, ok:0, justif:0 };
+    meses[mes].total++;
+    if (r.tipo === 'ok') meses[mes].ok++;
+    if (r.tipo !== 'ok' && r.justificativa_acuracia) meses[mes].justif++;
+  });
+
+  const keys = Object.keys(meses).sort();
+  if (!keys.length) {
+    document.getElementById('ac-chart').innerHTML = '<div style="color:var(--text3);font-size:.8rem;padding:20px">Sem dados para o período.</div>';
+    document.getElementById('ac-chart-labels').innerHTML = '';
+    return;
+  }
+
+  const maxTotal = Math.max(...keys.map(k => meses[k].total), 1);
+  const HEIGHT   = 140;
+
+  const bars = keys.map(k => {
+    const m    = meses[k];
+    const pct  = m.total ? ((m.ok / m.total)*100).toFixed(0) : 0;
+    const pctR = m.total ? (((m.ok + m.justif) / m.total)*100).toFixed(0) : 0;
+    const hOk  = Math.round((m.ok / maxTotal) * HEIGHT);
+    const hJ   = Math.round((m.justif / maxTotal) * HEIGHT);
+    const hDiv = Math.round(((m.total - m.ok - m.justif) / maxTotal) * HEIGHT);
+    const cor  = pct >= 95 ? 'var(--green)' : pct >= 80 ? 'var(--amber-lt)' : 'var(--red)';
+
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;flex:1">
+      <div style="font-size:.62rem;font-weight:700;color:${cor}">${pct}%</div>
+      <div style="display:flex;flex-direction:column;justify-content:flex-end;height:${HEIGHT}px;width:32px;gap:1px">
+        ${hDiv ? `<div style="height:${hDiv}px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:3px 3px 0 0" title="Divergências sem justificativa"></div>` : ''}
+        ${hJ   ? `<div style="height:${hJ}px;background:var(--amber-bg);border:1px solid var(--amber-bd)" title="Justificados"></div>` : ''}
+        ${hOk  ? `<div style="height:${hOk}px;background:var(--green-bg);border:1px solid var(--green-bd);border-radius:${!hJ&&!hDiv?'3px 3px':'0 0'} 0 0" title="Sem divergência"></div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const labels = keys.map(k => {
+    const [y, m] = k.split('-');
+    const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return `<div style="min-width:44px;flex:1;text-align:center;font-size:.62rem;color:var(--text3);font-weight:600">${nomes[parseInt(m)-1]}/${y.slice(2)}</div>`;
+  }).join('');
+
+  // Legenda
+  const legenda = `<div style="display:flex;gap:12px;margin-top:10px;font-size:.65rem;font-weight:600">
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:var(--green-bg);border:1px solid var(--green-bd);border-radius:2px;display:inline-block"></span>Sem divergência</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:2px;display:inline-block"></span>Justificados</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:2px;display:inline-block"></span>Divergência</span>
+  </div>`;
+
+  document.getElementById('ac-chart').innerHTML = bars + legenda;
+  document.getElementById('ac-chart-labels').innerHTML = labels;
+}
+
+function renderTabelaAcuracidade(dados) {
+  const tbody = document.getElementById('tbody-ac');
+  if (!dados.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Nenhum registro encontrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = dados.map(r => {
+    const div = r.divergencia ?? 0;
+    const divCell = r.tipo === 'ok'
+      ? `<span class="div-ok">0</span>`
+      : `<span class="${div>0?'div-pos':'div-neg'}">${div>0?'+':''}${div}</span>`;
+
+    const tipoBadge = r.tipo === 'ok'
+      ? `<span class="badge b-v">✓ OK</span>`
+      : r.tipo === 'positivo'
+        ? `<span class="badge b-p">+ Positivo</span>`
+        : `<span class="badge b-r">− Negativo</span>`;
+
+    const justCell = r.justificativa_acuracia
+      ? `<span style="font-size:.72rem;color:var(--green-txt);font-weight:600;cursor:pointer" onclick="verTexto('Justificativa',${JSON.stringify(r.justificativa_acuracia).replace(/"/g,'&quot;')})">✓ Ver</span>`
+      : (r.tipo !== 'ok'
+          ? `<button class="btn btn-amber btn-sm" style="font-size:.65rem;padding:3px 8px" onclick="abrirJustificativa(${r.id},'${(r.produto_nome||'').replace(/'/g,"\'")}',${div})">+ Justificar</button>`
+          : '<span style="color:var(--text3)">—</span>');
+
+    // Linha: vermelha suave se divergência sem justificativa
+    const rowStyle = r.tipo !== 'ok' && !r.justificativa_acuracia
+      ? 'background:var(--red-bg);'
+      : r.justificativa_acuracia
+        ? 'background:var(--amber-bg);'
+        : '';
+
+    return `<tr style="${rowStyle}">
+      <td class="cts">${fmtTS(r.created_at)}</td>
+      <td class="cn" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.produto_nome||'—'}</td>
+      <td class="cm">${r.lote||'—'}</td>
+      <td style="font-weight:600">${r.armazem||'—'}</td>
+      <td style="font-weight:700">${r.quantidade??'—'}</td>
+      <td style="font-weight:700">${r.saldo_sistema??'—'}</td>
+      <td>${divCell}</td>
+      <td>${tipoBadge}</td>
+      <td class="cm">${r.usuario||'—'}</td>
+      <td style="max-width:150px">${justCell}</td>
+      <td class="ca">
+        <button class="btn btn-ghost btn-sm" style="font-size:.65rem;padding:3px 8px" onclick="verTexto('Observação','${(r.observacao||'Sem observação').replace(/'/g,"\'")}')">obs</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── JUSTIFICATIVA ──────────────────────────────────────────
+function abrirJustificativa(id, produto, div) {
+  document.getElementById('mj-id').value    = id;
+  document.getElementById('mj-sub').textContent = produto;
+  document.getElementById('mj-div').textContent = (div>0?'+':'')+div;
+  document.getElementById('mj-div').style.color = div>0?'var(--amber-lt)':'var(--red)';
+  document.getElementById('mj-tipo').textContent= div>0?'Positivo':'Negativo';
+  document.getElementById('mj-texto').value = '';
+  document.getElementById('modal-justif').classList.add('open');
+}
+
+async function salvarJustificativa() {
+  const id   = document.getElementById('mj-id').value;
+  const txt  = document.getElementById('mj-texto').value.trim();
+  if (!txt) { toast('Informe a justificativa.','warn'); return; }
+
+  const btn  = document.querySelector('#modal-justif .btn-primary');
+  const spin = document.getElementById('mj-spin');
+  btn.disabled=true; spin.style.display='block';
+
+  try {
+    const { error } = await sb
+      .from('historico')
+      .update({ justificativa_acuracia: txt })
+      .eq('id', id);
+    if (error) throw error;
+    fecharModal('modal-justif');
+    toast('✓ Justificativa salva! Item não afetará a acurácia.','ok');
+    carregarAcuracidade();
+  } catch(e) {
+    toast('Erro: '+e.message,'err');
+  } finally {
+    btn.disabled=false; spin.style.display='none';
+  }
+}
+
+// ── EXPORTAR CSV ──────────────────────────────────────────
+function exportarAcuracidade() {
+  if (!_acFiltrado.length) { toast('Nenhum dado para exportar.','warn'); return; }
+  const cab = ['Data','Produto','Lote','Armazém','Qtd Contada','Saldo Sistema','Divergência','Tipo','Operador','Justificativa','Observação'];
+  const rows = _acFiltrado.map(r => [
+    fmtTS(r.created_at), r.produto_nome||'', r.lote||'', r.armazem||'',
+    r.quantidade??'', r.saldo_sistema??'', r.divergencia??'',
+    r.tipo||'', r.usuario||'',
+    r.justificativa_acuracia||'', r.observacao||''
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+
+  const csv  = [cab.join(','), ...rows].join('');
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download=`acuracia_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('✓ CSV exportado!','ok');
+}
+
+// Fechar modal justificativa pelo fundo
+document.getElementById('modal-justif').addEventListener('click', e => {
+  if (e.target === e.currentTarget) fecharModal('modal-justif');
+});
+
 // ── VER TEXTO COMPLETO ────────────────────────────────────
 function verTexto(titulo, texto) {
   document.getElementById('vt-titulo').textContent = titulo;
@@ -3062,4 +3470,4 @@ carregarAgendamentos();
 </script>
 
 </body>
-</html>
+</html>s
