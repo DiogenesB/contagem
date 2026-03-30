@@ -1530,21 +1530,57 @@ async function iniciarSessao(agend, recontagem = false) {
   sessaoRecont      = recontagem;
   sessaoLancamentos = [];
   sessaoId          = null;
+  sessaoInicio      = Date.now();
 
-  try { await sb.from('agendamentos').update({ status: 'em_contagem' }).eq('id', agend.id); } catch(e) { console.error(e); }
+  const continuando = agend.status === 'em_contagem';
 
-  sessaoInicio = Date.now();
-  try {
-    const { data } = await sb.from('sessoes_contagem').insert({
-      agendamento_id: agend.id,
-      usuario:        usuarioAtual,
-      codigo:         agend.codigo,
-      produto_nome:   agend.produto_nome,
-      inicio:         new Date(sessaoInicio).toISOString(),
-    }).select('id').single();
-    if (data) sessaoId = data.id;
-  } catch(e) { console.error(e); }
+  if (continuando) {
+    // ── CONTINUANDO: busca sessão e lançamentos existentes ──
+    try {
+      // Pega a sessão mais recente deste agendamento
+      const { data: sessaoExist } = await sb
+        .from('sessoes_contagem')
+        .select('id, inicio')
+        .eq('agendamento_id', agend.id)
+        .is('fim', null)
+        .order('inicio', { ascending: false })
+        .limit(1)
+        .single();
 
+      if (sessaoExist) {
+        sessaoId     = sessaoExist.id;
+        sessaoInicio = new Date(sessaoExist.inicio).getTime();
+      }
+
+      // Busca lançamentos pendentes já feitos
+      const { data: lancsExist } = await sb
+        .from('lancamentos')
+        .select('*')
+        .eq('agendamento_id', agend.id)
+        .eq('status', 'pendente');
+
+      if (lancsExist?.length) {
+        sessaoLancamentos = lancsExist;
+      }
+    } catch(e) { console.error('[Continuar]', e); }
+
+  } else {
+    // ── NOVO INÍCIO: marca em_contagem e cria sessão ──
+    try { await sb.from('agendamentos').update({ status: 'em_contagem' }).eq('id', agend.id); } catch(e) { console.error(e); }
+
+    try {
+      const { data } = await sb.from('sessoes_contagem').insert({
+        agendamento_id: agend.id,
+        usuario:        usuarioAtual,
+        codigo:         agend.codigo,
+        produto_nome:   agend.produto_nome,
+        inicio:         new Date(sessaoInicio).toISOString(),
+      }).select('id').single();
+      if (data) sessaoId = data.id;
+    } catch(e) { console.error(e); }
+  }
+
+  // ── Preenche a tela ──
   document.getElementById('sessao-produto-nome').textContent = agend.produto_nome;
   document.getElementById('sessao-produto-cod').textContent  = agend.codigo;
   document.getElementById('sessao-produto-nome-banner').textContent = agend.produto_nome;
@@ -1561,10 +1597,17 @@ async function iniciarSessao(agend, recontagem = false) {
     if (loteEl) loteEl.value = agend.lote_especifico;
   }
 
-  renderSessaoLista();
-  document.getElementById('btn-finalizar-sessao').style.display = 'none';
-  document.getElementById('btn-fin-hint').style.display = 'block';
+  // Mostra botão finalizar se já tem lançamentos
+  const temLanc = sessaoLancamentos.length > 0;
+  document.getElementById('btn-finalizar-sessao').style.display = temLanc ? 'flex' : 'none';
+  document.getElementById('btn-fin-hint').style.display         = temLanc ? 'none' : 'block';
 
+  // Se continuando, mostra quantos lançamentos já foram feitos
+  if (continuando && temLanc) {
+    toast(`▶ Continuando — ${sessaoLancamentos.length} lançamento(s) já registrado(s).`, 'info', 4000);
+  }
+
+  // Timer
   function atualizarTimers(val) {
     const t1 = document.getElementById('sessao-timer');
     const t2 = document.getElementById('sessao-timer-top');
