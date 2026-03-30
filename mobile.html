@@ -1344,14 +1344,14 @@ html.dark .dp-hoje   { color:var(--green-txt); }
     <div class="qr-frame"></div>
     <div class="qr-line"></div>
   </div>
-  <div class="qr-label">Aponte para o QR Code</div>
-  <div class="qr-sublabel">Leitura automática ao detectar</div>
+  <div class="qr-label" id="qr-label">Aponte para o código</div>
+  <div class="qr-sublabel">Lê QR Code e código de barras automaticamente</div>
   <button class="qr-cancel" onclick="fecharQR()">Cancelar</button>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 /* ══════════════════════════════════════════
@@ -1934,55 +1934,78 @@ async function confirmarTransferencia() {
 }
 
 // ── QR CODE ──────────────────────────────
+// ── SCANNER: ZXing (lê QR code + barcode) ────────────────
+let _zxingReader = null;
+
 function abrirQR(targetInputId, cb = null) {
   qrTargetId = targetInputId;
   qrCallback = cb;
   document.getElementById('qr-overlay').classList.add('open');
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-    .then(stream => {
-      qrStream = stream;
-      const video = document.getElementById('qr-video');
-      video.srcObject = stream;
-      video.play();
-      scanQR();
-    })
-    .catch(() => {
-      fecharQR();
-      toast('Câmera indisponível. Use digitação.', 'warn');
+  iniciarZXing();
+}
+
+async function iniciarZXing() {
+  try {
+    // Cria o leitor uma vez e reutiliza
+    if (!_zxingReader) {
+      const hints = new Map();
+      // Formatos mais comuns em embalagens industriais
+      const formats = [
+        ZXing.BarcodeFormat.CODE_128,
+        ZXing.BarcodeFormat.CODE_39,
+        ZXing.BarcodeFormat.EAN_13,
+        ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.ITF,
+        ZXing.BarcodeFormat.DATA_MATRIX,
+        ZXing.BarcodeFormat.QR_CODE,
+        ZXing.BarcodeFormat.PDF_417,
+      ];
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      _zxingReader = new ZXing.BrowserMultiFormatReader(hints);
+    }
+
+    const video = document.getElementById('qr-video');
+
+    // Pega câmera traseira
+    const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
+    const traseira = devices.find(d =>
+      d.label.toLowerCase().includes('back') ||
+      d.label.toLowerCase().includes('rear') ||
+      d.label.toLowerCase().includes('trás') ||
+      d.label.toLowerCase().includes('environment')
+    ) || devices[devices.length - 1]; // última costuma ser a traseira
+
+    const deviceId = traseira?.deviceId || undefined;
+
+    await _zxingReader.decodeFromVideoDevice(deviceId, video, (result, err) => {
+      if (result) {
+        const val = result.getText().trim();
+        fecharQR();
+        const input = document.getElementById(qrTargetId);
+        if (input) { input.value = val.toUpperCase(); input.classList.add('filled'); }
+        if (qrCallback) qrCallback(val);
+        toast('✓ Lido: ' + val, 'ok', 2000);
+      }
+      // err é normal durante scanning (frame sem código) — ignorar
     });
+
+  } catch(e) {
+    fecharQR();
+    toast('Câmera indisponível. Use digitação.', 'warn');
+    console.error('[Scanner]', e);
+  }
 }
 
 function fecharQR() {
   document.getElementById('qr-overlay').classList.remove('open');
-  if (qrAnimId) { cancelAnimationFrame(qrAnimId); qrAnimId = null; }
+  try { if (_zxingReader) _zxingReader.reset(); } catch(e) {}
   if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+  if (qrAnimId) { cancelAnimationFrame(qrAnimId); qrAnimId = null; }
 }
 
-function scanQR() {
-  const video  = document.getElementById('qr-video');
-  const canvas = document.createElement('canvas');
-  const ctx    = canvas.getContext('2d');
-  function tick() {
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.height = video.videoHeight;
-      canvas.width  = video.videoWidth;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
-      if (code) {
-        fecharQR();
-        const val = code.data.trim();
-        const input = document.getElementById(qrTargetId);
-        if (input) { input.value = val.toUpperCase(); input.classList.add('filled'); }
-        if (qrCallback) qrCallback(val);
-        toast('✓ QR lido: ' + val, 'ok', 2000);
-        return;
-      }
-    }
-    qrAnimId = requestAnimationFrame(tick);
-  }
-  qrAnimId = requestAnimationFrame(tick);
-}
+// Mantido por compatibilidade (não usado com ZXing)
+function scanQR() {}
 
 
 // ══════════════════════════════════════════════════════════
