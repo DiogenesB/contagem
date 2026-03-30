@@ -1,0 +1,25 @@
+{
+  "name": "Simbiose Expedição",
+  "short_name": "Simbiose",
+  "description": "Contagem de estoque e conferência de expedição",
+  "start_url": "./mobile.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0f2f5",
+  "theme_color": "#1a7f4b",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%231a7f4b'/%3E%3Cpath d='M96 40L48 65V120L96 145L144 120V65Z' fill='none' stroke='white' stroke-width='8' stroke-linejoin='round'/%3E%3Cpath d='M48 65L96 90L144 65' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Cpath d='M96 90V145' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%231a7f4b'/%3E%3Cpath d='M256 96L128 165V330L256 400L384 330V165Z' fill='none' stroke='white' stroke-width='20' stroke-linejoin='round'/%3E%3Cpath d='M128 165L256 234L384 165' stroke='white' stroke-width='20' stroke-linecap='round'/%3E%3Cpath d='M256 234V400' stroke='white' stroke-width='20' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"]
+}
