@@ -307,126 +307,6 @@ html, body {
 }
 .btn-back:active { background:var(--bg4); }
 
-/* Botão de notificação */
-.notif-btn {
-  position:relative;
-  width:30px; height:30px;
-  display:flex; align-items:center; justify-content:center;
-  background:var(--bg3);
-  border:1px solid var(--border2);
-  border-radius:var(--r-xs);
-  cursor:pointer;
-  font-size:.85rem;
-  flex-shrink:0;
-  transition:background .12s;
-}
-.notif-btn:active { background:var(--bg4); }
-
-.notif-badge {
-  position:absolute;
-  top:-5px; right:-5px;
-  min-width:16px; height:16px;
-  background:var(--red);
-  color:#fff;
-  font-size:.56rem;
-  font-weight:800;
-  border-radius:10px;
-  display:flex; align-items:center; justify-content:center;
-  padding:0 3px;
-  border:2px solid var(--bg2);
-  line-height:1;
-}
-
-/* Painel de notificações */
-.notif-panel {
-  display:none;
-  position:fixed;
-  top:var(--topbar-h, 56px); left:0; right:0;
-  background:var(--bg2);
-  border-bottom:1px solid var(--border);
-  z-index:49;
-  box-shadow:0 4px 20px rgba(0,0,0,.12);
-  animation:slideDown .2s ease;
-  max-height:70vh;
-  overflow-y:auto;
-}
-.notif-panel.open { display:block; }
-@keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
-
-.notif-header {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:12px 16px 8px;
-  border-bottom:1px solid var(--border);
-}
-.notif-header-title {
-  font-size:.78rem;
-  font-weight:800;
-  color:var(--text);
-  text-transform:uppercase;
-  letter-spacing:.06em;
-}
-.notif-clear {
-  font-size:.7rem;
-  font-weight:700;
-  color:var(--text3);
-  background:none;
-  border:none;
-  cursor:pointer;
-  padding:3px 6px;
-  border-radius:var(--r-xs);
-}
-.notif-clear:active { background:var(--bg3); }
-
-.notif-item {
-  display:flex;
-  gap:11px;
-  align-items:flex-start;
-  padding:11px 16px;
-  border-bottom:1px solid var(--border);
-  animation:fadeUp .18s ease;
-  cursor:pointer;
-  transition:background .12s;
-}
-.notif-item:active { background:var(--bg3); }
-.notif-item:last-child { border-bottom:none; }
-
-.notif-item-ico {
-  font-size:1.2rem;
-  flex-shrink:0;
-  margin-top:1px;
-}
-
-.notif-item-body { flex:1; }
-.notif-item-title { font-size:.83rem; font-weight:700; color:var(--text); line-height:1.3; }
-.notif-item-sub   { font-size:.7rem; color:var(--text3); font-weight:600; margin-top:2px; }
-.notif-item-time  { font-size:.64rem; color:var(--text3); font-weight:600; margin-top:4px; }
-
-.notif-item.unread { background:var(--blue-bg); }
-.notif-item.unread .notif-item-title { color:var(--blue); }
-html.dark .notif-item.unread { background:var(--blue-bg); }
-
-.notif-empty {
-  padding:28px 16px;
-  text-align:center;
-  font-size:.78rem;
-  color:var(--text3);
-  font-weight:600;
-}
-
-/* Permissão banner */
-.perm-banner {
-  display:none;
-  background:var(--amber-bg);
-  border:1px solid var(--amber-bd);
-  border-radius:var(--r);
-  padding:12px 14px;
-  margin:10px 14px;
-  align-items:center;
-  gap:10px;
-}
-.perm-banner.show { display:flex; }
-.perm-banner-txt { flex:1; font-size:.78rem; font-weight:600; color:var(--amber); }
-html.dark .notif-btn { background:var(--bg3); border-color:var(--border2); }
 
 /* Toggle de tema */
 .theme-toggle {
@@ -1165,35 +1045,14 @@ html.dark .dp-hoje   { color:var(--green-txt); }
     </div>
     <div class="topbar-right">
       <span class="topbar-user" id="topbar-user">—</span>
-      <button class="notif-btn" id="btn-notif" onclick="toggleNotifPanel()" title="Notificações">
-        🔔
-        <span class="notif-badge" id="notif-badge" style="display:none">0</span>
-      </button>
       <button class="theme-toggle" id="btn-theme" onclick="toggleTheme()" title="Alternar tema">🌙</button>
       <button class="btn-logout" onclick="fazerLogout()">✕</button>
-    </div>
-  </div>
-
-  <!-- Painel de notificações -->
-  <div class="notif-panel" id="notif-panel">
-    <div class="notif-header">
-      <span class="notif-header-title">Notificações</span>
-      <button class="notif-clear" onclick="limparNotificacoes()">Limpar tudo</button>
-    </div>
-    <div id="notif-lista">
-      <div class="notif-empty">Nenhuma notificação</div>
     </div>
   </div>
 
   <div class="statusbar">
     <div class="sdot" id="sdot"></div>
     <span id="slabel">Conectando…</span>
-  </div>
-
-  <!-- Banner de permissão de notificações -->
-  <div class="perm-banner" id="perm-banner">
-    <span class="perm-banner-txt">🔔 Ative as notificações para receber alertas de agenda e transferências.</span>
-    <button class="btn btn-amber btn-sm" onclick="pedirPermissao()" style="flex-shrink:0">Ativar</button>
   </div>
 
   <div class="nav-tabs">
@@ -1492,13 +1351,10 @@ function fazerLogin() {
   initSb();
   showScreen('screen-main');
   carregarAgenda();
-  iniciarNotificacoes();
 }
 function fazerLogout() {
   usuarioAtual = null;
   localStorage.removeItem('op_u');
-  if (_checkInterval) { clearInterval(_checkInterval); _checkInterval = null; }
-  fecharNotifPanel();
   showScreen('screen-login');
 }
 document.getElementById('login-senha').addEventListener('keydown', e => { if (e.key === 'Enter') fazerLogin(); });
@@ -1511,7 +1367,6 @@ document.getElementById('login-senha').addEventListener('keydown', e => { if (e.
     initSb();
     showScreen('screen-main');
     carregarAgenda();
-    iniciarNotificacoes();
   }
 })();
 
@@ -2051,191 +1906,6 @@ function fecharQR() {
 
 function scanQR() {}
 
-
-// ══════════════════════════════════════════════════════════
-// NOTIFICAÇÕES — In-App (funciona sem hospedagem)
-// ══════════════════════════════════════════════════════════
-
-let _notifList     = [];   // histórico in-app
-let _checkInterval = null; // polling interval
-let _lastAgenda    = null; // baseline agenda
-let _lastTransf    = null; // baseline transf
-
-// ── PEDIR PERMISSÃO ───────────────────────────────────────
-async function pedirPermissao() {
-  if (!('Notification' in window)) {
-    toast('Notificações não suportadas neste navegador.', 'warn'); return;
-  }
-  const perm = await Notification.requestPermission();
-  if (perm === 'granted') {
-    document.getElementById('perm-banner')?.classList.remove('show');
-    localStorage.setItem('notif-perm', 'granted');
-    toast('✓ Notificações ativadas!', 'ok');
-    iniciarPolling();
-  } else {
-    toast('Permissão negada. Ative nas configurações do navegador.', 'warn', 5000);
-  }
-}
-
-// ── CHECAR PERMISSÃO ─────────────────────────────────────
-function checarPermissaoBanner() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'default') {
-    document.getElementById('perm-banner')?.classList.add('show');
-  } else if (Notification.permission === 'granted') {
-    document.getElementById('perm-banner')?.classList.remove('show');
-    iniciarPolling();
-  }
-}
-
-// ── POLLING A CADA 3 MIN ─────────────────────────────────
-function iniciarPolling() {
-  if (_checkInterval) return;
-  verificarNovidades();
-  _checkInterval = setInterval(verificarNovidades, 3 * 60 * 1000);
-}
-
-async function verificarNovidades() {
-  if (!sb || !usuarioAtual) return;
-  try {
-    // Agenda
-    const { count: agendaCount } = await sb
-      .from('agendamentos')
-      .select('*', { count: 'exact', head: true })
-      .in('status', ['pendente', 'em_contagem']);
-
-    if (_lastAgenda !== null && agendaCount > _lastAgenda) {
-      const novos = agendaCount - _lastAgenda;
-      const titulo = `📋 ${novos} novo${novos > 1 ? 's itens' : ' item'} na agenda`;
-      const corpo  = `${agendaCount} item${agendaCount !== 1 ? 'ns' : ''} aguardando contagem.`;
-      adicionarNotifInApp(titulo, corpo, '📋', 'agenda');
-      dispararNotif(titulo, corpo, false);
-    }
-    if (agendaCount !== null) _lastAgenda = agendaCount;
-
-    // Transferências
-    const { count: transfCount } = await sb
-      .from('transferencias')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'pendente');
-
-    if (_lastTransf !== null && transfCount > _lastTransf) {
-      const novos = transfCount - _lastTransf;
-      const titulo = `🔄 ${novos} nova${novos > 1 ? 's transferências' : ' transferência'}`;
-      const corpo  = `${novos} movimentação${novos > 1 ? 'ões' : ''} aguardando confirmação.`;
-      adicionarNotifInApp(titulo, corpo, '🔄', 'transf');
-      dispararNotif(titulo, corpo, true);
-    }
-    if (transfCount !== null) _lastTransf = transfCount;
-
-  } catch(e) {
-    console.warn('[Notif] erro ao verificar:', e.message);
-  }
-}
-
-// ── NOTIFICAÇÃO NATIVA ────────────────────────────────────
-function dispararNotif(titulo, corpo, requireInteraction) {
-  if (Notification.permission !== 'granted') return;
-  try {
-    const n = new Notification(titulo, {
-      body: corpo,
-      icon: './icon-192.png',
-      requireInteraction,
-    });
-    n.onclick = () => { window.focus(); n.close(); };
-  } catch(e) {
-    console.warn('[Notif] falha ao exibir:', e.message);
-  }
-}
-
-// ── IN-APP ────────────────────────────────────────────────
-function adicionarNotifInApp(titulo, corpo, ico, tipo) {
-  const hora = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-  _notifList.unshift({ titulo, corpo, ico, tipo, hora, lido: false, id: Date.now() });
-  if (_notifList.length > 30) _notifList.length = 30;
-  renderNotifPanel();
-  atualizarBadge();
-}
-
-function renderNotifPanel() {
-  const lista = document.getElementById('notif-lista');
-  if (!lista) return;
-  if (!_notifList.length) {
-    lista.innerHTML = '<div class="notif-empty">Nenhuma notificação</div>';
-    return;
-  }
-  lista.innerHTML = _notifList.map(n => `
-    <div class="notif-item ${n.lido ? '' : 'unread'}" onclick="clicarNotif(${n.id},'${n.tipo}')">
-      <div class="notif-item-ico">${n.ico}</div>
-      <div class="notif-item-body">
-        <div class="notif-item-title">${n.titulo}</div>
-        <div class="notif-item-sub">${n.corpo}</div>
-        <div class="notif-item-time">${n.hora}</div>
-      </div>
-    </div>`).join('');
-}
-
-function clicarNotif(id, tipo) {
-  const item = _notifList.find(n => n.id === id);
-  if (item) item.lido = true;
-  atualizarBadge();
-  renderNotifPanel();
-  fecharNotifPanel();
-  const aba = tipo === 'transf' ? 'transf' : 'agenda';
-  const btn = document.querySelector(`.nav-tab[onclick*="'${aba}'"]`);
-  if (btn) btn.click();
-}
-
-function atualizarBadge() {
-  const badge = document.getElementById('notif-badge');
-  if (!badge) return;
-  const n = _notifList.filter(n => !n.lido).length;
-  badge.textContent = n > 9 ? '9+' : n;
-  badge.style.display = n > 0 ? 'flex' : 'none';
-}
-
-function toggleNotifPanel() {
-  const panel = document.getElementById('notif-panel');
-  if (!panel) return;
-  const abrindo = !panel.classList.contains('open');
-  panel.classList.toggle('open');
-  if (abrindo) {
-    _notifList.forEach(n => n.lido = true);
-    atualizarBadge();
-    renderNotifPanel();
-  }
-}
-
-function fecharNotifPanel() {
-  document.getElementById('notif-panel')?.classList.remove('open');
-}
-
-function limparNotificacoes() {
-  _notifList = [];
-  renderNotifPanel();
-  atualizarBadge();
-}
-
-document.addEventListener('click', e => {
-  const panel = document.getElementById('notif-panel');
-  const btn   = document.getElementById('btn-notif');
-  if (panel?.classList.contains('open') && !panel.contains(e.target) && !btn?.contains(e.target)) {
-    fecharNotifPanel();
-  }
-});
-
-// ── INICIAR AO LOGAR ─────────────────────────────────────
-function iniciarNotificacoes() {
-  checarPermissaoBanner();
-  setTimeout(async () => {
-    if (!sb) return;
-    const { count: a } = await sb.from('agendamentos').select('*',{count:'exact',head:true}).in('status',['pendente','em_contagem']);
-    const { count: t } = await sb.from('transferencias').select('*',{count:'exact',head:true}).eq('status','pendente');
-    _lastAgenda = a ?? 0;
-    _lastTransf = t ?? 0;
-    if (Notification.permission === 'granted') iniciarPolling();
-  }, 1500);
-}
 
 
 // ── MODAIS PELO FUNDO ────────────────────
