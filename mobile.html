@@ -1,0 +1,2182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Contagem Expedição · Simbiose</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════
+   VARIÁVEIS — TEMA CLARO (padrão)
+══════════════════════════════════ */
+:root {
+  --bg:        #f0f2f5;
+  --bg2:       #ffffff;
+  --bg3:       #f7f8fa;
+  --bg4:       #eef0f4;
+  --border:    #dde1e8;
+  --border2:   #c8cdd8;
+  --border3:   #b0b7c6;
+
+  --green:     #1a7f4b;
+  --green-lt:  #22a361;
+  --green-bg:  #eaf7f0;
+  --green-bd:  #b6e8cf;
+  --green-txt: #145e37;
+
+  --amber:     #b45309;
+  --amber-lt:  #d97706;
+  --amber-bg:  #fef3e2;
+  --amber-bd:  #fcd59a;
+
+  --red:       #c0392b;
+  --red-lt:    #e74c3c;
+  --red-bg:    #fdecea;
+  --red-bd:    #f5b8b2;
+
+  --blue:      #1d5fa8;
+  --blue-lt:   #2e7dd1;
+  --blue-bg:   #e8f0fb;
+  --blue-bd:   #a8c4ef;
+
+  --purple:    #6d4fc2;
+  --purple-bg: #f0ebfb;
+  --purple-bd: #c7b4ef;
+
+  --text:      #1a2035;
+  --text2:     #4a5568;
+  --text3:     #8a95a8;
+
+  --sans:      'Nunito Sans', 'Calibri', 'Segoe UI', sans-serif;
+  --r:         10px;
+  --r-sm:      7px;
+  --r-xs:      5px;
+  --sh:        0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+  --sh-sm:     0 1px 3px rgba(0,0,0,.07);
+}
+
+/* ── TEMA ESCURO ── */
+html.dark {
+  --bg:        #0f1117;
+  --bg2:       #171b24;
+  --bg3:       #1d2230;
+  --bg4:       #232839;
+  --border:    #2c3348;
+  --border2:   #38445e;
+  --border3:   #475568;
+
+  --green:     #22c55e;
+  --green-lt:  #34d874;
+  --green-bg:  rgba(34,197,94,.09);
+  --green-bd:  rgba(34,197,94,.28);
+  --green-txt: #86efac;
+
+  --amber:     #f59e0b;
+  --amber-lt:  #fbbf24;
+  --amber-bg:  rgba(245,158,11,.1);
+  --amber-bd:  rgba(245,158,11,.3);
+
+  --red:       #f43f5e;
+  --red-lt:    #fb7185;
+  --red-bg:    rgba(244,63,94,.09);
+  --red-bd:    rgba(244,63,94,.3);
+
+  --blue:      #60a5fa;
+  --blue-lt:   #93c5fd;
+  --blue-bg:   rgba(96,165,250,.1);
+  --blue-bd:   rgba(96,165,250,.28);
+
+  --purple:    #a78bfa;
+  --purple-bg: rgba(167,139,250,.09);
+  --purple-bd: rgba(167,139,250,.28);
+
+  --text:      #e8edf8;
+  --text2:     #8fa3be;
+  --text3:     #4a6080;
+
+  --sh:        0 1px 4px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
+  --sh-sm:     0 1px 3px rgba(0,0,0,.35);
+}
+
+/* ── DARK ADJUSTMENTS ── */
+html.dark input, html.dark select, html.dark textarea {
+  background:var(--bg3); border-color:var(--border2); color:var(--text);
+}
+html.dark input.filled { background:var(--green-bg); border-color:var(--green-bd); }
+html.dark input.error  { background:var(--red-bg);   border-color:var(--red-bd); }
+html.dark input[readonly] { background:var(--bg4); }
+html.dark .login-card { background:var(--bg2); border-color:var(--border2); }
+html.dark .card { background:var(--bg2); border-color:var(--border); }
+html.dark .item-card { background:var(--bg2); border-color:var(--border); }
+html.dark .lanc-item { background:var(--bg3); border-color:var(--border); }
+html.dark .modal { background:var(--bg2); border-color:var(--border2); }
+html.dark .topbar { background:var(--bg2); border-color:var(--border); }
+html.dark .statusbar { background:var(--bg); border-color:var(--border); }
+html.dark .nav-tabs { background:var(--bg2); border-color:var(--border); }
+html.dark .timer-bar { background:var(--bg3); border-color:var(--border2); }
+html.dark .produto-banner { background:var(--bg3); border-color:var(--border2); }
+html.dark .alerta-recont { background:var(--red-bg); border-color:var(--red-bd); }
+html.dark .btn-ghost { background:var(--bg3); border-color:var(--border2); color:var(--text2); }
+html.dark .btn-ghost:active { background:var(--bg4); }
+html.dark .topbar-user { background:var(--bg3); border-color:var(--border2); }
+html.dark .btn-back { background:var(--bg3); border-color:var(--border2); color:var(--text2); }
+html.dark .qr-btn { background:var(--bg3); border-color:var(--border2); }
+html.dark .theme-toggle { background:var(--bg3); border-color:var(--border2); }
+
+/* ════════════════════════════════
+   BASE
+════════════════════════════════ */
+*, *::before, *::after {
+  margin:0; padding:0; box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html, body {
+  height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.55;
+  transition:background .2s, color .2s;
+}
+
+/* ── SCREENS ── */
+.screen { display:none; min-height:100vh; flex-direction:column; }
+.screen.active { display:flex; }
+
+/* ════════════════════════════════
+   LOGIN
+════════════════════════════════ */
+#screen-login {
+  background:var(--bg);
+  align-items:center;
+  justify-content:center;
+  padding:28px 20px;
+}
+
+.login-mark {
+  width:60px; height:60px;
+  background:var(--green);
+  border-radius:14px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px;
+  margin:0 auto 16px;
+  box-shadow:0 4px 16px rgba(26,127,75,.3);
+}
+
+.login-brand { text-align:center; margin-bottom:28px; }
+
+.login-name {
+  font-size:1.2rem;
+  font-weight:800;
+  color:var(--text);
+  letter-spacing:-.01em;
+}
+
+.login-name em { color:var(--green); font-style:normal; }
+
+.login-sub {
+  font-size:.72rem;
+  color:var(--text3);
+  font-weight:600;
+  margin-top:3px;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+
+.login-card {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:22px 18px;
+  width:100%;
+  max-width:360px;
+  box-shadow:var(--sh);
+}
+
+.login-card h2 {
+  font-size:.78rem;
+  font-weight:700;
+  color:var(--text3);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  margin-bottom:16px;
+  padding-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+
+.login-err {
+  background:var(--red-bg);
+  border:1px solid var(--red-bd);
+  border-radius:var(--r-sm);
+  color:var(--red);
+  font-size:.76rem;
+  font-weight:600;
+  padding:9px 12px;
+  margin-top:10px;
+  display:none;
+  text-align:center;
+}
+
+/* ════════════════════════════════
+   TOPBAR
+════════════════════════════════ */
+.topbar {
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:12px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:sticky;
+  top:0;
+  z-index:50;
+  box-shadow:var(--sh-sm);
+}
+
+.topbar-left { display:flex; align-items:center; gap:10px; }
+
+.topbar-logo {
+  width:32px; height:32px;
+  background:var(--green);
+  border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px;
+  box-shadow:0 2px 8px rgba(26,127,75,.3);
+  flex-shrink:0;
+}
+
+.topbar-title {
+  font-size:.94rem;
+  font-weight:800;
+  color:var(--text);
+  letter-spacing:-.01em;
+  line-height:1.2;
+}
+
+.topbar-sub {
+  font-size:.64rem;
+  color:var(--text3);
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.topbar-right {
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+.topbar-user {
+  font-size:.72rem;
+  font-weight:700;
+  color:var(--text2);
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:20px;
+  padding:4px 11px;
+}
+
+.btn-logout {
+  background:none;
+  border:none;
+  color:var(--text3);
+  cursor:pointer;
+  font-size:.82rem;
+  padding:4px 6px;
+  border-radius:var(--r-xs);
+  transition:color .12s;
+}
+.btn-logout:active { color:var(--red); }
+
+.btn-back {
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:var(--r-xs);
+  padding:6px 12px;
+  color:var(--text2);
+  cursor:pointer;
+  font-size:.8rem;
+  font-family:var(--sans);
+  font-weight:700;
+  flex-shrink:0;
+  transition:all .12s;
+}
+.btn-back:active { background:var(--bg4); }
+
+/* Botão de notificação */
+.notif-btn {
+  position:relative;
+  width:30px; height:30px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:var(--r-xs);
+  cursor:pointer;
+  font-size:.85rem;
+  flex-shrink:0;
+  transition:background .12s;
+}
+.notif-btn:active { background:var(--bg4); }
+
+.notif-badge {
+  position:absolute;
+  top:-5px; right:-5px;
+  min-width:16px; height:16px;
+  background:var(--red);
+  color:#fff;
+  font-size:.56rem;
+  font-weight:800;
+  border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  padding:0 3px;
+  border:2px solid var(--bg2);
+  line-height:1;
+}
+
+/* Painel de notificações */
+.notif-panel {
+  display:none;
+  position:fixed;
+  top:var(--topbar-h, 56px); left:0; right:0;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  z-index:49;
+  box-shadow:0 4px 20px rgba(0,0,0,.12);
+  animation:slideDown .2s ease;
+  max-height:70vh;
+  overflow-y:auto;
+}
+.notif-panel.open { display:block; }
+@keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
+
+.notif-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px 8px;
+  border-bottom:1px solid var(--border);
+}
+.notif-header-title {
+  font-size:.78rem;
+  font-weight:800;
+  color:var(--text);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+.notif-clear {
+  font-size:.7rem;
+  font-weight:700;
+  color:var(--text3);
+  background:none;
+  border:none;
+  cursor:pointer;
+  padding:3px 6px;
+  border-radius:var(--r-xs);
+}
+.notif-clear:active { background:var(--bg3); }
+
+.notif-item {
+  display:flex;
+  gap:11px;
+  align-items:flex-start;
+  padding:11px 16px;
+  border-bottom:1px solid var(--border);
+  animation:fadeUp .18s ease;
+  cursor:pointer;
+  transition:background .12s;
+}
+.notif-item:active { background:var(--bg3); }
+.notif-item:last-child { border-bottom:none; }
+
+.notif-item-ico {
+  font-size:1.2rem;
+  flex-shrink:0;
+  margin-top:1px;
+}
+
+.notif-item-body { flex:1; }
+.notif-item-title { font-size:.83rem; font-weight:700; color:var(--text); line-height:1.3; }
+.notif-item-sub   { font-size:.7rem; color:var(--text3); font-weight:600; margin-top:2px; }
+.notif-item-time  { font-size:.64rem; color:var(--text3); font-weight:600; margin-top:4px; }
+
+.notif-item.unread { background:var(--blue-bg); }
+.notif-item.unread .notif-item-title { color:var(--blue); }
+html.dark .notif-item.unread { background:var(--blue-bg); }
+
+.notif-empty {
+  padding:28px 16px;
+  text-align:center;
+  font-size:.78rem;
+  color:var(--text3);
+  font-weight:600;
+}
+
+/* Permissão banner */
+.perm-banner {
+  display:none;
+  background:var(--amber-bg);
+  border:1px solid var(--amber-bd);
+  border-radius:var(--r);
+  padding:12px 14px;
+  margin:10px 14px;
+  align-items:center;
+  gap:10px;
+}
+.perm-banner.show { display:flex; }
+.perm-banner-txt { flex:1; font-size:.78rem; font-weight:600; color:var(--amber); }
+html.dark .notif-btn { background:var(--bg3); border-color:var(--border2); }
+
+/* Toggle de tema */
+.theme-toggle {
+  width:30px; height:30px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:var(--r-xs);
+  cursor:pointer;
+  font-size:.85rem;
+  flex-shrink:0;
+}
+
+/* ── STATUS BAR ── */
+.statusbar {
+  background:var(--bg3);
+  border-bottom:1px solid var(--border);
+  padding:5px 16px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-size:.67rem;
+  color:var(--text3);
+  font-weight:600;
+}
+
+.sdot {
+  width:6px; height:6px;
+  border-radius:50%;
+  background:var(--text3);
+  flex-shrink:0;
+}
+.sdot.ok  { background:var(--green); box-shadow:0 0 5px var(--green); animation:blink 2.5s infinite; }
+.sdot.err { background:var(--red); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+/* ── NAV TABS ── */
+.nav-tabs {
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+}
+
+.nav-tab {
+  padding:11px 6px;
+  text-align:center;
+  font-size:.78rem;
+  font-weight:700;
+  color:var(--text3);
+  cursor:pointer;
+  border:none;
+  background:none;
+  border-bottom:2px solid transparent;
+  transition:color .15s, border-color .15s, background .15s;
+  font-family:var(--sans);
+}
+
+.nav-tab .ti { display:block; font-size:1.15rem; margin-bottom:2px; }
+
+.nav-tab.active {
+  color:var(--green);
+  border-bottom-color:var(--green);
+  background:var(--green-bg);
+  font-weight:800;
+}
+html.dark .nav-tab.active { color:var(--green-txt); background:var(--green-bg); }
+
+/* ── PAGE BODY ── */
+.page-body {
+  flex:1;
+  overflow-y:auto;
+  padding:14px 14px 88px;
+  background:var(--bg);
+}
+
+/* ── CARD ── */
+.card {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:16px;
+  margin-bottom:12px;
+  box-shadow:var(--sh-sm);
+}
+
+.card-title {
+  font-size:.72rem;
+  font-weight:700;
+  color:var(--green-txt);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  margin-bottom:14px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding-bottom:10px;
+  border-bottom:1px solid var(--border);
+}
+html.dark .card-title { color:var(--green); }
+
+.ct-dot {
+  width:7px; height:7px;
+  border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 6px var(--green);
+  flex-shrink:0;
+}
+
+/* ── FORM ── */
+.field { margin-bottom:12px; }
+
+.field label {
+  display:block;
+  font-size:.68rem;
+  font-weight:700;
+  color:var(--text3);
+  text-transform:uppercase;
+  letter-spacing:.07em;
+  margin-bottom:6px;
+}
+
+.inp-wrap { position:relative; }
+
+.inp-wrap .qr-btn {
+  position:absolute;
+  right:8px; top:50%;
+  transform:translateY(-50%);
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:var(--r-xs);
+  color:var(--blue);
+  width:34px; height:34px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  font-size:15px;
+  transition:background .12s;
+}
+.inp-wrap .qr-btn:active { background:var(--bg4); }
+.inp-wrap input { padding-right:50px !important; }
+
+input, select, textarea {
+  width:100%;
+  background:var(--bg2);
+  border:1.5px solid var(--border2);
+  border-radius:var(--r-sm);
+  color:var(--text);
+  font-size:.97rem;
+  font-family:var(--sans);
+  font-weight:700;
+  padding:11px 14px;
+  outline:none;
+  transition:border-color .15s, box-shadow .15s;
+  -webkit-appearance:none;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color:var(--blue-lt);
+  box-shadow:0 0 0 3px rgba(46,125,209,.12);
+}
+
+input.filled {
+  border-color:var(--green);
+  background:var(--green-bg);
+}
+html.dark input.filled { background:var(--green-bg); }
+
+input.error {
+  border-color:var(--red);
+  background:var(--red-bg);
+}
+
+input[readonly] { color:var(--text2); background:var(--bg3); cursor:default; }
+
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
+
+/* Produto tag */
+.produto-tag {
+  margin-top:8px;
+  background:var(--green-bg);
+  border:1px solid var(--green-bd);
+  border-radius:var(--r-sm);
+  padding:10px 13px;
+  display:none;
+  animation:fadeUp .2s ease;
+}
+.pt-nome { font-weight:800; font-size:.94rem; color:var(--green-txt); }
+.pt-cod  { font-size:.7rem; color:var(--text3); margin-top:2px; font-weight:600; }
+html.dark .pt-nome { color:var(--green-txt); }
+
+/* ════════════════════════════════
+   BUTTONS
+════════════════════════════════ */
+.btn {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  padding:13px;
+  border:1.5px solid transparent;
+  border-radius:var(--r-sm);
+  font-family:var(--sans);
+  font-size:.94rem;
+  font-weight:700;
+  cursor:pointer;
+  transition:opacity .12s, transform .1s;
+  letter-spacing:.01em;
+}
+
+.btn:active { transform:scale(.97); }
+.btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+
+.btn-primary {
+  background:var(--green);
+  color:#fff;
+  border-color:var(--green-txt);
+  box-shadow:0 2px 8px rgba(26,127,75,.2);
+}
+.btn-primary:active { opacity:.88; }
+html.dark .btn-primary { color:#041a0e; border-color:rgba(34,197,94,.4); }
+
+.btn-amber {
+  background:var(--amber-bg);
+  border-color:var(--amber-bd);
+  color:var(--amber);
+}
+html.dark .btn-amber { background:var(--amber-bg); color:var(--amber-lt); }
+
+.btn-red {
+  background:var(--red-bg);
+  border-color:var(--red-bd);
+  color:var(--red);
+}
+
+.btn-ghost {
+  background:var(--bg2);
+  border-color:var(--border2);
+  color:var(--text2);
+}
+
+.btn-blue {
+  background:var(--blue-bg);
+  border-color:var(--blue-bd);
+  color:var(--blue);
+}
+html.dark .btn-blue { color:var(--blue-lt); }
+
+.btn-sm {
+  padding:7px 14px;
+  font-size:.8rem;
+  width:auto;
+  border-radius:var(--r-xs);
+}
+
+.btn + .btn { margin-top:8px; }
+
+/* ════════════════════════════════
+   ITEM CARD
+════════════════════════════════ */
+.item-card {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:14px 15px;
+  margin-bottom:10px;
+  position:relative;
+  overflow:hidden;
+  box-shadow:var(--sh-sm);
+  animation:fadeUp .2s ease both;
+}
+
+/* Barra lateral colorida */
+.item-card::before {
+  content:'';
+  position:absolute;
+  left:0; top:0; bottom:0;
+  width:3px;
+  border-radius:3px 0 0 3px;
+}
+
+.ic-green::before  { background:var(--green); }
+.ic-amber::before  { background:var(--amber-lt); }
+.ic-blue::before   { background:var(--blue-lt); }
+.ic-red::before    { background:var(--red); }
+
+.ic-top {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  margin-bottom:7px;
+  gap:10px;
+}
+
+.ic-nome {
+  font-weight:700;
+  font-size:.93rem;
+  color:var(--text);
+  flex:1;
+  line-height:1.35;
+}
+
+.ic-badge {
+  font-size:.62rem;
+  font-weight:700;
+  padding:3px 8px;
+  border-radius:var(--r-xs);
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  flex-shrink:0;
+  border:1px solid transparent;
+}
+
+.b-verde  { background:var(--green-bg); color:var(--green-txt); border-color:var(--green-bd); }
+.b-amber  { background:var(--amber-bg); color:var(--amber);     border-color:var(--amber-bd); }
+.b-blue   { background:var(--blue-bg);  color:var(--blue);      border-color:var(--blue-bd);  }
+.b-red    { background:var(--red-bg);   color:var(--red);       border-color:var(--red-bd);   }
+html.dark .b-verde { color:var(--green-txt); }
+
+.ic-meta {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  font-size:.73rem;
+  color:var(--text3);
+  font-weight:600;
+  margin-bottom:11px;
+}
+
+.ic-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+/* ── EMPTY ── */
+.empty { text-align:center; padding:48px 16px; }
+.empty-ico { font-size:2.4rem; margin-bottom:12px; opacity:.35; }
+.empty-txt { font-size:.82rem; color:var(--text3); font-weight:600; }
+
+/* ════════════════════════════════
+   TOAST
+════════════════════════════════ */
+.toast {
+  position:fixed;
+  bottom:20px;
+  left:14px; right:14px;
+  padding:12px 16px;
+  border-radius:var(--r);
+  font-size:.82rem;
+  font-weight:700;
+  z-index:300;
+  transform:translateY(80px);
+  opacity:0;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s;
+  pointer-events:none;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  border:1px solid transparent;
+  box-shadow:var(--sh);
+}
+
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.ok   { background:var(--green-bg); border-color:var(--green-bd); color:var(--green-txt); }
+.toast.err  { background:var(--red-bg);   border-color:var(--red-bd);   color:var(--red); }
+.toast.info { background:var(--blue-bg);  border-color:var(--blue-bd);  color:var(--blue); }
+.toast.warn { background:var(--amber-bg); border-color:var(--amber-bd); color:var(--amber); }
+html.dark .toast.ok { color:var(--green-txt); }
+
+/* ── SPIN ── */
+.spin {
+  width:16px; height:16px;
+  border:2px solid rgba(0,0,0,.12);
+  border-top-color:currentColor;
+  border-radius:50%;
+  animation:spinr .6s linear infinite;
+  display:none;
+  flex-shrink:0;
+}
+@keyframes spinr { to { transform:rotate(360deg); } }
+
+/* ════════════════════════════════
+   QR OVERLAY
+════════════════════════════════ */
+.qr-overlay {
+  display:none;
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.92);
+  z-index:200;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+.qr-overlay.open { display:flex; }
+
+.qr-box {
+  width:260px; height:260px;
+  position:relative;
+  margin-bottom:20px;
+}
+
+#qr-video {
+  width:100%; height:100%;
+  object-fit:cover;
+  border-radius:14px;
+}
+
+.qr-frame {
+  position:absolute; inset:0;
+  pointer-events:none;
+  border:2px solid rgba(26,127,75,.7);
+  border-radius:14px;
+}
+
+.qr-line {
+  position:absolute;
+  left:6px; right:6px;
+  height:2px;
+  background:linear-gradient(90deg, transparent, var(--green), transparent);
+  animation:scanline 2s ease-in-out infinite;
+  top:50%;
+}
+@keyframes scanline { 0%,100%{top:10%} 50%{top:90%} }
+
+.qr-label    { color:#fff; font-size:.98rem; font-weight:700; margin-bottom:5px; }
+.qr-sublabel { color:rgba(255,255,255,.45); font-size:.76rem; margin-bottom:20px; text-align:center; }
+
+.qr-cancel {
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:var(--r-sm);
+  color:#fff;
+  font-size:.9rem;
+  font-weight:700;
+  padding:11px 28px;
+  cursor:pointer;
+  font-family:var(--sans);
+}
+
+/* ════════════════════════════════
+   SESSÃO TIMER
+════════════════════════════════ */
+.timer-bar {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r-sm);
+  padding:10px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
+  box-shadow:var(--sh-sm);
+}
+
+.timer-val {
+  font-size:1.15rem;
+  font-weight:800;
+  color:var(--green-txt);
+  letter-spacing:.03em;
+  font-variant-numeric:tabular-nums;
+}
+html.dark .timer-val { color:var(--green); }
+
+.timer-lbl {
+  font-size:.65rem;
+  color:var(--text3);
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+/* ── BANNER PRODUTO ── */
+.produto-banner {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-left:3px solid var(--green);
+  border-radius:var(--r);
+  padding:12px 14px;
+  margin-bottom:12px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  box-shadow:var(--sh-sm);
+}
+
+.produto-banner-ico { font-size:1.6rem; flex-shrink:0; }
+.produto-banner-nome { font-size:.94rem; font-weight:800; color:var(--text); line-height:1.3; }
+.produto-banner-cod  { font-size:.68rem; color:var(--text3); margin-top:3px; font-weight:600; }
+
+/* ── ALERTA RECONTAGEM ── */
+.alerta-recont {
+  background:var(--red-bg);
+  border:1.5px solid var(--red-bd);
+  border-radius:var(--r);
+  padding:12px 14px;
+  margin-bottom:12px;
+  align-items:center;
+  gap:10px;
+  display:none;
+}
+.alerta-recont.visivel { display:flex; }
+.ar-ico { font-size:1.3rem; flex-shrink:0; }
+.ar-titulo { font-weight:800; font-size:.88rem; color:var(--red); }
+.ar-sub    { font-size:.68rem; color:var(--text3); margin-top:2px; font-weight:600; }
+
+/* ── LANÇAMENTOS ── */
+.lanc-item {
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:var(--r-sm);
+  padding:10px 13px;
+  margin-bottom:8px;
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  animation:fadeUp .2s ease;
+}
+
+.lanc-num {
+  width:24px; height:24px;
+  border-radius:50%;
+  background:var(--green-bg);
+  border:1.5px solid var(--green-bd);
+  color:var(--green-txt);
+  font-size:.66rem;
+  font-weight:800;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+  margin-top:1px;
+}
+html.dark .lanc-num { color:var(--green); }
+
+.lanc-body { flex:1; }
+.lanc-lote { font-size:.82rem; font-weight:700; color:var(--text); }
+.lanc-meta { font-size:.68rem; color:var(--text3); margin-top:3px; font-weight:600; }
+.lanc-ok   { font-size:.75rem; color:var(--green-txt); flex-shrink:0; margin-top:2px; }
+html.dark .lanc-ok { color:var(--green); }
+
+/* ── BADGE RECONTAGEM ── */
+.badge-recont {
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  background:var(--red-bg);
+  border:1px solid var(--red-bd);
+  color:var(--red);
+  font-size:.63rem;
+  font-weight:700;
+  padding:3px 8px;
+  border-radius:var(--r-xs);
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+
+/* ── DATA PILL ── */
+.date-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  font-size:.68rem;
+  padding:3px 9px;
+  border-radius:20px;
+  font-weight:700;
+  border:1px solid transparent;
+}
+.dp-hoje     { background:var(--green-bg); color:var(--green-txt); border-color:var(--green-bd); }
+.dp-atrasado { background:var(--red-bg);   color:var(--red);       border-color:var(--red-bd); }
+.dp-futuro   { background:var(--bg4);      color:var(--text3);     border-color:var(--border); }
+.dp-antecip  { background:var(--blue-bg);  color:var(--blue);      border-color:var(--blue-bd); }
+html.dark .dp-hoje   { color:var(--green-txt); }
+
+/* ── SEÇÃO TÍTULO ── */
+.sec-title {
+  font-size:.68rem;
+  font-weight:700;
+  color:var(--text3);
+  text-transform:uppercase;
+  letter-spacing:.09em;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-bottom:8px;
+  margin-top:4px;
+}
+
+.sec-title-dot {
+  width:6px; height:6px;
+  border-radius:50%;
+  background:var(--red);
+  flex-shrink:0;
+}
+.sec-title-dot.green { background:var(--green); }
+
+/* ── MOTIVO BOX ── */
+.motivo-box {
+  background:var(--red-bg);
+  border:1px solid var(--red-bd);
+  border-radius:var(--r-sm);
+  padding:8px 11px;
+  margin-bottom:10px;
+  font-size:.7rem;
+  color:var(--red);
+  font-weight:600;
+}
+
+/* ── MODAL ── */
+.modal-bg {
+  display:none;
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.5);
+  backdrop-filter:blur(2px);
+  z-index:200;
+  align-items:flex-end;
+}
+.modal-bg.open { display:flex; animation:fadeIn .15s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.modal {
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  border-radius:var(--r) var(--r) 0 0;
+  padding:20px 16px;
+  width:100%;
+  max-height:88vh;
+  overflow-y:auto;
+  animation:slideUp .28s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 -8px 40px rgba(0,0,0,.15);
+}
+
+.modal-handle {
+  width:36px; height:4px;
+  background:var(--border2);
+  border-radius:3px;
+  margin:0 auto 16px;
+}
+
+.modal h3 {
+  font-size:.98rem;
+  font-weight:800;
+  margin-bottom:4px;
+  color:var(--text);
+  padding-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+
+.modal .msub {
+  font-size:.74rem;
+  color:var(--text3);
+  font-weight:600;
+  margin-bottom:16px;
+  margin-top:8px;
+}
+
+/* ── BARRA FIXA INFERIOR ── */
+.fixed-bottom {
+  position:fixed;
+  bottom:0; left:0; right:0;
+  background:var(--bg2);
+  border-top:1px solid var(--border);
+  padding:10px 14px;
+  padding-bottom:calc(10px + env(safe-area-inset-bottom));
+  box-shadow:0 -2px 10px rgba(0,0,0,.07);
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+@keyframes slideUp { from{transform:translateY(28px);opacity:0} to{transform:translateY(0);opacity:1} }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════
+     LOGIN
+════════════════════════════════ -->
+<div class="screen active" id="screen-login">
+  <div class="login-mark">📦</div>
+  <div class="login-brand">
+    <div class="login-name">Contagem <em>Expedição</em></div>
+    <div class="login-sub">Simbiose · Conferente de Estoque</div>
+  </div>
+  <div class="login-card">
+    <h2>Acesso do Operador</h2>
+    <div class="field">
+      <label>Operador</label>
+      <select id="login-usuario">
+        <option value="">Selecione…</option>
+        <option value="Gabriel Farias">Gabriel Farias</option>
+      </select>
+    </div>
+    <div class="field" style="margin-bottom:16px">
+      <label>Senha</label>
+      <input type="password" id="login-senha" placeholder="••••••">
+    </div>
+    <button class="btn btn-primary" onclick="fazerLogin()">Entrar</button>
+    <div class="login-err" id="login-err">Usuário ou senha incorretos.</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════
+     TELA PRINCIPAL
+════════════════════════════════ -->
+<div class="screen" id="screen-main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">📦</div>
+      <div>
+        <div class="topbar-title">Simbiose <span style="color:var(--green)">Expedição</span></div>
+        <div class="topbar-sub">Contagem de Estoque</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-user" id="topbar-user">—</span>
+      <button class="notif-btn" id="btn-notif" onclick="toggleNotifPanel()" title="Notificações">
+        🔔
+        <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+      </button>
+      <button class="theme-toggle" id="btn-theme" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+      <button class="btn-logout" onclick="fazerLogout()">✕</button>
+    </div>
+  </div>
+
+  <!-- Painel de notificações -->
+  <div class="notif-panel" id="notif-panel">
+    <div class="notif-header">
+      <span class="notif-header-title">Notificações</span>
+      <button class="notif-clear" onclick="limparNotificacoes()">Limpar tudo</button>
+    </div>
+    <div id="notif-lista">
+      <div class="notif-empty">Nenhuma notificação</div>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <div class="sdot" id="sdot"></div>
+    <span id="slabel">Conectando…</span>
+  </div>
+
+  <!-- Banner de permissão de notificações -->
+  <div class="perm-banner" id="perm-banner">
+    <span class="perm-banner-txt">🔔 Ative as notificações para receber alertas de agenda e transferências.</span>
+    <button class="btn btn-amber btn-sm" onclick="pedirPermissao()" style="flex-shrink:0">Ativar</button>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('agenda',this)">
+      <span class="ti">📋</span>Agenda
+    </button>
+    <button class="nav-tab" onclick="switchTab('transf',this)">
+      <span class="ti">🔄</span>Transf.
+    </button>
+  </div>
+
+  <!-- TAB: AGENDA -->
+  <div class="page-body" id="tab-agenda">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:.68rem;color:var(--text3);font-weight:600" id="agenda-count"></div>
+      <button class="btn btn-ghost btn-sm" onclick="carregarAgenda()">↺ Atualizar</button>
+    </div>
+    <div id="lista-agenda">
+      <div class="empty"><div class="empty-ico">📋</div><div class="empty-txt">Carregando…</div></div>
+    </div>
+  </div>
+
+  <!-- TAB: TRANSFERÊNCIAS -->
+  <div class="page-body" id="tab-transf" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:.68rem;color:var(--text3);font-weight:600" id="transf-count">—</div>
+      <button class="btn btn-ghost btn-sm" onclick="carregarTransferencias()">↺ Atualizar</button>
+    </div>
+    <div id="lista-transf">
+      <div class="empty"><div class="empty-ico">🔄</div><div class="empty-txt">Carregando…</div></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════
+     SESSÃO DE CONTAGEM
+════════════════════════════════ -->
+<div class="screen" id="screen-sessao">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="btn-back" onclick="voltarAgenda()">← Voltar</button>
+      <div>
+        <div class="topbar-title" id="sessao-produto-nome">—</div>
+        <div class="topbar-sub"   id="sessao-produto-cod">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body" style="padding-bottom:100px">
+
+    <!-- Banner do produto -->
+    <div class="produto-banner" id="sessao-produto-banner">
+      <div class="produto-banner-ico">📦</div>
+      <div>
+        <div class="produto-banner-nome" id="sessao-produto-nome-banner">—</div>
+        <div class="produto-banner-cod"  id="sessao-produto-cod-banner">—</div>
+      </div>
+    </div>
+
+    <!-- Alerta de recontagem -->
+    <div class="alerta-recont" id="alerta-recontagem">
+      <div class="ar-ico">⚠️</div>
+      <div class="ar-txt">
+        <div class="ar-titulo">Recontagem Solicitada</div>
+        <div class="ar-sub">O gestor pediu uma nova contagem deste produto</div>
+      </div>
+    </div>
+
+    <!-- Formulário de lançamento -->
+    <div class="card">
+      <div class="card-title">
+        <span class="ct-dot"></span>
+        Lançamento
+        <span id="lanc-recont-badge" class="badge-recont" style="display:none;margin-left:4px">⚠ Recontagem</span>
+      </div>
+
+      <div class="field">
+        <label>Código / SKU</label>
+        <div class="inp-wrap">
+          <input type="text" id="l-codigo" placeholder="Ex: PRD-001" autocomplete="off"
+            oninput="onCodigoSessaoInput()" style="text-transform:uppercase">
+          <button class="qr-btn" onclick="abrirQR('l-codigo', onCodigoSessaoInput)" title="Ler QR">📷</button>
+        </div>
+        <div class="produto-tag" id="l-ptag">
+          <div class="pt-nome" id="l-pnome">—</div>
+          <div class="pt-cod"  id="l-pcod">—</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Lote</label>
+        <div class="inp-wrap">
+          <input type="text" id="l-lote" placeholder="Ex: LOT-2024-01" autocomplete="off"
+            style="text-transform:uppercase">
+          <button class="qr-btn" onclick="abrirQR('l-lote', null)" title="Ler QR">📷</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Armazém</label>
+        <input type="text" id="l-armazem" placeholder="Ex: 42 ou D2" inputmode="text"
+          style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+      </div>
+
+      <div class="field" style="margin-bottom:16px">
+        <label>Quantidade</label>
+        <input type="number" id="l-qtd" placeholder="0" min="0" inputmode="numeric">
+      </div>
+
+      <button class="btn btn-primary" id="btn-add-lanc" onclick="adicionarLancamento()">
+        <div class="spin" id="l-spin"></div>
+        <span id="l-lbl">+ Adicionar Lançamento</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Barra inferior fixa -->
+  <div class="fixed-bottom">
+    <button class="btn btn-amber" id="btn-finalizar-sessao" style="display:none" onclick="finalizarSessao()">
+      <div class="spin" id="fin-spin"></div>
+      <span>✓ Finalizar Contagem</span>
+    </button>
+    <div id="btn-fin-hint" style="display:none;text-align:center;font-size:.65rem;color:var(--text3);font-weight:600;margin-top:6px">
+      Adicione pelo menos um lançamento para finalizar
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════
+     MODAL: CONFIRMAR TRANSFERÊNCIA
+════════════════════════════════ -->
+<div class="modal-bg" id="modal-transf">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Confirmar Transferência</h3>
+    <div class="msub" id="mt-produto">—</div>
+    <div id="mt-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"></div>
+    <div id="mt-arrow" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:12px;font-size:.78rem;font-weight:600"></div>
+    <button class="btn btn-primary" id="btn-conf-transf" onclick="confirmarTransferencia()">
+      <div class="spin" id="t-spin"></div>
+      Confirmar Movimentação
+    </button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="fecharModal('modal-transf')">Cancelar</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     MODAL: ANTECIPAR CONTAGEM
+════════════════════════════════ -->
+<div class="modal-bg" id="modal-antecipar">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Antecipar Contagem</h3>
+    <div class="msub" id="ant-produto">—</div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Nova Data</label>
+      <input type="date" id="ant-data">
+    </div>
+    <button class="btn btn-blue" id="btn-antecipar" onclick="confirmarAntecipar()">
+      <div class="spin" id="ant-spin"></div>
+      Confirmar Antecipação
+    </button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="fecharModal('modal-antecipar')">Cancelar</button>
+  </div>
+</div>
+
+<!-- QR Scanner -->
+<div class="qr-overlay" id="qr-overlay">
+  <div class="qr-box">
+    <video id="qr-video" autoplay muted playsinline></video>
+    <div class="qr-frame"></div>
+    <div class="qr-line"></div>
+  </div>
+  <div class="qr-label">Aponte para o QR Code</div>
+  <div class="qr-sublabel">Leitura automática ao detectar</div>
+  <button class="qr-cancel" onclick="fecharQR()">Cancelar</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+/* ══════════════════════════════════════════
+   MOBILE.JS — Conferência Expedição Simbiose
+══════════════════════════════════════════ */
+
+const SUPABASE_URL = 'https://yuaboypybjqxxgntfyrq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_IbvCmbnbazxMGcQTF9-mRg_Tt2RkAng';
+
+const OPERADORES = {
+  'Gabriel Farias': '1234'
+};
+
+let sb               = null;
+let usuarioAtual     = null;
+let transfAtual      = null;
+let agendAntecipar   = null;
+
+let sessaoId         = null;
+let sessaoAgend      = null;
+let sessaoInicio     = null;
+let sessaoTimerIv    = null;
+let sessaoLancamentos= [];
+let sessaoRecont     = false;
+
+let qrTargetId       = null;
+let qrCallback       = null;
+let qrStream         = null;
+let qrAnimId         = null;
+
+// ── SUPABASE ──────────────────────────────
+function initSb() {
+  try {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    setStatus(true, 'Conectado · Supabase');
+  } catch(e) {
+    setStatus(false, 'Erro: ' + e.message);
+  }
+}
+function setStatus(ok, msg) {
+  const d = document.getElementById('sdot');
+  const l = document.getElementById('slabel');
+  if (!d || !l) return;
+  d.className = 'sdot ' + (ok ? 'ok' : 'err');
+  l.textContent = msg;
+}
+
+// ── HELPERS ──────────────────────────────
+function toast(msg, tipo='ok', dur=3500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${tipo} show`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), dur);
+}
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+function fecharModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+function switchTab(nome, btn) {
+  document.querySelectorAll('.page-body').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + nome).style.display = '';
+  btn.classList.add('active');
+  if (nome === 'agenda') carregarAgenda();
+  if (nome === 'transf') carregarTransferencias();
+}
+function fmtData(s) {
+  if (!s) return '—';
+  const [y,m,d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+function hoje() { return new Date().toISOString().split('T')[0]; }
+function diasAte(s) {
+  if (!s) return null;
+  const diff = (new Date(s + 'T00:00:00') - new Date(hoje() + 'T00:00:00')) / 86400000;
+  return Math.round(diff);
+}
+
+// ── TEMA ─────────────────────────────────
+function toggleTheme() {
+  const isDark = document.documentElement.classList.toggle('dark');
+  const btn = document.getElementById('btn-theme');
+  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+  localStorage.setItem('simbiose-theme', isDark ? 'dark' : 'light');
+}
+(function() {
+  const saved = localStorage.getItem('simbiose-theme');
+  if (saved === 'dark') {
+    document.documentElement.classList.add('dark');
+    const btn = document.getElementById('btn-theme');
+    if (btn) btn.textContent = '☀️';
+  }
+})();
+
+// ── LOGIN ─────────────────────────────────
+function fazerLogin() {
+  const u = document.getElementById('login-usuario').value;
+  const s = document.getElementById('login-senha').value;
+  const err = document.getElementById('login-err');
+  err.style.display = 'none';
+  if (!u) { err.textContent = 'Selecione um operador.'; err.style.display = 'block'; return; }
+  if (OPERADORES[u] !== s) { err.style.display = 'block'; return; }
+  usuarioAtual = u;
+  localStorage.setItem('op_u', u);
+  document.getElementById('topbar-user').textContent = u;
+  document.getElementById('login-senha').value = '';
+  initSb();
+  showScreen('screen-main');
+  carregarAgenda();
+  iniciarNotificacoes();
+}
+function fazerLogout() {
+  usuarioAtual = null;
+  localStorage.removeItem('op_u');
+  if (_checkInterval) { clearInterval(_checkInterval); _checkInterval = null; }
+  fecharNotifPanel();
+  showScreen('screen-login');
+}
+document.getElementById('login-senha').addEventListener('keydown', e => { if (e.key === 'Enter') fazerLogin(); });
+(function autoLogin() {
+  const u = localStorage.getItem('op_u');
+  if (u && OPERADORES[u] !== undefined) {
+    document.getElementById('login-usuario').value = u;
+    usuarioAtual = u;
+    document.getElementById('topbar-user').textContent = u;
+    initSb();
+    showScreen('screen-main');
+    carregarAgenda();
+    iniciarNotificacoes();
+  }
+})();
+
+// ── BUSCAR PRODUTO ────────────────────────
+async function buscarProduto(codigo, tagId='c-ptag', nomeId='c-pnome', codId='c-pcod', inputNomeId='c-nome', inputCodigoId='c-codigo') {
+  codigo = (codigo || '').trim().toUpperCase();
+  const tag = document.getElementById(tagId);
+  const inp = document.getElementById(inputCodigoId);
+  const nome = document.getElementById(inputNomeId);
+  if (nome) nome.value = '';
+  if (!tag) return null;
+  tag.style.display = 'none';
+  if (inp) inp.classList.remove('filled', 'error');
+  if (!codigo || codigo.length < 2) return null;
+  try {
+    const { data } = await sb.from('produtos').select('*').eq('codigo', codigo).maybeSingle();
+    if (data) {
+      if (nome) nome.value = data.nome;
+      if (inp) inp.classList.add('filled');
+      document.getElementById(nomeId).textContent = data.nome;
+      document.getElementById(codId).textContent  = data.codigo;
+      tag.style.display = 'block';
+      return data;
+    } else {
+      if (inp && codigo.length >= 4) inp.classList.add('error');
+      return null;
+    }
+  } catch(e) { console.error(e); return null; }
+}
+
+async function salvarContagemAvulsa() {
+  const codigo  = document.getElementById('c-codigo').value.trim().toUpperCase();
+  const nome    = document.getElementById('c-nome').value.trim();
+  const lote    = document.getElementById('c-lote').value.trim().toUpperCase();
+  const armazem = document.getElementById('c-armazem').value.trim();
+  const qtd     = parseFloat(document.getElementById('c-qtd').value);
+  if (!codigo || !nome) { toast('Informe um código de produto válido.', 'err'); return; }
+  if (!lote)            { toast('Informe o lote.', 'warn'); return; }
+  if (!armazem)         { toast('Informe o número do armazém.', 'warn'); return; }
+  if (isNaN(qtd) || qtd < 0) { toast('Informe uma quantidade válida.', 'warn'); return; }
+  const btn = document.getElementById('btn-salvar');
+  const spin = document.getElementById('c-spin');
+  btn.disabled = true; spin.style.display = 'block';
+  document.getElementById('c-lbl').textContent = 'Salvando…';
+  try {
+    const { error } = await sb.from('contagens').insert({
+      codigo, produto_nome: nome, lote, quantidade: qtd,
+      armazem, usuario: usuarioAtual, status: 'pendente', recontagem: false
+    });
+    if (error) throw error;
+    toast('✓ Contagem salva!', 'ok');
+    ['c-codigo','c-nome','c-lote','c-armazem','c-qtd'].forEach(id => {
+      const el = document.getElementById(id);
+      el.value = '';
+      el.classList.remove('filled','error');
+    });
+    document.getElementById('c-ptag').style.display = 'none';
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; spin.style.display = 'none';
+    document.getElementById('c-lbl').textContent = 'Salvar Contagem';
+  }
+}
+
+// ── AGENDA ───────────────────────────────
+async function carregarAgenda() {
+  const lista = document.getElementById('lista-agenda');
+  lista.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-txt">Carregando…</div></div>';
+  try {
+    const { data, error } = await sb
+      .from('agendamentos').select('*')
+      .in('status', ['pendente','em_contagem'])
+      .order('is_recontagem', { ascending: false })
+      .order('data_agendada', { ascending: true });
+    if (error) throw error;
+
+    const recontagens = (data||[]).filter(a => a.is_recontagem);
+    const normais     = (data||[]).filter(a => !a.is_recontagem);
+    const total = (data||[]).length;
+
+    document.getElementById('agenda-count').textContent =
+      `${total} item${total !== 1 ? 'ns' : ''} pendente${total !== 1 ? 's' : ''}`;
+
+    if (!total) {
+      lista.innerHTML = '<div class="empty"><div class="empty-ico">✅</div><div class="empty-txt">Nenhum item pendente.</div></div>';
+      return;
+    }
+
+    let html = '';
+
+    if (recontagens.length > 0) {
+      html += `<div class="sec-title"><span class="sec-title-dot"></span>⚠ Recontagens (${recontagens.length})</div>`;
+      html += recontagens.map(a => {
+        const emContagem = a.status === 'em_contagem';
+        return `<div class="item-card ic-red">
+          <div class="ic-top">
+            <div class="ic-nome">${a.produto_nome}</div>
+            <span class="ic-badge b-red">⚠ Recontagem</span>
+          </div>
+          <div class="ic-meta">
+            <span>📦 ${a.codigo}</span>
+            ${a.lote_especifico ? `<span>🏷️ Lote: <strong style="color:var(--text)">${a.lote_especifico}</strong></span>` : ''}
+          </div>
+          ${a.motivo_recontagem ? `<div class="motivo-box">Motivo: ${a.motivo_recontagem}</div>` : ''}
+          <div class="ic-actions">
+            <button class="btn btn-red btn-sm" onclick="iniciarSessao(${JSON.stringify(a).replace(/"/g,'&quot;')}, true)">
+              ${emContagem ? '▶ Continuar Recontagem' : '↺ Fazer Recontagem'}
+            </button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    if (normais.length > 0) {
+      html += `<div class="sec-title" style="margin-top:${recontagens.length ? '16px' : '0'}"><span class="sec-title-dot green"></span>Agenda (${normais.length})</div>`;
+      html += normais.map(a => {
+        const dataEfetiva = a.data_antecipada || a.data_agendada;
+        const d = diasAte(dataEfetiva);
+        let pill, cor;
+        if (a.data_antecipada) {
+          pill = `<span class="date-pill dp-antecip">⚡ Antecipado ${fmtData(a.data_antecipada)}</span>`; cor = 'ic-blue';
+        } else if (d === null) {
+          pill = `<span class="date-pill dp-futuro">Sem data</span>`; cor = 'ic-amber';
+        } else if (d < 0) {
+          pill = `<span class="date-pill dp-atrasado">⚠ ${Math.abs(d)}d atrasado</span>`; cor = 'ic-red';
+        } else if (d === 0) {
+          pill = `<span class="date-pill dp-hoje">📅 Hoje</span>`; cor = 'ic-green';
+        } else {
+          pill = `<span class="date-pill dp-futuro">📅 ${fmtData(dataEfetiva)} (${d}d)</span>`; cor = 'ic-amber';
+        }
+        const emContagem = a.status === 'em_contagem';
+        return `<div class="item-card ${cor}">
+          <div class="ic-top">
+            <div class="ic-nome">${a.produto_nome}</div>
+            <span class="ic-badge ${emContagem ? 'b-blue' : 'b-amber'}">${emContagem ? 'Em contagem' : 'Pendente'}</span>
+          </div>
+          <div class="ic-meta">
+            <span>📦 ${a.codigo}</span>
+            ${a.lote_especifico ? `<span>🏷️ Lote: <strong style="color:var(--text)">${a.lote_especifico}</strong></span>` : ''}
+            ${pill}
+          </div>
+          <div class="ic-actions">
+            <button class="btn btn-primary btn-sm" onclick="iniciarSessao(${JSON.stringify(a).replace(/"/g,'&quot;')}, false)">
+              ${emContagem ? '▶ Continuar' : '▶ Iniciar Contagem'}
+            </button>
+            ${!emContagem ? `<button class="btn btn-ghost btn-sm" onclick="abrirAntecipar(${JSON.stringify(a).replace(/"/g,'&quot;')})">⚡ Antecipar</button>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    lista.innerHTML = html;
+  } catch(e) {
+    lista.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-txt">${e.message}</div></div>`;
+  }
+}
+
+async function iniciarSessao(agend, recontagem = false) {
+  sessaoAgend       = agend;
+  sessaoRecont      = recontagem;
+  sessaoLancamentos = [];
+  sessaoId          = null;
+
+  try { await sb.from('agendamentos').update({ status: 'em_contagem' }).eq('id', agend.id); } catch(e) { console.error(e); }
+
+  sessaoInicio = Date.now();
+  try {
+    const { data } = await sb.from('sessoes_contagem').insert({
+      agendamento_id: agend.id,
+      usuario:        usuarioAtual,
+      codigo:         agend.codigo,
+      produto_nome:   agend.produto_nome,
+      inicio:         new Date(sessaoInicio).toISOString(),
+    }).select('id').single();
+    if (data) sessaoId = data.id;
+  } catch(e) { console.error(e); }
+
+  document.getElementById('sessao-produto-nome').textContent = agend.produto_nome;
+  document.getElementById('sessao-produto-cod').textContent  = agend.codigo;
+  document.getElementById('sessao-produto-nome-banner').textContent = agend.produto_nome;
+  document.getElementById('sessao-produto-cod-banner').textContent  = '📦 ' + agend.codigo;
+
+  const alertaEl = document.getElementById('alerta-recontagem');
+  if (recontagem) alertaEl.classList.add('visivel');
+  else alertaEl.classList.remove('visivel');
+  document.getElementById('lanc-recont-badge').style.display = recontagem ? 'inline-flex' : 'none';
+
+  limparFormLancamento();
+  if (recontagem && agend.lote_especifico) {
+    const loteEl = document.getElementById('l-lote');
+    if (loteEl) loteEl.value = agend.lote_especifico;
+  }
+
+  renderSessaoLista();
+  document.getElementById('btn-finalizar-sessao').style.display = 'none';
+  document.getElementById('btn-fin-hint').style.display = 'block';
+
+  function atualizarTimers(val) {
+    const t1 = document.getElementById('sessao-timer');
+    const t2 = document.getElementById('sessao-timer-top');
+    if (t1) t1.textContent = val;
+    if (t2) t2.textContent = val;
+  }
+  clearInterval(sessaoTimerIv);
+  sessaoTimerIv = setInterval(() => {
+    const s = Math.floor((Date.now() - sessaoInicio) / 1000);
+    const m = Math.floor(s / 60);
+    const h = Math.floor(m / 60);
+    const val = h > 0
+      ? `${h}h ${String(m % 60).padStart(2,'0')}m`
+      : `${String(m).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
+    atualizarTimers(val);
+  }, 1000);
+
+  showScreen('screen-sessao');
+}
+
+function limparFormLancamento() {
+  ['l-codigo','l-lote','l-armazem','l-qtd'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.classList.remove('filled','error'); }
+  });
+  const ptag = document.getElementById('l-ptag');
+  if (ptag) ptag.style.display = 'none';
+}
+
+async function onCodigoSessaoInput() {
+  const codigo = document.getElementById('l-codigo').value.trim().toUpperCase();
+  await buscarProduto(codigo, 'l-ptag', 'l-pnome', 'l-pcod', null, 'l-codigo');
+}
+
+async function adicionarLancamento() {
+  const codigo  = document.getElementById('l-codigo').value.trim().toUpperCase();
+  const lote    = document.getElementById('l-lote').value.trim().toUpperCase();
+  const armazem = (document.getElementById('l-armazem').value||'').trim().toUpperCase();
+  const qtd     = parseFloat(document.getElementById('l-qtd').value);
+
+  if (!codigo)               { toast('Informe o código do produto.', 'warn'); return; }
+  if (!lote)                 { toast('Informe o lote.', 'warn'); return; }
+  if (!armazem)              { toast('Informe o armazém.', 'warn'); return; }
+  if (isNaN(qtd) || qtd < 0){ toast('Informe a quantidade.', 'warn'); return; }
+
+  const btn  = document.getElementById('btn-add-lanc');
+  const spin = document.getElementById('l-spin');
+  const lbl  = document.getElementById('l-lbl');
+  btn.disabled = true; spin.style.display = 'block'; lbl.textContent = 'Salvando…';
+
+  try {
+    let prodNome = sessaoAgend?.produto_nome || '';
+    const ptag = document.getElementById('l-pnome');
+    if (ptag && ptag.textContent !== '—') prodNome = ptag.textContent;
+
+    const payload = {
+      sessao_id:      sessaoId,
+      agendamento_id: sessaoAgend?.id || null,
+      codigo,
+      produto_nome:   prodNome,
+      lote,
+      quantidade:     qtd,
+      armazem,
+      usuario:        usuarioAtual,
+      status:         'pendente',
+      recontagem:     sessaoRecont,
+    };
+
+    const { data, error } = await sb.from('lancamentos').insert(payload).select('id').single();
+    if (error) throw error;
+
+    sessaoLancamentos.push({ ...payload, id: data?.id });
+    limparFormLancamento();
+
+    document.getElementById('btn-finalizar-sessao').style.display = 'flex';
+    document.getElementById('btn-fin-hint').style.display = 'none';
+    toast('✓ Lançamento adicionado!', 'ok', 1500);
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; spin.style.display = 'none'; lbl.textContent = '+ Adicionar Lançamento';
+  }
+}
+
+function renderSessaoLista() {}
+
+async function finalizarSessao() {
+  if (!sessaoLancamentos.length) { toast('Adicione ao menos um lançamento.', 'warn'); return; }
+  const btn  = document.getElementById('btn-finalizar-sessao');
+  const spin = document.getElementById('fin-spin');
+  btn.disabled = true; spin.style.display = 'block';
+  const spanEl = btn.querySelector('span');
+  if (spanEl) spanEl.textContent = 'Finalizando…';
+
+  try {
+    const fimTs      = new Date().toISOString();
+    const duracaoSeg = Math.round((Date.now() - sessaoInicio) / 1000);
+
+    await Promise.all([
+      sessaoId ? sb.from('sessoes_contagem').update({
+        fim: fimTs,
+        duracao_seg: duracaoSeg,
+        total_lancamentos: sessaoLancamentos.length,
+        is_recontagem: sessaoRecont,
+      }).eq('id', sessaoId) : Promise.resolve(),
+      sessaoAgend?.id ? sb.from('agendamentos').update({ status: 'finalizado' }).eq('id', sessaoAgend.id) : Promise.resolve(),
+    ]);
+
+    clearInterval(sessaoTimerIv);
+    const mins = Math.floor(duracaoSeg / 60);
+    const segs = duracaoSeg % 60;
+    toast(`✓ Contagem finalizada! ${sessaoLancamentos.length} lançamento(s) em ${mins}min ${segs}s.`, 'ok', 4000);
+    voltarAgenda();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+    btn.disabled = false; spin.style.display = 'none';
+    if (spanEl) spanEl.textContent = '✓ Finalizar Contagem';
+  }
+}
+
+function voltarAgenda() {
+  clearInterval(sessaoTimerIv);
+  showScreen('screen-main');
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.page-body').forEach(p => p.style.display = 'none');
+  const btnAgenda = document.querySelector('[onclick*="\'agenda\'"]');
+  if (btnAgenda) btnAgenda.classList.add('active');
+  const tabAgenda = document.getElementById('tab-agenda');
+  if (tabAgenda) tabAgenda.style.display = '';
+  carregarAgenda();
+}
+
+// ── ANTECIPAR ────────────────────────────
+function abrirAntecipar(agend) {
+  agendAntecipar = agend;
+  document.getElementById('ant-produto').textContent = agend.produto_nome;
+  const amanha = new Date(); amanha.setDate(amanha.getDate() + 1);
+  document.getElementById('ant-data').value = amanha.toISOString().split('T')[0];
+  document.getElementById('modal-antecipar').classList.add('open');
+}
+
+async function confirmarAntecipar() {
+  const data = document.getElementById('ant-data').value;
+  if (!data) { toast('Selecione uma data.', 'warn'); return; }
+  const btn = document.getElementById('btn-antecipar');
+  const sp  = document.getElementById('ant-spin');
+  btn.disabled = true; sp.style.display = 'block';
+  try {
+    await sb.from('agendamentos').update({ data_antecipada: data }).eq('id', agendAntecipar.id);
+    fecharModal('modal-antecipar');
+    toast('✓ Contagem antecipada!', 'ok');
+    carregarAgenda();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; sp.style.display = 'none';
+  }
+}
+
+// ── TRANSFERÊNCIAS ───────────────────────
+async function carregarTransferencias() {
+  const lista = document.getElementById('lista-transf');
+  lista.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-txt">Carregando…</div></div>';
+  try {
+    const { data, error } = await sb
+      .from('transferencias').select('*').eq('status','pendente')
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+
+    document.getElementById('transf-count').textContent =
+      `${data.length} transferência${data.length !== 1 ? 's' : ''} pendente${data.length !== 1 ? 's' : ''}`;
+
+    if (!data.length) {
+      lista.innerHTML = '<div class="empty"><div class="empty-ico">✅</div><div class="empty-txt">Nenhuma transferência pendente.</div></div>';
+      return;
+    }
+
+    lista.innerHTML = data.map(t => `
+      <div class="item-card ic-amber">
+        <div class="ic-top">
+          <div class="ic-nome">${t.produto_nome}</div>
+          <span class="ic-badge b-amber">Pendente</span>
+        </div>
+        <div class="ic-meta">
+          ${t.codigo ? `<span>📦 ${t.codigo}</span>` : ''}
+          ${t.lote   ? `<span>🏷️ ${t.lote}</span>`   : ''}
+          <span>🔢 <strong style="color:var(--text)">${t.quantidade}</strong></span>
+        </div>
+        <div style="font-size:.75rem;font-weight:700;margin-bottom:10px;color:var(--text2)">
+          Arm. <strong style="color:var(--text)">${t.armazem_origem}</strong>
+          <span style="color:var(--green);margin:0 6px">→</span>
+          Arm. <strong style="color:var(--green)">${t.armazem_destino}</strong>
+        </div>
+        <div class="ic-actions">
+          <button class="btn btn-primary btn-sm" onclick="abrirTransf(${JSON.stringify(t).replace(/"/g,'&quot;')})">✓ Confirmar</button>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    lista.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-txt">${e.message}</div></div>`;
+  }
+}
+
+function abrirTransf(t) {
+  transfAtual = t;
+  document.getElementById('mt-produto').textContent = t.produto_nome;
+  document.getElementById('mt-grid').innerHTML = `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px">
+      <div style="font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Código</div>
+      <div style="font-weight:700;font-size:.85rem">${t.codigo || '—'}</div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px">
+      <div style="font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Lote</div>
+      <div style="font-weight:700;font-size:.85rem">${t.lote || '—'}</div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px">
+      <div style="font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Quantidade</div>
+      <div style="font-weight:800;font-size:.95rem;color:var(--text)">${t.quantidade}</div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px">
+      <div style="font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Status</div>
+      <div style="font-weight:700;font-size:.85rem;color:var(--amber)">Pendente</div>
+    </div>`;
+  document.getElementById('mt-arrow').innerHTML =
+    `<span style="color:var(--text3)">Armazém:</span>
+     <strong style="margin-left:6px">${t.armazem_origem}</strong>
+     <span style="color:var(--green);margin:0 8px">→</span>
+     <strong style="color:var(--green)">${t.armazem_destino}</strong>`;
+  document.getElementById('modal-transf').classList.add('open');
+}
+
+async function confirmarTransferencia() {
+  if (!transfAtual) return;
+  const btn = document.getElementById('btn-conf-transf');
+  const sp  = document.getElementById('t-spin');
+  btn.disabled = true; sp.style.display = 'block';
+  try {
+    const { error } = await sb.from('transferencias').update({ status:'concluido' }).eq('id', transfAtual.id);
+    if (error) throw error;
+    fecharModal('modal-transf');
+    toast('✓ Transferência confirmada!', 'ok');
+    transfAtual = null;
+    carregarTransferencias();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; sp.style.display = 'none';
+  }
+}
+
+// ── QR CODE ──────────────────────────────
+function abrirQR(targetInputId, cb = null) {
+  qrTargetId = targetInputId;
+  qrCallback = cb;
+  document.getElementById('qr-overlay').classList.add('open');
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(stream => {
+      qrStream = stream;
+      const video = document.getElementById('qr-video');
+      video.srcObject = stream;
+      video.play();
+      scanQR();
+    })
+    .catch(() => {
+      fecharQR();
+      toast('Câmera indisponível. Use digitação.', 'warn');
+    });
+}
+
+function fecharQR() {
+  document.getElementById('qr-overlay').classList.remove('open');
+  if (qrAnimId) { cancelAnimationFrame(qrAnimId); qrAnimId = null; }
+  if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+}
+
+function scanQR() {
+  const video  = document.getElementById('qr-video');
+  const canvas = document.createElement('canvas');
+  const ctx    = canvas.getContext('2d');
+  function tick() {
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.height = video.videoHeight;
+      canvas.width  = video.videoWidth;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      if (code) {
+        fecharQR();
+        const val = code.data.trim();
+        const input = document.getElementById(qrTargetId);
+        if (input) { input.value = val.toUpperCase(); input.classList.add('filled'); }
+        if (qrCallback) qrCallback(val);
+        toast('✓ QR lido: ' + val, 'ok', 2000);
+        return;
+      }
+    }
+    qrAnimId = requestAnimationFrame(tick);
+  }
+  qrAnimId = requestAnimationFrame(tick);
+}
+
+
+// ══════════════════════════════════════════════════════════
+// NOTIFICAÇÕES — In-App (funciona sem hospedagem)
+// ══════════════════════════════════════════════════════════
+
+let _notifList     = [];   // histórico in-app
+let _checkInterval = null; // polling interval
+let _lastAgenda    = null; // baseline agenda
+let _lastTransf    = null; // baseline transf
+
+// ── PEDIR PERMISSÃO ───────────────────────────────────────
+async function pedirPermissao() {
+  if (!('Notification' in window)) {
+    toast('Notificações não suportadas neste navegador.', 'warn'); return;
+  }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    document.getElementById('perm-banner')?.classList.remove('show');
+    localStorage.setItem('notif-perm', 'granted');
+    toast('✓ Notificações ativadas!', 'ok');
+    iniciarPolling();
+  } else {
+    toast('Permissão negada. Ative nas configurações do navegador.', 'warn', 5000);
+  }
+}
+
+// ── CHECAR PERMISSÃO ─────────────────────────────────────
+function checarPermissaoBanner() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    document.getElementById('perm-banner')?.classList.add('show');
+  } else if (Notification.permission === 'granted') {
+    document.getElementById('perm-banner')?.classList.remove('show');
+    iniciarPolling();
+  }
+}
+
+// ── POLLING A CADA 3 MIN ─────────────────────────────────
+function iniciarPolling() {
+  if (_checkInterval) return;
+  verificarNovidades();
+  _checkInterval = setInterval(verificarNovidades, 3 * 60 * 1000);
+}
+
+async function verificarNovidades() {
+  if (!sb || !usuarioAtual) return;
+  try {
+    // Agenda
+    const { count: agendaCount } = await sb
+      .from('agendamentos')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['pendente', 'em_contagem']);
+
+    if (_lastAgenda !== null && agendaCount > _lastAgenda) {
+      const novos = agendaCount - _lastAgenda;
+      const titulo = `📋 ${novos} novo${novos > 1 ? 's itens' : ' item'} na agenda`;
+      const corpo  = `${agendaCount} item${agendaCount !== 1 ? 'ns' : ''} aguardando contagem.`;
+      adicionarNotifInApp(titulo, corpo, '📋', 'agenda');
+      dispararNotif(titulo, corpo, false);
+    }
+    if (agendaCount !== null) _lastAgenda = agendaCount;
+
+    // Transferências
+    const { count: transfCount } = await sb
+      .from('transferencias')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pendente');
+
+    if (_lastTransf !== null && transfCount > _lastTransf) {
+      const novos = transfCount - _lastTransf;
+      const titulo = `🔄 ${novos} nova${novos > 1 ? 's transferências' : ' transferência'}`;
+      const corpo  = `${novos} movimentação${novos > 1 ? 'ões' : ''} aguardando confirmação.`;
+      adicionarNotifInApp(titulo, corpo, '🔄', 'transf');
+      dispararNotif(titulo, corpo, true);
+    }
+    if (transfCount !== null) _lastTransf = transfCount;
+
+  } catch(e) {
+    console.warn('[Notif] erro ao verificar:', e.message);
+  }
+}
+
+// ── NOTIFICAÇÃO NATIVA ────────────────────────────────────
+function dispararNotif(titulo, corpo, requireInteraction) {
+  if (Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification(titulo, {
+      body: corpo,
+      icon: './icon-192.png',
+      requireInteraction,
+    });
+    n.onclick = () => { window.focus(); n.close(); };
+  } catch(e) {
+    console.warn('[Notif] falha ao exibir:', e.message);
+  }
+}
+
+// ── IN-APP ────────────────────────────────────────────────
+function adicionarNotifInApp(titulo, corpo, ico, tipo) {
+  const hora = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  _notifList.unshift({ titulo, corpo, ico, tipo, hora, lido: false, id: Date.now() });
+  if (_notifList.length > 30) _notifList.length = 30;
+  renderNotifPanel();
+  atualizarBadge();
+}
+
+function renderNotifPanel() {
+  const lista = document.getElementById('notif-lista');
+  if (!lista) return;
+  if (!_notifList.length) {
+    lista.innerHTML = '<div class="notif-empty">Nenhuma notificação</div>';
+    return;
+  }
+  lista.innerHTML = _notifList.map(n => `
+    <div class="notif-item ${n.lido ? '' : 'unread'}" onclick="clicarNotif(${n.id},'${n.tipo}')">
+      <div class="notif-item-ico">${n.ico}</div>
+      <div class="notif-item-body">
+        <div class="notif-item-title">${n.titulo}</div>
+        <div class="notif-item-sub">${n.corpo}</div>
+        <div class="notif-item-time">${n.hora}</div>
+      </div>
+    </div>`).join('');
+}
+
+function clicarNotif(id, tipo) {
+  const item = _notifList.find(n => n.id === id);
+  if (item) item.lido = true;
+  atualizarBadge();
+  renderNotifPanel();
+  fecharNotifPanel();
+  const aba = tipo === 'transf' ? 'transf' : 'agenda';
+  const btn = document.querySelector(`.nav-tab[onclick*="'${aba}'"]`);
+  if (btn) btn.click();
+}
+
+function atualizarBadge() {
+  const badge = document.getElementById('notif-badge');
+  if (!badge) return;
+  const n = _notifList.filter(n => !n.lido).length;
+  badge.textContent = n > 9 ? '9+' : n;
+  badge.style.display = n > 0 ? 'flex' : 'none';
+}
+
+function toggleNotifPanel() {
+  const panel = document.getElementById('notif-panel');
+  if (!panel) return;
+  const abrindo = !panel.classList.contains('open');
+  panel.classList.toggle('open');
+  if (abrindo) {
+    _notifList.forEach(n => n.lido = true);
+    atualizarBadge();
+    renderNotifPanel();
+  }
+}
+
+function fecharNotifPanel() {
+  document.getElementById('notif-panel')?.classList.remove('open');
+}
+
+function limparNotificacoes() {
+  _notifList = [];
+  renderNotifPanel();
+  atualizarBadge();
+}
+
+document.addEventListener('click', e => {
+  const panel = document.getElementById('notif-panel');
+  const btn   = document.getElementById('btn-notif');
+  if (panel?.classList.contains('open') && !panel.contains(e.target) && !btn?.contains(e.target)) {
+    fecharNotifPanel();
+  }
+});
+
+// ── INICIAR AO LOGAR ─────────────────────────────────────
+function iniciarNotificacoes() {
+  checarPermissaoBanner();
+  setTimeout(async () => {
+    if (!sb) return;
+    const { count: a } = await sb.from('agendamentos').select('*',{count:'exact',head:true}).in('status',['pendente','em_contagem']);
+    const { count: t } = await sb.from('transferencias').select('*',{count:'exact',head:true}).eq('status','pendente');
+    _lastAgenda = a ?? 0;
+    _lastTransf = t ?? 0;
+    if (Notification.permission === 'granted') iniciarPolling();
+  }, 1500);
+}
+
+
+// ── MODAIS PELO FUNDO ────────────────────
+['modal-transf','modal-antecipar'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => {
+    if (e.target === e.currentTarget) fecharModal(id);
+  });
+});
+</script>
+</body>
+</html>

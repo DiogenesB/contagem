@@ -1,0 +1,3062 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simbiose Expedição · Conferência</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Nunito+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #f0f2f5;
+  --bg2:       #ffffff;
+  --bg3:       #f7f8fa;
+  --bg4:       #eef0f4;
+  --bg5:       #e4e7ed;
+  --border:    #dde1e8;
+  --border2:   #c8cdd8;
+  --border3:   #b0b7c6;
+
+  --green:     #1a7f4b;
+  --green-lt:  #22a361;
+  --green-bg:  #eaf7f0;
+  --green-bd:  #b6e8cf;
+  --green-txt: #145e37;
+
+  --amber:     #b45309;
+  --amber-lt:  #d97706;
+  --amber-bg:  #fef3e2;
+  --amber-bd:  #fcd59a;
+
+  --red:       #c0392b;
+  --red-bg:    #fdecea;
+  --red-bd:    #f5b8b2;
+
+  --blue:      #1d5fa8;
+  --blue-lt:   #2e7dd1;
+  --blue-bg:   #e8f0fb;
+  --blue-bd:   #a8c4ef;
+
+  --purple:    #6d4fc2;
+  --purple-bg: #f0ebfb;
+  --purple-bd: #c7b4ef;
+
+  --text:      #1a2035;
+  --text2:     #4a5568;
+  --text3:     #8a95a8;
+
+  --sans:      'Nunito Sans', 'Calibri', 'Segoe UI', sans-serif;
+  --r:         8px;
+  --r-sm:      6px;
+  --r-xs:      4px;
+  --nav-w:     230px;
+  --topbar-h:  52px;
+  --sh:        0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+  --sh-sm:     0 1px 3px rgba(0,0,0,.07);
+}
+
+/* ── TEMA ESCURO ── */
+html.dark {
+  --bg:        #0f1117;
+  --bg2:       #171b24;
+  --bg3:       #1d2230;
+  --bg4:       #232839;
+  --bg5:       #2a3045;
+  --border:    #2c3348;
+  --border2:   #38445e;
+  --border3:   #475568;
+
+  --green:     #22c55e;
+  --green-lt:  #34d874;
+  --green-bg:  rgba(34,197,94,.09);
+  --green-bd:  rgba(34,197,94,.28);
+  --green-txt: #86efac;
+
+  --amber:     #f59e0b;
+  --amber-lt:  #fbbf24;
+  --amber-bg:  rgba(245,158,11,.1);
+  --amber-bd:  rgba(245,158,11,.3);
+
+  --red:       #f43f5e;
+  --red-bg:    rgba(244,63,94,.09);
+  --red-bd:    rgba(244,63,94,.3);
+
+  --blue:      #60a5fa;
+  --blue-lt:   #93c5fd;
+  --blue-bg:   rgba(96,165,250,.1);
+  --blue-bd:   rgba(96,165,250,.28);
+
+  --purple:    #a78bfa;
+  --purple-bg: rgba(167,139,250,.09);
+  --purple-bd: rgba(167,139,250,.28);
+
+  --text:      #e8edf8;
+  --text2:     #8fa3be;
+  --text3:     #4a6080;
+
+  --sh:        0 1px 4px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
+  --sh-sm:     0 1px 3px rgba(0,0,0,.35);
+}
+
+/* Ajustes pontuais no dark mode */
+html.dark tbody tr:hover { background:rgba(255,255,255,.03) !important; }
+html.dark .field input[readonly] { background:var(--bg4); color:var(--text2); }
+html.dark .field input, html.dark .field select, html.dark .field textarea { background:var(--bg3); border-color:var(--border2); color:var(--text); }
+html.dark .search-inp, html.dark .filter-sel { background:var(--bg3); border-color:var(--border2); color:var(--text2); }
+html.dark .log-img-card img { filter:saturate(.4) brightness(.4); }
+html.dark .brand-ico { box-shadow:0 2px 12px rgba(34,197,94,.25); }
+html.dark .btn-primary { background:var(--green); color:#041a0e; border-color:rgba(34,197,94,.5); }
+html.dark .btn-primary:hover { background:var(--green-lt); }
+html.dark .btn-ghost { background:var(--bg3); border-color:var(--border2); color:var(--text2); }
+html.dark .btn-ghost:hover { background:var(--bg4); border-color:var(--border3); color:var(--text); }
+html.dark .sv-contado  { background:rgba(34,197,94,.05) !important; }
+html.dark .sv-validado { background:rgba(34,197,94,.03) !important; }
+html.dark .sv-recont   { background:rgba(167,139,250,.05) !important; }
+html.dark .sv-pendente { background:transparent !important; }
+html.dark .ag-finalizado  { background:rgba(34,197,94,.04) !important; }
+html.dark .ag-em-contagem { background:rgba(96,165,250,.04) !important; }
+html.dark .info-banner { background:var(--blue-bg); border-color:var(--blue-bd); color:var(--blue); }
+html.dark .import-banner { background:var(--bg2); border-color:var(--border); }
+html.dark .divprev { background:var(--bg3); border-color:var(--border2); }
+html.dark .modal { background:var(--bg2); border-color:var(--border2); }
+html.dark .tcount { background:var(--bg4); border-color:var(--border); color:var(--text3); }
+html.dark .ph-stat { border-left-color:var(--border); }
+html.dark .page-header { background:var(--bg2); border-color:var(--border); }
+html.dark .table-wrap { background:var(--bg2); border-color:var(--border); }
+html.dark .table-hdr { background:var(--bg3); border-color:var(--border); }
+html.dark thead tr { background:var(--bg4); }
+html.dark td { border-color:rgba(255,255,255,.04); }
+html.dark .add-sec { background:var(--bg2); border-color:var(--border); }
+html.dark .add-sec-title { border-color:var(--border); }
+html.dark .sb-user { background:var(--bg3); border-color:var(--border); }
+html.dark .brand-status { background:var(--bg3); border-color:var(--border); }
+html.dark .modal-bg { background:rgba(0,0,0,.75); }
+html.dark [style*="background:var(--bg3)"] { background:var(--bg3) !important; }
+html.dark .import-drop { background:var(--bg3); border-color:var(--border2); }
+html.dark .log-img-card { border-color:var(--border); }
+html.dark .perf-card { background:var(--bg2); border-color:var(--border); }
+html.dark .perf-row { border-color:var(--border); }
+
+/* Toggle button */
+.theme-toggle {
+  width:34px; height:34px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:var(--r-sm);
+  cursor:pointer;
+  font-size:.95rem;
+  transition:all .15s;
+  flex-shrink:0;
+}
+.theme-toggle:hover { background:var(--bg4); border-color:var(--border3); }
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; background:var(--bg); color:var(--text); font-family:var(--sans); font-size:14px; line-height:1.55; }
+
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:var(--bg4); }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:10px; }
+::-webkit-scrollbar-thumb:hover { background:var(--border3); }
+
+/* ══════════════════════
+   LAYOUT
+══════════════════════ */
+.layout { display:flex; min-height:100vh; }
+
+/* ══════════════════════
+   SIDEBAR
+══════════════════════ */
+.sidebar {
+  width:var(--nav-w);
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  position:fixed;
+  top:0; left:0; bottom:0;
+  z-index:100;
+  box-shadow:var(--sh-sm);
+}
+
+.brand {
+  padding:18px 16px 14px;
+  border-bottom:1px solid var(--border);
+  background:var(--bg2);
+}
+
+.brand-top {
+  display:flex;
+  align-items:center;
+  gap:11px;
+}
+
+.brand-ico {
+  width:38px; height:38px;
+  background:#1a7f4b;
+  border-radius:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  box-shadow:0 2px 8px rgba(26,127,75,.3);
+}
+
+.brand-ico svg { width:20px; height:20px; }
+
+.brand-name {
+  font-size:1rem;
+  font-weight:800;
+  color:var(--text);
+  line-height:1.2;
+  letter-spacing:-.01em;
+}
+
+.brand-name em {
+  color:var(--green);
+  font-style:normal;
+}
+
+.brand-sub {
+  font-size:.7rem;
+  color:var(--text3);
+  margin-top:2px;
+  font-weight:500;
+}
+
+.brand-status {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-top:10px;
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:var(--r-sm);
+  padding:5px 10px;
+}
+
+.si-dot {
+  width:7px; height:7px;
+  border-radius:50%;
+  background:var(--text3);
+  flex-shrink:0;
+}
+
+.si-dot.ok  { background:var(--green); animation:pulse 2.4s infinite; }
+.si-dot.err { background:var(--red); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.si-lbl {
+  font-size:.7rem;
+  color:var(--text3);
+  font-weight:600;
+}
+
+/* Nav */
+.nav-sec { padding:8px 8px 2px; }
+
+.nav-sec-lbl {
+  font-size:.66rem;
+  font-weight:700;
+  color:var(--text3);
+  text-transform:uppercase;
+  letter-spacing:.1em;
+  padding:4px 8px;
+  margin-bottom:3px;
+}
+
+.nav-item {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:8px 10px;
+  border-radius:var(--r-sm);
+  cursor:pointer;
+  border:1px solid transparent;
+  background:none;
+  width:100%;
+  text-align:left;
+  font-family:var(--sans);
+  font-size:.86rem;
+  font-weight:600;
+  color:var(--text2);
+  transition:all .12s;
+}
+
+.nav-item .ni {
+  width:26px; height:26px;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:5px;
+  flex-shrink:0;
+  font-size:.85rem;
+}
+
+.nav-item .nbadge {
+  margin-left:auto;
+  background:var(--amber-lt);
+  color:#fff;
+  font-size:.6rem;
+  font-weight:700;
+  padding:1px 7px;
+  border-radius:10px;
+  display:none;
+}
+
+.nav-item:hover {
+  background:var(--bg3);
+  color:var(--text);
+}
+
+.nav-item.active {
+  background:var(--green-bg);
+  color:var(--green-txt);
+  border-color:var(--green-bd);
+  font-weight:700;
+}
+
+.nav-item.active .ni {
+  background:var(--green-bd);
+}
+
+.nav-divider {
+  height:1px;
+  background:var(--border);
+  margin:8px 10px;
+}
+
+.sidebar-footer {
+  margin-top:auto;
+  padding:12px 10px;
+  border-top:1px solid var(--border);
+  background:var(--bg3);
+}
+
+.sb-user {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:8px 10px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r-sm);
+}
+
+.sb-av {
+  width:30px; height:30px;
+  background:linear-gradient(135deg,#2e7dd1,#6d4fc2);
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:.72rem;
+  font-weight:800;
+  color:#fff;
+  flex-shrink:0;
+}
+
+.sb-name { font-size:.82rem; font-weight:700; color:var(--text); }
+.sb-role { font-size:.65rem; color:var(--text3); }
+
+/* ══════════════════════
+   MAIN
+══════════════════════ */
+.main {
+  margin-left:var(--nav-w);
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+}
+
+.topbar {
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;
+  height:var(--topbar-h);
+  display:flex;
+  align-items:center;
+  gap:14px;
+  position:sticky;
+  top:0;
+  z-index:50;
+  box-shadow:var(--sh-sm);
+}
+
+.topbar-crumb {
+  font-size:.72rem;
+  color:var(--text3);
+  font-weight:500;
+}
+
+.topbar-sep {
+  color:var(--border2);
+  font-size:.8rem;
+}
+
+.topbar-title {
+  font-size:.95rem;
+  font-weight:700;
+  color:var(--text);
+}
+
+.topbar-right {
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.rt-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  font-size:.68rem;
+  font-weight:600;
+  color:var(--green-txt);
+  background:var(--green-bg);
+  border:1px solid var(--green-bd);
+  border-radius:20px;
+  padding:3px 10px;
+}
+
+.rt-dot {
+  width:5px; height:5px;
+  border-radius:50%;
+  background:var(--green);
+  animation:pulse 1.8s infinite;
+}
+
+/* ══════════════════════
+   CONTENT
+══════════════════════ */
+.content { padding:18px 24px; flex:1; }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; animation:fadeUp .18s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+
+/* ══════════════════════
+   PAGE HEADER STRIP
+══════════════════════ */
+.page-header {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:16px 20px;
+  margin-bottom:16px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  box-shadow:var(--sh-sm);
+}
+
+.ph-icon {
+  width:44px; height:44px;
+  border-radius:var(--r-sm);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1.25rem;
+  flex-shrink:0;
+}
+
+.ph-icon.green { background:var(--green-bg); border:1px solid var(--green-bd); }
+
+.ph-title {
+  font-size:.98rem;
+  font-weight:800;
+  color:var(--text);
+  margin-bottom:2px;
+}
+
+.ph-sub {
+  font-size:.74rem;
+  color:var(--text3);
+  font-weight:500;
+}
+
+.ph-right {
+  margin-left:auto;
+  display:flex;
+  gap:1px;
+}
+
+.ph-stat {
+  padding:6px 16px;
+  text-align:center;
+  border-left:1px solid var(--border);
+}
+
+.ph-stat:first-child { border-left:none; }
+
+.ph-stat-val {
+  font-size:1.35rem;
+  font-weight:800;
+  line-height:1.1;
+  margin-bottom:2px;
+}
+
+.ph-stat-lbl {
+  font-size:.64rem;
+  color:var(--text3);
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+
+/* ══════════════════════
+   LOGISTICS IMAGES
+══════════════════════ */
+.logistics-strip {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin-bottom:16px;
+}
+
+.log-img-card {
+  border-radius:var(--r);
+  overflow:hidden;
+  border:1px solid var(--border);
+  position:relative;
+  height:72px;
+  box-shadow:var(--sh-sm);
+}
+
+.log-img-card img {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  filter:saturate(.55) brightness(.7);
+}
+
+.log-img-label {
+  position:absolute;
+  bottom:0; left:0; right:0;
+  padding:5px 10px;
+  background:linear-gradient(transparent, rgba(0,0,0,.6));
+  font-size:.62rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.09em;
+  color:rgba(255,255,255,.85);
+}
+
+/* ══════════════════════
+   STAT CARDS
+══════════════════════ */
+.stat-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+  gap:10px;
+  margin-bottom:16px;
+}
+
+.stat-card {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:14px 16px;
+  box-shadow:var(--sh-sm);
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.sc-val {
+  font-size:1.85rem;
+  font-weight:800;
+  line-height:1;
+  letter-spacing:-.02em;
+}
+
+.sc-lbl {
+  font-size:.68rem;
+  color:var(--text3);
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+
+.sc-bar {
+  height:3px;
+  border-radius:2px;
+  margin-bottom:4px;
+}
+
+/* ══════════════════════
+   TABLE
+══════════════════════ */
+.table-wrap {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+  overflow-x:auto;
+  margin-bottom:14px;
+  box-shadow:var(--sh-sm);
+}
+
+.table-hdr {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:11px 16px;
+  border-bottom:1px solid var(--border);
+  gap:8px;
+  flex-wrap:wrap;
+  background:var(--bg3);
+}
+
+.th-left { display:flex; align-items:center; gap:9px; }
+.th-right { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+
+.table-title {
+  font-size:.9rem;
+  font-weight:700;
+  color:var(--text);
+}
+
+.tcount {
+  font-size:.68rem;
+  font-weight:600;
+  color:var(--text3);
+  background:var(--bg4);
+  border:1px solid var(--border);
+  border-radius:var(--r-xs);
+  padding:2px 8px;
+}
+
+table { width:100%; border-collapse:collapse; }
+
+thead tr { background:var(--bg4); }
+
+th {
+  padding:9px 13px;
+  text-align:left;
+  font-size:.68rem;
+  font-weight:700;
+  color:var(--text3);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  white-space:nowrap;
+  border-bottom:1px solid var(--border);
+}
+
+td {
+  padding:10px 13px;
+  font-size:.87rem;
+  border-bottom:1px solid var(--border);
+  vertical-align:middle;
+}
+
+tr:last-child td { border-bottom:none; }
+tbody tr:hover { background:#f5f7fa; }
+
+.cm  { font-size:.8rem; color:var(--text2); }
+.cc  { font-size:.78rem; color:var(--blue-lt); font-weight:700; white-space:nowrap; }
+.cn  { font-weight:700; color:var(--text); }
+.cts { font-size:.74rem; color:var(--text3); white-space:nowrap; }
+.ca  { text-align:right; white-space:nowrap; }
+
+/* ══════════════════════
+   BADGES
+══════════════════════ */
+.badge {
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  font-size:.67rem;
+  font-weight:700;
+  padding:3px 9px;
+  border-radius:var(--r-xs);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  white-space:nowrap;
+}
+
+.badge::before {
+  content:'';
+  width:5px; height:5px;
+  border-radius:50%;
+  display:inline-block;
+}
+
+.b-p { background:var(--amber-bg); color:var(--amber); border:1px solid var(--amber-bd); } .b-p::before { background:var(--amber-lt); }
+.b-v { background:var(--green-bg); color:var(--green-txt); border:1px solid var(--green-bd); } .b-v::before { background:var(--green); }
+.b-b { background:var(--blue-bg);  color:var(--blue);  border:1px solid var(--blue-bd);  } .b-b::before { background:var(--blue-lt);  }
+.b-r { background:var(--red-bg);   color:var(--red);   border:1px solid var(--red-bd);   } .b-r::before { background:var(--red);   }
+
+.badge-recont {
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  background:var(--purple-bg);
+  border:1px solid var(--purple-bd);
+  color:var(--purple);
+  font-size:.62rem;
+  font-weight:700;
+  padding:2px 6px;
+  border-radius:var(--r-xs);
+  text-transform:uppercase;
+  vertical-align:middle;
+  margin-left:4px;
+}
+
+.div-ok  { font-size:.8rem; color:var(--green); font-weight:700; }
+.div-pos { font-size:.8rem; color:var(--amber-lt); font-weight:700; }
+.div-neg { font-size:.8rem; color:var(--red); font-weight:700; }
+
+/* ══════════════════════
+   BUTTONS
+══════════════════════ */
+.btn {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:7px 14px;
+  border:1px solid transparent;
+  border-radius:var(--r-sm);
+  font-family:var(--sans);
+  font-size:.82rem;
+  font-weight:700;
+  cursor:pointer;
+  transition:all .12s;
+  white-space:nowrap;
+}
+
+.btn:active { transform:scale(.97); }
+.btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+
+.btn-primary {
+  background:var(--green);
+  color:#fff;
+  border-color:var(--green-txt);
+  box-shadow:0 1px 3px rgba(26,127,75,.25);
+}
+
+.btn-primary:hover { background:var(--green-lt); }
+
+.btn-ghost {
+  background:var(--bg2);
+  border-color:var(--border2);
+  color:var(--text2);
+}
+
+.btn-ghost:hover { border-color:var(--border3); background:var(--bg3); color:var(--text); }
+
+.btn-danger {
+  background:var(--red-bg);
+  border-color:var(--red-bd);
+  color:var(--red);
+}
+
+.btn-danger:hover { background:#fad5d1; }
+
+.btn-amber {
+  background:var(--amber-bg);
+  border-color:var(--amber-bd);
+  color:var(--amber);
+}
+
+.btn-amber:hover { background:#fde8c0; }
+
+.btn-blue {
+  background:var(--blue-bg);
+  border-color:var(--blue-bd);
+  color:var(--blue);
+}
+
+.btn-blue:hover { background:#d3e4f7; }
+
+.btn-sm { padding:5px 10px; font-size:.77rem; }
+.btn-lg { padding:9px 20px; font-size:.9rem; }
+
+/* ══════════════════════
+   FORM
+══════════════════════ */
+.fg {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:11px;
+  margin-bottom:13px;
+}
+
+.field { display:flex; flex-direction:column; gap:4px; }
+
+.field label {
+  font-size:.7rem;
+  font-weight:700;
+  color:var(--text2);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.field input,
+.field select,
+.field textarea {
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  border-radius:var(--r-sm);
+  color:var(--text);
+  font-size:.88rem;
+  font-family:var(--sans);
+  font-weight:500;
+  padding:8px 11px;
+  outline:none;
+  transition:border-color .12s, box-shadow .12s;
+  -webkit-appearance:none;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color:var(--blue-lt);
+  box-shadow:0 0 0 3px rgba(46,125,209,.12);
+}
+
+.field input[readonly] { background:var(--bg3); color:var(--text2); }
+.field textarea { resize:vertical; min-height:65px; }
+
+/* ── FILTERS ── */
+.search-inp {
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  border-radius:var(--r-sm);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:.82rem;
+  font-weight:500;
+  padding:6px 11px;
+  outline:none;
+  transition:border-color .12s;
+}
+
+.search-inp:focus { border-color:var(--blue-lt); }
+.search-inp::placeholder { color:var(--text3); }
+
+.filter-sel {
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  border-radius:var(--r-sm);
+  color:var(--text2);
+  font-family:var(--sans);
+  font-size:.82rem;
+  font-weight:500;
+  padding:6px 10px;
+  outline:none;
+  -webkit-appearance:none;
+  cursor:pointer;
+}
+
+.filter-sel:focus { border-color:var(--blue-lt); }
+
+/* ── ADD SECTION ── */
+.add-sec {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:16px 18px;
+  margin-bottom:16px;
+  box-shadow:var(--sh-sm);
+}
+
+.add-sec-title {
+  font-size:.78rem;
+  font-weight:700;
+  color:var(--green-txt);
+  text-transform:uppercase;
+  letter-spacing:.07em;
+  margin-bottom:12px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding-bottom:10px;
+  border-bottom:1px solid var(--border);
+}
+
+/* ══════════════════════
+   MODAL
+══════════════════════ */
+.modal-bg {
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(10,15,30,.5);
+  backdrop-filter:blur(3px);
+  z-index:200;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+
+.modal-bg.open { display:flex; animation:fadeIn .15s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.modal {
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  border-radius:var(--r);
+  padding:22px 20px;
+  width:100%;
+  max-width:570px;
+  max-height:90vh;
+  overflow-y:auto;
+  box-shadow:0 8px 40px rgba(0,0,0,.18);
+}
+
+.modal-title {
+  font-size:1rem;
+  font-weight:800;
+  margin-bottom:4px;
+  color:var(--text);
+  padding-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+
+.modal-sub   { font-size:.76rem; color:var(--text3); margin-bottom:16px; margin-top:8px; }
+.modal-sep   { border:none; border-top:1px solid var(--border); margin:13px 0; }
+.modal-acts  { display:flex; gap:7px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
+
+/* ── DIVPREV ── */
+.divprev {
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:var(--r-sm);
+  padding:11px 13px;
+  font-size:.8rem;
+  margin:9px 0;
+  display:none;
+}
+
+.dp-row { display:flex; justify-content:space-between; padding:3px 0; }
+.dp-k { color:var(--text3); font-size:.78rem; }
+.dp-v { font-weight:700; font-size:.82rem; }
+
+/* ══════════════════════
+   TOAST
+══════════════════════ */
+.toast {
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  padding:10px 16px;
+  border-radius:var(--r);
+  font-size:.78rem;
+  font-weight:600;
+  z-index:400;
+  transform:translateY(14px);
+  opacity:0;
+  transition:transform .28s cubic-bezier(.34,1.56,.64,1), opacity .28s;
+  pointer-events:none;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  max-width:320px;
+  box-shadow:var(--sh);
+  border:1px solid transparent;
+}
+
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.ok   { background:var(--green-bg); border-color:var(--green-bd); color:var(--green-txt); }
+.toast.err  { background:var(--red-bg);  border-color:var(--red-bd);   color:var(--red); }
+.toast.info { background:var(--blue-bg); border-color:var(--blue-bd);  color:var(--blue); }
+.toast.warn { background:var(--amber-bg); border-color:var(--amber-bd); color:var(--amber); }
+
+/* ── SPIN ── */
+.spin {
+  width:12px; height:12px;
+  border:2px solid rgba(0,0,0,.12);
+  border-top-color:currentColor;
+  border-radius:50%;
+  animation:spinr .6s linear infinite;
+  display:none;
+}
+
+@keyframes spinr { to{transform:rotate(360deg)} }
+
+/* ── ARROW ── */
+.arrow-row { display:inline-flex; align-items:center; gap:6px; font-size:.76rem; }
+.ach { background:var(--bg3); border:1px solid var(--border2); border-radius:4px; padding:2px 8px; color:var(--text2); }
+.ach.d { border-color:var(--green-bd); color:var(--green-txt); background:var(--green-bg); }
+
+/* ── PERFORMANCE ── */
+.perf-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:11px; margin-bottom:18px; }
+
+.perf-card {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:14px 16px;
+  box-shadow:var(--sh-sm);
+}
+
+.perf-card-title { font-size:.85rem; font-weight:700; margin-bottom:11px; color:var(--text); }
+.perf-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--border); }
+.perf-row:last-child { border-bottom:none; }
+.perf-name { font-size:.82rem; font-weight:600; color:var(--text); }
+.perf-meta { font-size:.67rem; color:var(--text3); margin-top:2px; }
+
+.perf-time {
+  font-size:.78rem;
+  font-weight:700;
+  color:var(--green-txt);
+  background:var(--green-bg);
+  border:1px solid var(--green-bd);
+  border-radius:var(--r-sm);
+  padding:3px 9px;
+}
+
+/* ── SALDO ROWS ── */
+.sv-contado  { background:#f5fbf8; }
+.sv-pendente { }
+.sv-recont   { background:#f8f5ff; }
+.sv-validado { background:#f0faf5; }
+.qtd-contada { font-weight:700; color:var(--green-txt); }
+.qtd-vazia   { font-size:.8rem; color:var(--text3); font-style:italic; }
+/* ── INFO BANNER ── */
+.info-banner {
+  background:var(--blue-bg);
+  border:1px solid var(--blue-bd);
+  border-left:3px solid var(--blue-lt);
+  border-radius:var(--r);
+  padding:10px 14px;
+  font-size:.8rem;
+  color:var(--blue);
+  font-weight:500;
+  margin-bottom:14px;
+}
+
+/* ── IMPORT BANNER ── */
+.import-banner {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:16px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-left:3px solid var(--blue-lt);
+  border-radius:var(--r);
+  padding:11px 16px;
+  flex-wrap:wrap;
+  box-shadow:var(--sh-sm);
+}
+
+/* ── IMPORT DROP ── */
+.import-drop {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  background:var(--bg3);
+  border:1.5px dashed var(--border2);
+  border-radius:var(--r-sm);
+  padding:6px 12px;
+  cursor:pointer;
+  transition:border-color .12s;
+}
+
+.import-drop:hover { border-color:var(--blue-lt); }
+
+/* ── AG ROWS ── */
+.ag-finalizado  { background:#f0faf5; }
+.ag-em-contagem { background:#eff6ff; }
+
+/* ── CHECKBOX ── */
+.sv-check { width:15px; height:15px; cursor:pointer; accent-color:var(--blue-lt); flex-shrink:0; }
+
+/* Modo exclusão — checkboxes e coluna ocultos por padrão */
+.col-chk  { width:32px; }
+#chk-all  { display:none; }
+.row-chk  { display:none; }
+td.td-chk { width:32px; padding:10px 8px; text-align:center; }
+
+/* Quando modo ativo */
+.delete-mode #chk-all  { display:inline-block; }
+.delete-mode .row-chk  { display:inline-block; }
+.delete-mode .col-chk  { width:32px; }
+
+/* Barra de selecao */
+.sel-bar { display:none; align-items:center; gap:10px; padding:9px 16px; background:var(--blue-bg); border:1px solid var(--blue-bd); border-radius:var(--r); margin-bottom:10px; font-size:.82rem; font-weight:600; color:var(--blue); flex-wrap:wrap; }
+.sel-bar.show { display:flex; }
+.sel-bar-count { font-weight:800; }
+html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); color:var(--blue); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ══════════════ SIDEBAR ══════════════ -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-top">
+      <div class="brand-ico">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M2 7L12 12L22 7" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M12 12V22" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Simbiose <em>Expedição</em></div>
+        <div class="brand-sub">Sistema de Conferência</div>
+      </div>
+    </div>
+    <div class="brand-status">
+      <span class="si-dot" id="si-dot"></span>
+      <span class="si-lbl" id="si-lbl">Conectando…</span>
+    </div>
+  </div>
+
+  <div class="nav-sec">
+    <div class="nav-sec-lbl">Contagem</div>
+    <button class="nav-item active" onclick="switchTab('validacao',this)">
+      <span class="ni">✅</span> Saldo / Validação
+      <span class="nbadge" id="nbadge-val">0</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('registros',this)">
+      <span class="ni">📥</span> Registros
+    </button>
+    <button class="nav-item" onclick="switchTab('historico',this)">
+      <span class="ni">🗂️</span> Histórico
+    </button>
+    <button class="nav-item" onclick="switchTab('performance',this)">
+      <span class="ni">📊</span> Performance
+    </button>
+  </div>
+
+  <div class="nav-divider"></div>
+
+  <div class="nav-sec">
+    <div class="nav-sec-lbl">Gestão</div>
+    <button class="nav-item" onclick="switchTab('agendamentos',this)">
+      <span class="ni">📋</span> Agendamentos
+      <span class="nbadge" id="nbadge-ag">0</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('transferencias',this)">
+      <span class="ni">🔄</span> Transferências
+    </button>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="sb-user">
+      <div class="sb-av">G</div>
+      <div>
+        <div class="sb-name">Gestor</div>
+        <div class="sb-role">Admin · Painel</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<main class="main">
+  <div class="topbar">
+    <span class="topbar-crumb">Simbiose Expedição</span>
+    <span class="topbar-sep">›</span>
+    <span class="topbar-title" id="topbar-title">Saldo / Validação</span>
+    <div class="topbar-right">
+      <span class="rt-pill"><span class="rt-dot"></span>Tempo real</span>
+      <button class="btn btn-ghost btn-sm" onclick="recarregar()">↺ Atualizar</button>
+      <a href="./mobile.html" target="_blank" class="btn btn-ghost btn-sm">📱 Operador</a>
+      <button class="theme-toggle" id="btn-theme" onclick="toggleTheme()" title="Alternar tema claro/escuro">🌙</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ TAB: SALDO / VALIDAÇÃO ══ -->
+    <div class="tab-panel active" id="tab-validacao">
+
+      <!-- Cabeçalho da página -->
+      <div class="page-header">
+        <div class="ph-icon green">📦</div>
+        <div>
+          <div class="ph-title">Conferência de Expedição</div>
+          <div class="ph-sub">Cruzamento de saldo sistêmico com contagem física · Simbiose Expedição</div>
+        </div>
+        <div class="ph-right">
+          <div class="ph-stat">
+            <div class="ph-stat-val" id="sv-total" style="color:var(--blue-lt)">—</div>
+            <div class="ph-stat-lbl">No Sistema</div>
+          </div>
+          <div class="ph-stat">
+            <div class="ph-stat-val" id="sv-contados" style="color:var(--green)">—</div>
+            <div class="ph-stat-lbl">Contados</div>
+          </div>
+          <div class="ph-stat">
+            <div class="ph-stat-val" id="sv-pendentes" style="color:var(--amber-lt)">—</div>
+            <div class="ph-stat-lbl">Pendentes</div>
+          </div>
+          <div class="ph-stat">
+            <div class="ph-stat-val" id="sv-diverg" style="color:var(--red)">—</div>
+            <div class="ph-stat-lbl">Divergências</div>
+          </div>
+          <div class="ph-stat">
+            <div class="ph-stat-val" id="sv-recontagens" style="color:var(--purple)">—</div>
+            <div class="ph-stat-lbl">Recontagens</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Imagens de logística -->
+      <div class="logistics-strip">
+        <div class="log-img-card">
+          <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=500&q=65" alt="Armazém">
+          <span class="log-img-label">Armazenagem</span>
+        </div>
+        <div class="log-img-card">
+          <img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=500&q=65" alt="Expedição">
+          <span class="log-img-label">Expedição</span>
+        </div>
+        <div class="log-img-card">
+          <img src="https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=500&q=65" alt="Conferência">
+          <span class="log-img-label">Conferência</span>
+        </div>
+      </div>
+
+      <!-- Importação -->
+      <div class="import-banner">
+        <span style="font-size:.82rem;font-weight:700;color:var(--blue)">↑ Importar Saldo do ERP</span>
+        <span id="saldo-status-txt" style="font-size:.72rem;color:var(--text3);font-weight:500">Nenhum saldo importado</span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label class="import-drop" id="lbl-upload-saldo" style="padding:5px 12px;cursor:pointer">
+            <span>📂</span>
+            <span style="font-size:.74rem;color:var(--text2);font-weight:600" id="lbl-arquivo-saldo">Selecionar .xlsx</span>
+            <input type="file" id="inp-saldo-xlsx" accept=".xlsx,.xls" style="display:none" onchange="onArquivoSaldoSelecionado(this)">
+          </label>
+          <button class="btn btn-blue btn-sm" id="btn-importar-saldo" onclick="importarSaldoSistema()" disabled>
+            <div class="spin" id="imp-spin"></div>↑ Importar
+          </button>
+        </div>
+        <div id="saldo-preview" style="display:none;width:100%;margin-top:8px;font-size:.72rem;color:var(--text2)"><span id="saldo-preview-info"></span></div>
+      </div>
+
+      <!-- Barra de seleção -->
+      <div class="sel-bar" id="sel-bar">
+        <span>☑</span>
+        <span><span class="sel-bar-count" id="sel-count">0</span> item(ns) selecionado(s)</span>
+        <button class="btn btn-danger btn-sm" onclick="excluirSelecionados()">🗑 Excluir Selecionados</button>
+        <button class="btn btn-ghost btn-sm" onclick="desmarcarTodos()">✕ Desmarcar</button>
+      </div>
+
+      <!-- Tabela principal -->
+      <div class="table-wrap">
+        <div class="table-hdr">
+          <div class="th-left">
+            <span class="table-title">Saldo Sistêmico × Contagem</span>
+            <span class="tcount" id="cnt-sv">—</span>
+          </div>
+          <div class="th-right">
+            <input type="text" class="search-inp" id="search-sv" placeholder="Produto / Lote…" oninput="filtrarValidacao()" style="width:180px">
+            <select class="filter-sel" id="filt-sv-arm" onchange="filtrarValidacao()">
+              <option value="">Todos armazéns</option>
+            </select>
+            <select class="filter-sel" id="filt-sv-status" onchange="filtrarValidacao()">
+              <option value="">Todos</option>
+              <option value="contado">Contados</option>
+              <option value="pendente">Não contados</option>
+              <option value="divergencia">Com divergência</option>
+              <option value="recontagem">Recontagem</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="btn-validar-todos" onclick="validarTodos()" style="display:none">✓ Validar Tudo</button>
+            <button class="btn btn-ghost btn-sm" id="btn-modo-exclusao" onclick="toggleModoExclusao()" title="Ativar seleção para exclusão">🗑 Excluir</button>
+            <button class="btn btn-danger btn-sm" id="btn-limpar-tudo" onclick="excluirTudo()" style="display:none">🗑 Limpar Tudo</button>
+            <button class="btn btn-ghost btn-sm" onclick="carregarValidacao()">↺</button>
+          </div>
+        </div>
+        <table>
+          <colgroup>
+            <col class="col-chk">
+            <col style="width:105px">
+            <col>
+            <col style="width:105px">
+            <col style="width:62px">
+            <col style="width:52px">
+            <col style="width:58px">
+            <col style="width:88px">
+            <col style="width:88px">
+            <col style="width:118px">
+            <col style="width:55px">
+            <col style="width:155px">
+          </colgroup>
+          <thead><tr>
+            <th style="text-align:center;padding:9px 8px"><input type="checkbox" class="sv-check" id="chk-all" onclick="toggleTodos(this)" title="Selecionar todos"></th>
+            <th>Código</th><th>Produto</th><th>Lote</th>
+            <th>Saldo</th><th>Emp.</th><th>Arm.</th>
+            <th>Fabric.</th><th>Vencim.</th>
+            <th>Saldo Contado</th><th>Div.</th>
+            <th style="text-align:right">Ações</th>
+          </tr></thead>
+          <tbody id="tbody-sv">
+            <tr><td colspan="13" style="text-align:center;padding:36px;color:var(--text3);font-size:.8rem">
+              Importe o saldo sistêmico para começar.
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ TAB: REGISTROS ══ -->
+    <div class="tab-panel" id="tab-registros">
+      <div class="info-banner">ℹ️ Registros brutos de todos os lançamentos do operador — apenas para consulta e análise futura. Edições aqui não afetam o histórico validado.</div>
+      <div class="table-wrap">
+        <div class="table-hdr">
+          <div class="th-left"><span class="table-title">Lançamentos da Agenda</span><span class="tcount" id="cnt-lanc">—</span></div>
+          <div class="th-right">
+            <input type="text" class="search-inp" id="search-lanc" placeholder="Buscar…" oninput="filtrarLancamentos()">
+            <button class="btn btn-ghost btn-sm" onclick="carregarLancamentos()">↺</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Código</th><th>Produto</th><th>Lote</th><th>Qtd</th><th>Armazém</th><th>Operador</th><th>Data</th><th>Tipo</th><th style="text-align:right">Ações</th></tr></thead>
+          <tbody id="tbody-lanc"><tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ TAB: HISTÓRICO ══ -->
+    <div class="tab-panel" id="tab-historico">
+      <div class="table-wrap">
+        <div class="table-hdr">
+          <div class="th-left"><span class="table-title">Histórico Validado</span><span class="tcount" id="cnt-hist">—</span></div>
+          <div class="th-right">
+            <input type="date" class="filter-sel" id="filt-hist-de"  onchange="carregarHistorico()" title="De">
+            <input type="date" class="filter-sel" id="filt-hist-ate" onchange="carregarHistorico()" title="Até">
+            <input type="text" class="search-inp" id="search-hist" placeholder="Produto / Lote…" oninput="filtrarHistorico()" style="width:150px">
+            <select class="filter-sel" id="filt-hist-arm" onchange="filtrarHistorico()">
+              <option value="">Todos arm.</option>
+            </select>
+            <select class="filter-sel" id="filt-hist-tipo" onchange="filtrarHistorico()">
+              <option value="">Todos</option>
+              <option value="ok">Sem diverg.</option>
+              <option value="positivo">Positivo</option>
+              <option value="negativo">Negativo</option>
+              <option value="recontagem">Recontagens</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="carregarHistorico()">↺</button>
+          </div>
+        </div>
+        <table>
+          <colgroup>
+            <col style="width:105px"><col><col style="width:105px">
+            <col style="width:80px"><col style="width:75px"><col style="width:75px">
+            <col style="width:90px"><col style="width:65px"><col style="width:100px">
+            <col style="width:90px"><col style="width:130px"><col style="width:40px">
+          </colgroup>
+          <thead><tr>
+            <th>Código</th><th>Produto</th><th>Lote</th>
+            <th>Qtd</th><th>Saldo</th><th>Diverg.</th>
+            <th>Tipo</th><th>Arm.</th><th>Operador</th>
+            <th>Obs.</th><th>Data</th><th></th>
+          </tr></thead>
+          <tbody id="tbody-hist"><tr><td colspan="12" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Selecione filtros e clique em Atualizar.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ TAB: PERFORMANCE ══ -->
+    <div class="tab-panel" id="tab-performance">
+      <div class="info-banner">ℹ️ Tempo medido do momento em que o operador abre um produto até finalizar a contagem. Recontagens contam separadamente.</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <span style="font-size:.9rem;font-weight:700;color:var(--text)">Análise de Tempo por Operador</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select class="filter-sel" id="filt-perf-op" onchange="carregarPerformance()"><option value="">Todos os operadores</option></select>
+          <input type="date" id="filt-perf-de"  class="filter-sel" onchange="carregarPerformance()">
+          <input type="date" id="filt-perf-ate" class="filter-sel" onchange="carregarPerformance()">
+          <button class="btn btn-ghost btn-sm" onclick="carregarPerformance()">↺</button>
+        </div>
+      </div>
+      <div class="stat-grid" id="perf-stats" style="margin-bottom:22px"></div>
+      <div class="table-wrap">
+        <div class="table-hdr">
+          <div class="th-left"><span class="table-title">Detalhamento de Sessões</span><span class="tcount" id="cnt-perf">—</span></div>
+        </div>
+        <table>
+          <thead><tr><th>Operador</th><th>Produto</th><th>Início</th><th>Fim</th><th>Duração</th><th>Lançamentos</th><th>Tipo</th></tr></thead>
+          <tbody id="tbody-perf"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Clique em Atualizar.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ TAB: AGENDAMENTOS ══ -->
+    <div class="tab-panel" id="tab-agendamentos">
+      <div class="add-sec">
+        <div class="add-sec-title">+ Novo Agendamento</div>
+        <div class="fg">
+          <div class="field"><label>Código do Produto</label><input type="text" id="ag-codigo" placeholder="PRD-001" oninput="buscarProdutoAg(this.value)" style="text-transform:uppercase"></div>
+          <div class="field"><label>Nome do Produto</label><input type="text" id="ag-nome" placeholder="Preenchido automaticamente" readonly></div>
+          <div class="field"><label>Lote Específico <span style="color:var(--text3)">(opcional)</span></label><input type="text" id="ag-lote" placeholder="Ex: 017-26-5004" style="text-transform:uppercase"></div>
+          <div class="field"><label>Data Agendada</label><input type="date" id="ag-data"></div>
+        </div>
+        <button class="btn btn-primary" onclick="criarAgendamento()"><div class="spin" id="ag-spin"></div>+ Criar Agendamento</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-hdr">
+          <div class="th-left"><span class="table-title">Agendamentos</span><span class="tcount" id="cnt-ag">—</span></div>
+          <div class="th-right">
+            <select class="filter-sel" id="filt-ag" onchange="carregarAgendamentos()">
+              <option value="">Todos</option>
+              <option value="pendente" selected>Pendente</option>
+              <option value="em_contagem">Em contagem</option>
+              <option value="finalizado">Finalizado ✅</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="carregarAgendamentos()">↺</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Código</th><th>Produto</th><th>Lote</th><th>Data Agendada</th><th>Antecipado</th><th>Status</th><th>Criado em</th><th style="text-align:right">Ações</th></tr></thead>
+          <tbody id="tbody-ag"><tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ TAB: TRANSFERÊNCIAS ══ -->
+    <div class="tab-panel" id="tab-transferencias">
+      <div class="add-sec">
+        <div class="add-sec-title">+ Nova Transferência</div>
+        <div class="fg">
+          <div class="field"><label>Produto</label><input type="text" id="tf-prod" placeholder="Nome do produto"></div>
+          <div class="field"><label>Código</label><input type="text" id="tf-cod" placeholder="PRD-001" style="text-transform:uppercase"></div>
+          <div class="field"><label>Lote</label><input type="text" id="tf-lote" placeholder="LOT-2024-01" style="text-transform:uppercase"></div>
+          <div class="field"><label>Quantidade</label><input type="number" id="tf-qtd" placeholder="0" min="1"></div>
+          <div class="field"><label>Armazém Origem</label><input type="number" id="tf-orig" placeholder="1" min="1"></div>
+          <div class="field"><label>Armazém Destino</label><input type="number" id="tf-dest" placeholder="3" min="1"></div>
+        </div>
+        <button class="btn btn-primary" onclick="criarTransferencia()"><div class="spin" id="tf-spin"></div>+ Criar Transferência</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-hdr">
+          <div class="th-left"><span class="table-title">Movimentações</span><span class="tcount" id="cnt-tf">—</span></div>
+          <div class="th-right">
+            <select class="filter-sel" id="filt-tf" onchange="carregarTransferencias()"><option value="">Todos</option><option value="pendente">Pendente</option><option value="concluido">Concluído</option></select>
+            <button class="btn btn-ghost btn-sm" onclick="carregarTransferencias()">↺</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Produto</th><th>Código</th><th>Lote</th><th>Qtd</th><th>Movimentação</th><th>Status</th><th>Data</th><th style="text-align:right">Ações</th></tr></thead>
+          <tbody id="tbody-tf"><tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+</div>
+
+<!-- MODAL: VALIDAR ITEM -->
+<div class="modal-bg" id="modal-val">
+  <div class="modal">
+    <div class="modal-title" id="mv-titulo">Validar Contagem</div>
+    <div class="modal-sub" id="mv-sub">—</div>
+
+    <div style="font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px">🗄 Dados do Sistema</div>
+    <div style="background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <div style="font-size:.65rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Código</div>
+          <div id="mv-cod" style="font-size:.95rem;font-weight:700;color:var(--blue-lt)">—</div>
+        </div>
+        <div>
+          <div style="font-size:.65rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Lote</div>
+          <div id="mv-lote" style="font-size:.95rem;font-weight:700;color:var(--text)">—</div>
+        </div>
+        <div>
+          <div style="font-size:.65rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Saldo no Sistema</div>
+          <div id="mv-saldo-sis" style="font-size:1.1rem;font-weight:800;color:var(--green)">—</div>
+        </div>
+        <div>
+          <div style="font-size:.65rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Armazém</div>
+          <div id="mv-arm" style="font-size:.95rem;font-weight:700;color:var(--amber)">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px">📱 Saldo Contado pelo Operador</div>
+    <div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:var(--r);padding:12px 15px;margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        <div><div style="font-size:.65rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Qtd Contada</div><div id="mv-qtd" style="font-size:1.2rem;font-weight:800;color:var(--green-txt)">—</div></div>
+        <div><div style="font-size:.65rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Operador(es)</div><div id="mv-ops" style="font-size:.82rem;font-weight:600">—</div></div>
+        <div><div style="font-size:.65rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Lançamentos</div><div id="mv-nlanc" style="font-size:.82rem;font-weight:600">—</div></div>
+      </div>
+      <div id="mv-recont-info" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--green-bd)">
+        <div style="font-size:.62rem;color:var(--purple);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;font-weight:700">↺ Esta é uma Recontagem</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><div style="font-size:.62rem;color:var(--text3);margin-bottom:2px">1ª Contagem</div><div id="mv-qtd-primeira" style="font-size:.85rem;font-weight:600;color:var(--text2)">—</div></div>
+          <div><div style="font-size:.62rem;color:var(--text3);margin-bottom:2px">Recontagem</div><div id="mv-qtd-recont" style="font-size:.85rem;font-weight:700;color:var(--purple)">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divprev" id="mv-prev">
+      <div class="dp-row"><span class="dp-k">Qtd contada</span><span class="dp-v" id="dp-qtd">—</span></div>
+      <div class="dp-row"><span class="dp-k">Saldo sistema</span><span class="dp-v" id="dp-sal">—</span></div>
+      <div class="dp-row" style="border-top:1px solid var(--border);margin-top:5px;padding-top:5px">
+        <span class="dp-k">Divergência</span><span class="dp-v" id="dp-div">—</span>
+      </div>
+    </div>
+
+    <hr class="modal-sep">
+
+    <div id="mv-motivo-wrap" style="display:none;margin-bottom:12px">
+      <div class="field">
+        <label>Motivo da Recontagem <span style="color:var(--red)">*</span></label>
+        <textarea id="mv-motivo" placeholder="Ex: Divergência na primeira contagem, embalagem danificada…" style="min-height:55px"></textarea>
+      </div>
+    </div>
+
+    <div id="mv-qtd-manual-wrap" style="display:none;margin-bottom:12px">
+      <div class="field">
+        <label>Quantidade Contada <span style="color:var(--red)">*</span> <span style="color:var(--amber);font-size:.6rem">(validação manual — pode ser 0)</span></label>
+        <input type="number" id="mv-qtd-manual" placeholder="0" min="0" oninput="calcDivManual()">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:10px">
+      <div class="field">
+        <label>Saldo do Sistema <span style="color:var(--green);font-size:.6rem">(auto)</span></label>
+        <input type="number" id="mv-saldo" placeholder="0" min="0" oninput="calcDiv()">
+      </div>
+      <div class="field">
+        <label>Tipo</label>
+        <input type="text" id="mv-tipo" readonly placeholder="Calculado automaticamente">
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:0">
+      <label>Observação</label>
+      <textarea id="mv-obs" placeholder="Ex: Embalagem danificada, e etc"></textarea>
+    </div>
+
+    <div class="modal-acts">
+      <button class="btn btn-amber" onclick="solicitarRecontagem()" id="btn-recont">↺ Recontagem</button>
+      <button class="btn btn-ghost" onclick="fecharModal('modal-val')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-conf-val" onclick="confirmarValidacao()">
+        <div class="spin" id="val-spin"></div>✓ Confirmar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: RECONTAGEM -->
+<div class="modal-bg" id="modal-recont">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">Solicitar Recontagem</div>
+    <div class="modal-sub" id="mr-sub">—</div>
+    <div class="field" style="margin-bottom:16px">
+      <label>Motivo da Recontagem <span style="color:var(--red)">*</span></label>
+      <textarea id="mr-motivo" placeholder="Ex: Divergência detectada, embalagem aberta, suspeita de erro de contagem…" style="min-height:80px"></textarea>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-recont')">Cancelar</button>
+      <button class="btn btn-amber" onclick="confirmarSolicitarRecontagem()">
+        <div class="spin" id="mr-spin"></div>↺ Solicitar Recontagem
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDITAR REGISTRO -->
+<div class="modal-bg" id="modal-edit-reg">
+  <div class="modal">
+    <div class="modal-title">Editar Registro</div>
+    <input type="hidden" id="er-id">
+    <input type="hidden" id="er-tabela">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px">
+      <div class="field"><label>Código</label><input type="text" id="er-cod" style="text-transform:uppercase"></div>
+      <div class="field"><label>Produto</label><input type="text" id="er-prod"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-bottom:11px">
+      <div class="field"><label>Lote</label><input type="text" id="er-lote" style="text-transform:uppercase"></div>
+      <div class="field"><label>Quantidade</label><input type="number" id="er-qtd" min="0"></div>
+      <div class="field"><label>Armazém</label><input type="text" id="er-arm"></div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-edit-reg')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEditRegistro()"><div class="spin" id="er-spin"></div>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDITAR HISTÓRICO -->
+<div class="modal-bg" id="modal-edit-hist">
+  <div class="modal">
+    <div class="modal-title">Editar Histórico</div>
+    <input type="hidden" id="eh-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px">
+      <div class="field"><label>Código</label><input type="text" id="eh-cod" style="text-transform:uppercase"></div>
+      <div class="field"><label>Produto</label><input type="text" id="eh-prod"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-bottom:11px">
+      <div class="field"><label>Lote</label><input type="text" id="eh-lote" style="text-transform:uppercase"></div>
+      <div class="field"><label>Qtd Contada</label><input type="number" id="eh-qtd" min="0"></div>
+      <div class="field"><label>Saldo Sistema</label><input type="number" id="eh-sal" min="0" oninput="calcEditDiv()"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-bottom:11px">
+      <div class="field"><label>Divergência</label><input type="text" id="eh-div" readonly></div>
+      <div class="field"><label>Tipo</label><select id="eh-tipo"><option value="ok">OK</option><option value="positivo">Positivo</option><option value="negativo">Negativo</option></select></div>
+      <div class="field"><label>Armazém</label><input type="text" id="eh-arm"></div>
+    </div>
+    <div class="field"><label>Observação</label><textarea id="eh-obs"></textarea></div>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-edit-hist')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEditHistorico()"><div class="spin" id="eh-spin"></div>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDITAR AGENDAMENTO -->
+<div class="modal-bg" id="modal-edit-ag">
+  <div class="modal">
+    <div class="modal-title">Editar Agendamento</div>
+    <input type="hidden" id="ea-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px">
+      <div class="field"><label>Código</label><input type="text" id="ea-cod" style="text-transform:uppercase"></div>
+      <div class="field"><label>Produto</label><input type="text" id="ea-nome"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px">
+      <div class="field"><label>Lote Específico</label><input type="text" id="ea-lote" style="text-transform:uppercase" placeholder="Opcional"></div>
+      <div class="field"><label>Status</label><select id="ea-status"><option value="pendente">Pendente</option><option value="em_contagem">Em contagem</option><option value="finalizado">Finalizado</option></select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+      <div class="field"><label>Data Agendada</label><input type="date" id="ea-data"></div>
+      <div class="field"><label>Data Antecipada</label><input type="date" id="ea-antecip"></div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-edit-ag')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEditAgendamento()"><div class="spin" id="ea-spin"></div>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EDITAR LANÇAMENTO SV -->
+<div class="modal-bg" id="modal-edit-sv">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title">Editar Lançamento</div>
+    <div class="modal-sub">Edita os lançamentos pendentes correspondentes</div>
+    <input type="hidden" id="esv-k">
+    <input type="hidden" id="esv-tipo">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px">
+      <div class="field"><label>Código</label><input type="text" id="esv-codigo" readonly style="opacity:.6"></div>
+      <div class="field"><label>Produto</label><input type="text" id="esv-produto" readonly style="opacity:.6"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-bottom:11px">
+      <div class="field"><label>Lote</label><input type="text" id="esv-lote" style="text-transform:uppercase"></div>
+      <div class="field"><label>Armazém</label><input type="text" id="esv-armazem"></div>
+      <div class="field"><label>Qtd Contada</label><input type="number" id="esv-qtd" min="0"></div>
+    </div>
+    <div style="background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--r-sm);padding:9px 12px;font-size:.74rem;color:var(--amber);margin-bottom:14px;font-weight:600">
+      ⚠ Atualiza lote e armazém em todos os lançamentos pendentes com este código/lote/armazém original.
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-edit-sv')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEditSV()"><div class="spin" id="esv-spin"></div>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: VER TEXTO COMPLETO -->
+<div class="modal-bg" id="modal-ver-texto">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title" id="vt-titulo">Texto</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;font-size:.9rem;line-height:1.65;color:var(--text2);white-space:pre-wrap;word-break:break-word;min-height:60px;max-height:300px;overflow-y:auto" id="vt-corpo">—</div>
+    <div class="modal-acts" style="margin-top:14px">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-ver-texto')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = 'https://yuaboypybjqxxgntfyrq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_IbvCmbnbazxMGcQTF9-mRg_Tt2RkAng';
+
+let sb = null;
+let itemAtual = null;   // linha do saldo sendo validada
+let todosLanc = [];
+let todoHistorico = [];
+let todosSaldo = [];
+let saldoXlsxData = null;
+let svLinhas = [];
+let svLoteNaoExiste = [];
+let svArmErrado = [];
+
+const NOMES_TABS = {
+  validacao:'Saldo / Validação', registros:'Registros de Contagem',
+  historico:'Histórico Validado', performance:'Performance de Operadores',
+  agendamentos:'Agendamentos', transferencias:'Transferências'
+};
+
+const COL_MAP = {
+  'b8_filial':'filial','b1_tipo':'tipo','b8_produto':'codigo','b1_desc':'descricao',
+  'b1_um':'unidade','b8_lotectl':'lote','data de fabricação':'dt_fabricacao',
+  'data de fabricacao':'dt_fabricacao','data de validade':'dt_validade',
+  'dias de vida':'dias_vida','% de vida':'pct_vida','b8_saldo':'saldo',
+  'b8_empenho':'empenho','b8_local':'armazem'
+};
+
+// ── INIT ───────────────────────────────────────────────────
+function initSb() {
+  try {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    setStatus(true, 'Supabase · realtime ativo');
+    setupRealtime();
+  } catch(e) { setStatus(false, 'Erro: ' + e.message); }
+}
+function setStatus(ok, msg) {
+  document.getElementById('si-dot').className = 'si-dot ' + (ok ? 'ok' : 'err');
+  document.getElementById('si-lbl').textContent = msg;
+}
+function setupRealtime() {
+  // Realtime removido da validação — recarregar manualmente com o botão ↺
+  // para evitar que a tabela recarregue e apague o status após validar
+}
+
+// ── HELPERS ────────────────────────────────────────────────
+function toast(msg, tipo='ok', dur=4000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = `toast ${tipo} show`;
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), dur);
+}
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+function fmtTS(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+function fmtData(s) { if (!s) return '—'; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
+function fmtDur(seg) {
+  if (!seg) return '—';
+  const m=Math.floor(seg/60), s=seg%60, h=Math.floor(m/60);
+  return h>0 ? `${h}h ${String(m%60).padStart(2,'0')}m` : `${m}m ${String(s).padStart(2,'0')}s`;
+}
+function norm(v) { return String(v||'').trim().toUpperCase().replace(/\s+/g,''); }
+function recarregar() { carregarValidacao(); carregarLancamentos(); }
+
+function switchTab(nome, el) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + nome).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('topbar-title').textContent = NOMES_TABS[nome] || nome;
+  if (nome === 'validacao')    carregarValidacao();
+  if (nome === 'registros')    carregarLancamentos();
+  if (nome === 'historico')    carregarHistorico();
+  if (nome === 'agendamentos') carregarAgendamentos();
+  if (nome === 'transferencias') carregarTransferencias();
+  if (nome === 'performance')  carregarPerformance();
+}
+
+// ══════════════════════════════════════════════════════════
+// SALDO / VALIDAÇÃO — tabela cruzada
+// ══════════════════════════════════════════════════════════
+
+async function carregarValidacao() {
+  try {
+    const { data: saldo } = await sb.from('saldo_sistema').select('*').order('codigo').order('lote');
+    if (!saldo || !saldo.length) {
+      document.getElementById('tbody-sv').innerHTML =
+        '<tr><td colspan="12" style="text-align:center;padding:32px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Importe o saldo sistêmico para começar.</td></tr>';
+      return;
+    }
+
+    const { data: lancs } = await sb.from('lancamentos').select('*').eq('status','pendente');
+    const { data: conts } = await sb.from('contagens').select('*').eq('status','pendente');
+    const todos = [...(lancs||[]), ...(conts||[])];
+
+    // Agrega soma por chave codigo+lote+armazem
+    const agg = {};
+    todos.forEach(r => {
+      const k = `${norm(r.codigo)}|${norm(r.lote)}|${norm(r.armazem)}`;
+      if (!agg[k]) agg[k] = { qtd:0, ops:new Set(), nlanc:0, recontagem:false, ids:[], tabelas:[], codigo:r.codigo, lote:r.lote, armazem:r.armazem };
+      agg[k].qtd += parseFloat(r.quantidade)||0;
+      agg[k].nlanc++;
+      agg[k].ids.push(r.id);
+      agg[k].tabelas.push(r.sessao_id !== undefined ? 'lancamentos' : 'contagens');
+      if (r.usuario) agg[k].ops.add(r.usuario);
+      if (r.recontagem) agg[k].recontagem = true;
+    });
+
+    // Set de chaves do saldo sistêmico
+    const saldoKeys     = new Set(saldo.map(s => `${norm(s.codigo)}|${norm(s.lote)}|${norm(s.armazem)}`));
+    const saldoLoteKeys = new Set(saldo.map(s => `${norm(s.codigo)}|${norm(s.lote)}`));
+
+    // Cruza saldo com contagem (match exato codigo+lote+armazem)
+    svLinhas = saldo.map(s => {
+      const k = `${norm(s.codigo)}|${norm(s.lote)}|${norm(s.armazem)}`;
+      // Se já validado no banco, usa os dados gravados
+      if (s.validado) {
+        return { ...s, qtdContada: s.qtd_contada ?? null, div: s.divergencia ?? null,
+          ops: s.operador||null, nlanc: 0, recontagem: false, _k: k, _tipo:'normal', _validado: true };
+      }
+      const c = agg[k] || null;
+      const qtdContada = c ? c.qtd : null;
+      const div = qtdContada !== null ? (qtdContada - s.saldo) : null;
+      return { ...s, qtdContada, div, ops: c?[...c.ops].join(', '):null, nlanc:c?c.nlanc:0, recontagem:c?c.recontagem:false, _k:k, _tipo:'normal', _validado: false };
+    });
+
+    // Detecta: lançamentos cujo lote+codigo NÃO existe no saldo (lote errado/inexistente)
+    svLoteNaoExiste = [];
+    // Detecta: lançamentos cujo lote existe mas armazém é diferente
+    svArmErrado = [];
+
+    // Build lookup: codigo → descricao (do saldo_sistema, fonte confiável)
+    const descricaoMap = {};
+    saldo.forEach(s => { if (s.codigo && s.descricao) descricaoMap[norm(s.codigo)] = s.descricao; });
+
+    Object.entries(agg).forEach(([k, c]) => {
+      const [cod, lot, arm] = k.split('|');
+      const matchExato  = saldoKeys.has(k);
+      const matchLote   = saldoLoteKeys.has(`${cod}|${lot}`);
+      const descricao   = descricaoMap[cod] || '';
+
+      if (!matchExato) {
+        if (matchLote) {
+          const saldosDoLote = saldo.filter(s => norm(s.codigo)===cod && norm(s.lote)===lot);
+          svArmErrado.push({
+            codigo: c.codigo, lote: c.lote, armazem: c.armazem,
+            descricao,
+            qtdContada: c.qtd, ops: [...c.ops].join(', '), nlanc: c.nlanc,
+            recontagem: c.recontagem, _k: k,
+            armazens_sistema: saldosDoLote.map(s=>s.armazem).join(', '),
+            saldo_sistema: saldosDoLote[0]?.saldo ?? null,
+          });
+        } else {
+          svLoteNaoExiste.push({
+            codigo: c.codigo, lote: c.lote, armazem: c.armazem,
+            descricao,
+            qtdContada: c.qtd, ops: [...c.ops].join(', '), nlanc: c.nlanc,
+            recontagem: c.recontagem, _k: k,
+          });
+        }
+      }
+    });
+
+    // Popula filtro de armazéns
+    const arms = [...new Set(svLinhas.map(r=>r.armazem).filter(Boolean))].sort();
+    const sel = document.getElementById('filt-sv-arm');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Todos armazéns</option>' + arms.map(a=>`<option value="${a}"${a===cur?' selected':''}>${a}</option>`).join('');
+
+    // Botão Validar Tudo
+    const temSemDiv = svLinhas.some(r => r.qtdContada !== null && r.div === 0 && !r.recontagem);
+    const btnVT = document.getElementById('btn-validar-todos');
+    if (btnVT) btnVT.style.display = temSemDiv ? 'inline-flex' : 'none';
+
+    atualizarStatsSV();
+    filtrarValidacao();
+  } catch(e) { toast('Erro validação: '+e.message,'err'); }
+}
+
+function atualizarStatsSV() {
+  const total     = svLinhas.length;
+  const validados = svLinhas.filter(r => r._validado).length;
+  const contados  = svLinhas.filter(r => r.qtdContada !== null && !r._validado).length;
+  const pend      = total - contados - validados;
+  const diverg    = svLinhas.filter(r => r.div !== null && r.div !== 0).length;
+  const recont    = svLinhas.filter(r => r.recontagem && !r._validado).length;
+
+  document.getElementById('sv-total').textContent      = total;
+  document.getElementById('sv-contados').textContent   = validados + contados;
+  document.getElementById('sv-pendentes').textContent  = pend;
+  document.getElementById('sv-diverg').textContent     = diverg;
+  document.getElementById('sv-recontagens').textContent= recont;
+
+  // Badge = aguardando validação (contados mas não validados)
+  const badge = document.getElementById('nbadge-val');
+  badge.textContent = contados;
+  badge.style.display = contados > 0 ? 'inline' : 'none';
+
+  // Botão Validar Tudo
+  const temSemDiv = svLinhas.some(r => r.qtdContada !== null && r.div === 0 && !r.recontagem && !r._validado);
+  const btnVT = document.getElementById('btn-validar-todos');
+  if (btnVT) btnVT.style.display = temSemDiv ? 'inline-flex' : 'none';
+}
+
+function filtrarValidacao() {
+  const q      = (document.getElementById('search-sv').value||'').toLowerCase();
+  const arm    = document.getElementById('filt-sv-arm').value;
+  const status = document.getElementById('filt-sv-status').value;
+
+  const data = svLinhas.filter(r => {
+    const txt = [r.codigo,r.descricao,r.lote,r.armazem].join(' ').toLowerCase();
+    if (q && !txt.includes(q)) return false;
+    if (arm && r.armazem !== arm) return false;
+    if (status === 'contado'    && r.qtdContada === null) return false;
+    if (status === 'pendente'   && r.qtdContada !== null) return false;
+    if (status === 'divergencia'&& (r.div === null || r.div === 0)) return false;
+    if (status === 'recontagem' && !r.recontagem) return false;
+    return true;
+  });
+
+  const total = data.length + (svArmErrado?.length||0) + (svLoteNaoExiste?.length||0);
+  document.getElementById('cnt-sv').textContent = `${total} item${total!==1?'ns':''}`;
+
+  const hoje = new Date();
+  const tbody = document.getElementById('tbody-sv');
+
+  // ── Seção 1: Itens normais do saldo sistêmico ──
+  const rowsNormais = data.map(r => {
+    const isValidado  = r._validado === true;
+    const temContagem = r.qtdContada !== null;
+    const rowClass = isValidado ? 'sv-validado'
+      : r.recontagem ? 'sv-recont'
+      : temContagem  ? 'sv-contado'
+      : 'sv-pendente';
+
+    let divCell = '<span style="color:var(--text3)">—</span>';
+    if (r.div !== null) {
+      const dc = r.div===0?'div-ok':r.div>0?'div-pos':'div-neg';
+      divCell = `<span class="${dc}">${r.div>0?'+':''}${r.div}</span>`;
+    }
+    let vencStyle = '';
+    if (r.dt_validade) {
+      const diff = (new Date(r.dt_validade)-hoje)/86400000;
+      if (diff<0) vencStyle='color:var(--red);font-weight:700';
+      else if (diff<30) vencStyle='color:var(--amber)';
+    }
+    const dtFab = r.dt_fabricacao ? new Date(r.dt_fabricacao).toLocaleDateString('pt-BR') : '—';
+    const dtVal = r.dt_validade   ? new Date(r.dt_validade).toLocaleDateString('pt-BR')   : '—';
+    const reconBadge = r.recontagem ? '<span class="badge-recont">↺</span>' : '';
+
+    let qtdCell, acoes;
+    if (isValidado) {
+      qtdCell = `<span class="qtd-contada">${r.qtdContada}</span> <span style="font-family:var(--mono);font-size:.63rem;color:var(--green);margin-left:4px;font-weight:700">✓ Validado</span>`;
+      acoes   = '';
+    } else if (temContagem) {
+      qtdCell = `<span class="qtd-contada">${r.qtdContada}</span><span style="font-family:var(--mono);font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span>${reconBadge}`;
+      acoes   = `<button class="btn btn-primary btn-sm" onclick="abrirValidacao(${JSON.stringify(r).replace(/"/g,'&quot;')})">✓ Validar</button><button class="btn btn-amber btn-sm" style="margin-left:2px" onclick="abrirSolicitarRecontagem(${JSON.stringify(r).replace(/"/g,'&quot;')})">↺</button><button class="btn btn-ghost btn-sm" style="margin-left:2px" onclick="abrirEditSV(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>`;
+    } else {
+      qtdCell = `<span class="qtd-vazia">Não contado</span>`;
+      acoes   = `<button class="btn btn-primary btn-sm" onclick="abrirValidacaoManual(${JSON.stringify(r).replace(/"/g,'&quot;')})">✓ Validar</button><button class="btn btn-ghost btn-sm" style="margin-left:2px" onclick="abrirEditSV(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>`;
+    }
+
+    const deleteBtn = `<button class="btn btn-danger btn-sm" style="margin-left:2px" title="Excluir este item" onclick="excluirItem(${r.id})">🗑</button>`;
+    const acoesComExcluir = acoes ? acoes + deleteBtn : deleteBtn;
+    return `<tr class="${rowClass}" data-id="${r.id}">
+      <td class="td-chk"><input type="checkbox" class="sv-check row-chk" value="${r.id}" onchange="atualizarSelecao()"></td>
+      <td class="cc">${r.codigo||'—'}</td>
+      <td class="cn">${r.descricao||'—'}</td>
+      <td class="cm">${r.lote||'—'}</td>
+      <td style="font-family:var(--mono);font-weight:700">${r.saldo}</td>
+      <td style="font-family:var(--mono);color:var(--amber)">${r.empenho||0}</td>
+      <td style="font-family:var(--mono);font-weight:600">${r.armazem||'—'}</td>
+      <td class="cts" style="${vencStyle}">${dtFab}</td>
+      <td class="cts" style="${vencStyle}">${dtVal}</td>
+      <td>${qtdCell}</td>
+      <td>${divCell}</td>
+      <td class="ca" style="white-space:nowrap">${acoesComExcluir}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Seção 2: Armazém errado (lote existe, armazém diferente) ──
+  let rowsArmErrado = '';
+  if (svArmErrado?.length > 0) {
+    rowsArmErrado = `
+      <tr style="background:var(--amber-bg)">
+        <td colspan="11" style="padding:9px 15px;font-family:var(--mono);font-size:.65rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--amber-bd)">
+          ⚠ Armazém não identificado — lote existe no sistema, mas armazém informado é diferente (${svArmErrado.length})
+        </td>
+      </tr>` +
+      svArmErrado.map(r => `
+        <tr style="background:var(--amber-bg)">
+          <td class="cc">${r.codigo||'—'}</td>
+          <td class="cn">${r.descricao||'—'}</td>
+          <td class="cm">${r.lote||'—'}</td>
+          <td style="font-family:var(--mono);color:var(--text3)">—</td>
+          <td style="font-family:var(--mono);color:var(--text3)">—</td>
+          <td><span style="font-family:var(--mono);font-weight:700;color:var(--amber)">${r.armazem||'—'}</span>
+            <span style="font-family:var(--mono);font-size:.65rem;color:var(--text3);margin-left:5px">← informado</span>
+          </td>
+          <td class="cts">—</td><td class="cts">—</td>
+          <td><span class="qtd-contada" style="color:var(--amber)">${r.qtdContada}</span><span style="font-family:var(--mono);font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
+          <td><span style="font-family:var(--mono);font-size:.72rem;color:var(--amber)">Arm. sistema: ${r.armazens_sistema}</span></td>
+          <td class="ca" style="white-space:nowrap">
+            <button class="btn btn-primary btn-sm" onclick="abrirValidacaoAvulsa(${JSON.stringify(r).replace(/"/g,'&quot;')}, 'arm_errado')">✓ Validar</button>
+            <button class="btn btn-ghost btn-sm" style="margin-left:3px" onclick="abrirEditSVAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>
+            <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="excluirLancAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✕</button>
+          </td>
+        </tr>`).join('');
+  }
+
+  // ── Seção 3: Lote não existe no sistema ──
+  let rowsNaoExiste = '';
+  if (svLoteNaoExiste?.length > 0) {
+    rowsNaoExiste = `
+      <tr style="background:var(--red-bg)">
+        <td colspan="11" style="padding:9px 15px;font-family:var(--mono);font-size:.65rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--red-bd)">
+          ✕ Lote não existe no saldo sistêmico (${svLoteNaoExiste.length})
+        </td>
+      </tr>` +
+      svLoteNaoExiste.map(r => `
+        <tr style="background:var(--red-bg)">
+          <td class="cc">${r.codigo||'—'}</td>
+          <td class="cn">${r.descricao||'—'}</td>
+          <td class="cm" style="color:var(--red)">${r.lote||'—'}</td>
+          <td colspan="2" style="font-family:var(--mono);font-size:.72rem;color:var(--red)">Lote não encontrado no sistema</td>
+          <td style="font-family:var(--mono);font-weight:600">${r.armazem||'—'}</td>
+          <td class="cts">—</td><td class="cts">—</td>
+          <td><span class="qtd-contada" style="color:var(--red)">${r.qtdContada}</span><span style="font-family:var(--mono);font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
+          <td><span class="div-neg">Verificar</span></td>
+          <td class="ca" style="white-space:nowrap">
+            <button class="btn btn-primary btn-sm" onclick="abrirValidacaoAvulsa(${JSON.stringify(r).replace(/"/g,'&quot;')}, 'lote_nao_existe')">✓ Validar</button>
+            <button class="btn btn-ghost btn-sm" style="margin-left:3px" onclick="abrirEditSVAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>
+            <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="excluirLancAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✕</button>
+          </td>
+        </tr>`).join('');
+  }
+
+  if (!rowsNormais && !rowsArmErrado && !rowsNaoExiste) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum item.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rowsNormais + rowsArmErrado + rowsNaoExiste;
+  atualizarBtnLimpar();
+  atualizarSelecao();
+}
+
+// Validação manual — item não contado pelo operador, gestor valida diretamente
+function abrirValidacaoManual(item) {
+  // Usa o mesmo modal mas com qtdContada = null, gestor preenche quantidade
+  const itemManual = { ...item, qtdContada: null, nlanc: 0, ops: null, div: null };
+  itemAtual = itemManual;
+  const isRecont = false;
+
+  document.getElementById('mv-titulo').textContent = 'Validar Manualmente';
+  document.getElementById('mv-sub').textContent    = `${item.descricao||item.codigo} — Lote ${item.lote} — Arm. ${item.armazem}`;
+  document.getElementById('mv-cod').textContent    = item.codigo || '—';
+  document.getElementById('mv-lote').textContent   = item.lote || '—';
+  document.getElementById('mv-saldo-sis').textContent = item.saldo ?? '—';
+  document.getElementById('mv-arm').textContent    = item.armazem || '—';
+  document.getElementById('mv-qtd').textContent    = '— (não contado)';
+  document.getElementById('mv-ops').textContent    = '—';
+  document.getElementById('mv-nlanc').textContent  = 'Nenhum lançamento do operador';
+
+  document.getElementById('mv-motivo-wrap').style.display = 'block';
+  const lbl = document.querySelector('#mv-motivo-wrap label');
+  if (lbl) lbl.innerHTML = 'Justificativa da validação manual <span style="color:var(--red)">*</span>';
+  const ph = document.getElementById('mv-motivo');
+  if (ph) ph.placeholder = 'Ex: Item conferido fisicamente pelo analista, contagem não registrada';
+
+  document.getElementById('mv-recont-info').style.display = 'none';
+  document.getElementById('btn-recont').style.display = 'none';
+
+  // Campo saldo pre-preenchido com o saldo do sistema
+  document.getElementById('mv-saldo').value = item.saldo ?? '';
+  document.getElementById('mv-tipo').value  = '';
+  document.getElementById('mv-obs').value   = '';
+  document.getElementById('mv-motivo').value = '';
+
+  // Adiciona campo para qtd contada manual
+  const qtdWrap = document.getElementById('mv-qtd-manual-wrap');
+  if (qtdWrap) qtdWrap.style.display = 'block';
+
+  document.getElementById('mv-prev').style.display = 'none';
+  document.getElementById('modal-val').classList.add('open');
+}
+
+// ── Abrir modal de validação ──────────────────────────────
+function abrirValidacao(item) {
+  itemAtual = item;
+  const isRecont = item.recontagem;
+
+  document.getElementById('mv-titulo').textContent = isRecont ? '↺ Validar Recontagem' : 'Validar Contagem';
+  document.getElementById('mv-sub').textContent    = `${item.descricao||item.codigo} — Lote ${item.lote} — Arm. ${item.armazem}`;
+  document.getElementById('mv-cod').textContent    = item.codigo || '—';
+  document.getElementById('mv-lote').textContent   = item.lote || '—';
+  document.getElementById('mv-saldo-sis').textContent = item.saldo ?? '—';
+  document.getElementById('mv-arm').textContent    = item.armazem || '—';
+  document.getElementById('mv-qtd').textContent    = item.qtdContada ?? '—';
+  document.getElementById('mv-ops').textContent    = item.ops || '—';
+  document.getElementById('mv-nlanc').textContent  = item.nlanc ? `${item.nlanc} lançamento${item.nlanc!==1?'s':''}` : '—';
+
+  // Motivo (só na recontagem)
+  document.getElementById('mv-motivo-wrap').style.display = isRecont ? 'block' : 'none';
+  document.getElementById('mv-recont-info').style.display = isRecont ? 'block' : 'none';
+  document.getElementById('btn-recont').style.display     = isRecont ? 'none' : 'inline-flex';
+
+  if (isRecont) {
+    document.getElementById('mv-qtd-recont').textContent = item.qtdContada ?? '—';
+    document.getElementById('mv-qtd-primeira').textContent = '— (buscar no histórico)';
+  }
+
+  // Pré-preenche saldo e calcula divergência
+  document.getElementById('mv-saldo').value = item.saldo ?? '';
+  document.getElementById('mv-tipo').value  = '';
+  document.getElementById('mv-obs').value   = '';
+  document.getElementById('mv-motivo').value= '';
+  // Esconde campo manual (só para validação manual)
+  const qmw = document.getElementById('mv-qtd-manual-wrap');
+  if (qmw) qmw.style.display = 'none';
+  const qmi = document.getElementById('mv-qtd-manual');
+  if (qmi) qmi.value = '';
+  calcDiv();
+
+  document.getElementById('modal-val').classList.add('open');
+}
+
+function calcDivManual() {
+  const qtdStr = document.getElementById('mv-qtd-manual').value;
+  if (qtdStr === '') { document.getElementById('mv-prev').style.display='none'; return; }
+  const qtd = parseFloat(qtdStr) || 0;
+  const saldoStr = document.getElementById('mv-saldo').value;
+  if (saldoStr === '') { document.getElementById('mv-prev').style.display='none'; return; }
+  const saldo = parseFloat(saldoStr);
+  const div   = qtd - saldo;
+  const tipo  = div===0?'ok':div>0?'positivo':'negativo';
+  document.getElementById('mv-tipo').value = tipo;
+  const prev = document.getElementById('mv-prev');
+  prev.style.display = 'block';
+  document.getElementById('dp-qtd').textContent = qtd;
+  document.getElementById('dp-sal').textContent = saldo;
+  const el = document.getElementById('dp-div');
+  el.textContent = (div>0?'+':'')+div;
+  el.className = `dp-v ${tipo==='ok'?'div-ok':tipo==='positivo'?'div-pos':'div-neg'}`;
+}
+
+function calcDiv() {
+  const qtd   = parseFloat(itemAtual?.qtdContada) || 0;
+  const saldoStr = document.getElementById('mv-saldo').value;
+  if (saldoStr === '' || saldoStr === null) { document.getElementById('mv-tipo').value=''; document.getElementById('mv-prev').style.display='none'; return; }
+  const saldo = parseFloat(saldoStr);
+  const div  = qtd - saldo;
+  const tipo = div===0 ? 'ok' : div>0 ? 'positivo' : 'negativo';
+  document.getElementById('mv-tipo').value = tipo;
+  const prev = document.getElementById('mv-prev');
+  prev.style.display = 'block';
+  document.getElementById('dp-qtd').textContent = qtd;
+  document.getElementById('dp-sal').textContent = saldo;
+  const el = document.getElementById('dp-div');
+  el.textContent = (div>0?'+':'')+div;
+  el.className = `dp-v ${tipo==='ok'?'div-ok':tipo==='positivo'?'div-pos':'div-neg'}`;
+}
+
+async function confirmarValidacao() {
+  if (!itemAtual) return;
+  const saldo  = parseFloat(document.getElementById('mv-saldo').value);
+  const tipo   = document.getElementById('mv-tipo').value;
+  const obs    = document.getElementById('mv-obs').value.trim();
+  const motivo = document.getElementById('mv-motivo').value.trim();
+  const isRecont = itemAtual.recontagem;
+
+  if (saldo === null || saldo === undefined || isNaN(saldo)) { toast('Informe o saldo do sistema (pode ser 0).','warn'); return; }
+
+  // Validação manual: usa qtd do campo manual
+  const isManual = itemAtual.qtdContada === null || itemAtual.qtdContada === undefined;
+  let qtdFinal = itemAtual.qtdContada;
+  if (isManual) {
+    const qtdManualEl = document.getElementById('mv-qtd-manual');
+    const qtdManualStr = qtdManualEl?.value ?? '';
+    if (qtdManualStr === '') { toast('Informe a quantidade contada (pode ser 0).','warn'); return; }
+    const qtdManualVal = parseFloat(qtdManualStr);
+    if (isNaN(qtdManualVal) || qtdManualVal < 0) { toast('Quantidade inválida.','warn'); return; }
+    qtdFinal = qtdManualVal;
+    if (!motivo) { toast('Informe a justificativa da validação manual.','warn'); return; }
+  } else if (isRecont && !motivo) {
+    toast('Informe o motivo da recontagem.','warn'); return;
+  }
+
+  const div = (qtdFinal||0) - saldo;
+  document.getElementById('btn-conf-val').disabled = true;
+  document.getElementById('val-spin').style.display = 'block';
+
+  try {
+    await sb.from('historico').insert({
+      codigo:           itemAtual.codigo,
+      produto_nome:     itemAtual.descricao || itemAtual.codigo,
+      lote:             itemAtual.lote,
+      quantidade:       qtdFinal,
+      saldo_sistema:    saldo,
+      divergencia:      div,
+      tipo:             tipo || (div===0?'ok':div>0?'positivo':'negativo'),
+      observacao:       obs || null,
+      armazem:          itemAtual.armazem,
+      usuario:          itemAtual.ops || (isManual ? 'Gestor (manual)' : null),
+      is_recontagem:    isRecont || false,
+      motivo_recontagem: isRecont ? motivo : null,
+    });
+
+    // Remove lançamentos pendentes deste codigo+lote+armazem
+    const cod = (itemAtual.codigo||'').trim();
+    const lot = (itemAtual.lote||'').trim();
+    const arm = (itemAtual.armazem||'').trim();
+
+    await Promise.all([
+      sb.from('lancamentos').delete().eq('status','pendente')
+        .ilike('codigo',`%${cod}%`).ilike('lote',`%${lot}%`).ilike('armazem',`%${arm}%`),
+      sb.from('contagens').delete().eq('status','pendente')
+        .ilike('codigo',`%${cod}%`).ilike('lote',`%${lot}%`).ilike('armazem',`%${arm}%`),
+      // Grava validado=true no saldo_sistema para persistir após reload
+      itemAtual.id ? sb.from('saldo_sistema').update({
+        validado:     true,
+        qtd_contada:  qtdFinal,
+        divergencia:  div,
+        tipo_div:     tipo || (div===0?'ok':div>0?'positivo':'negativo'),
+        operador:     itemAtual.ops || (isManual ? 'Gestor (manual)' : null),
+        observacao_val: obs || null,
+        motivo_val:   motivo || null,
+        validado_em:  new Date().toISOString(),
+      }).eq('id', itemAtual.id) : Promise.resolve(),
+    ]);
+
+    fecharModal('modal-val');
+    toast(isManual ? '✓ Validado manualmente!' : isRecont ? '✓ Recontagem validada!' : '✓ Contagem validada!', 'ok');
+
+    // Atualiza a linha localmente também (sem reload)
+    if (itemAtual._k) {
+      const idx = svLinhas.findIndex(r => r._k === itemAtual._k);
+      if (idx !== -1) {
+        svLinhas[idx] = { ...svLinhas[idx], _validado: true, qtdContada: qtdFinal };
+      }
+    }
+    svArmErrado     = (svArmErrado||[]).filter(r => r._k !== itemAtual._k);
+    svLoteNaoExiste = (svLoteNaoExiste||[]).filter(r => r._k !== itemAtual._k);
+
+    itemAtual = null;
+    atualizarStatsSV();
+    filtrarValidacao();
+  } catch(e) {
+    toast('Erro: '+e.message,'err');
+  } finally {
+    document.getElementById('btn-conf-val').disabled = false;
+    document.getElementById('val-spin').style.display = 'none';
+  }
+}
+
+// ── Solicitar recontagem ──────────────────────────────────
+function abrirSolicitarRecontagem(item) {
+  itemAtual = item;
+  document.getElementById('mr-sub').textContent = `${item.descricao||item.codigo} — Lote ${item.lote} — Arm. ${item.armazem}`;
+  document.getElementById('mr-motivo').value = '';
+  document.getElementById('modal-recont').classList.add('open');
+}
+
+async function confirmarSolicitarRecontagem() {
+  const motivo = document.getElementById('mr-motivo').value.trim();
+  if (!motivo) { toast('Informe o motivo da recontagem.','warn'); return; }
+
+  document.getElementById('mr-spin').style.display = 'block';
+
+  try {
+    const item = itemAtual;
+    const cod  = (item.codigo||'').trim();
+    const lot  = (item.lote||'').trim();
+    const arm  = (item.armazem||'').trim();
+
+    // Salva a qtd da 1ª contagem no histórico (como "apagada/recontagem pendente")
+    // Marca lancamentos/contagens como recontagem=true
+    await sb.from('lancamentos').update({ recontagem: true })
+      .eq('status','pendente')
+      .ilike('codigo', `%${cod}%`)
+      .ilike('lote',   `%${lot}%`)
+      .ilike('armazem',`%${arm}%`);
+
+    await sb.from('contagens').update({ recontagem: true })
+      .eq('status','pendente')
+      .ilike('codigo', `%${cod}%`)
+      .ilike('lote',   `%${lot}%`)
+      .ilike('armazem',`%${arm}%`);
+
+    // Cria agendamento de recontagem com lote e motivo específicos
+    await sb.from('agendamentos').insert({
+      codigo:            cod,
+      produto_nome:      item.descricao || cod,
+      lote_especifico:   lot,
+      status:            'pendente',
+      data_agendada:     new Date().toISOString().split('T')[0],
+      is_recontagem:     true,
+      motivo_recontagem: motivo,
+    });
+
+    fecharModal('modal-recont');
+    toast('↺ Recontagem solicitada! Agendamento criado.','warn');
+    itemAtual = null;
+    carregarValidacao();
+
+    // Atualiza badge de agendamentos
+    const { count } = await sb.from('agendamentos').select('*', {count:'exact',head:true}).in('status',['pendente','em_contagem']);
+    const badge = document.getElementById('nbadge-ag');
+    if (count > 0) { badge.textContent = count; badge.style.display = 'inline'; }
+
+  } catch(e) {
+    toast('Erro: '+e.message,'err');
+  } finally {
+    document.getElementById('mr-spin').style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// REGISTROS (bruto, só consulta)
+// ══════════════════════════════════════════════════════════
+
+async function carregarLancamentos() {
+  try {
+    const { data, error } = await sb.from('lancamentos').select('*').order('created_at',{ascending:false});
+    if (error) throw error;
+    todosLanc = data || [];
+    renderLancamentos(todosLanc);
+  } catch(e) { toast('Erro lançamentos: '+e.message,'err'); }
+}
+
+function filtrarLancamentos() {
+  const q = document.getElementById('search-lanc').value.toLowerCase();
+  renderLancamentos(q ? todosLanc.filter(r => [r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem].join(' ').toLowerCase().includes(q)) : todosLanc);
+}
+
+function renderLancamentos(data) {
+  document.getElementById('cnt-lanc').textContent = `${data.length} registro${data.length!==1?'s':''}`;
+  const tbody = document.getElementById('tbody-lanc');
+  if (!data.length) { tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum lançamento.</td></tr>'; return; }
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td class="cc">${r.codigo}</td>
+      <td class="cn">${r.produto_nome}${r.recontagem?'<span class="badge-recont">↺ Recontagem</span>':''}</td>
+      <td class="cm">${r.lote||'—'}</td>
+      <td><span style="font-family:var(--mono);font-weight:700">${r.quantidade}</span></td>
+      <td><span style="font-family:var(--mono);color:var(--amber)">${r.armazem||'—'}</span></td>
+      <td class="cm">${r.usuario||'—'}</td>
+      <td class="cts">${fmtTS(r.created_at)}</td>
+      <td>${r.recontagem?'<span class="badge b-r">Recontagem</span>':'<span class="badge b-p">Normal</span>'}</td>
+      <td class="ca">
+        <button class="btn btn-ghost btn-sm" onclick="abrirEditRegistro(${JSON.stringify(r).replace(/"/g,'&quot;')},'lancamentos')">✏</button>
+        <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="excluirRegistro('${r.id}','lancamentos')">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function excluirRegistro(id, tabela) {
+  if (!confirm('Excluir este registro?')) return;
+  try {
+    const { error } = await sb.from(tabela).delete().eq('id', String(id));
+    if (error) throw error;
+    toast('Registro excluído.','warn');
+    carregarLancamentos();
+  } catch(e) { toast('Erro: '+e.message,'err'); }
+}
+
+// carregarContagens removida — aba de contagens avulsas foi removida do painel
+
+function abrirEditRegistro(r, tabela) {
+  document.getElementById('er-id').value     = r.id;
+  document.getElementById('er-tabela').value = tabela;
+  document.getElementById('er-cod').value    = r.codigo||'';
+  document.getElementById('er-prod').value   = r.produto_nome||'';
+  document.getElementById('er-lote').value   = r.lote||'';
+  document.getElementById('er-qtd').value    = r.quantidade||'';
+  document.getElementById('er-arm').value    = r.armazem||'';
+  document.getElementById('modal-edit-reg').classList.add('open');
+}
+async function salvarEditRegistro() {
+  const id  = document.getElementById('er-id').value;
+  const tab = document.getElementById('er-tabela').value;
+  document.getElementById('er-spin').style.display = 'block';
+  try {
+    const { error } = await sb.from(tab).update({
+      codigo:       document.getElementById('er-cod').value.trim().toUpperCase(),
+      produto_nome: document.getElementById('er-prod').value.trim(),
+      lote:         document.getElementById('er-lote').value.trim().toUpperCase(),
+      quantidade:   parseFloat(document.getElementById('er-qtd').value),
+      armazem:      document.getElementById('er-arm').value.trim(),
+    }).eq('id', id);
+    if (error) throw error;
+    fecharModal('modal-edit-reg');
+    toast('✓ Registro atualizado!','ok');
+    if (tab==='lancamentos') carregarLancamentos();
+  } catch(e) { toast('Erro: '+e.message,'err'); }
+  finally { document.getElementById('er-spin').style.display='none'; }
+}
+
+// ══════════════════════════════════════════════════════════
+// HISTÓRICO
+// ══════════════════════════════════════════════════════════
+
+async function carregarHistorico() {
+  try {
+    const de  = document.getElementById('filt-hist-de').value;
+    const ate = document.getElementById('filt-hist-ate').value;
+    let q = sb.from('historico').select('*').order('created_at',{ascending:false}).limit(500);
+    if (de)  q = q.gte('created_at', de+'T00:00:00');
+    if (ate) q = q.lte('created_at', ate+'T23:59:59');
+    const { data, error } = await q;
+    if (error) throw error;
+    todoHistorico = data || [];
+
+    // Popula filtro de armazéns
+    const arms = [...new Set(todoHistorico.map(r=>r.armazem).filter(Boolean))].sort();
+    const sel = document.getElementById('filt-hist-arm');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Todos arm.</option>' + arms.map(a=>`<option value="${a}"${a===cur?' selected':''}>${a}</option>`).join('');
+
+    filtrarHistorico();
+  } catch(e) { toast('Erro histórico: '+e.message,'err'); }
+}
+
+function filtrarHistorico() {
+  const q    = (document.getElementById('search-hist').value||'').toLowerCase();
+  const arm  = document.getElementById('filt-hist-arm').value;
+  const tipo = document.getElementById('filt-hist-tipo').value;
+
+  const data = todoHistorico.filter(r => {
+    const txt = [r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem].join(' ').toLowerCase();
+    if (q && !txt.includes(q)) return false;
+    if (arm && r.armazem !== arm) return false;
+    if (tipo === 'ok'        && r.tipo !== 'ok') return false;
+    if (tipo === 'positivo'  && r.tipo !== 'positivo') return false;
+    if (tipo === 'negativo'  && r.tipo !== 'negativo') return false;
+    if (tipo === 'recontagem'&& !r.is_recontagem) return false;
+    return true;
+  });
+
+  document.getElementById('cnt-hist').textContent = `${data.length} registro${data.length!==1?'s':''}`;
+  const tbody = document.getElementById('tbody-hist');
+  if (!data.length) { tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Nenhum registro.</td></tr>'; return; }
+
+  tbody.innerHTML = data.map(h => {
+    const d  = h.divergencia ?? 0;
+    const dc = d===0?'div-ok':d>0?'div-pos':'div-neg';
+    const dl = d===0?'± 0':(d>0?'+':'')+d;
+
+    // Badge tipo
+    const tipoBadge = `<span class="badge ${h.tipo==='ok'?'b-v':h.tipo==='positivo'?'b-b':'b-r'}">${h.tipo==='ok'?'OK':h.tipo==='positivo'?'+':'-'}</span>`;
+
+    // Obs + motivo recontagem combinados numa célula
+    let obsTexto = '';
+    if (h.motivo_recontagem) obsTexto = h.motivo_recontagem;
+    else if (h.observacao) obsTexto = h.observacao;
+    const obsCell = obsTexto
+      ? `<button class="btn btn-ghost btn-sm" style="font-size:.67rem;padding:3px 8px" onclick="verTexto('Detalhes',${JSON.stringify(obsTexto).replace(/"/g,'&quot;')})">💬</button>`
+      : '<span style="color:var(--text3)">—</span>';
+
+    // Recontagem indicator inline no tipo
+    const reconTag = h.is_recontagem ? ' <span style="font-family:var(--mono);font-size:.6rem;color:var(--purple)">↺</span>' : '';
+
+    return `<tr>
+      <td class="cc">${h.codigo||'—'}</td>
+      <td class="cn" style="font-size:.85rem">${h.produto_nome||'—'}</td>
+      <td class="cm">${h.lote||'—'}</td>
+      <td style="font-family:var(--mono);font-weight:700;font-size:.82rem">${h.quantidade??'—'}</td>
+      <td style="font-family:var(--mono);font-size:.8rem;color:var(--text2)">${h.saldo_sistema??'—'}</td>
+      <td><span class="${dc}" style="font-size:.8rem">${dl}</span></td>
+      <td>${tipoBadge}${reconTag}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:var(--amber);font-size:.8rem">${h.armazem||'—'}</td>
+      <td style="font-size:.82rem;color:var(--text2)">${h.usuario||'—'}</td>
+      <td>${obsCell}</td>
+      <td class="cts">${fmtTS(h.created_at)}</td>
+      <td class="ca"><button class="btn btn-ghost btn-sm" onclick="abrirEditHistorico(${JSON.stringify(h).replace(/"/g,'&quot;')})">✏</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirEditHistorico(h) {
+  document.getElementById('eh-id').value   = h.id;
+  document.getElementById('eh-cod').value  = h.codigo||'';
+  document.getElementById('eh-prod').value = h.produto_nome||'';
+  document.getElementById('eh-lote').value = h.lote||'';
+  document.getElementById('eh-qtd').value  = h.quantidade??'';
+  document.getElementById('eh-sal').value  = h.saldo_sistema??'';
+  document.getElementById('eh-div').value  = h.divergencia??'';
+  document.getElementById('eh-tipo').value = h.tipo||'ok';
+  document.getElementById('eh-arm').value  = h.armazem||'';
+  document.getElementById('eh-obs').value  = h.observacao||'';
+  document.getElementById('modal-edit-hist').classList.add('open');
+}
+function calcEditDiv() {
+  const qtd=parseFloat(document.getElementById('eh-qtd').value)||0;
+  const sal=parseFloat(document.getElementById('eh-sal').value);
+  if (!isNaN(sal)) { const d=qtd-sal; document.getElementById('eh-div').value=d; document.getElementById('eh-tipo').value=d===0?'ok':d>0?'positivo':'negativo'; }
+}
+async function salvarEditHistorico() {
+  const id=document.getElementById('eh-id').value;
+  document.getElementById('eh-spin').style.display='block';
+  try {
+    const { error } = await sb.from('historico').update({
+      codigo:        document.getElementById('eh-cod').value.trim().toUpperCase(),
+      produto_nome:  document.getElementById('eh-prod').value.trim(),
+      lote:          document.getElementById('eh-lote').value.trim().toUpperCase(),
+      quantidade:    parseFloat(document.getElementById('eh-qtd').value),
+      saldo_sistema: parseFloat(document.getElementById('eh-sal').value),
+      divergencia:   parseFloat(document.getElementById('eh-div').value),
+      tipo:          document.getElementById('eh-tipo').value,
+      armazem:       document.getElementById('eh-arm').value.trim(),
+      observacao:    document.getElementById('eh-obs').value.trim()||null,
+    }).eq('id',id);
+    if (error) throw error;
+    fecharModal('modal-edit-hist'); toast('✓ Histórico atualizado!','ok'); carregarHistorico();
+  } catch(e) { toast('Erro: '+e.message,'err'); }
+  finally { document.getElementById('eh-spin').style.display='none'; }
+}
+
+// ══════════════════════════════════════════════════════════
+// PERFORMANCE
+// ══════════════════════════════════════════════════════════
+
+async function carregarPerformance() {
+  try {
+    const op=document.getElementById('filt-perf-op').value;
+    const de=document.getElementById('filt-perf-de').value;
+    const ate=document.getElementById('filt-perf-ate').value;
+    let q=sb.from('sessoes_contagem').select('*').not('fim','is',null).order('inicio',{ascending:false}).limit(500);
+    if (op)  q=q.eq('usuario',op);
+    if (de)  q=q.gte('inicio',de+'T00:00:00');
+    if (ate) q=q.lte('inicio',ate+'T23:59:59');
+    const { data, error } = await q;
+    if (error) throw error;
+
+    if (!op) {
+      const ops=[...new Set((data||[]).map(r=>r.usuario).filter(Boolean))];
+      const sel=document.getElementById('filt-perf-op');
+      const cur=sel.value;
+      sel.innerHTML='<option value="">Todos os operadores</option>'+ops.map(o=>`<option value="${o}"${o===cur?' selected':''}>${o}</option>`).join('');
+    }
+
+    const byOp={};
+    (data||[]).forEach(s=>{
+      if (!byOp[s.usuario]) byOp[s.usuario]={total:0,durTotal:0,lanc:0,recontagens:0};
+      byOp[s.usuario].total++;
+      byOp[s.usuario].durTotal+=s.duracao_seg||0;
+      byOp[s.usuario].lanc+=s.total_lancamentos||0;
+      if (s.is_recontagem) byOp[s.usuario].recontagens++;
+    });
+
+    document.getElementById('perf-stats').innerHTML=Object.entries(byOp).map(([op,v])=>`
+      <div class="stat-card sc-b">
+        <div class="sc-val" style="color:var(--blue);font-size:1.1rem;margin-bottom:2px">${op}</div>
+        <div class="sc-lbl">${v.total} sessão${v.total!==1?'s':''} · ${v.lanc} lançamento${v.lanc!==1?'s':''} · ${v.recontagens} recontagem${v.recontagens!==1?'s':''}</div>
+        <div style="margin-top:8px;font-family:var(--mono);font-size:.78rem;color:var(--green)">Tempo médio: ${fmtDur(Math.round(v.durTotal/v.total))}</div>
+      </div>`).join('')||'<div style="color:var(--text3);font-family:var(--mono);font-size:.78rem">Sem dados no período.</div>';
+
+    document.getElementById('cnt-perf').textContent=`${(data||[]).length} sessão${(data||[]).length!==1?'ões':''}`;
+    const tbody=document.getElementById('tbody-perf');
+    if (!data?.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhuma sessão.</td></tr>';return;}
+    tbody.innerHTML=data.map(s=>`
+      <tr>
+        <td class="cn">${s.usuario||'—'}</td>
+        <td>${s.produto_nome||'—'} <span class="cm" style="font-size:.68rem">(${s.codigo})</span></td>
+        <td class="cts">${fmtTS(s.inicio)}</td>
+        <td class="cts">${fmtTS(s.fim)}</td>
+        <td><span style="font-family:var(--mono);font-weight:600;color:var(--green);background:var(--green-bg);border:1px solid var(--green-bd);padding:3px 9px;border-radius:4px;font-size:.75rem">${fmtDur(s.duracao_seg)}</span></td>
+        <td><span style="font-family:var(--mono);font-size:.78rem">${s.total_lancamentos||0}</span></td>
+        <td>${s.is_recontagem?'<span class="badge b-r">↺ Recontagem</span>':'<span class="badge b-p">Normal</span>'}</td>
+      </tr>`).join('');
+  } catch(e) { toast('Erro performance: '+e.message,'err'); }
+}
+
+// ══════════════════════════════════════════════════════════
+// AGENDAMENTOS (com fix de exclusão)
+// ══════════════════════════════════════════════════════════
+
+async function buscarProdutoAg(codigo) {
+  if (!codigo||codigo.length<3) return;
+  try {
+    const { data } = await sb.from('produtos').select('nome').eq('codigo',codigo.toUpperCase()).maybeSingle();
+    if (data) document.getElementById('ag-nome').value=data.nome;
+  } catch {}
+}
+
+async function criarAgendamento() {
+  const codigo = document.getElementById('ag-codigo').value.trim().toUpperCase();
+  const nome   = document.getElementById('ag-nome').value.trim();
+  const lote   = document.getElementById('ag-lote').value.trim().toUpperCase();
+  const data   = document.getElementById('ag-data').value;
+  if (!codigo||!nome) { toast('Informe código e nome.','warn'); return; }
+  document.getElementById('ag-spin').style.display='block';
+  try {
+    const { error } = await sb.from('agendamentos').insert({
+      codigo, produto_nome:nome, lote_especifico:lote||null,
+      status:'pendente', data_agendada:data||null
+    });
+    if (error) throw error;
+    toast('✓ Agendamento criado!','ok');
+    ['ag-codigo','ag-nome','ag-lote','ag-data'].forEach(id=>document.getElementById(id).value='');
+    carregarAgendamentos();
+  } catch(e) { toast('Erro: '+e.message,'err'); }
+  finally { document.getElementById('ag-spin').style.display='none'; }
+}
+
+async function carregarAgendamentos() {
+  try {
+    const filt=document.getElementById('filt-ag').value;
+    let q=sb.from('agendamentos').select('*').order('data_agendada',{ascending:true});
+    if (filt) q=q.eq('status',filt);
+    const { data, error } = await q;
+    if (error) throw error;
+
+    // Atualiza badge
+    const pendentes=(data||[]).filter(a=>a.status==='pendente'||a.status==='em_contagem').length;
+    const badge=document.getElementById('nbadge-ag');
+    badge.textContent=pendentes; badge.style.display=pendentes>0?'inline':'none';
+
+    document.getElementById('cnt-ag').textContent=`${(data||[]).length} agendamento${(data||[]).length!==1?'s':''}`;
+    const tbody=document.getElementById('tbody-ag');
+    if (!data?.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum agendamento.</td></tr>';return;}
+    tbody.innerHTML=data.map(a=>{
+      const isFinalizado = a.status === 'finalizado';
+      const isEmContagem = a.status === 'em_contagem';
+      const rowStyle = isFinalizado
+        ? 'background:rgba(16,217,138,.07);border-left:3px solid var(--green);'
+        : isEmContagem
+        ? 'background:rgba(96,165,250,.06);border-left:3px solid var(--blue);'
+        : '';
+      const statusBadge = isFinalizado
+        ? `<span class="badge b-v">✅ Finalizado</span>`
+        : isEmContagem
+        ? `<span class="badge b-b">▶ Em contagem</span>`
+        : `<span class="badge b-p">Pendente</span>`;
+      return `
+      <tr style="${rowStyle}">
+        <td class="cc">${a.codigo}</td>
+        <td class="cn">${a.produto_nome}${a.is_recontagem?'<span class="badge-recont">↺ Recontagem</span>':''}</td>
+        <td class="cm">${a.lote_especifico||'—'}</td>
+        <td class="cts">${fmtData(a.data_agendada)}</td>
+        <td>${a.data_antecipada?`<span style="font-family:var(--mono);font-size:.72rem;color:var(--blue)">⚡ ${fmtData(a.data_antecipada)}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+        <td>${statusBadge}</td>
+        <td class="cts">${fmtTS(a.created_at)}</td>
+        <td class="ca" style="display:flex;gap:5px;justify-content:flex-end">
+          ${!isFinalizado ? `<button class="btn btn-ghost btn-sm" onclick="abrirEditAg(${JSON.stringify(a).replace(/"/g,'&quot;')})">✏ Editar</button>` : ''}
+          <button class="btn btn-danger btn-sm" onclick="excluirAg('${a.id}')">✕</button>
+        </td>
+      </tr>`}).join('');
+  } catch(e) { toast('Erro agendamentos: '+e.message,'err'); }
+}
+
+function abrirEditAg(a) {
+  document.getElementById('ea-id').value      = a.id;
+  document.getElementById('ea-cod').value     = a.codigo;
+  document.getElementById('ea-nome').value    = a.produto_nome;
+  document.getElementById('ea-lote').value    = a.lote_especifico||'';
+  document.getElementById('ea-data').value    = a.data_agendada||'';
+  document.getElementById('ea-antecip').value = a.data_antecipada||'';
+  document.getElementById('ea-status').value  = a.status;
+  document.getElementById('modal-edit-ag').classList.add('open');
+}
+async function salvarEditAgendamento() {
+  const id=document.getElementById('ea-id').value;
+  document.getElementById('ea-spin').style.display='block';
+  try {
+    const { error } = await sb.from('agendamentos').update({
+      codigo:          document.getElementById('ea-cod').value.trim().toUpperCase(),
+      produto_nome:    document.getElementById('ea-nome').value.trim(),
+      lote_especifico: document.getElementById('ea-lote').value.trim().toUpperCase()||null,
+      data_agendada:   document.getElementById('ea-data').value||null,
+      data_antecipada: document.getElementById('ea-antecip').value||null,
+      status:          document.getElementById('ea-status').value,
+    }).eq('id', id);
+    if (error) throw error;
+    fecharModal('modal-edit-ag'); toast('✓ Agendamento atualizado!','ok'); carregarAgendamentos();
+  } catch(e) { toast('Erro: '+e.message,'err'); }
+  finally { document.getElementById('ea-spin').style.display='none'; }
+}
+async function excluirAg(id) {
+  if (!confirm('Excluir este agendamento?')) return;
+  try {
+    const { error } = await sb.from('agendamentos').delete().eq('id', String(id));
+    if (error) throw error;
+    toast('Agendamento excluído.','warn'); carregarAgendamentos();
+  } catch(e) { toast('Erro ao excluir: '+e.message,'err'); }
+}
+
+// ══════════════════════════════════════════════════════════
+// TRANSFERÊNCIAS
+// ══════════════════════════════════════════════════════════
+
+async function criarTransferencia() {
+  const prod=document.getElementById('tf-prod').value.trim();
+  const codigo=document.getElementById('tf-cod').value.trim().toUpperCase();
+  const lote=document.getElementById('tf-lote').value.trim().toUpperCase();
+  const qtd=parseFloat(document.getElementById('tf-qtd').value);
+  const orig=document.getElementById('tf-orig').value.trim();
+  const dest=document.getElementById('tf-dest').value.trim();
+  if (!prod||!qtd||!orig||!dest){toast('Preencha produto, qtd, origem e destino.','warn');return;}
+  if (orig===dest){toast('Origem e destino devem ser diferentes.','warn');return;}
+  document.getElementById('tf-spin').style.display='block';
+  try {
+    const { error } = await sb.from('transferencias').insert({codigo:codigo||null,produto_nome:prod,lote:lote||null,quantidade:qtd,armazem_origem:orig,armazem_destino:dest,status:'pendente'});
+    if (error) throw error;
+    toast('✓ Transferência criada!','ok');
+    ['tf-prod','tf-cod','tf-lote','tf-qtd','tf-orig','tf-dest'].forEach(id=>document.getElementById(id).value='');
+    carregarTransferencias();
+  } catch(e){toast('Erro: '+e.message,'err');}
+  finally{document.getElementById('tf-spin').style.display='none';}
+}
+
+async function carregarTransferencias() {
+  try {
+    const filt=document.getElementById('filt-tf').value;
+    let q=sb.from('transferencias').select('*').order('created_at',{ascending:false});
+    if (filt) q=q.eq('status',filt);
+    const { data, error } = await q;
+    if (error) throw error;
+    document.getElementById('cnt-tf').textContent=`${(data||[]).length} transferência${(data||[]).length!==1?'s':''}`;
+    const tbody=document.getElementById('tbody-tf');
+    if (!data?.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhuma transferência.</td></tr>';return;}
+    tbody.innerHTML=data.map(t=>`
+      <tr>
+        <td class="cn">${t.produto_nome}</td>
+        <td class="cc">${t.codigo||'—'}</td>
+        <td class="cm">${t.lote||'—'}</td>
+        <td style="font-family:var(--mono);font-weight:700">${t.quantidade}</td>
+        <td><div class="arrow-row"><span class="ach">Arm. ${t.armazem_origem}</span><span style="color:var(--green)">→</span><span class="ach d">Arm. ${t.armazem_destino}</span></div></td>
+        <td><span class="badge ${t.status==='pendente'?'b-p':'b-v'}">${t.status}</span></td>
+        <td class="cts">${fmtTS(t.created_at)}</td>
+        <td class="ca">
+          ${t.status==='pendente'?`<button class="btn btn-primary btn-sm" onclick="concluirTf(${t.id})">✓ Concluir</button>`:'<span style="color:var(--text3);font-family:var(--mono);font-size:.68rem">concluído</span>'}
+          <button class="btn btn-danger btn-sm" onclick="excluirTf(${t.id})" style="margin-left:4px">✕</button>
+        </td>
+      </tr>`).join('');
+  } catch(e){toast('Erro transferências: '+e.message,'err');}
+}
+async function concluirTf(id){try{await sb.from('transferencias').update({status:'concluido'}).eq('id',id);toast('✓ Concluída!','ok');carregarTransferencias();}catch(e){toast('Erro: '+e.message,'err');}}
+async function excluirTf(id){if(!confirm('Excluir esta transferência?'))return;try{await sb.from('transferencias').delete().eq('id',id);toast('Excluída.','warn');carregarTransferencias();}catch(e){toast('Erro: '+e.message,'err');}}
+
+// ══════════════════════════════════════════════════════════
+// SALDO SISTÊMICO — importação xlsx
+// ══════════════════════════════════════════════════════════
+
+function onArquivoSaldoSelecionado(input) {
+  const file=input.files[0]; if(!file) return;
+  document.getElementById('lbl-arquivo-saldo').textContent=file.name;
+  document.getElementById('btn-importar-saldo').disabled=true;
+  document.getElementById('saldo-preview').style.display='none';
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try {
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const raw=XLSX.utils.sheet_to_json(ws,{raw:false,defval:''});
+      if (!raw.length){toast('Planilha vazia.','warn');return;}
+      saldoXlsxData=raw.map(row=>{
+        const out={};
+        for (const [k,v] of Object.entries(row)){
+          const campo=COL_MAP[k.trim().toLowerCase()];
+          if (campo) out[campo]=typeof v==='string'?v.trim():v;
+        }
+        return out;
+      }).filter(r=>r.codigo);
+      const cols=Object.keys(saldoXlsxData[0]||{});
+      const faltando=['codigo','lote','saldo','armazem'].filter(c=>!cols.includes(c));
+      const prev=document.getElementById('saldo-preview');
+      const info=document.getElementById('saldo-preview-info');
+      prev.style.display='block';
+      if (faltando.length>0){
+        info.innerHTML=`<span style="color:var(--red)">⚠ Colunas não encontradas: ${faltando.join(', ')}</span>`;
+        toast('Algumas colunas não foram reconhecidas.','warn');
+      } else {
+        const prods=new Set(saldoXlsxData.map(r=>r.codigo)).size;
+        const lotes=new Set(saldoXlsxData.map(r=>r.lote)).size;
+        const arms=new Set(saldoXlsxData.map(r=>r.armazem)).size;
+        info.innerHTML=`✓ <strong style="color:var(--green)">${saldoXlsxData.length}</strong> linhas · <strong>${prods}</strong> produtos · <strong>${lotes}</strong> lotes · <strong>${arms}</strong> armazéns`;
+        document.getElementById('btn-importar-saldo').disabled=false;
+        toast(`✓ ${saldoXlsxData.length} linhas lidas. Clique em Importar.`,'ok');
+      }
+    } catch(err){toast('Erro ao ler: '+err.message,'err');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function importarSaldoSistema() {
+  if (!saldoXlsxData?.length){toast('Selecione um arquivo primeiro.','warn');return;}
+  const btn=document.getElementById('btn-importar-saldo');
+  const sp=document.getElementById('imp-spin');
+  btn.disabled=true; sp.style.display='block';
+  try {
+    // Deleta apenas os não validados (mantém os já validados)
+    await sb.from('saldo_sistema').delete().eq('validado', false);
+    const BATCH=200;
+    const agora=new Date().toISOString();
+    let inseridos=0;
+    for (let i=0;i<saldoXlsxData.length;i+=BATCH){
+      const lote=saldoXlsxData.slice(i,i+BATCH).map(r=>({
+        filial:String(r.filial||'').trim(), tipo:String(r.tipo||'').trim(),
+        codigo:String(r.codigo||'').trim(), descricao:String(r.descricao||'').trim(),
+        unidade:String(r.unidade||'').trim(), lote:String(r.lote||'').trim(),
+        dt_fabricacao:r.dt_fabricacao||null, dt_validade:r.dt_validade||null,
+        dias_vida:parseFloat(r.dias_vida)||null, pct_vida:parseFloat(r.pct_vida)||null,
+        saldo:parseFloat(r.saldo)||0, empenho:parseFloat(r.empenho)||0,
+        armazem:String(r.armazem||'').trim(), importado_em:agora,
+        validado: false,
+      }));
+      const { error } = await sb.from('saldo_sistema').insert(lote);
+      if (error) throw error;
+      inseridos+=lote.length;
+    }
+    const dt=new Date().toLocaleString('pt-BR');
+    document.getElementById('saldo-status-txt').textContent=`✓ Importado em ${dt} · ${inseridos} registros`;
+    toast(`✓ ${inseridos} registros importados!`,'ok',5000);
+    saldoXlsxData=null;
+    document.getElementById('saldo-preview').style.display='none';
+    document.getElementById('lbl-arquivo-saldo').textContent='Selecionar .xlsx';
+    document.getElementById('inp-saldo-xlsx').value='';
+    document.getElementById('btn-importar-saldo').disabled=true;
+    carregarValidacao();
+  } catch(e){toast('Erro importação: '+e.message,'err');}
+  finally{btn.disabled=false; sp.style.display='none';}
+}
+
+// carregarSaldoSistema e filtrarSaldo removidas — aba Saldo Sistêmico foi eliminada
+
+// ══════════════════════════════════════════════════════════
+// EDITAR / EXCLUIR / VALIDAR ITENS DO SALDO/VALIDAÇÃO
+// ══════════════════════════════════════════════════════════
+
+// Abre modal de edição para um item normal do saldo sistêmico (edita os lançamentos)
+function abrirEditSV(item) {
+  // Para itens normais, editamos os lançamentos correspondentes no banco
+  document.getElementById('esv-k').value        = item._k || '';
+  document.getElementById('esv-codigo').value   = item.codigo || '';
+  document.getElementById('esv-produto').value  = item.descricao || '';
+  document.getElementById('esv-lote').value     = item.lote || '';
+  document.getElementById('esv-armazem').value  = item.armazem || '';
+  document.getElementById('esv-qtd').value      = item.qtdContada ?? '';
+  document.getElementById('esv-tipo').value     = 'normal';
+  document.getElementById('modal-edit-sv').classList.add('open');
+}
+
+// Abre modal de edição para itens de armazém errado ou lote não existe
+function abrirEditSVAvulso(item) {
+  document.getElementById('esv-k').value        = item._k || '';
+  document.getElementById('esv-codigo').value   = item.codigo || '';
+  document.getElementById('esv-produto').value  = '';
+  document.getElementById('esv-lote').value     = item.lote || '';
+  document.getElementById('esv-armazem').value  = item.armazem || '';
+  document.getElementById('esv-qtd').value      = item.qtdContada ?? '';
+  document.getElementById('esv-tipo').value     = 'avulso';
+  document.getElementById('modal-edit-sv').classList.add('open');
+}
+
+async function salvarEditSV() {
+  const k       = document.getElementById('esv-k').value;
+  const novoLote= document.getElementById('esv-lote').value.trim().toUpperCase();
+  const novoArm = document.getElementById('esv-armazem').value.trim();
+  const novaQtd = parseFloat(document.getElementById('esv-qtd').value);
+  document.getElementById('esv-spin').style.display = 'block';
+
+  try {
+    const [cod, lot, arm] = k.split('|');
+    // Atualiza todos os lançamentos que batem com a chave original
+    const { error: e1 } = await sb.from('lancamentos')
+      .update({ lote: novoLote, armazem: novoArm })
+      .eq('status','pendente')
+      .ilike('codigo',`%${cod}%`)
+      .ilike('lote',`%${lot}%`)
+      .ilike('armazem',`%${arm}%`);
+
+    const { error: e2 } = await sb.from('contagens')
+      .update({ lote: novoLote, armazem: novoArm })
+      .eq('status','pendente')
+      .ilike('codigo',`%${cod}%`)
+      .ilike('lote',`%${lot}%`)
+      .ilike('armazem',`%${arm}%`);
+
+    fecharModal('modal-edit-sv');
+    toast('✓ Lançamentos atualizados!','ok');
+    carregarValidacao();
+  } catch(e) { toast('Erro: '+e.message,'err'); }
+  finally { document.getElementById('esv-spin').style.display = 'none'; }
+}
+
+// Exclui lançamentos de armazém errado ou lote não existe
+async function excluirLancAvulso(item) {
+  if (!confirm(`Excluir o lançamento de "${item.codigo}" lote "${item.lote}" arm. "${item.armazem}"?`)) return;
+  try {
+    const cod = (item.codigo||'').trim();
+    const lot = (item.lote||'').trim();
+    const arm = (item.armazem||'').trim();
+    await sb.from('lancamentos').delete().eq('status','pendente')
+      .ilike('codigo',`%${cod}%`).ilike('lote',`%${lot}%`).ilike('armazem',`%${arm}%`);
+    await sb.from('contagens').delete().eq('status','pendente')
+      .ilike('codigo',`%${cod}%`).ilike('lote',`%${lot}%`).ilike('armazem',`%${arm}%`);
+    toast('Lançamento excluído.','warn');
+    carregarValidacao();
+  } catch(e) { toast('Erro: '+e.message,'err'); }
+}
+
+// Valida item de armazém errado ou lote não existe (sem cruzar com saldo sistêmico)
+function abrirValidacaoAvulsa(item, tipoAlerta) {
+  itemAtual = { ...item, saldo: item.saldo_sistema ?? null, descricao: item.codigo, div: null, qtdContada: item.qtdContada };
+  document.getElementById('mv-titulo').textContent = tipoAlerta === 'arm_errado'
+    ? '⚠ Validar — Armazém Diferente' : '⚠ Validar — Lote Não Encontrado';
+  document.getElementById('mv-sub').textContent = `${item.codigo} — Lote ${item.lote} — Arm. informado: ${item.armazem}`;
+  document.getElementById('mv-cod').textContent  = item.codigo || '—';
+  document.getElementById('mv-lote').textContent = item.lote || '—';
+  document.getElementById('mv-arm').textContent  = item.armazem || '—';
+  document.getElementById('mv-qtd').textContent  = item.qtdContada ?? '—';
+  document.getElementById('mv-ops').textContent  = item.ops || '—';
+  document.getElementById('mv-nlanc').textContent= item.nlanc ? `${item.nlanc} lançamento${item.nlanc!==1?'s':''}` : '—';
+  document.getElementById('mv-saldo-sis').textContent = tipoAlerta === 'arm_errado'
+    ? (item.saldo_sistema ?? '—') + ` (arm. ${item.armazens_sistema})` : '— (lote inexistente)';
+  document.getElementById('mv-motivo-wrap').style.display = 'block';
+  const lbl = document.querySelector('#mv-motivo-wrap label');
+  if (lbl) lbl.innerHTML = tipoAlerta === 'arm_errado'
+    ? 'Justificativa do Armazém <span style="color:var(--red)">*</span>'
+    : 'Justificativa do Lote Não Encontrado <span style="color:var(--red)">*</span>';
+  document.getElementById('mv-recont-info').style.display = 'none';
+  document.getElementById('btn-recont').style.display = 'none';
+  document.getElementById('mv-saldo').value  = item.saldo_sistema ?? '';
+  document.getElementById('mv-tipo').value   = '';
+  document.getElementById('mv-obs').value    = '';
+  document.getElementById('mv-motivo').value = '';
+  document.getElementById('mv-prev').style.display = 'none';
+  document.getElementById('modal-val').classList.add('open');
+}
+
+// Validar Tudo — itens sem divergência de uma vez
+async function validarTodos() {
+  const semDiv = svLinhas.filter(r => r.qtdContada !== null && r.div === 0 && !r.recontagem);
+  if (!semDiv.length) { toast('Nenhum item sem divergência para validar.','warn'); return; }
+  if (!confirm(`Validar ${semDiv.length} item${semDiv.length!==1?'ns':''} sem divergência?`)) return;
+  const btn = document.getElementById('btn-validar-todos');
+  btn.disabled = true; btn.textContent = '⏳ Validando…';
+  let ok=0, erros=0;
+  for (const item of semDiv) {
+    try {
+      await sb.from('historico').insert({
+        codigo: item.codigo, produto_nome: item.descricao||item.codigo,
+        lote: item.lote, quantidade: item.qtdContada, saldo_sistema: item.saldo,
+        divergencia: 0, tipo: 'ok', observacao: null, armazem: item.armazem,
+        usuario: item.ops||null, is_recontagem: false, motivo_recontagem: null,
+      });
+      const cod=(item.codigo||'').trim(), lot=(item.lote||'').trim(), arm=(item.armazem||'').trim();
+      await sb.from('lancamentos').delete().eq('status','pendente').ilike('codigo',`%${cod}%`).ilike('lote',`%${lot}%`).ilike('armazem',`%${arm}%`);
+      await sb.from('contagens').delete().eq('status','pendente').ilike('codigo',`%${cod}%`).ilike('lote',`%${lot}%`).ilike('armazem',`%${arm}%`);
+      // Marca localmente
+      const idx = svLinhas.findIndex(r => r._k === item._k);
+      if (idx !== -1) svLinhas[idx]._validado = true;
+      ok++;
+    } catch { erros++; }
+  }
+  btn.disabled=false; btn.textContent='✓ Validar Tudo';
+  toast(`✓ ${ok} item${ok!==1?'ns':''} validado${ok!==1?'s':''}${erros?` · ${erros} erro${erros!==1?'s':''}`:''}.`,'ok',5000);
+  atualizarStatsSV();
+  filtrarValidacao();
+}
+
+// ── VER TEXTO COMPLETO ────────────────────────────────────
+function verTexto(titulo, texto) {
+  document.getElementById('vt-titulo').textContent = titulo;
+  document.getElementById('vt-corpo').textContent  = texto;
+  document.getElementById('modal-ver-texto').classList.add('open');
+}
+
+// ── FECHAR MODAIS PELO FUNDO ───────────────────────────────
+['modal-val','modal-recont','modal-edit-reg','modal-edit-hist','modal-edit-ag','modal-edit-sv','modal-ver-texto'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{if(e.target===e.currentTarget)fecharModal(id);});
+});
+
+// ── INIT ──────────────────────────────────────────────────
+
+
+// ══════════════════════════════════════════════════════════
+// EXCLUSÃO DE ITENS DO SALDO SISTÊMICO
+// ══════════════════════════════════════════════════════════
+
+function toggleModoExclusao() {
+  const tabela = document.getElementById('tbody-sv')?.closest('table');
+  const wrap   = tabela?.closest('.table-wrap') || document.querySelector('#tab-validacao .table-wrap');
+  const btn    = document.getElementById('btn-modo-exclusao');
+  const ativo  = document.querySelector('#tab-validacao').classList.toggle('delete-mode');
+  if (btn) {
+    btn.textContent = ativo ? '✕ Cancelar' : '🗑 Excluir';
+    btn.className   = ativo ? 'btn btn-amber btn-sm' : 'btn btn-ghost btn-sm';
+  }
+  if (!ativo) desmarcarTodos();
+}
+
+function atualizarBtnLimpar() {
+  const btn = document.getElementById('btn-limpar-tudo');
+  if (btn) btn.style.display = svLinhas.length > 0 ? 'inline-flex' : 'none';
+}
+
+function atualizarSelecao() {
+  const checks = document.querySelectorAll('.row-chk');
+  const marcados = [...checks].filter(c => c.checked);
+  const bar = document.getElementById('sel-bar');
+  const countEl = document.getElementById('sel-count');
+  const chkAll = document.getElementById('chk-all');
+  if (countEl) countEl.textContent = marcados.length;
+  if (bar) bar.classList.toggle('show', marcados.length > 0);
+  if (chkAll) {
+    chkAll.indeterminate = marcados.length > 0 && marcados.length < checks.length;
+    chkAll.checked = checks.length > 0 && marcados.length === checks.length;
+  }
+}
+
+function toggleTodos(chk) {
+  document.querySelectorAll('.row-chk').forEach(c => c.checked = chk.checked);
+  atualizarSelecao();
+}
+
+function desmarcarTodos() {
+  document.querySelectorAll('.row-chk').forEach(c => c.checked = false);
+  const chkAll = document.getElementById('chk-all');
+  if (chkAll) { chkAll.checked = false; chkAll.indeterminate = false; }
+  atualizarSelecao();
+}
+
+async function excluirItem(id) {
+  if (!id) return;
+  if (!confirm('Excluir este item do saldo importado?')) return;
+  try {
+    const { error } = await sb.from('saldo_sistema').delete().eq('id', id);
+    if (error) throw error;
+    toast('Item excluído.', 'warn');
+    await carregarValidacao();
+  } catch(e) { toast('Erro: ' + e.message, 'err'); }
+}
+
+async function excluirSelecionados() {
+  const checks = [...document.querySelectorAll('.row-chk:checked')];
+  if (!checks.length) { toast('Nenhum item selecionado.', 'warn'); return; }
+  const ids = checks.map(c => parseInt(c.value)).filter(Boolean);
+  if (!confirm(`Excluir ${ids.length} item(ns) selecionado(s) do saldo importado?`)) return;
+  try {
+    const { error } = await sb.from('saldo_sistema').delete().in('id', ids);
+    if (error) throw error;
+    toast(`✓ ${ids.length} item(ns) excluído(s).`, 'ok');
+    // Sai do modo exclusão
+    document.getElementById('tab-validacao')?.classList.remove('delete-mode');
+    const btnModo = document.getElementById('btn-modo-exclusao');
+    if (btnModo) { btnModo.textContent = '🗑 Excluir'; btnModo.className = 'btn btn-ghost btn-sm'; }
+    desmarcarTodos();
+    await carregarValidacao();
+  } catch(e) { toast('Erro: ' + e.message, 'err'); }
+}
+
+async function excluirTudo() {
+  const total = svLinhas.length;
+  if (!total) { toast('Nenhum dado importado para excluir.', 'warn'); return; }
+  if (!confirm(`Isso irá excluir TODOS os ${total} itens do saldo sistêmico importado (incluindo não validados). Deseja continuar?`)) return;
+  if (!confirm('Tem certeza? Esta ação não pode ser desfeita.')) return;
+  try {
+    const { error } = await sb.from('saldo_sistema').delete().eq('validado', false);
+    if (error) throw error;
+    toast('✓ Todos os dados importados foram excluídos.', 'ok', 5000);
+    document.getElementById('saldo-status-txt').textContent = 'Nenhum saldo importado';
+    document.getElementById('btn-limpar-tudo').style.display = 'none';
+    await carregarValidacao();
+  } catch(e) { toast('Erro: ' + e.message, 'err'); }
+}
+
+// ── TEMA CLARO/ESCURO ────────────────────────────────────
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.classList.toggle("dark");
+  const btn = document.getElementById("btn-theme");
+  btn.textContent = isDark ? "☀️" : "🌙";
+  localStorage.setItem("simbiose-theme", isDark ? "dark" : "light");
+}
+(function(){
+  const saved = localStorage.getItem("simbiose-theme");
+  if (saved === "dark") {
+    document.documentElement.classList.add("dark");
+    const btn = document.getElementById("btn-theme");
+    if (btn) btn.textContent = "☀️";
+  }
+})();
+
+initSb();
+carregarValidacao();
+carregarLancamentos();
+carregarAgendamentos();
+</script>
+
+</body>
+</html>
