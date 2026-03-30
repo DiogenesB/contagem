@@ -1755,7 +1755,7 @@ async function carregarValidacao() {
     const { data: saldo } = await sb.from('saldo_sistema').select('*').order('codigo').order('lote');
     if (!saldo || !saldo.length) {
       document.getElementById('tbody-sv').innerHTML =
-        '<tr><td colspan="12" style="text-align:center;padding:32px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Importe o saldo sistêmico para começar.</td></tr>';
+        '<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Importe o saldo sistêmico para começar.</td></tr>';
       return;
     }
 
@@ -1953,23 +1953,23 @@ function filtrarValidacao() {
   if (svArmErrado?.length > 0) {
     rowsArmErrado = `
       <tr style="background:var(--amber-bg)">
-        <td colspan="11" style="padding:9px 15px;font-family:var(--mono);font-size:.65rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--amber-bd)">
+        <td colspan="13" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--amber-bd)">
           ⚠ Armazém não identificado — lote existe no sistema, mas armazém informado é diferente (${svArmErrado.length})
         </td>
       </tr>` +
       svArmErrado.map(r => `
         <tr style="background:var(--amber-bg)">
+          <td class="td-chk"><input type="checkbox" class="sv-check row-chk" value="" onchange="atualizarSelecao()" disabled></td>
           <td class="cc">${r.codigo||'—'}</td>
           <td class="cn">${r.descricao||'—'}</td>
-          <td class="cm">${r.lote||'—'}</td>
-          <td style="font-family:var(--mono);color:var(--text3)">—</td>
-          <td style="font-family:var(--mono);color:var(--text3)">—</td>
-          <td><span style="font-family:var(--mono);font-weight:700;color:var(--amber)">${r.armazem||'—'}</span>
-            <span style="font-family:var(--mono);font-size:.65rem;color:var(--text3);margin-left:5px">← informado</span>
-          </td>
-          <td class="cts">—</td><td class="cts">—</td>
-          <td><span class="qtd-contada" style="color:var(--amber)">${r.qtdContada}</span><span style="font-family:var(--mono);font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
-          <td><span style="font-family:var(--mono);font-size:.72rem;color:var(--amber)">Arm. sistema: ${r.armazens_sistema}</span></td>
+          <td class="cm" style="color:var(--amber)">${r.lote||'—'}</td>
+          <td style="color:var(--text3)">—</td>
+          <td style="color:var(--text3)">—</td>
+          <td><span style="font-weight:700;color:var(--amber)">${r.armazem||'—'}</span><span style="font-size:.65rem;color:var(--text3);margin-left:5px">← info</span></td>
+          <td class="cts">—</td>
+          <td class="cts">—</td>
+          <td><span class="qtd-contada" style="color:var(--amber)">${r.qtdContada}</span><span style="font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
+          <td><span style="font-size:.72rem;color:var(--amber)">Arm: ${r.armazens_sistema}</span></td>
           <td class="ca" style="white-space:nowrap">
             <button class="btn btn-primary btn-sm" onclick="abrirValidacaoAvulsa(${JSON.stringify(r).replace(/"/g,'&quot;')}, 'arm_errado')">✓ Validar</button>
             <button class="btn btn-ghost btn-sm" style="margin-left:3px" onclick="abrirEditSVAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>
@@ -1983,19 +1983,22 @@ function filtrarValidacao() {
   if (svLoteNaoExiste?.length > 0) {
     rowsNaoExiste = `
       <tr style="background:var(--red-bg)">
-        <td colspan="11" style="padding:9px 15px;font-family:var(--mono);font-size:.65rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--red-bd)">
+        <td colspan="13" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--red-bd)">
           ✕ Lote não existe no saldo sistêmico (${svLoteNaoExiste.length})
         </td>
       </tr>` +
       svLoteNaoExiste.map(r => `
         <tr style="background:var(--red-bg)">
+          <td class="td-chk"><input type="checkbox" class="sv-check row-chk" value="" onchange="atualizarSelecao()" disabled></td>
           <td class="cc">${r.codigo||'—'}</td>
           <td class="cn">${r.descricao||'—'}</td>
           <td class="cm" style="color:var(--red)">${r.lote||'—'}</td>
-          <td colspan="2" style="font-family:var(--mono);font-size:.72rem;color:var(--red)">Lote não encontrado no sistema</td>
-          <td style="font-family:var(--mono);font-weight:600">${r.armazem||'—'}</td>
-          <td class="cts">—</td><td class="cts">—</td>
-          <td><span class="qtd-contada" style="color:var(--red)">${r.qtdContada}</span><span style="font-family:var(--mono);font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
+          <td style="font-size:.72rem;color:var(--red)">Lote não encontrado</td>
+          <td style="color:var(--text3)">—</td>
+          <td style="font-weight:600">${r.armazem||'—'}</td>
+          <td class="cts">—</td>
+          <td class="cts">—</td>
+          <td><span class="qtd-contada" style="color:var(--red)">${r.qtdContada}</span><span style="font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
           <td><span class="div-neg">Verificar</span></td>
           <td class="ca" style="white-space:nowrap">
             <button class="btn btn-primary btn-sm" onclick="abrirValidacaoAvulsa(${JSON.stringify(r).replace(/"/g,'&quot;')}, 'lote_nao_existe')">✓ Validar</button>
@@ -2006,7 +2009,7 @@ function filtrarValidacao() {
   }
 
   if (!rowsNormais && !rowsArmErrado && !rowsNaoExiste) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum item.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--text3);font-size:.75rem">Nenhum item.</td></tr>';
     return;
   }
   tbody.innerHTML = rowsNormais + rowsArmErrado + rowsNaoExiste;
