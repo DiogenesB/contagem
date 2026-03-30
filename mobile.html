@@ -1271,15 +1271,14 @@ html.dark .dp-hoje   { color:var(--green-txt); }
         <span id="lanc-recont-badge" class="badge-recont" style="display:none;margin-left:4px">⚠ Recontagem</span>
       </div>
 
-      <!-- Botão único de scanner -->
-      <button class="btn btn-blue" style="margin-bottom:14px" onclick="abrirQR(null, null)">
-        📷 Escanear Código / Lote
-      </button>
-
       <div class="field">
         <label>Código / SKU</label>
-        <input type="text" id="l-codigo" placeholder="Ex: PRD-001" autocomplete="off"
-          oninput="onCodigoSessaoInput()" style="text-transform:uppercase">
+        <div class="inp-wrap">
+          <input type="text" id="l-codigo" placeholder="Ex: PRD-001" autocomplete="off"
+            oninput="onCodigoSessaoInput()" style="text-transform:uppercase"
+            onfocus="selecionarInput('l-codigo', onCodigoSessaoInput)">
+          <button class="qr-btn" id="qrbtn-ativo" onclick="abrirQR(qrTargetId, qrCallback)" title="Escanear">📷</button>
+        </div>
         <div class="produto-tag" id="l-ptag">
           <div class="pt-nome" id="l-pnome">—</div>
           <div class="pt-cod"  id="l-pcod">—</div>
@@ -1289,13 +1288,15 @@ html.dark .dp-hoje   { color:var(--green-txt); }
       <div class="field">
         <label>Lote</label>
         <input type="text" id="l-lote" placeholder="Ex: LOT-2024-01" autocomplete="off"
-          style="text-transform:uppercase">
+          style="text-transform:uppercase"
+          onfocus="selecionarInput('l-lote', null)">
       </div>
 
       <div class="field">
         <label>Armazém</label>
         <input type="text" id="l-armazem" placeholder="Ex: 42 ou D2" inputmode="text"
-          style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+          style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"
+          onfocus="selecionarInput('l-armazem', null)">
       </div>
 
       <div class="field" style="margin-bottom:16px">
@@ -1370,15 +1371,7 @@ html.dark .dp-hoje   { color:var(--green-txt); }
     <div class="qr-line"></div>
   </div>
   <div class="qr-label" id="qr-label">Aponte para o código</div>
-  <div class="qr-sublabel" id="qr-sublabel">Lê QR Code e código de barras</div>
-
-  <!-- Seletor de destino -->
-  <div class="qr-target-sel" id="qr-target-sel">
-    <button class="qr-target-btn active" id="qrbtn-codigo" onclick="selecionarCampoQR('l-codigo', this)">📦 Código</button>
-    <button class="qr-target-btn" id="qrbtn-lote" onclick="selecionarCampoQR('l-lote', this)">🏷️ Lote</button>
-    <button class="qr-target-btn" id="qrbtn-armazem" onclick="selecionarCampoQR('l-armazem', this)">🏭 Armazém</button>
-  </div>
-
+  <div class="qr-sublabel">Lê QR Code e código de barras</div>
   <button class="qr-cancel" onclick="fecharQR()">Cancelar</button>
 </div>
 
@@ -1740,10 +1733,12 @@ async function iniciarSessao(agend, recontagem = false) {
 function limparFormLancamento() {
   ['l-codigo','l-lote','l-armazem','l-qtd'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.value = ''; el.classList.remove('filled','error'); }
+    if (el) { el.value = ''; el.classList.remove('filled','error'); el.style.borderColor = ''; }
   });
   const ptag = document.getElementById('l-ptag');
   if (ptag) ptag.style.display = 'none';
+  // Padrão: código selecionado
+  selecionarInput('l-codigo', onCodigoSessaoInput);
 }
 
 async function onCodigoSessaoInput() {
@@ -1970,40 +1965,28 @@ async function confirmarTransferencia() {
 // ── SCANNER: ZXing (lê QR code + barcode) ────────────────
 let _zxingReader = null;
 
-function abrirQR(targetInputId, cb = null) {
-  // Se targetInputId é null, começa sem campo selecionado — usuário escolhe no overlay
-  qrTargetId = targetInputId;
+// Chamado ao focar num campo — define qual campo vai receber o scan
+function selecionarInput(inputId, cb) {
+  qrTargetId = inputId;
   qrCallback = cb;
-
-  // Sempre mostra o seletor na sessão de contagem
-  const naSessao = document.getElementById('screen-sessao').classList.contains('active');
-  document.getElementById('qr-target-sel').style.display = naSessao ? 'flex' : 'none';
-
-  // Destaca botão correspondente (ou nenhum se null)
-  document.querySelectorAll('.qr-target-btn').forEach(b => b.classList.remove('active'));
-  const mapa = { 'l-codigo': 'qrbtn-codigo', 'l-lote': 'qrbtn-lote', 'l-armazem': 'qrbtn-armazem' };
-  if (targetInputId && mapa[targetInputId]) {
-    document.getElementById(mapa[targetInputId])?.classList.add('active');
-  }
-
-  // Label inicial
-  const labels = { 'l-codigo': 'Aponte para o código', 'l-lote': 'Aponte para o lote', 'l-armazem': 'Aponte para o armazém' };
-  document.getElementById('qr-label').textContent = targetInputId
-    ? (labels[targetInputId] || 'Aponte para o código')
-    : 'Selecione o campo abaixo';
-
-  document.getElementById('qr-overlay').classList.add('open');
-  setTimeout(iniciarZXing, 100);
+  // Destaca visualmente o campo ativo
+  ['l-codigo','l-lote','l-armazem'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.borderColor = id === inputId ? 'var(--blue-lt)' : '';
+  });
 }
 
-// Muda campo destino sem fechar câmera
-function selecionarCampoQR(novoTargetId, btn) {
-  qrTargetId = novoTargetId;
-  qrCallback = novoTargetId === 'l-codigo' ? onCodigoSessaoInput : null;
-  document.querySelectorAll('.qr-target-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const labels = { 'l-codigo': 'Aponte para o código', 'l-lote': 'Aponte para o lote', 'l-armazem': 'Aponte para o armazém' };
-  document.getElementById('qr-label').textContent = labels[novoTargetId] || 'Aponte para o código';
+function abrirQR(targetInputId, cb) {
+  if (!targetInputId) {
+    toast('Toque primeiro no campo que quer preencher.', 'warn', 2500);
+    return;
+  }
+  qrTargetId = targetInputId;
+  qrCallback  = cb;
+  const labels = { 'l-codigo': 'Código do produto', 'l-lote': 'Lote', 'l-armazem': 'Armazém' };
+  document.getElementById('qr-label').textContent = '📷 Lendo: ' + (labels[targetInputId] || targetInputId);
+  document.getElementById('qr-overlay').classList.add('open');
+  setTimeout(iniciarZXing, 100);
 }
 
 async function iniciarZXing() {
@@ -2052,10 +2035,6 @@ async function iniciarZXing() {
       if (result) {
         const val = result.getText().trim();
         // Se nenhum campo selecionado, avisa o usuário
-        if (!qrTargetId) {
-          toast('Selecione o campo antes de escanear.', 'warn', 2500);
-          return;
-        }
         fecharQR();
         const input = document.getElementById(qrTargetId);
         if (input) { input.value = val.toUpperCase(); input.classList.add('filled'); }
