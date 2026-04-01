@@ -1300,10 +1300,26 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
     <div class="tab-panel" id="tab-registros">
       <div class="info-banner">ℹ️ Registros brutos de todos os lançamentos do operador — apenas para consulta e análise futura. Edições aqui não afetam o histórico validado.</div>
       <div class="table-wrap">
-        <div class="table-hdr">
+        <div class="table-hdr" style="flex-wrap:wrap;gap:6px">
           <div class="th-left"><span class="table-title">Lançamentos da Agenda</span><span class="tcount" id="cnt-lanc">—</span></div>
-          <div class="th-right">
-            <input type="text" class="search-inp" id="search-lanc" placeholder="Buscar…" oninput="filtrarLancamentos()">
+          <div class="th-right" style="flex-wrap:wrap;gap:6px">
+            <input type="text" class="search-inp" id="search-lanc" placeholder="Produto / Código / Lote…" oninput="filtrarLancamentos()" style="width:180px">
+            <select class="filter-sel" id="filt-lanc-arm" onchange="filtrarLancamentos()"><option value="">Todos arm.</option></select>
+            <select class="filter-sel" id="filt-lanc-op" onchange="filtrarLancamentos()"><option value="">Todos operadores</option></select>
+            <select class="filter-sel" id="filt-lanc-tipo" onchange="filtrarLancamentos()">
+              <option value="">Todos os tipos</option>
+              <option value="normal">Normal</option>
+              <option value="recontagem">Recontagem</option>
+            </select>
+            <input type="date" class="filter-sel" id="filt-lanc-de"  onchange="filtrarLancamentos()" title="De">
+            <input type="date" class="filter-sel" id="filt-lanc-ate" onchange="filtrarLancamentos()" title="Até">
+            <select class="filter-sel" id="filt-lanc-status" onchange="filtrarLancamentos()">
+              <option value="">Qualquer status</option>
+              <option value="pendente">Pendente</option>
+              <option value="aprovado">Aprovado</option>
+              <option value="rejeitado">Rejeitado</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="exportarLancamentosExcel()">↓ Excel</button>
             <button class="btn btn-ghost btn-sm" onclick="carregarLancamentos()">↺</button>
           </div>
         </div>
@@ -1319,12 +1335,15 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
       <div class="table-wrap">
         <div class="table-hdr">
           <div class="th-left"><span class="table-title">Histórico Validado</span><span class="tcount" id="cnt-hist">—</span></div>
-          <div class="th-right">
+          <div class="th-right" style="flex-wrap:wrap;gap:6px">
             <input type="date" class="filter-sel" id="filt-hist-de"  onchange="carregarHistorico()" title="De">
             <input type="date" class="filter-sel" id="filt-hist-ate" onchange="carregarHistorico()" title="Até">
-            <input type="text" class="search-inp" id="search-hist" placeholder="Produto / Lote…" oninput="filtrarHistorico()" style="width:150px">
+            <input type="text" class="search-inp" id="search-hist" placeholder="Produto / Lote / Código…" oninput="filtrarHistorico()" style="width:170px">
             <select class="filter-sel" id="filt-hist-arm" onchange="filtrarHistorico()">
               <option value="">Todos arm.</option>
+            </select>
+            <select class="filter-sel" id="filt-hist-op" onchange="filtrarHistorico()">
+              <option value="">Todos operadores</option>
             </select>
             <select class="filter-sel" id="filt-hist-tipo" onchange="filtrarHistorico()">
               <option value="">Todos</option>
@@ -1360,14 +1379,46 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
       <div class="info-banner">ℹ️ Tempo medido do momento em que o operador abre um produto até finalizar a contagem. Recontagens contam separadamente.</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
         <span style="font-size:.9rem;font-weight:700;color:var(--text)">Análise de Tempo por Operador</span>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <select class="filter-sel" id="filt-perf-op" onchange="carregarPerformance()"><option value="">Todos os operadores</option></select>
           <input type="date" id="filt-perf-de"  class="filter-sel" onchange="carregarPerformance()">
           <input type="date" id="filt-perf-ate" class="filter-sel" onchange="carregarPerformance()">
+          <select class="filter-sel" id="filt-perf-tipo" onchange="filtrarPerformance()">
+            <option value="">Normal + Recontagem</option>
+            <option value="normal">Somente normais</option>
+            <option value="recontagem">Somente recontagens</option>
+          </select>
+          <input type="text" class="search-inp" id="search-perf" placeholder="Produto…" oninput="filtrarPerformance()" style="width:150px">
           <button class="btn btn-ghost btn-sm" onclick="carregarPerformance()">↺</button>
         </div>
       </div>
       <div class="stat-grid" id="perf-stats" style="margin-bottom:22px"></div>
+
+      <!-- Tempo médio por produto -->
+      <div class="table-wrap" style="margin-bottom:18px">
+        <div class="table-hdr">
+          <div class="th-left">
+            <span class="table-title">⏱ Tempo Médio por Produto</span>
+            <span class="tcount" id="cnt-perf-prod">—</span>
+          </div>
+          <div class="th-right">
+            <span style="font-size:.7rem;color:var(--text3);font-weight:600">Ordenado do mais lento ao mais rápido</span>
+          </div>
+        </div>
+        <table>
+          <thead><tr>
+            <th style="width:105px">Código</th>
+            <th>Produto</th>
+            <th style="width:80px;text-align:center">Sessões</th>
+            <th style="width:110px;text-align:center">Tempo Médio</th>
+            <th style="width:100px;text-align:center">Tempo Mín.</th>
+            <th style="width:100px;text-align:center">Tempo Máx.</th>
+            <th style="width:90px;text-align:center">Total Lanç.</th>
+          </tr></thead>
+          <tbody id="tbody-perf-prod"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3);font-size:.8rem">Carregue os dados acima.</td></tr></tbody>
+        </table>
+      </div>
+
       <div class="table-wrap">
         <div class="table-hdr">
           <div class="th-left"><span class="table-title">Detalhamento de Sessões</span><span class="tcount" id="cnt-perf">—</span></div>
@@ -1395,12 +1446,20 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
         <div class="table-hdr">
           <div class="th-left"><span class="table-title">Agendamentos</span><span class="tcount" id="cnt-ag">—</span></div>
           <div class="th-right">
+            <input type="text" class="search-inp" id="search-ag" placeholder="Produto / Código / Lote…" oninput="filtrarAgendamentos()" style="width:190px">
             <select class="filter-sel" id="filt-ag" onchange="carregarAgendamentos()">
               <option value="">Todos</option>
               <option value="pendente" selected>Pendente</option>
               <option value="em_contagem">Em contagem</option>
               <option value="finalizado">Finalizado ✅</option>
             </select>
+            <select class="filter-sel" id="filt-ag-tipo" onchange="filtrarAgendamentos()">
+              <option value="">Normal + Recontagem</option>
+              <option value="normal">Somente normais</option>
+              <option value="recontagem">Somente recontagens</option>
+            </select>
+            <input type="date" class="filter-sel" id="filt-ag-de"  onchange="filtrarAgendamentos()" title="Agendado de">
+            <input type="date" class="filter-sel" id="filt-ag-ate" onchange="filtrarAgendamentos()" title="Agendado até">
             <button class="btn btn-ghost btn-sm" onclick="carregarAgendamentos()">↺</button>
           </div>
         </div>
@@ -1429,7 +1488,11 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
         <div class="table-hdr">
           <div class="th-left"><span class="table-title">Movimentações</span><span class="tcount" id="cnt-tf">—</span></div>
           <div class="th-right">
+            <input type="text" class="search-inp" id="search-tf" placeholder="Produto / Código / Lote…" oninput="filtrarTransferencias()" style="width:190px">
             <select class="filter-sel" id="filt-tf" onchange="carregarTransferencias()"><option value="">Todos</option><option value="pendente">Pendente</option><option value="concluido">Concluído</option></select>
+            <input type="text" class="filter-sel" id="filt-tf-arm" placeholder="Armazém" oninput="filtrarTransferencias()" style="width:100px" title="Filtrar por armazém origem ou destino">
+            <input type="date" class="filter-sel" id="filt-tf-de"  onchange="filtrarTransferencias()" title="De">
+            <input type="date" class="filter-sel" id="filt-tf-ate" onchange="filtrarTransferencias()" title="Até">
             <button class="btn btn-ghost btn-sm" onclick="carregarTransferencias()">↺</button>
           </div>
         </div>
@@ -1807,6 +1870,9 @@ let itemAtual = null;   // linha do saldo sendo validada
 let todosLanc = [];
 let todoHistorico = [];
 let todosSaldo = [];
+let todosAg   = [];
+let todosTf   = [];
+let todosPerf = [];
 let saldoXlsxData = null;
 let svLinhas = [];
 let svLoteNaoExiste = [];
@@ -2429,13 +2495,79 @@ async function carregarLancamentos() {
     const { data, error } = await sb.from('lancamentos').select('*').order('created_at',{ascending:false});
     if (error) throw error;
     todosLanc = data || [];
-    renderLancamentos(todosLanc);
+
+    // Popula filtros de armazém e operador
+    const arms = [...new Set(todosLanc.map(r=>r.armazem).filter(Boolean))].sort();
+    const ops  = [...new Set(todosLanc.map(r=>r.usuario).filter(Boolean))].sort();
+    const selArm = document.getElementById('filt-lanc-arm');
+    const selOp  = document.getElementById('filt-lanc-op');
+    const curArm = selArm.value, curOp = selOp.value;
+    selArm.innerHTML = '<option value="">Todos arm.</option>' + arms.map(a=>`<option value="${a}"${a===curArm?' selected':''}>${a}</option>`).join('');
+    selOp.innerHTML  = '<option value="">Todos operadores</option>' + ops.map(o=>`<option value="${o}"${o===curOp?' selected':''}>${o}</option>`).join('');
+
+    filtrarLancamentos();
   } catch(e) { toast('Erro lançamentos: '+e.message,'err'); }
 }
 
 function filtrarLancamentos() {
-  const q = document.getElementById('search-lanc').value.toLowerCase();
-  renderLancamentos(q ? todosLanc.filter(r => [r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem].join(' ').toLowerCase().includes(q)) : todosLanc);
+  const q      = (document.getElementById('search-lanc').value||'').toLowerCase();
+  const arm    = document.getElementById('filt-lanc-arm').value;
+  const op     = document.getElementById('filt-lanc-op').value;
+  const tipo   = document.getElementById('filt-lanc-tipo').value;
+  const status = document.getElementById('filt-lanc-status').value;
+  const de     = document.getElementById('filt-lanc-de').value;
+  const ate    = document.getElementById('filt-lanc-ate').value;
+
+  const data = todosLanc.filter(r => {
+    if (q && ![r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem].join(' ').toLowerCase().includes(q)) return false;
+    if (arm    && r.armazem !== arm) return false;
+    if (op     && r.usuario !== op)  return false;
+    if (tipo === 'normal'     && r.recontagem)  return false;
+    if (tipo === 'recontagem' && !r.recontagem) return false;
+    if (status && r.status !== status) return false;
+    if (de  && r.created_at < de+'T00:00:00') return false;
+    if (ate && r.created_at > ate+'T23:59:59') return false;
+    return true;
+  });
+  renderLancamentos(data);
+}
+
+function exportarLancamentosExcel() {
+  const q      = (document.getElementById('search-lanc').value||'').toLowerCase();
+  const arm    = document.getElementById('filt-lanc-arm').value;
+  const op     = document.getElementById('filt-lanc-op').value;
+  const tipo   = document.getElementById('filt-lanc-tipo').value;
+  const status = document.getElementById('filt-lanc-status').value;
+  const de     = document.getElementById('filt-lanc-de').value;
+  const ate    = document.getElementById('filt-lanc-ate').value;
+  const data = todosLanc.filter(r => {
+    if (q && ![r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem].join(' ').toLowerCase().includes(q)) return false;
+    if (arm    && r.armazem !== arm) return false;
+    if (op     && r.usuario !== op)  return false;
+    if (tipo === 'normal'     && r.recontagem)  return false;
+    if (tipo === 'recontagem' && !r.recontagem) return false;
+    if (status && r.status !== status) return false;
+    if (de  && r.created_at < de+'T00:00:00') return false;
+    if (ate && r.created_at > ate+'T23:59:59') return false;
+    return true;
+  });
+  if (!data.length) { toast('Nenhum dado para exportar.','warn'); return; }
+  const rows = data.map(r => ({
+    'Código':     r.codigo||'',
+    'Produto':    r.produto_nome||'',
+    'Lote':       r.lote||'',
+    'Quantidade': r.quantidade,
+    'Armazém':    r.armazem||'',
+    'Operador':   r.usuario||'',
+    'Tipo':       r.recontagem ? 'Recontagem' : 'Normal',
+    'Status':     r.status||'',
+    'Data':       fmtTS(r.created_at),
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Lançamentos');
+  XLSX.writeFile(wb, `lancamentos_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('✓ Excel exportado!','ok');
 }
 
 function renderLancamentos(data) {
@@ -2516,11 +2648,15 @@ async function carregarHistorico() {
     if (error) throw error;
     todoHistorico = data || [];
 
-    // Popula filtro de armazéns
+    // Popula filtro de armazéns e operadores
     const arms = [...new Set(todoHistorico.map(r=>r.armazem).filter(Boolean))].sort();
+    const ops  = [...new Set(todoHistorico.map(r=>r.usuario).filter(Boolean))].sort();
     const sel = document.getElementById('filt-hist-arm');
     const cur = sel.value;
     sel.innerHTML = '<option value="">Todos arm.</option>' + arms.map(a=>`<option value="${a}"${a===cur?' selected':''}>${a}</option>`).join('');
+    const selOp = document.getElementById('filt-hist-op');
+    const curOp = selOp.value;
+    selOp.innerHTML = '<option value="">Todos operadores</option>' + ops.map(o=>`<option value="${o}"${o===curOp?' selected':''}>${o}</option>`).join('');
 
     filtrarHistorico();
   } catch(e) { toast('Erro histórico: '+e.message,'err'); }
@@ -2529,12 +2665,14 @@ async function carregarHistorico() {
 function filtrarHistorico() {
   const q    = (document.getElementById('search-hist').value||'').toLowerCase();
   const arm  = document.getElementById('filt-hist-arm').value;
+  const op   = document.getElementById('filt-hist-op').value;
   const tipo = document.getElementById('filt-hist-tipo').value;
 
   const data = todoHistorico.filter(r => {
     const txt = [r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem].join(' ').toLowerCase();
     if (q && !txt.includes(q)) return false;
     if (arm && r.armazem !== arm) return false;
+    if (op  && r.usuario !== op)  return false;
     if (tipo === 'ok'        && r.tipo !== 'ok') return false;
     if (tipo === 'positivo'  && r.tipo !== 'positivo') return false;
     if (tipo === 'negativo'  && r.tipo !== 'negativo') return false;
@@ -2657,36 +2795,103 @@ async function carregarPerformance() {
       sel.innerHTML='<option value="">Todos os operadores</option>'+ops.map(o=>`<option value="${o}"${o===cur?' selected':''}>${o}</option>`).join('');
     }
 
-    const byOp={};
-    (data||[]).forEach(s=>{
-      if (!byOp[s.usuario]) byOp[s.usuario]={total:0,durTotal:0,lanc:0,recontagens:0};
-      byOp[s.usuario].total++;
-      byOp[s.usuario].durTotal+=s.duracao_seg||0;
-      byOp[s.usuario].lanc+=s.total_lancamentos||0;
-      if (s.is_recontagem) byOp[s.usuario].recontagens++;
-    });
-
-    document.getElementById('perf-stats').innerHTML=Object.entries(byOp).map(([op,v])=>`
-      <div class="stat-card sc-b">
-        <div class="sc-val" style="color:var(--blue);font-size:1.1rem;margin-bottom:2px">${op}</div>
-        <div class="sc-lbl">${v.total} sessão${v.total!==1?'s':''} · ${v.lanc} lançamento${v.lanc!==1?'s':''} · ${v.recontagens} recontagem${v.recontagens!==1?'s':''}</div>
-        <div style="margin-top:8px;font-family:var(--mono);font-size:.78rem;color:var(--green)">Tempo médio: ${fmtDur(Math.round(v.durTotal/v.total))}</div>
-      </div>`).join('')||'<div style="color:var(--text3);font-family:var(--mono);font-size:.78rem">Sem dados no período.</div>';
-
-    document.getElementById('cnt-perf').textContent=`${(data||[]).length} sessão${(data||[]).length!==1?'ões':''}`;
-    const tbody=document.getElementById('tbody-perf');
-    if (!data?.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhuma sessão.</td></tr>';return;}
-    tbody.innerHTML=data.map(s=>`
-      <tr>
-        <td class="cn">${s.usuario||'—'}</td>
-        <td>${s.produto_nome||'—'} <span class="cm" style="font-size:.68rem">(${s.codigo})</span></td>
-        <td class="cts">${fmtTS(s.inicio)}</td>
-        <td class="cts">${fmtTS(s.fim)}</td>
-        <td><span style="font-family:var(--mono);font-weight:600;color:var(--green);background:var(--green-bg);border:1px solid var(--green-bd);padding:3px 9px;border-radius:4px;font-size:.75rem">${fmtDur(s.duracao_seg)}</span></td>
-        <td><span style="font-family:var(--mono);font-size:.78rem">${s.total_lancamentos||0}</span></td>
-        <td>${s.is_recontagem?'<span class="badge b-r">↺ Recontagem</span>':'<span class="badge b-p">Normal</span>'}</td>
-      </tr>`).join('');
+    todosPerf = data || [];
+    filtrarPerformance();
   } catch(e) { toast('Erro performance: '+e.message,'err'); }
+}
+
+function filtrarPerformance() {
+  const q    = (document.getElementById('search-perf').value||'').toLowerCase();
+  const tipo = document.getElementById('filt-perf-tipo').value;
+
+  const data = todosPerf.filter(s => {
+    if (q && ![s.produto_nome,s.codigo,s.usuario].join(' ').toLowerCase().includes(q)) return false;
+    if (tipo === 'normal'     && s.is_recontagem)  return false;
+    if (tipo === 'recontagem' && !s.is_recontagem) return false;
+    return true;
+  });
+
+  // ── Cards por operador ──
+  const byOp={};
+  data.forEach(s=>{
+    if (!byOp[s.usuario]) byOp[s.usuario]={total:0,durTotal:0,lanc:0,recontagens:0};
+    byOp[s.usuario].total++;
+    byOp[s.usuario].durTotal+=s.duracao_seg||0;
+    byOp[s.usuario].lanc+=s.total_lancamentos||0;
+    if (s.is_recontagem) byOp[s.usuario].recontagens++;
+  });
+
+  document.getElementById('perf-stats').innerHTML=Object.entries(byOp).map(([op,v])=>`
+    <div class="stat-card sc-b">
+      <div class="sc-val" style="color:var(--blue);font-size:1.1rem;margin-bottom:2px">${op}</div>
+      <div class="sc-lbl">${v.total} sessão${v.total!==1?'s':''} · ${v.lanc} lançamento${v.lanc!==1?'s':''} · ${v.recontagens} recontagem${v.recontagens!==1?'s':''}</div>
+      <div style="margin-top:8px;font-family:var(--mono);font-size:.78rem;color:var(--green)">Tempo médio: ${fmtDur(Math.round(v.durTotal/v.total))}</div>
+    </div>`).join('')||'<div style="color:var(--text3);font-family:var(--mono);font-size:.78rem">Sem dados no período.</div>';
+
+  // ── Tempo médio por produto ──
+  const byProd = {};
+  data.forEach(s => {
+    const key = (s.codigo||'?') + '||' + (s.produto_nome||'?');
+    if (!byProd[key]) byProd[key] = {
+      codigo: s.codigo||'—', nome: s.produto_nome||'—',
+      total: 0, durTotal: 0, durMin: Infinity, durMax: 0, lanc: 0
+    };
+    const dur = s.duracao_seg || 0;
+    byProd[key].total++;
+    byProd[key].durTotal += dur;
+    if (dur > 0 && dur < byProd[key].durMin) byProd[key].durMin = dur;
+    if (dur > byProd[key].durMax) byProd[key].durMax = dur;
+    byProd[key].lanc += s.total_lancamentos || 0;
+  });
+
+  const prodRows = Object.values(byProd)
+    .map(p => ({ ...p, media: Math.round(p.durTotal / p.total) }))
+    .sort((a,b) => b.media - a.media); // mais lento primeiro
+
+  document.getElementById('cnt-perf-prod').textContent =
+    `${prodRows.length} produto${prodRows.length!==1?'s':''}`;
+
+  const tbodyProd = document.getElementById('tbody-perf-prod');
+  if (!prodRows.length) {
+    tbodyProd.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3);font-size:.8rem">Sem dados.</td></tr>';
+  } else {
+    const maxMedia = prodRows[0]?.media || 1;
+    tbodyProd.innerHTML = prodRows.map(p => {
+      const pct = Math.round((p.media / maxMedia) * 100);
+      const barColor = pct > 75 ? 'var(--red)' : pct > 40 ? 'var(--amber-lt)' : 'var(--green)';
+      return `<tr>
+        <td class="cc">${p.codigo}</td>
+        <td>
+          <div style="font-size:.85rem;font-weight:600;color:var(--text)">${p.nome}</div>
+          <div style="margin-top:4px;height:4px;border-radius:2px;background:var(--bg4);overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:${barColor};border-radius:2px;transition:width .3s"></div>
+          </div>
+        </td>
+        <td style="text-align:center;font-family:var(--mono);font-size:.82rem">${p.total}</td>
+        <td style="text-align:center">
+          <span style="font-family:var(--mono);font-weight:700;font-size:.82rem;color:${barColor}">${fmtDur(p.media)}</span>
+        </td>
+        <td style="text-align:center;font-family:var(--mono);font-size:.78rem;color:var(--green)">${p.durMin===Infinity?'—':fmtDur(p.durMin)}</td>
+        <td style="text-align:center;font-family:var(--mono);font-size:.78rem;color:var(--red)">${fmtDur(p.durMax)}</td>
+        <td style="text-align:center;font-family:var(--mono);font-size:.78rem">${p.lanc}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Tabela de sessões ──
+  document.getElementById('cnt-perf').textContent=`${data.length} sessão${data.length!==1?'ões':''}`;
+  const tbody=document.getElementById('tbody-perf');
+  if (!data.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhuma sessão.</td></tr>';return;}
+  tbody.innerHTML=data.map(s=>`
+    <tr>
+      <td class="cn">${s.usuario||'—'}</td>
+      <td>${s.produto_nome||'—'} <span class="cm" style="font-size:.68rem">(${s.codigo})</span></td>
+      <td class="cts">${fmtTS(s.inicio)}</td>
+      <td class="cts">${fmtTS(s.fim)}</td>
+      <td><span style="font-family:var(--mono);font-weight:600;color:var(--green);background:var(--green-bg);border:1px solid var(--green-bd);padding:3px 9px;border-radius:4px;font-size:.75rem">${fmtDur(s.duracao_seg)}</span></td>
+      <td><span style="font-family:var(--mono);font-size:.78rem">${s.total_lancamentos||0}</span></td>
+      <td>${s.is_recontagem?'<span class="badge b-r">↺ Recontagem</span>':'<span class="badge b-p">Normal</span>'}</td>
+    </tr>`).join('');
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2734,37 +2939,57 @@ async function carregarAgendamentos() {
     const badge=document.getElementById('nbadge-ag');
     badge.textContent=pendentes; badge.style.display=pendentes>0?'inline':'none';
 
-    document.getElementById('cnt-ag').textContent=`${(data||[]).length} agendamento${(data||[]).length!==1?'s':''}`;
-    const tbody=document.getElementById('tbody-ag');
-    if (!data?.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum agendamento.</td></tr>';return;}
-    tbody.innerHTML=data.map(a=>{
-      const isFinalizado = a.status === 'finalizado';
-      const isEmContagem = a.status === 'em_contagem';
-      const rowStyle = isFinalizado
-        ? 'background:rgba(16,217,138,.07);border-left:3px solid var(--green);'
-        : isEmContagem
-        ? 'background:rgba(96,165,250,.06);border-left:3px solid var(--blue);'
-        : '';
-      const statusBadge = isFinalizado
-        ? `<span class="badge b-v">✅ Finalizado</span>`
-        : isEmContagem
-        ? `<span class="badge b-b">▶ Em contagem</span>`
-        : `<span class="badge b-p">Pendente</span>`;
-      return `
-      <tr style="${rowStyle}">
-        <td class="cc">${a.codigo}</td>
-        <td class="cn">${a.produto_nome}${a.is_recontagem?'<span class="badge-recont">↺ Recontagem</span>':''}</td>
-        <td class="cm">${a.lote_especifico||'—'}</td>
-        <td class="cts">${fmtData(a.data_agendada)}</td>
-        <td>${a.data_antecipada?`<span style="font-family:var(--mono);font-size:.72rem;color:var(--blue)">⚡ ${fmtData(a.data_antecipada)}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
-        <td>${statusBadge}</td>
-        <td class="cts">${fmtTS(a.created_at)}</td>
-        <td class="ca" style="display:flex;gap:5px;justify-content:flex-end">
-          ${!isFinalizado ? `<button class="btn btn-ghost btn-sm" onclick="abrirEditAg(${JSON.stringify(a).replace(/"/g,'&quot;')})">✏ Editar</button>` : ''}
-          <button class="btn btn-danger btn-sm" onclick="excluirAg('${a.id}')">✕</button>
-        </td>
-      </tr>`}).join('');
+    todosAg = data || [];
+    filtrarAgendamentos();
   } catch(e) { toast('Erro agendamentos: '+e.message,'err'); }
+}
+
+function filtrarAgendamentos() {
+  const q    = (document.getElementById('search-ag').value||'').toLowerCase();
+  const tipo = document.getElementById('filt-ag-tipo').value;
+  const de   = document.getElementById('filt-ag-de').value;
+  const ate  = document.getElementById('filt-ag-ate').value;
+
+  const data = todosAg.filter(a => {
+    if (q && ![a.codigo,a.produto_nome,a.lote_especifico].join(' ').toLowerCase().includes(q)) return false;
+    if (tipo === 'normal'     && a.is_recontagem)  return false;
+    if (tipo === 'recontagem' && !a.is_recontagem) return false;
+    const dataRef = a.data_agendada;
+    if (de  && dataRef && dataRef < de) return false;
+    if (ate && dataRef && dataRef > ate) return false;
+    return true;
+  });
+
+  document.getElementById('cnt-ag').textContent=`${data.length} agendamento${data.length!==1?'s':''}`;
+  const tbody=document.getElementById('tbody-ag');
+  if (!data.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum agendamento.</td></tr>';return;}
+  tbody.innerHTML=data.map(a=>{
+    const isFinalizado = a.status === 'finalizado';
+    const isEmContagem = a.status === 'em_contagem';
+    const rowStyle = isFinalizado
+      ? 'background:rgba(16,217,138,.07);border-left:3px solid var(--green);'
+      : isEmContagem
+      ? 'background:rgba(96,165,250,.06);border-left:3px solid var(--blue);'
+      : '';
+    const statusBadge = isFinalizado
+      ? `<span class="badge b-v">✅ Finalizado</span>`
+      : isEmContagem
+      ? `<span class="badge b-b">▶ Em contagem</span>`
+      : `<span class="badge b-p">Pendente</span>`;
+    return `
+    <tr style="${rowStyle}">
+      <td class="cc">${a.codigo}</td>
+      <td class="cn">${a.produto_nome}${a.is_recontagem?'<span class="badge-recont">↺ Recontagem</span>':''}</td>
+      <td class="cm">${a.lote_especifico||'—'}</td>
+      <td class="cts">${fmtData(a.data_agendada)}</td>
+      <td>${a.data_antecipada?`<span style="font-family:var(--mono);font-size:.72rem;color:var(--blue)">⚡ ${fmtData(a.data_antecipada)}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${statusBadge}</td>
+      <td class="cts">${fmtTS(a.created_at)}</td>
+      <td class="ca" style="display:flex;gap:5px;justify-content:flex-end">
+        ${!isFinalizado ? `<button class="btn btn-ghost btn-sm" onclick="abrirEditAg(${JSON.stringify(a).replace(/"/g,'&quot;')})">✏ Editar</button>` : ''}
+        <button class="btn btn-danger btn-sm" onclick="excluirAg('${a.id}')">✕</button>
+      </td>
+    </tr>`}).join('');
 }
 
 function abrirEditAg(a) {
@@ -2834,24 +3059,42 @@ async function carregarTransferencias() {
     if (filt) q=q.eq('status',filt);
     const { data, error } = await q;
     if (error) throw error;
-    document.getElementById('cnt-tf').textContent=`${(data||[]).length} transferência${(data||[]).length!==1?'s':''}`;
-    const tbody=document.getElementById('tbody-tf');
-    if (!data?.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhuma transferência.</td></tr>';return;}
-    tbody.innerHTML=data.map(t=>`
-      <tr>
-        <td class="cn">${t.produto_nome}</td>
-        <td class="cc">${t.codigo||'—'}</td>
-        <td class="cm">${t.lote||'—'}</td>
-        <td style="font-family:var(--mono);font-weight:700">${t.quantidade}</td>
-        <td><div class="arrow-row"><span class="ach">Arm. ${t.armazem_origem}</span><span style="color:var(--green)">→</span><span class="ach d">Arm. ${t.armazem_destino}</span></div></td>
-        <td><span class="badge ${t.status==='pendente'?'b-p':'b-v'}">${t.status}</span></td>
-        <td class="cts">${fmtTS(t.created_at)}</td>
-        <td class="ca">
-          ${t.status==='pendente'?`<button class="btn btn-primary btn-sm" onclick="concluirTf(${t.id})">✓ Concluir</button>`:'<span style="color:var(--text3);font-family:var(--mono);font-size:.68rem">concluído</span>'}
-          <button class="btn btn-danger btn-sm" onclick="excluirTf(${t.id})" style="margin-left:4px">✕</button>
-        </td>
-      </tr>`).join('');
+    todosTf = data || [];
+    filtrarTransferencias();
   } catch(e){toast('Erro transferências: '+e.message,'err');}
+}
+
+function filtrarTransferencias() {
+  const q   = (document.getElementById('search-tf').value||'').toLowerCase();
+  const arm = (document.getElementById('filt-tf-arm').value||'').toLowerCase();
+  const de  = document.getElementById('filt-tf-de').value;
+  const ate = document.getElementById('filt-tf-ate').value;
+
+  const data = todosTf.filter(t => {
+    if (q && ![t.produto_nome,t.codigo,t.lote].join(' ').toLowerCase().includes(q)) return false;
+    if (arm && ![t.armazem_origem,t.armazem_destino].join(' ').toLowerCase().includes(arm)) return false;
+    if (de  && t.created_at < de+'T00:00:00') return false;
+    if (ate && t.created_at > ate+'T23:59:59') return false;
+    return true;
+  });
+
+  document.getElementById('cnt-tf').textContent=`${data.length} transferência${data.length!==1?'s':''}`;
+  const tbody=document.getElementById('tbody-tf');
+  if (!data.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhuma transferência.</td></tr>';return;}
+  tbody.innerHTML=data.map(t=>`
+    <tr>
+      <td class="cn">${t.produto_nome}</td>
+      <td class="cc">${t.codigo||'—'}</td>
+      <td class="cm">${t.lote||'—'}</td>
+      <td style="font-family:var(--mono);font-weight:700">${t.quantidade}</td>
+      <td><div class="arrow-row"><span class="ach">Arm. ${t.armazem_origem}</span><span style="color:var(--green)">→</span><span class="ach d">Arm. ${t.armazem_destino}</span></div></td>
+      <td><span class="badge ${t.status==='pendente'?'b-p':'b-v'}">${t.status}</span></td>
+      <td class="cts">${fmtTS(t.created_at)}</td>
+      <td class="ca">
+        ${t.status==='pendente'?`<button class="btn btn-primary btn-sm" onclick="concluirTf(${t.id})">✓ Concluir</button>`:'<span style="color:var(--text3);font-family:var(--mono);font-size:.68rem">concluído</span>'}
+        <button class="btn btn-danger btn-sm" onclick="excluirTf(${t.id})" style="margin-left:4px">✕</button>
+      </td>
+    </tr>`).join('');
 }
 async function concluirTf(id){try{await sb.from('transferencias').update({status:'concluido'}).eq('id',id);toast('✓ Concluída!','ok');carregarTransferencias();}catch(e){toast('Erro: '+e.message,'err');}}
 async function excluirTf(id){if(!confirm('Excluir esta transferência?'))return;try{await sb.from('transferencias').delete().eq('id',id);toast('Excluída.','warn');carregarTransferencias();}catch(e){toast('Erro: '+e.message,'err');}}
