@@ -1198,12 +1198,27 @@ html.dark .dp-hoje   { color:var(--green-txt); }
 
   <!-- Barra inferior fixa -->
   <div class="fixed-bottom">
+    <!-- Estado: aguardando lançamentos -->
+    <div id="btn-fin-hint" style="text-align:center;font-size:.65rem;color:var(--text3);font-weight:600;margin-bottom:6px">
+      Adicione pelo menos um lançamento para finalizar
+    </div>
+    <!-- Estado: tem lançamentos, pode finalizar -->
     <button class="btn btn-amber" id="btn-finalizar-sessao" style="display:none" onclick="finalizarSessao()">
       <div class="spin" id="fin-spin"></div>
       <span>✓ Finalizar Contagem</span>
     </button>
-    <div id="btn-fin-hint" style="display:none;text-align:center;font-size:.65rem;color:var(--text3);font-weight:600;margin-top:6px">
-      Adicione pelo menos um lançamento para finalizar
+    <!-- Estado: contagem finalizada — opções pós-finalização -->
+    <div id="pos-finalizacao" style="display:none">
+      <div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:10px;text-align:center">
+        <div style="font-size:.88rem;font-weight:800;color:var(--green-txt)">✅ Contagem Finalizada!</div>
+        <div id="pos-fin-resumo" style="font-size:.7rem;color:var(--text2);margin-top:3px;font-weight:600"></div>
+      </div>
+      <button class="btn btn-red" onclick="iniciarRecontagem()" style="margin-bottom:8px">
+        ↺ Fazer Recontagem
+      </button>
+      <button class="btn btn-ghost" onclick="voltarAgenda()">
+        ← Voltar à Agenda
+      </button>
     </div>
   </div>
 </div>
@@ -1469,6 +1484,30 @@ async function carregarAgenda() {
       .order('data_agendada', { ascending: true });
     if (error) throw error;
 
+    // ── Corrige agendamentos fantasma: em_contagem mas com sessão já finalizada ──
+    const emContagem = (data||[]).filter(a => a.status === 'em_contagem');
+    if (emContagem.length > 0) {
+      const ids = emContagem.map(a => a.id);
+      const { data: sessoes } = await sb
+        .from('sessoes_contagem')
+        .select('agendamento_id, fim')
+        .in('agendamento_id', ids)
+        .not('fim', 'is', null);
+
+      const finalizados = new Set((sessoes||[]).map(s => s.agendamento_id));
+      const fantasmas = emContagem.filter(a => finalizados.has(a.id));
+
+      if (fantasmas.length > 0) {
+        // Corrige silenciosamente no background
+        await Promise.all(fantasmas.map(a =>
+          sb.from('agendamentos').update({ status: 'finalizado' }).eq('id', a.id)
+        ));
+        // Remove da lista local
+        const idsFantasma = new Set(fantasmas.map(a => a.id));
+        data.splice(0, data.length, ...(data.filter(a => !idsFantasma.has(a.id))));
+      }
+    }
+
     const recontagens = (data||[]).filter(a => a.is_recontagem);
     const normais     = (data||[]).filter(a => !a.is_recontagem);
     const total = (data||[]).length;
@@ -1653,6 +1692,7 @@ async function iniciarSessao(agend, recontagem = false) {
   const temLanc = sessaoLancamentos.length > 0;
   document.getElementById('btn-finalizar-sessao').style.display = temLanc ? 'flex' : 'none';
   document.getElementById('btn-fin-hint').style.display         = temLanc ? 'none' : 'block';
+  document.getElementById('pos-finalizacao').style.display      = 'none';
 
   // Se continuando, mostra quantos lançamentos já foram feitos
   if (continuando && temLanc) {
@@ -1736,6 +1776,7 @@ async function adicionarLancamento() {
 
     document.getElementById('btn-finalizar-sessao').style.display = 'flex';
     document.getElementById('btn-fin-hint').style.display = 'none';
+    document.getElementById('pos-finalizacao').style.display = 'none';
     toast('✓ Lançamento adicionado!', 'ok', 1500);
   } catch(e) {
     toast('Erro: ' + e.message, 'err');
@@ -1758,23 +1799,71 @@ async function finalizarSessao() {
     const fimTs      = new Date().toISOString();
     const duracaoSeg = Math.round((Date.now() - sessaoInicio) / 1000);
 
-    await Promise.all([
-      sessaoId ? sb.from('sessoes_contagem').update({
+    // Executa as duas operações separadamente para garantir que ambas sejam tentadas
+    // mesmo que uma falhe — o status 'finalizado' é crítico para evitar o bug do agendamento fantasma
+    let erros = [];
+
+    if (sessaoId) {
+      const { error: e1 } = await sb.from('sessoes_contagem').update({
         fim: fimTs,
         duracao_seg: duracaoSeg,
         total_lancamentos: sessaoLancamentos.length,
         is_recontagem: sessaoRecont,
-      }).eq('id', sessaoId) : Promise.resolve(),
-      sessaoAgend?.id ? sb.from('agendamentos').update({ status: 'finalizado' }).eq('id', sessaoAgend.id) : Promise.resolve(),
-    ]);
+      }).eq('id', sessaoId);
+      if (e1) erros.push('sessão: ' + e1.message);
+    }
+
+    if (sessaoAgend?.id) {
+      const { error: e2 } = await sb.from('agendamentos')
+        .update({ status: 'finalizado' })
+        .eq('id', sessaoAgend.id);
+      if (e2) erros.push('agendamento: ' + e2.message);
+    }
+
+    // Se o status do agendamento falhou, tenta novamente (crítico para evitar fantasma)
+    if (erros.some(e => e.includes('agendamento')) && sessaoAgend?.id) {
+      await sb.from('agendamentos').update({ status: 'finalizado' }).eq('id', sessaoAgend.id);
+    }
 
     clearInterval(sessaoTimerIv);
     const mins = Math.floor(duracaoSeg / 60);
     const segs = duracaoSeg % 60;
-    toast(`✓ Contagem finalizada! ${sessaoLancamentos.length} lançamento(s) em ${mins}min ${segs}s.`, 'ok', 4000);
-    voltarAgenda();
+
+    // Detecta produtos do saldo que podem não ter sido contados
+    // (baseado nos lançamentos feitos vs. itens esperados do agendamento)
+    const codigosContados = new Set(sessaoLancamentos.map(l => l.codigo));
+    const codigoEsperado  = sessaoAgend?.codigo;
+    const semContagem = codigoEsperado && !codigosContados.has(codigoEsperado);
+
+    btn.style.display = 'none';
+    document.getElementById('btn-fin-hint').style.display = 'none';
+    document.getElementById('pos-finalizacao').style.display = 'block';
+    document.getElementById('pos-fin-resumo').textContent =
+      `${sessaoLancamentos.length} lançamento(s) · ${mins}min ${segs}s`;
+
+    // Atualiza texto do botão de recontagem baseado na situação
+    const btnRecont = document.querySelector('#pos-finalizacao .btn-red');
+    if (btnRecont) {
+      if (semContagem) {
+        btnRecont.textContent = `⚠ ${codigoEsperado} sem lançamento — Recontagem`;
+        btnRecont.style.background = 'var(--red-bg)';
+        btnRecont.style.borderColor = 'var(--red-bd)';
+        btnRecont.style.color = 'var(--red)';
+      } else {
+        btnRecont.textContent = '↺ Fazer Recontagem';
+      }
+    }
+
+    if (erros.length) console.warn('[finalizarSessao] erros menores:', erros);
+
   } catch(e) {
-    toast('Erro: ' + e.message, 'err');
+    toast('Erro ao finalizar: ' + e.message, 'err');
+    // Tenta ao menos marcar o agendamento como finalizado para evitar fantasma
+    if (sessaoAgend?.id) {
+      sb.from('agendamentos').update({ status: 'finalizado' }).eq('id', sessaoAgend.id).then(() => {
+        toast('Agendamento marcado como finalizado.', 'warn', 3000);
+      }).catch(() => {});
+    }
     btn.disabled = false; spin.style.display = 'none';
     if (spanEl) spanEl.textContent = '✓ Finalizar Contagem';
   }
@@ -1790,6 +1879,28 @@ function voltarAgenda() {
   const tabAgenda = document.getElementById('tab-agenda');
   if (tabAgenda) tabAgenda.style.display = '';
   carregarAgenda();
+}
+
+async function iniciarRecontagem() {
+  if (!sessaoAgend) { voltarAgenda(); return; }
+  const motivo = prompt('Motivo da recontagem (opcional):') ?? '';
+  try {
+    const { data, error } = await sb.from('agendamentos').insert({
+      codigo:            sessaoAgend.codigo,
+      produto_nome:      sessaoAgend.produto_nome,
+      lote_especifico:   sessaoAgend.lote_especifico || null,
+      status:            'pendente',
+      data_agendada:     new Date().toISOString().split('T')[0],
+      is_recontagem:     true,
+      motivo_recontagem: motivo || null,
+    }).select('*').single();
+    if (error) throw error;
+    toast('↺ Recontagem agendada! Iniciando…', 'warn', 2500);
+    // Pequeno delay para o toast aparecer, depois inicia a sessão de recontagem diretamente
+    setTimeout(() => iniciarSessao(data, true), 800);
+  } catch(e) {
+    toast('Erro ao criar recontagem: ' + e.message, 'err');
+  }
 }
 
 // ── ANTECIPAR ────────────────────────────
