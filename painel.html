@@ -139,10 +139,11 @@ html.dark .perf-row { border-color:var(--border); }
 
 /* ── FILIAL BADGES ── */
 .fil-badge {
-  display:inline-flex; align-items:center; gap:4px;
-  font-size:.68rem; font-weight:700; letter-spacing:.02em;
-  padding:2px 7px; border-radius:20px;
+  display:inline-flex; align-items:center;
+  font-size:.62rem; font-weight:700; letter-spacing:.01em;
+  padding:1px 5px; border-radius:20px;
   white-space:nowrap; text-transform:uppercase;
+  max-width:72px; overflow:hidden; text-overflow:ellipsis;
 }
 .fil-simbiose { background:#e8f5ee; color:#145e37; border:1px solid #b6e8cf; }
 .fil-bioma    { background:#e8f0fb; color:#1d5fa8; border:1px solid #a8c4ef; }
@@ -679,9 +680,9 @@ td {
 tr:last-child td { border-bottom:none; }
 tbody tr:hover { background:#f5f7fa; }
 
-.cm  { font-size:.8rem; color:var(--text2); }
-.cc  { font-size:.78rem; color:var(--blue-lt); font-weight:700; white-space:nowrap; }
-.cn  { font-weight:700; color:var(--text); }
+.cm  { font-size:.78rem; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cc  { font-size:.76rem; color:var(--blue-lt); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cn  { font-weight:700; color:var(--text); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .cts { font-size:.74rem; color:var(--text3); white-space:nowrap; }
 .ca  { text-align:right; white-space:nowrap; }
 
@@ -1302,28 +1303,36 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <button class="btn btn-ghost btn-sm" onclick="carregarValidacao()">↺</button>
           </div>
         </div>
-        <table>
+        <table style="table-layout:fixed;font-size:.82rem">
           <colgroup>
             <col class="col-chk">
-            <col style="width:105px">
+            <col style="width:70px">
+            <col style="width:95px">
             <col>
-            <col style="width:105px">
-            <col style="width:62px">
-            <col style="width:52px">
+            <col style="width:100px">
             <col style="width:58px">
-            <col style="width:88px">
-            <col style="width:88px">
-            <col style="width:118px">
-            <col style="width:55px">
-            <col style="width:155px">
+            <col style="width:46px">
+            <col style="width:52px">
+            <col style="width:82px">
+            <col style="width:82px">
+            <col style="width:108px">
+            <col style="width:50px">
+            <col style="width:148px">
           </colgroup>
           <thead><tr>
             <th style="text-align:center;padding:9px 8px"><input type="checkbox" class="sv-check" id="chk-all" onclick="toggleTodos(this)" title="Selecionar todos"></th>
-            <th>Filial</th><th>Código</th><th>Produto</th><th>Lote</th>
-            <th>Saldo</th><th>Emp.</th><th>Arm.</th>
-            <th>Fabric.</th><th>Vencim.</th>
-            <th>Saldo Contado</th><th>Div.</th>
-            <th style="text-align:right">Ações</th>
+            <th style="white-space:nowrap">Filial</th>
+            <th style="white-space:nowrap">Código</th>
+            <th>Produto</th>
+            <th style="white-space:nowrap">Lote</th>
+            <th style="white-space:nowrap">Saldo</th>
+            <th style="white-space:nowrap">Emp.</th>
+            <th style="white-space:nowrap">Arm.</th>
+            <th style="white-space:nowrap">Fabric.</th>
+            <th style="white-space:nowrap">Vencim.</th>
+            <th style="white-space:nowrap">Saldo Contado</th>
+            <th style="white-space:nowrap">Div.</th>
+            <th style="text-align:right;white-space:nowrap">Ações</th>
           </tr></thead>
           <tbody id="tbody-sv">
             <tr><td colspan="14" style="text-align:center;padding:36px;color:var(--text3);font-size:.8rem">
