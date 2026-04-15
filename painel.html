@@ -2004,12 +2004,12 @@ function onFiltroFilialChange() {
   const match = onclick.match(/switchTab\('([^']+)'/);
   if (!match) return;
   const tab = match[1];
-  if (tab === 'validacao')     filtrarValidacao();
-  if (tab === 'registros')     filtrarLancamentos();
-  if (tab === 'historico')     filtrarHistorico();
-  if (tab === 'agendamentos')  { carregarAgendamentos(); }
+  if (tab === 'validacao')      filtrarValidacao();
+  if (tab === 'registros')      filtrarLancamentos();
+  if (tab === 'historico')      filtrarHistorico();
+  if (tab === 'agendamentos')   carregarAgendamentos();
   if (tab === 'transferencias') filtrarTransferencias();
-  if (tab === 'acuracidade')   carregarAcuracidade();
+  if (tab === 'acuracidade')    filtrarAcuracidade();  // refiltra local sem rebuscar banco
 }
 
 // ── INIT ───────────────────────────────────────────────────
@@ -3568,15 +3568,18 @@ function filtrarAcuracidade() {
   const op   = document.getElementById('ac-op').value;
   const tipo = document.getElementById('ac-tipo').value;
 
+  const filial = getFiltroFilial();
   _acFiltrado = _acDados.filter(r => {
-    if (q   && ![r.produto_nome,r.codigo,r.lote].join(' ').toLowerCase().includes(q)) return false;
-    if (arm && r.armazem !== arm) return false;
-    if (op  && r.usuario !== op)  return false;
-    if (tipo === 'ok')           return r.tipo === 'ok';
-    if (tipo === 'positivo')     return r.tipo === 'positivo';
-    if (tipo === 'negativo')     return r.tipo === 'negativo';
-    if (tipo === 'justificado')  return !!r.justificativa_acuracia;
-    if (tipo === 'nao_justificado') return r.tipo !== 'ok' && !r.justificativa_acuracia;
+    if (q      && ![r.produto_nome,r.codigo,r.lote].join(' ').toLowerCase().includes(q)) return false;
+    if (arm    && r.armazem !== arm) return false;
+    if (op     && r.usuario !== op)  return false;
+    if (filial && (r.filial||'').toUpperCase() !== filial) return false;
+    // Filtro de tipo — não usa return direto para permitir combinar com outros filtros
+    if (tipo === 'ok'             && r.tipo !== 'ok') return false;
+    if (tipo === 'positivo'       && r.tipo !== 'positivo') return false;
+    if (tipo === 'negativo'       && r.tipo !== 'negativo') return false;
+    if (tipo === 'justificado'    && !r.justificativa_acuracia) return false;
+    if (tipo === 'nao_justificado'&& (r.tipo === 'ok' || !!r.justificativa_acuracia)) return false;
     return true;
   });
 
@@ -3589,22 +3592,27 @@ function renderAcuracidade() {
   const semDiv= dados.filter(r => r.tipo === 'ok').length;
   const comDiv= dados.filter(r => r.tipo !== 'ok').length;
   const justif= dados.filter(r => r.tipo !== 'ok' && !!r.justificativa_acuracia).length;
-  const pctGeral= total ? ((semDiv / total)*100).toFixed(1) : '—';
-  // Acurácia real: ok + justificados / total
-  const pctReal = total ? (((semDiv + justif) / total)*100).toFixed(1) : '—';
+  // pctGeral: apenas itens OK / total (sem justificativas)
+  const pctGeral = total ? ((semDiv / total)*100).toFixed(1) : '—';
+  // pctReal: OK + justificados / total (acurácia ajustada)
+  const pctReal  = total ? (((semDiv + justif) / total)*100).toFixed(1) : '—';
+  // nao_justif: divergências sem nenhuma justificativa
+  const naoJustif = dados.filter(r => r.tipo !== 'ok' && !r.justificativa_acuracia).length;
 
   document.getElementById('ac-total').textContent  = total;
   document.getElementById('ac-ok').textContent     = semDiv;
-  document.getElementById('ac-div').textContent    = comDiv;
+  document.getElementById('ac-div').textContent    = naoJustif;
   document.getElementById('ac-just').textContent   = justif;
   document.getElementById('ac-pct').textContent    = pctGeral !== '—' ? pctGeral+'%' : '—';
   document.getElementById('ac-pct-real').textContent = pctReal !== '—' ? pctReal+'%' : '—';
 
-  // Cor do KPI de acurácia geral
-  const pctNum = parseFloat(pctGeral);
-  const corPct = pctNum >= 95 ? 'var(--green)' : pctNum >= 80 ? 'var(--amber-lt)' : 'var(--red)';
-  document.getElementById('ac-pct').style.color = corPct;
-  document.getElementById('ac-pct-real').style.color = 'var(--green)';
+  // Cor proporcional para ambos os KPIs
+  const pctNum  = parseFloat(pctGeral);
+  const pctRNum = parseFloat(pctReal);
+  const corPct  = pctNum  >= 95 ? 'var(--green)' : pctNum  >= 80 ? 'var(--amber-lt)' : 'var(--red)';
+  const corReal = pctRNum >= 95 ? 'var(--green)' : pctRNum >= 80 ? 'var(--amber-lt)' : 'var(--red)';
+  document.getElementById('ac-pct').style.color      = corPct;
+  document.getElementById('ac-pct-real').style.color = corReal;
 
   document.getElementById('ac-cnt').textContent = `${total} item${total!==1?'ns':''}`;
 
