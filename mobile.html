@@ -122,6 +122,28 @@ html.dark .statusbar { background:var(--bg); border-color:var(--border); }
 html.dark .nav-tabs { background:var(--bg2); border-color:var(--border); }
 html.dark .timer-bar { background:var(--bg3); border-color:var(--border2); }
 html.dark .produto-banner { background:var(--bg3); border-color:var(--border2); }
+
+/* ── FILIAL BADGES (mobile) ── */
+.fil-badge {
+  display:inline-flex; align-items:center; gap:3px;
+  font-size:.65rem; font-weight:700; letter-spacing:.03em;
+  padding:2px 8px; border-radius:20px;
+  white-space:nowrap; text-transform:uppercase;
+}
+.fil-simbiose { background:#e8f5ee; color:#145e37; border:1px solid #b6e8cf; }
+.fil-bioma    { background:#e8f0fb; color:#1d5fa8; border:1px solid #a8c4ef; }
+.fil-biagro   { background:#fef3e2; color:#b45309; border:1px solid #fcd59a; }
+.fil-unknown  { background:var(--bg4); color:var(--text3); border:1px solid var(--border2); }
+html.dark .fil-simbiose { background:rgba(34,197,94,.1); color:#86efac; border-color:rgba(34,197,94,.3); }
+html.dark .fil-bioma    { background:rgba(96,165,250,.1); color:#93c5fd; border-color:rgba(96,165,250,.3); }
+html.dark .fil-biagro   { background:rgba(245,158,11,.1); color:#fbbf24; border-color:rgba(245,158,11,.3); }
+
+/* Faixa de filial no banner do produto */
+.produto-filial-strip {
+  display:flex; align-items:center; gap:8px;
+  padding:6px 14px 0;
+  font-size:.68rem; color:var(--text3); font-weight:600;
+}
 html.dark .alerta-recont { background:var(--red-bg); border-color:var(--red-bd); }
 html.dark .btn-ghost { background:var(--bg3); border-color:var(--border2); color:var(--text2); }
 html.dark .btn-ghost:active { background:var(--bg4); }
@@ -1132,9 +1154,12 @@ html.dark .dp-hoje   { color:var(--green-txt); }
     <!-- Banner do produto -->
     <div class="produto-banner" id="sessao-produto-banner">
       <div class="produto-banner-ico">📦</div>
-      <div>
+      <div style="flex:1">
         <div class="produto-banner-nome" id="sessao-produto-nome-banner">—</div>
         <div class="produto-banner-cod"  id="sessao-produto-cod-banner">—</div>
+        <div style="margin-top:5px" id="sessao-produto-filial-wrap" style="display:none">
+          <span id="sessao-produto-filial-badge"></span>
+        </div>
       </div>
     </div>
 
@@ -1307,11 +1332,51 @@ let qrCallback       = null;
 let qrStream         = null;
 let qrAnimId         = null;
 
+// ── FILIAIS ──────────────────────────────────────────────
+const FILIAIS_NOMES = {
+  'SIMBIOSE CRUZ ALTA': 'Simbiose',
+  'BIOMA CRUZ ALTA':    'Bioma',
+  'BIAGRO CRUZ ALTA':   'Biagro',
+};
+
+// Cache local: codigo → filial (carregado do saldo_sistema)
+let _filialCache = {};
+let _filialCacheLoaded = false;
+
+async function carregarFilialCache() {
+  if (_filialCacheLoaded || !sb) return;
+  try {
+    const { data } = await sb.from('saldo_sistema').select('codigo, filial').not('filial','is',null);
+    if (data) {
+      _filialCache = {};
+      data.forEach(r => {
+        if (r.codigo && r.filial) _filialCache[r.codigo.trim().toUpperCase()] = r.filial.trim().toUpperCase();
+      });
+      _filialCacheLoaded = true;
+    }
+  } catch(e) { console.warn('[filialCache mobile]', e); }
+}
+
+function detectarFilialPorCodigo(codigo) {
+  if (!codigo) return '';
+  return _filialCache[(codigo||'').trim().toUpperCase()] || '';
+}
+
+function filialBadgeHtml(filial) {
+  if (!filial) return '';
+  const f = filial.toUpperCase();
+  if (f.includes('SIMBIOSE')) return `<span class="fil-badge fil-simbiose">🏢 Simbiose</span>`;
+  if (f.includes('BIOMA'))    return `<span class="fil-badge fil-bioma">🏢 Bioma</span>`;
+  if (f.includes('BIAGRO'))   return `<span class="fil-badge fil-biagro">🏢 Biagro</span>`;
+  return `<span class="fil-badge fil-unknown">🏢 ${filial}</span>`;
+}
+
 // ── SUPABASE ──────────────────────────────
 function initSb() {
   try {
     sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     setStatus(true, 'Conectado · Supabase');
+    carregarFilialCache();
   } catch(e) {
     setStatus(false, 'Erro: ' + e.message);
   }
@@ -1428,6 +1493,20 @@ async function buscarProduto(codigo, tagId='c-ptag', nomeId='c-pnome', codId='c-
       if (inp) inp.classList.add('filled');
       document.getElementById(nomeId).textContent = data.nome;
       document.getElementById(codId).textContent  = data.codigo;
+      // Exibe filial detectada na tag
+      const filialDetec = data.filial || detectarFilialPorCodigo(codigo);
+      const filialHtml  = filialBadgeHtml(filialDetec);
+      const filialExist = tag.querySelector('.fil-badge-wrap');
+      if (filialHtml) {
+        if (filialExist) filialExist.innerHTML = filialHtml;
+        else {
+          const wrap = document.createElement('div');
+          wrap.className = 'fil-badge-wrap';
+          wrap.style.cssText = 'margin-top:4px';
+          wrap.innerHTML = filialHtml;
+          tag.appendChild(wrap);
+        }
+      }
       tag.style.display = 'block';
       return data;
     } else {
@@ -1452,9 +1531,11 @@ async function salvarContagemAvulsa() {
   btn.disabled = true; spin.style.display = 'block';
   document.getElementById('c-lbl').textContent = 'Salvando…';
   try {
+    const filialAvulsa = detectarFilialPorCodigo(codigo) || null;
     const { error } = await sb.from('contagens').insert({
       codigo, produto_nome: nome, lote, quantidade: qtd,
-      armazem, usuario: usuarioAtual, status: 'pendente', recontagem: false
+      armazem, usuario: usuarioAtual, status: 'pendente', recontagem: false,
+      filial: filialAvulsa,
     });
     if (error) throw error;
     toast('✓ Contagem salva!', 'ok');
@@ -1534,6 +1615,7 @@ async function carregarAgenda() {
           <div class="ic-meta">
             <span>📦 ${a.codigo}</span>
             ${a.lote_especifico ? `<span>🏷️ Lote: <strong style="color:var(--text)">${a.lote_especifico}</strong></span>` : ''}
+            ${(a.filial || detectarFilialPorCodigo(a.codigo)) ? filialBadgeHtml(a.filial || detectarFilialPorCodigo(a.codigo)) : ''}
           </div>
           ${a.motivo_recontagem ? `<div class="motivo-box">Motivo: ${a.motivo_recontagem}</div>` : ''}
           <div class="ic-actions">
@@ -1571,6 +1653,7 @@ async function carregarAgenda() {
           <div class="ic-meta">
             <span>📦 ${a.codigo}</span>
             ${a.lote_especifico ? `<span>🏷️ Lote: <strong style="color:var(--text)">${a.lote_especifico}</strong></span>` : ''}
+            ${(a.filial || detectarFilialPorCodigo(a.codigo)) ? filialBadgeHtml(a.filial || detectarFilialPorCodigo(a.codigo)) : ''}
             ${pill}
           </div>
           <div class="ic-actions">
@@ -1677,6 +1760,17 @@ async function iniciarSessao(agend, recontagem = false) {
   document.getElementById('sessao-produto-nome-banner').textContent = agend.produto_nome;
   document.getElementById('sessao-produto-cod-banner').textContent  = '📦 ' + agend.codigo;
 
+  // Exibe filial detectada no banner
+  const filialSessao = agend.filial || detectarFilialPorCodigo(agend.codigo);
+  const filialBadgeEl = document.getElementById('sessao-produto-filial-badge');
+  const filialWrapEl  = document.getElementById('sessao-produto-filial-wrap');
+  if (filialBadgeEl && filialSessao) {
+    filialBadgeEl.innerHTML = filialBadgeHtml(filialSessao);
+    if (filialWrapEl) filialWrapEl.style.display = 'block';
+  } else if (filialWrapEl) {
+    filialWrapEl.style.display = 'none';
+  }
+
   const alertaEl = document.getElementById('alerta-recontagem');
   if (recontagem) alertaEl.classList.add('visivel');
   else alertaEl.classList.remove('visivel');
@@ -1755,6 +1849,7 @@ async function adicionarLancamento() {
     const ptag = document.getElementById('l-pnome');
     if (ptag && ptag.textContent !== '—') prodNome = ptag.textContent;
 
+    const filialLanc = sessaoAgend?.filial || detectarFilialPorCodigo(codigo) || null;
     const payload = {
       sessao_id:      sessaoId,
       agendamento_id: sessaoAgend?.id || null,
@@ -1766,6 +1861,7 @@ async function adicionarLancamento() {
       usuario:        usuarioAtual,
       status:         'pendente',
       recontagem:     sessaoRecont,
+      filial:         filialLanc,
     };
 
     const { data, error } = await sb.from('lancamentos').insert(payload).select('id').single();
