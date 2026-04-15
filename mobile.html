@@ -1565,18 +1565,19 @@ async function carregarAgenda() {
       .order('data_agendada', { ascending: true });
     if (error) throw error;
 
-    // ── Corrige agendamentos fantasma: em_contagem mas com sessão já finalizada ──
-    const emContagem = (data||[]).filter(a => a.status === 'em_contagem');
-    if (emContagem.length > 0) {
-      const ids = emContagem.map(a => a.id);
+    // ── Corrige agendamentos fantasma: qualquer status pendente/em_contagem
+    //    mas que já tem ao menos uma sessão finalizada (fim preenchido) ──
+    const todosIds = (data||[]).map(a => a.id);
+    if (todosIds.length > 0) {
       const { data: sessoes } = await sb
         .from('sessoes_contagem')
         .select('agendamento_id, fim')
-        .in('agendamento_id', ids)
+        .in('agendamento_id', todosIds)
         .not('fim', 'is', null);
 
-      const finalizados = new Set((sessoes||[]).map(s => s.agendamento_id));
-      const fantasmas = emContagem.filter(a => finalizados.has(a.id));
+      // Qualquer agendamento com sessão finalizada é fantasma
+      const comSessaoFinalizada = new Set((sessoes||[]).map(s => s.agendamento_id));
+      const fantasmas = (data||[]).filter(a => comSessaoFinalizada.has(a.id));
 
       if (fantasmas.length > 0) {
         // Corrige silenciosamente no background
