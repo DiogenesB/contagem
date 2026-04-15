@@ -137,6 +137,35 @@ html.dark .log-img-card { border-color:var(--border); }
 html.dark .perf-card { background:var(--bg2); border-color:var(--border); }
 html.dark .perf-row { border-color:var(--border); }
 
+/* ── FILIAL BADGES ── */
+.fil-badge {
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:.68rem; font-weight:700; letter-spacing:.02em;
+  padding:2px 7px; border-radius:20px;
+  white-space:nowrap; text-transform:uppercase;
+}
+.fil-simbiose { background:#e8f5ee; color:#145e37; border:1px solid #b6e8cf; }
+.fil-bioma    { background:#e8f0fb; color:#1d5fa8; border:1px solid #a8c4ef; }
+.fil-biagro   { background:#fef3e2; color:#b45309; border:1px solid #fcd59a; }
+.fil-unknown  { background:var(--bg4); color:var(--text3); border:1px solid var(--border2); }
+html.dark .fil-simbiose { background:rgba(34,197,94,.1); color:#86efac; border-color:rgba(34,197,94,.3); }
+html.dark .fil-bioma    { background:rgba(96,165,250,.1); color:#93c5fd; border-color:rgba(96,165,250,.3); }
+html.dark .fil-biagro   { background:rgba(245,158,11,.1); color:#fbbf24; border-color:rgba(245,158,11,.3); }
+
+/* Filtro global de filial na topbar */
+.filial-filter-wrap {
+  display:flex; align-items:center; gap:6px;
+  background:var(--bg3); border:1px solid var(--border2);
+  border-radius:var(--r-sm); padding:3px 10px 3px 8px;
+}
+.filial-filter-wrap label { font-size:.72rem; font-weight:700; color:var(--text3); white-space:nowrap; }
+.filial-filter-wrap select {
+  border:none; background:transparent; font-size:.8rem;
+  font-weight:600; color:var(--text); font-family:var(--sans);
+  cursor:pointer; outline:none; padding:0;
+}
+html.dark .filial-filter-wrap select { color:var(--text); }
+
 /* Toggle button */
 .theme-toggle {
   width:34px; height:34px;
@@ -1156,6 +1185,15 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
     <span class="topbar-title" id="topbar-title">Saldo / Validação</span>
     <div class="topbar-right">
       <span class="rt-pill"><span class="rt-dot"></span>Tempo real</span>
+      <div class="filial-filter-wrap" title="Filtrar todas as abas por filial">
+        <label>🏢</label>
+        <select id="filt-global-filial" onchange="onFiltroFilialChange()">
+          <option value="">Todas as filiais</option>
+          <option value="SIMBIOSE CRUZ ALTA">Simbiose Cruz Alta</option>
+          <option value="BIOMA CRUZ ALTA">Bioma Cruz Alta</option>
+          <option value="BIAGRO CRUZ ALTA">Biagro Cruz Alta</option>
+        </select>
+      </div>
       <button class="btn btn-ghost btn-sm" onclick="recarregar()">↺ Atualizar</button>
       <a href="./mobile.html" target="_blank" class="btn btn-ghost btn-sm">📱 Operador</a>
       <button class="theme-toggle" id="btn-theme" onclick="toggleTheme()" title="Alternar tema claro/escuro">🌙</button>
@@ -1281,14 +1319,14 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
           </colgroup>
           <thead><tr>
             <th style="text-align:center;padding:9px 8px"><input type="checkbox" class="sv-check" id="chk-all" onclick="toggleTodos(this)" title="Selecionar todos"></th>
-            <th>Código</th><th>Produto</th><th>Lote</th>
+            <th>Filial</th><th>Código</th><th>Produto</th><th>Lote</th>
             <th>Saldo</th><th>Emp.</th><th>Arm.</th>
             <th>Fabric.</th><th>Vencim.</th>
             <th>Saldo Contado</th><th>Div.</th>
             <th style="text-align:right">Ações</th>
           </tr></thead>
           <tbody id="tbody-sv">
-            <tr><td colspan="13" style="text-align:center;padding:36px;color:var(--text3);font-size:.8rem">
+            <tr><td colspan="14" style="text-align:center;padding:36px;color:var(--text3);font-size:.8rem">
               Importe o saldo sistêmico para começar.
             </td></tr>
           </tbody>
@@ -1324,7 +1362,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
           </div>
         </div>
         <table>
-          <thead><tr><th>Código</th><th>Produto</th><th>Lote</th><th>Qtd</th><th>Armazém</th><th>Operador</th><th>Data</th><th>Tipo</th><th style="text-align:right">Ações</th></tr></thead>
+          <thead><tr><th>Filial</th><th>Código</th><th>Produto</th><th>Lote</th><th>Qtd</th><th>Armazém</th><th>Operador</th><th>Data</th><th>Tipo</th><th style="text-align:right">Ações</th></tr></thead>
           <tbody id="tbody-lanc"><tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr></tbody>
         </table>
       </div>
@@ -1364,12 +1402,12 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <col style="width:90px"><col style="width:130px"><col style="width:40px">
           </colgroup>
           <thead><tr>
-            <th>Código</th><th>Produto</th><th>Lote</th>
+            <th>Filial</th><th>Código</th><th>Produto</th><th>Lote</th>
             <th>Qtd</th><th>Saldo</th><th>Diverg.</th>
             <th>Tipo</th><th>Arm.</th><th>Operador</th>
             <th>Obs.</th><th>Data</th><th></th>
           </tr></thead>
-          <tbody id="tbody-hist"><tr><td colspan="12" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Selecione filtros e clique em Atualizar.</td></tr></tbody>
+          <tbody id="tbody-hist"><tr><td colspan="13" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Selecione filtros e clique em Atualizar.</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1437,6 +1475,13 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
         <div class="fg">
           <div class="field"><label>Código do Produto</label><input type="text" id="ag-codigo" placeholder="PRD-001" oninput="buscarProdutoAg(this.value)" style="text-transform:uppercase"></div>
           <div class="field"><label>Nome do Produto</label><input type="text" id="ag-nome" placeholder="Preenchido automaticamente" readonly></div>
+          <div class="field">
+            <label>Filial <span style="color:var(--text3)">(detectada automaticamente)</span></label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="text" id="ag-filial" placeholder="Detectando pelo código…" readonly style="flex:1;background:var(--bg3);color:var(--text2);cursor:default">
+              <span id="ag-filial-badge" style="display:none"></span>
+            </div>
+          </div>
           <div class="field"><label>Lote Específico <span style="color:var(--text3)">(opcional)</span></label><input type="text" id="ag-lote" placeholder="Ex: 017-26-5004" style="text-transform:uppercase"></div>
           <div class="field"><label>Data Agendada</label><input type="date" id="ag-data"></div>
         </div>
@@ -1464,8 +1509,8 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
           </div>
         </div>
         <table>
-          <thead><tr><th>Código</th><th>Produto</th><th>Lote</th><th>Data Agendada</th><th>Antecipado</th><th>Status</th><th>Criado em</th><th style="text-align:right">Ações</th></tr></thead>
-          <tbody id="tbody-ag"><tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr></tbody>
+          <thead><tr><th>Filial</th><th>Código</th><th>Produto</th><th>Lote</th><th>Data Agendada</th><th>Antecipado</th><th>Status</th><th>Criado em</th><th style="text-align:right">Ações</th></tr></thead>
+          <tbody id="tbody-ag"><tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1806,11 +1851,22 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
       <div class="field"><label>Produto</label><input type="text" id="ea-nome"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px">
+      <div class="field">
+        <label>Filial</label>
+        <select id="ea-filial">
+          <option value="">— Não definida —</option>
+          <option value="SIMBIOSE CRUZ ALTA">Simbiose Cruz Alta</option>
+          <option value="BIOMA CRUZ ALTA">Bioma Cruz Alta</option>
+          <option value="BIAGRO CRUZ ALTA">Biagro Cruz Alta</option>
+        </select>
+      </div>
       <div class="field"><label>Lote Específico</label><input type="text" id="ea-lote" style="text-transform:uppercase" placeholder="Opcional"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px">
       <div class="field"><label>Status</label><select id="ea-status"><option value="pendente">Pendente</option><option value="em_contagem">Em contagem</option><option value="finalizado">Finalizado</option></select></div>
+      <div class="field"><label>Data Agendada</label><input type="date" id="ea-data"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
-      <div class="field"><label>Data Agendada</label><input type="date" id="ea-data"></div>
       <div class="field"><label>Data Antecipada</label><input type="date" id="ea-antecip"></div>
     </div>
     <div class="modal-acts">
@@ -1885,12 +1941,76 @@ const NOMES_TABS = {
 };
 
 const COL_MAP = {
-  'b8_filial':'filial','b1_tipo':'tipo','b8_produto':'codigo','b1_desc':'descricao',
+  'b8_filial':'filial','m0_filial':'filial_erp','b1_tipo':'tipo','b8_produto':'codigo','b1_desc':'descricao',
   'b1_um':'unidade','b8_lotectl':'lote','data de fabricação':'dt_fabricacao',
   'data de fabricacao':'dt_fabricacao','data de validade':'dt_validade',
   'dias de vida':'dias_vida','% de vida':'pct_vida','b8_saldo':'saldo',
   'b8_empenho':'empenho','b8_local':'armazem'
 };
+
+// ── FILIAIS ────────────────────────────────────────────────
+const FILIAIS = ['SIMBIOSE CRUZ ALTA', 'BIOMA CRUZ ALTA', 'BIAGRO CRUZ ALTA'];
+
+// Cache: codigo → filial (construído a partir do saldo_sistema importado)
+let _filialCache = {}; // { 'PRD001': 'SIMBIOSE CRUZ ALTA', '5001': 'BIOMA CRUZ ALTA', ... }
+let _filialCacheLoaded = false;
+
+async function carregarFilialCache() {
+  if (_filialCacheLoaded) return;
+  try {
+    const { data } = await sb.from('saldo_sistema').select('codigo, filial').not('filial','is',null);
+    if (data) {
+      _filialCache = {};
+      data.forEach(r => {
+        if (r.codigo && r.filial) _filialCache[r.codigo.trim().toUpperCase()] = r.filial.trim().toUpperCase();
+      });
+      _filialCacheLoaded = true;
+    }
+  } catch(e) { console.warn('[filialCache]', e); }
+}
+
+function detectarFilialPorCodigo(codigo) {
+  if (!codigo) return '';
+  return _filialCache[(codigo||'').trim().toUpperCase()] || '';
+}
+
+function filialBadgeHtml(filial) {
+  if (!filial) return '<span class="fil-badge fil-unknown">—</span>';
+  const f = filial.toUpperCase();
+  if (f.includes('SIMBIOSE')) return `<span class="fil-badge fil-simbiose">Simbiose</span>`;
+  if (f.includes('BIOMA'))    return `<span class="fil-badge fil-bioma">Bioma</span>`;
+  if (f.includes('BIAGRO'))   return `<span class="fil-badge fil-biagro">Biagro</span>`;
+  return `<span class="fil-badge fil-unknown">${filial}</span>`;
+}
+
+function filialCurta(filial) {
+  if (!filial) return '—';
+  const f = filial.toUpperCase();
+  if (f.includes('SIMBIOSE')) return 'Simbiose';
+  if (f.includes('BIOMA'))    return 'Bioma';
+  if (f.includes('BIAGRO'))   return 'Biagro';
+  return filial;
+}
+
+function getFiltroFilial() {
+  return (document.getElementById('filt-global-filial')?.value || '').toUpperCase();
+}
+
+function onFiltroFilialChange() {
+  // Refiltra a aba ativa
+  const aba = document.querySelector('.nav-item.active');
+  if (!aba) return;
+  const onclick = aba.getAttribute('onclick') || '';
+  const match = onclick.match(/switchTab\('([^']+)'/);
+  if (!match) return;
+  const tab = match[1];
+  if (tab === 'validacao')     filtrarValidacao();
+  if (tab === 'registros')     filtrarLancamentos();
+  if (tab === 'historico')     filtrarHistorico();
+  if (tab === 'agendamentos')  { carregarAgendamentos(); }
+  if (tab === 'transferencias') filtrarTransferencias();
+  if (tab === 'acuracidade')   carregarAcuracidade();
+}
 
 // ── INIT ───────────────────────────────────────────────────
 function initSb() {
@@ -1898,6 +2018,7 @@ function initSb() {
     sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     setStatus(true, 'Supabase · realtime ativo');
     setupRealtime();
+    carregarFilialCache();
   } catch(e) { setStatus(false, 'Erro: ' + e.message); }
 }
 function setStatus(ok, msg) {
@@ -1954,7 +2075,7 @@ async function carregarValidacao() {
     const { data: saldo } = await sb.from('saldo_sistema').select('*').order('codigo').order('lote');
     if (!saldo || !saldo.length) {
       document.getElementById('tbody-sv').innerHTML =
-        '<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Importe o saldo sistêmico para começar.</td></tr>';
+        '<tr><td colspan="14" style="text-align:center;padding:32px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Importe o saldo sistêmico para começar.</td></tr>';
       return;
     }
 
@@ -2075,11 +2196,13 @@ function filtrarValidacao() {
   const q      = (document.getElementById('search-sv').value||'').toLowerCase();
   const arm    = document.getElementById('filt-sv-arm').value;
   const status = document.getElementById('filt-sv-status').value;
+  const filial = getFiltroFilial();
 
   const data = svLinhas.filter(r => {
     const txt = [r.codigo,r.descricao,r.lote,r.armazem].join(' ').toLowerCase();
     if (q && !txt.includes(q)) return false;
     if (arm && r.armazem !== arm) return false;
+    if (filial && (r.filial||'').toUpperCase() !== filial) return false;
     if (status === 'contado'    && r.qtdContada === null) return false;
     if (status === 'pendente'   && r.qtdContada !== null) return false;
     if (status === 'divergencia'&& (r.div === null || r.div === 0)) return false;
@@ -2133,6 +2256,7 @@ function filtrarValidacao() {
     const acoesComExcluir = acoes ? acoes + deleteBtn : deleteBtn;
     return `<tr class="${rowClass}" data-id="${r.id}">
       <td class="td-chk"><input type="checkbox" class="sv-check row-chk" value="${r.id}" onchange="atualizarSelecao()"></td>
+      <td>${filialBadgeHtml(r.filial)}</td>
       <td class="cc">${r.codigo||'—'}</td>
       <td class="cn">${r.descricao||'—'}</td>
       <td class="cm">${r.lote||'—'}</td>
@@ -2152,13 +2276,14 @@ function filtrarValidacao() {
   if (svArmErrado?.length > 0) {
     rowsArmErrado = `
       <tr style="background:var(--amber-bg)">
-        <td colspan="13" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--amber-bd)">
+        <td colspan="14" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--amber-bd)">
           ⚠ Armazém não identificado — lote existe no sistema, mas armazém informado é diferente (${svArmErrado.length})
         </td>
       </tr>` +
       svArmErrado.map(r => `
         <tr style="background:var(--amber-bg)">
           <td class="td-chk"><input type="checkbox" class="sv-check row-chk" value="" onchange="atualizarSelecao()" disabled></td>
+          <td>${filialBadgeHtml(r.filial)}</td>
           <td class="cc">${r.codigo||'—'}</td>
           <td class="cn">${r.descricao||'—'}</td>
           <td class="cm" style="color:var(--amber)">${r.lote||'—'}</td>
@@ -2182,13 +2307,14 @@ function filtrarValidacao() {
   if (svLoteNaoExiste?.length > 0) {
     rowsNaoExiste = `
       <tr style="background:var(--red-bg)">
-        <td colspan="13" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--red-bd)">
+        <td colspan="14" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--red-bd)">
           ✕ Lote não existe no saldo sistêmico (${svLoteNaoExiste.length})
         </td>
       </tr>` +
       svLoteNaoExiste.map(r => `
         <tr style="background:var(--red-bg)">
           <td class="td-chk"><input type="checkbox" class="sv-check row-chk" value="" onchange="atualizarSelecao()" disabled></td>
+          <td>${filialBadgeHtml(r.filial)}</td>
           <td class="cc">${r.codigo||'—'}</td>
           <td class="cn">${r.descricao||'—'}</td>
           <td class="cm" style="color:var(--red)">${r.lote||'—'}</td>
@@ -2208,7 +2334,7 @@ function filtrarValidacao() {
   }
 
   if (!rowsNormais && !rowsArmErrado && !rowsNaoExiste) {
-    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--text3);font-size:.75rem">Nenhum item.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--text3);font-size:.75rem">Nenhum item.</td></tr>';
     return;
   }
   tbody.innerHTML = rowsNormais + rowsArmErrado + rowsNaoExiste;
@@ -2375,6 +2501,7 @@ async function confirmarValidacao() {
       usuario:          itemAtual.ops || (isManual ? 'Gestor (manual)' : null),
       is_recontagem:    isRecont || false,
       motivo_recontagem: isRecont ? motivo : null,
+      filial:           itemAtual.filial || detectarFilialPorCodigo(itemAtual.codigo) || null,
     });
 
     // Remove lançamentos pendentes deste codigo+lote+armazem
@@ -2459,9 +2586,11 @@ async function confirmarSolicitarRecontagem() {
       .ilike('armazem',`%${arm}%`);
 
     // Cria agendamento de recontagem com lote e motivo específicos
+    const filialRecont = item.filial || detectarFilialPorCodigo(cod) || null;
     await sb.from('agendamentos').insert({
       codigo:            cod,
       produto_nome:      item.descricao || cod,
+      filial:            filialRecont,
       lote_especifico:   lot,
       status:            'pendente',
       data_agendada:     new Date().toISOString().split('T')[0],
@@ -2518,6 +2647,7 @@ function filtrarLancamentos() {
   const de     = document.getElementById('filt-lanc-de').value;
   const ate    = document.getElementById('filt-lanc-ate').value;
 
+  const filial = getFiltroFilial();
   const data = todosLanc.filter(r => {
     if (q && ![r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem].join(' ').toLowerCase().includes(q)) return false;
     if (arm    && r.armazem !== arm) return false;
@@ -2527,6 +2657,7 @@ function filtrarLancamentos() {
     if (status && r.status !== status) return false;
     if (de  && r.created_at < de+'T00:00:00') return false;
     if (ate && r.created_at > ate+'T23:59:59') return false;
+    if (filial && (r.filial||'').toUpperCase() !== filial) return false;
     return true;
   });
   renderLancamentos(data);
@@ -2553,6 +2684,7 @@ function exportarLancamentosExcel() {
   });
   if (!data.length) { toast('Nenhum dado para exportar.','warn'); return; }
   const rows = data.map(r => ({
+    'Filial':     r.filial||'',
     'Código':     r.codigo||'',
     'Produto':    r.produto_nome||'',
     'Lote':       r.lote||'',
@@ -2573,9 +2705,10 @@ function exportarLancamentosExcel() {
 function renderLancamentos(data) {
   document.getElementById('cnt-lanc').textContent = `${data.length} registro${data.length!==1?'s':''}`;
   const tbody = document.getElementById('tbody-lanc');
-  if (!data.length) { tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum lançamento.</td></tr>'; return; }
+  if (!data.length) { tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum lançamento.</td></tr>'; return; }
   tbody.innerHTML = data.map(r => `
     <tr>
+      <td>${filialBadgeHtml(r.filial)}</td>
       <td class="cc">${r.codigo}</td>
       <td class="cn">${r.produto_nome}${r.recontagem?'<span class="badge-recont">↺ Recontagem</span>':''}</td>
       <td class="cm">${r.lote||'—'}</td>
@@ -2668,6 +2801,7 @@ function filtrarHistorico() {
   const op   = document.getElementById('filt-hist-op').value;
   const tipo = document.getElementById('filt-hist-tipo').value;
 
+  const filial = getFiltroFilial();
   const data = todoHistorico.filter(r => {
     const txt = [r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem].join(' ').toLowerCase();
     if (q && !txt.includes(q)) return false;
@@ -2677,12 +2811,13 @@ function filtrarHistorico() {
     if (tipo === 'positivo'  && r.tipo !== 'positivo') return false;
     if (tipo === 'negativo'  && r.tipo !== 'negativo') return false;
     if (tipo === 'recontagem'&& !r.is_recontagem) return false;
+    if (filial && (r.filial||'').toUpperCase() !== filial) return false;
     return true;
   });
 
   document.getElementById('cnt-hist').textContent = `${data.length} registro${data.length!==1?'s':''}`;
   const tbody = document.getElementById('tbody-hist');
-  if (!data.length) { tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Nenhum registro.</td></tr>'; return; }
+  if (!data.length) { tbody.innerHTML='<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Nenhum registro.</td></tr>'; return; }
 
   tbody.innerHTML = data.map(h => {
     const d  = h.divergencia ?? 0;
@@ -2704,6 +2839,7 @@ function filtrarHistorico() {
     const reconTag = h.is_recontagem ? ' <span style="font-family:var(--mono);font-size:.6rem;color:var(--purple)">↺</span>' : '';
 
     return `<tr>
+      <td>${filialBadgeHtml(h.filial)}</td>
       <td class="cc">${h.codigo||'—'}</td>
       <td class="cn" style="font-size:.85rem">${h.produto_nome||'—'}</td>
       <td class="cm">${h.lote||'—'}</td>
@@ -2899,10 +3035,41 @@ function filtrarPerformance() {
 // ══════════════════════════════════════════════════════════
 
 async function buscarProdutoAg(codigo) {
-  if (!codigo||codigo.length<3) return;
+  if (!codigo || codigo.length < 2) {
+    document.getElementById('ag-filial').value = '';
+    document.getElementById('ag-filial-badge').style.display = 'none';
+    return;
+  }
+  const filialDetectada = detectarFilialPorCodigo(codigo);
+  const filialEl  = document.getElementById('ag-filial');
+  const badgeEl   = document.getElementById('ag-filial-badge');
+  if (filialDetectada) {
+    filialEl.value = filialDetectada;
+    badgeEl.innerHTML = filialBadgeHtml(filialDetectada);
+    badgeEl.style.display = 'inline-flex';
+    filialEl.style.color = 'var(--green)';
+    filialEl.style.fontWeight = '700';
+  } else {
+    filialEl.value = '';
+    filialEl.style.color = '';
+    filialEl.style.fontWeight = '';
+    badgeEl.style.display = 'none';
+    if (codigo.length >= 3) {
+      filialEl.value = 'Código não encontrado no saldo';
+      filialEl.style.color = 'var(--text3)';
+    }
+  }
+  if (!codigo || codigo.length < 3) return;
   try {
-    const { data } = await sb.from('produtos').select('nome').eq('codigo',codigo.toUpperCase()).maybeSingle();
-    if (data) document.getElementById('ag-nome').value=data.nome;
+    const { data } = await sb.from('produtos').select('nome,filial').eq('codigo',codigo.toUpperCase()).maybeSingle();
+    if (data) {
+      document.getElementById('ag-nome').value = data.nome;
+      if (data.filial && !filialDetectada) {
+        filialEl.value = data.filial;
+        badgeEl.innerHTML = filialBadgeHtml(data.filial);
+        badgeEl.style.display = 'inline-flex';
+      }
+    }
   } catch {}
 }
 
@@ -2911,16 +3078,22 @@ async function criarAgendamento() {
   const nome   = document.getElementById('ag-nome').value.trim();
   const lote   = document.getElementById('ag-lote').value.trim().toUpperCase();
   const data   = document.getElementById('ag-data').value;
+  const filial = detectarFilialPorCodigo(codigo) || document.getElementById('ag-filial').value.trim() || null;
   if (!codigo||!nome) { toast('Informe código e nome.','warn'); return; }
+  if (!filial || filial.includes('não encontrado')) { toast('⚠ Filial não detectada — importe o saldo primeiro ou verifique o código.','warn'); return; }
   document.getElementById('ag-spin').style.display='block';
   try {
     const { error } = await sb.from('agendamentos').insert({
       codigo, produto_nome:nome, lote_especifico:lote||null,
-      status:'pendente', data_agendada:data||null
+      status:'pendente', data_agendada:data||null, filial
     });
     if (error) throw error;
-    toast('✓ Agendamento criado!','ok');
+    toast(`✓ Agendamento criado! [${filialCurta(filial)}]`,'ok');
     ['ag-codigo','ag-nome','ag-lote','ag-data'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('ag-filial').value='';
+    document.getElementById('ag-filial').style.color='';
+    document.getElementById('ag-filial').style.fontWeight='';
+    document.getElementById('ag-filial-badge').style.display='none';
     carregarAgendamentos();
   } catch(e) { toast('Erro: '+e.message,'err'); }
   finally { document.getElementById('ag-spin').style.display='none'; }
@@ -2945,10 +3118,11 @@ async function carregarAgendamentos() {
 }
 
 function filtrarAgendamentos() {
-  const q    = (document.getElementById('search-ag').value||'').toLowerCase();
-  const tipo = document.getElementById('filt-ag-tipo').value;
-  const de   = document.getElementById('filt-ag-de').value;
-  const ate  = document.getElementById('filt-ag-ate').value;
+  const q      = (document.getElementById('search-ag').value||'').toLowerCase();
+  const tipo   = document.getElementById('filt-ag-tipo').value;
+  const de     = document.getElementById('filt-ag-de').value;
+  const ate    = document.getElementById('filt-ag-ate').value;
+  const filial = getFiltroFilial();
 
   const data = todosAg.filter(a => {
     if (q && ![a.codigo,a.produto_nome,a.lote_especifico].join(' ').toLowerCase().includes(q)) return false;
@@ -2957,12 +3131,13 @@ function filtrarAgendamentos() {
     const dataRef = a.data_agendada;
     if (de  && dataRef && dataRef < de) return false;
     if (ate && dataRef && dataRef > ate) return false;
+    if (filial && (a.filial||'').toUpperCase() !== filial) return false;
     return true;
   });
 
   document.getElementById('cnt-ag').textContent=`${data.length} agendamento${data.length!==1?'s':''}`;
   const tbody=document.getElementById('tbody-ag');
-  if (!data.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum agendamento.</td></tr>';return;}
+  if (!data.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum agendamento.</td></tr>';return;}
   tbody.innerHTML=data.map(a=>{
     const isFinalizado = a.status === 'finalizado';
     const isEmContagem = a.status === 'em_contagem';
@@ -2978,6 +3153,7 @@ function filtrarAgendamentos() {
       : `<span class="badge b-p">Pendente</span>`;
     return `
     <tr style="${rowStyle}">
+      <td>${filialBadgeHtml(a.filial)}</td>
       <td class="cc">${a.codigo}</td>
       <td class="cn">${a.produto_nome}${a.is_recontagem?'<span class="badge-recont">↺ Recontagem</span>':''}</td>
       <td class="cm">${a.lote_especifico||'—'}</td>
@@ -2996,6 +3172,7 @@ function abrirEditAg(a) {
   document.getElementById('ea-id').value      = a.id;
   document.getElementById('ea-cod').value     = a.codigo;
   document.getElementById('ea-nome').value    = a.produto_nome;
+  document.getElementById('ea-filial').value  = a.filial||'';
   document.getElementById('ea-lote').value    = a.lote_especifico||'';
   document.getElementById('ea-data').value    = a.data_agendada||'';
   document.getElementById('ea-antecip').value = a.data_antecipada||'';
@@ -3009,6 +3186,7 @@ async function salvarEditAgendamento() {
     const { error } = await sb.from('agendamentos').update({
       codigo:          document.getElementById('ea-cod').value.trim().toUpperCase(),
       produto_nome:    document.getElementById('ea-nome').value.trim(),
+      filial:          document.getElementById('ea-filial').value||null,
       lote_especifico: document.getElementById('ea-lote').value.trim().toUpperCase()||null,
       data_agendada:   document.getElementById('ea-data').value||null,
       data_antecipada: document.getElementById('ea-antecip').value||null,
@@ -3185,6 +3363,8 @@ async function importarSaldoSistema() {
     const dt=new Date().toLocaleString('pt-BR');
     document.getElementById('saldo-status-txt').textContent=`✓ Importado em ${dt} · ${inseridos} registros`;
     toast(`✓ ${inseridos} registros importados!`,'ok',5000);
+    _filialCacheLoaded = false;  // força reconstrução do cache de filial
+    await carregarFilialCache();
     saldoXlsxData=null;
     document.getElementById('saldo-preview').style.display='none';
     document.getElementById('lbl-arquivo-saldo').textContent='Selecionar .xlsx';
@@ -3317,6 +3497,7 @@ async function validarTodos() {
         lote: item.lote, quantidade: item.qtdContada, saldo_sistema: item.saldo,
         divergencia: 0, tipo: 'ok', observacao: null, armazem: item.armazem,
         usuario: item.ops||null, is_recontagem: false, motivo_recontagem: null,
+        filial: item.filial || detectarFilialPorCodigo(item.codigo) || null,
       });
       const cod=(item.codigo||'').trim(), lot=(item.lote||'').trim(), arm=(item.armazem||'').trim();
       await sb.from('lancamentos').delete().eq('status','pendente').ilike('codigo',`%${cod}%`).ilike('lote',`%${lot}%`).ilike('armazem',`%${arm}%`);
@@ -3588,9 +3769,9 @@ function exportarXlsx(nomeArq, cabecalhos, linhas) {
 
 function exportarAcuracidade() {
   if (!_acFiltrado.length) { toast('Nenhum dado para exportar.', 'warn'); return; }
-  const cab = ['Data','Produto','Código','Lote','Armazém','Qtd Contada','Saldo Sistema','Divergência','Tipo','Operador','Justificativa','Observação'];
+  const cab = ['Filial','Data','Produto','Código','Lote','Armazém','Qtd Contada','Saldo Sistema','Divergência','Tipo','Operador','Justificativa','Observação'];
   const lin = _acFiltrado.map(r => [
-    fmtTS(r.created_at), r.produto_nome||'', r.codigo||'', r.lote||'', r.armazem||'',
+    r.filial||'', fmtTS(r.created_at), r.produto_nome||'', r.codigo||'', r.lote||'', r.armazem||'',
     r.quantidade??'', r.saldo_sistema??'', r.divergencia??'',
     r.tipo==='ok'?'Sem divergência':r.tipo==='positivo'?'Positivo':'Negativo',
     r.usuario||'', r.justificativa_acuracia||'', r.observacao||''
@@ -3600,9 +3781,9 @@ function exportarAcuracidade() {
 
 function exportarHistorico() {
   if (!todoHistorico?.length) { toast('Carregue o histórico primeiro.', 'warn'); return; }
-  const cab = ['Data','Código','Produto','Lote','Qtd Contada','Saldo Sistema','Divergência','Tipo','Armazém','Operador','Observação','Recontagem'];
+  const cab = ['Filial','Data','Código','Produto','Lote','Qtd Contada','Saldo Sistema','Divergência','Tipo','Armazém','Operador','Observação','Recontagem'];
   const lin = todoHistorico.map(h => [
-    fmtTS(h.created_at), h.codigo||'', h.produto_nome||'', h.lote||'',
+    h.filial||'', fmtTS(h.created_at), h.codigo||'', h.produto_nome||'', h.lote||'',
     h.quantidade??'', h.saldo_sistema??'', h.divergencia??'',
     h.tipo==='ok'?'Sem divergência':h.tipo==='positivo'?'Positivo':'Negativo',
     h.armazem||'', h.usuario||'',
