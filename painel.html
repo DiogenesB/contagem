@@ -684,7 +684,7 @@ tbody tr:hover { background:#f5f7fa; }
 .cc  { font-size:.76rem; color:var(--blue-lt); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .cn  { font-weight:700; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .cts { font-size:.74rem; color:var(--text3); white-space:nowrap; }
-.ca  { text-align:right; white-space:nowrap; }
+.ca  { text-align:right; white-space:nowrap; display:flex; align-items:center; justify-content:flex-end; gap:3px; padding-right:8px; }
 
 /* ══════════════════════
    BADGES
@@ -796,7 +796,8 @@ tbody tr:hover { background:#f5f7fa; }
 
 .btn-blue:hover { background:#d3e4f7; }
 
-.btn-sm { padding:5px 10px; font-size:.77rem; }
+.btn-sm { padding:4px 9px; font-size:.75rem; }
+.btn-xs { padding:3px 7px; font-size:.7rem; }
 .btn-lg { padding:9px 20px; font-size:.9rem; }
 
 /* ══════════════════════
@@ -1303,7 +1304,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <col style="width:82px">
             <col style="width:108px">
             <col style="width:46px">
-            <col style="width:138px">
+            <col style="width:126px">
           </colgroup>
           <thead><tr>
             <th style="text-align:center;padding:9px 8px"><input type="checkbox" class="sv-check" id="chk-all" onclick="toggleTodos(this)" title="Selecionar todos"></th>
@@ -2241,13 +2242,13 @@ function filtrarValidacao() {
       acoes   = '';
     } else if (temContagem) {
       qtdCell = `<span class="qtd-contada">${r.qtdContada}</span><span style="font-family:var(--mono);font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span>${reconBadge}`;
-      acoes   = `<button class="btn btn-primary btn-sm" onclick="abrirValidacao(${JSON.stringify(r).replace(/"/g,'&quot;')})">✓ Validar</button><button class="btn btn-amber btn-sm" style="margin-left:2px" onclick="abrirSolicitarRecontagem(${JSON.stringify(r).replace(/"/g,'&quot;')})">↺</button><button class="btn btn-ghost btn-sm" style="margin-left:2px" onclick="abrirEditSV(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>`;
+      acoes   = `<button class="btn btn-primary btn-sm" onclick="abrirValidacao(${JSON.stringify(r).replace(/"/g,'&quot;')})">✓ Validar</button><button class="btn btn-amber btn-sm" onclick="abrirSolicitarRecontagem(${JSON.stringify(r).replace(/"/g,'&quot;')})">↺</button><button class="btn btn-ghost btn-sm" onclick="abrirEditSV(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>`;
     } else {
       qtdCell = `<span class="qtd-vazia">Não contado</span>`;
-      acoes   = `<button class="btn btn-primary btn-sm" onclick="abrirValidacaoManual(${JSON.stringify(r).replace(/"/g,'&quot;')})">✓ Validar</button><button class="btn btn-ghost btn-sm" style="margin-left:2px" onclick="abrirEditSV(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>`;
+      acoes   = `<button class="btn btn-primary btn-sm" onclick="abrirValidacaoManual(${JSON.stringify(r).replace(/"/g,'&quot;')})">✓ Validar</button><button class="btn btn-ghost btn-sm" onclick="abrirEditSV(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>`;
     }
 
-    const deleteBtn = `<button class="btn btn-danger btn-sm" style="margin-left:2px" title="Excluir este item" onclick="excluirItem(${r.id})">🗑</button>`;
+    const deleteBtn = `<button class="btn btn-danger btn-sm" title="Excluir este item" onclick="excluirItem(${r.id})">🗑</button>`;
     const acoesComExcluir = acoes ? acoes + deleteBtn : deleteBtn;
     return `<tr class="${rowClass}" data-id="${r.id}">
       <td class="td-chk"><input type="checkbox" class="sv-check row-chk" value="${r.id}" onchange="atualizarSelecao()"></td>
@@ -2262,7 +2263,7 @@ function filtrarValidacao() {
       <td class="cts" style="${vencStyle}">${dtVal}</td>
       <td>${qtdCell}</td>
       <td>${divCell}</td>
-      <td class="ca" style="white-space:nowrap">${acoesComExcluir}</td>
+      <td class="ca">${acoesComExcluir}</td>
     </tr>`;
   }).join('');
 
@@ -2289,10 +2290,10 @@ function filtrarValidacao() {
           <td class="cts">—</td>
           <td style="white-space:nowrap"><span class="qtd-contada" style="color:var(--amber)">${r.qtdContada}</span><span style="font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
           <td><span style="font-size:.68rem;color:var(--amber);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:88px" title="${r.armazens_sistema}">↔ ${(r.armazens_sistema||'').split(', ').slice(0,3).join(', ')}${(r.armazens_sistema||'').split(', ').length>3?' …':''}</span></td>
-          <td class="ca" style="white-space:nowrap">
+          <td class="ca">
             <button class="btn btn-primary btn-sm" onclick="abrirValidacaoAvulsa(${JSON.stringify(r).replace(/"/g,'&quot;')}, 'arm_errado')">✓ Validar</button>
-            <button class="btn btn-ghost btn-sm" style="margin-left:3px" onclick="abrirEditSVAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>
-            <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="excluirLancAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✕</button>
+            <button class="btn btn-ghost btn-sm" onclick="abrirEditSVAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>
+            <button class="btn btn-danger btn-sm" onclick="excluirLancAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✕</button>
           </td>
         </tr>`).join('');
   }
@@ -2320,10 +2321,10 @@ function filtrarValidacao() {
           <td class="cts">—</td>
           <td><span class="qtd-contada" style="color:var(--red)">${r.qtdContada}</span><span style="font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
           <td><span class="div-neg">Verificar</span></td>
-          <td class="ca" style="white-space:nowrap">
+          <td class="ca">
             <button class="btn btn-primary btn-sm" onclick="abrirValidacaoAvulsa(${JSON.stringify(r).replace(/"/g,'&quot;')}, 'lote_nao_existe')">✓ Validar</button>
-            <button class="btn btn-ghost btn-sm" style="margin-left:3px" onclick="abrirEditSVAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>
-            <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="excluirLancAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✕</button>
+            <button class="btn btn-ghost btn-sm" onclick="abrirEditSVAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>
+            <button class="btn btn-danger btn-sm" onclick="excluirLancAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✕</button>
           </td>
         </tr>`).join('');
   }
@@ -2714,7 +2715,7 @@ function renderLancamentos(data) {
       <td>${r.recontagem?'<span class="badge b-r">Recontagem</span>':'<span class="badge b-p">Normal</span>'}</td>
       <td class="ca">
         <button class="btn btn-ghost btn-sm" onclick="abrirEditRegistro(${JSON.stringify(r).replace(/"/g,'&quot;')},'lancamentos')">✏</button>
-        <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="excluirRegistro('${r.id}','lancamentos')">✕</button>
+        <button class="btn btn-danger btn-sm" onclick="excluirRegistro('${r.id}','lancamentos')">✕</button>
       </td>
     </tr>`).join('');
 }
@@ -2846,9 +2847,9 @@ function filtrarHistorico() {
       <td style="font-size:.82rem;color:var(--text2)">${h.usuario||'—'}</td>
       <td>${obsCell}</td>
       <td class="cts">${fmtTS(h.created_at)}</td>
-      <td class="ca" style="white-space:nowrap">
+      <td class="ca">
         <button class="btn btn-ghost btn-sm" onclick="abrirEditHistorico(${JSON.stringify(h).replace(/"/g,'&quot;')})">✏</button>
-        <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="excluirHistorico(${h.id})">🗑</button>
+        <button class="btn btn-danger btn-sm" onclick="excluirHistorico(${h.id})">🗑</button>
       </td>
     </tr>`;
   }).join('');
@@ -3265,7 +3266,7 @@ function filtrarTransferencias() {
       <td class="cts">${fmtTS(t.created_at)}</td>
       <td class="ca">
         ${t.status==='pendente'?`<button class="btn btn-primary btn-sm" onclick="concluirTf(${t.id})">✓ Concluir</button>`:'<span style="color:var(--text3);font-family:var(--mono);font-size:.68rem">concluído</span>'}
-        <button class="btn btn-danger btn-sm" onclick="excluirTf(${t.id})" style="margin-left:4px">✕</button>
+        <button class="btn btn-danger btn-sm" onclick="excluirTf(${t.id})">✕</button>
       </td>
     </tr>`).join('');
 }
