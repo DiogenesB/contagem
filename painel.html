@@ -2220,12 +2220,11 @@ function filtrarValidacao() {
   const rowsNormais = data.map(r => {
     const isValidado  = r._validado === true;
     const temContagem = r.qtdContada !== null;
-    const temDiverg  = temContagem && r.div !== null && r.div !== 0;
+    const temDiverg  = (temContagem && r.div !== null && r.div !== 0) || !temContagem;
     const rowClass = isValidado  ? 'sv-validado'
       : r.recontagem ? 'sv-recont'
       : temDiverg    ? 'sv-diverg'
-      : temContagem  ? 'sv-contado'
-      : 'sv-pendente';
+      : 'sv-contado';
 
     let divCell = '<span style="color:var(--text3)">—</span>';
     if (r.div !== null) {
