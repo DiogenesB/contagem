@@ -50,7 +50,7 @@
   --r-sm:      6px;
   --r-xs:      4px;
   --nav-w:     230px;
-  --topbar-h:  52px;
+  --topbar-h:  46px;
   --sh:        0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
   --sh-sm:     0 1px 3px rgba(0,0,0,.07);
 }
@@ -457,7 +457,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 /* ══════════════════════
    CONTENT
 ══════════════════════ */
-.content { padding:18px 24px; flex:1; }
+.content { padding:14px 16px; flex:1; }
 .tab-panel { display:none; }
 .tab-panel.active { display:block; animation:fadeUp .18s ease; }
 @keyframes fadeUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
@@ -623,6 +623,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   margin-bottom:14px;
   box-shadow:var(--sh-sm);
 }
+.table-wrap table { width:100%; }
 
 .table-hdr {
   display:flex;
@@ -1290,21 +1291,21 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <button class="btn btn-ghost btn-sm" onclick="carregarValidacao()">↺</button>
           </div>
         </div>
-        <table style="table-layout:fixed;font-size:.82rem">
+        <table style="table-layout:fixed;width:100%;font-size:.82rem">
           <colgroup>
-            <col class="col-chk">
-            <col style="width:64px">
-            <col style="width:120px">
-            <col style="min-width:160px">
-            <col style="width:105px">
-            <col style="width:55px">
-            <col style="width:42px">
-            <col style="width:48px">
-            <col style="width:82px">
-            <col style="width:82px">
-            <col style="width:108px">
-            <col style="width:46px">
-            <col style="width:126px">
+            <col style="width:32px">
+            <col style="width:5%">
+            <col style="width:10%">
+            <col>
+            <col style="width:9%">
+            <col style="width:5%">
+            <col style="width:4%">
+            <col style="width:4%">
+            <col style="width:7%">
+            <col style="width:7%">
+            <col style="width:9%">
+            <col style="width:4%">
+            <col style="width:11%">
           </colgroup>
           <thead><tr>
             <th style="text-align:center;padding:9px 8px"><input type="checkbox" class="sv-check" id="chk-all" onclick="toggleTodos(this)" title="Selecionar todos"></th>
