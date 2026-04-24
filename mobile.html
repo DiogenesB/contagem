@@ -895,7 +895,7 @@ async function confirmarContagem() {
     await sb.from('lancamentos').insert({
       codigo, produto_nome: produto, lote, armazem,
       quantidade: qtd, usuario: OPERADOR, filial,
-      observacao: obs, status: 'pendente', recontagem: isRecont,
+      status: 'pendente', recontagem: isRecont,
     });
 
     // Marca agendamento como finalizado
@@ -968,7 +968,7 @@ async function lancarAvulso() {
     const { data, error } = await sb.from('lancamentos').insert({
       codigo, produto_nome: produto || codigo, lote, armazem,
       quantidade: qtd, usuario: OPERADOR, filial,
-      observacao: obs, status: 'pendente', recontagem: false,
+      status: 'pendente', recontagem: false,
     }).select().single();
     if (error) throw error;
 
