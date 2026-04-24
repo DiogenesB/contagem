@@ -50,7 +50,7 @@
   --r-sm:      6px;
   --r-xs:      4px;
   --nav-w:     230px;
-  --topbar-h:  46px;
+  --topbar-h:  52px;
   --sh:        0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
   --sh-sm:     0 1px 3px rgba(0,0,0,.07);
 }
@@ -110,7 +110,6 @@ html.dark .btn-primary:hover { background:var(--green-lt); }
 html.dark .btn-ghost { background:var(--bg3); border-color:var(--border2); color:var(--text2); }
 html.dark .btn-ghost:hover { background:var(--bg4); border-color:var(--border3); color:var(--text); }
 html.dark .sv-contado  { background:rgba(34,197,94,.05) !important; }
-html.dark .sv-diverg   { background:rgba(245,158,11,.07) !important; border-left:3px solid var(--amber) !important; }
 html.dark .sv-validado { background:rgba(34,197,94,.03) !important; }
 html.dark .sv-recont   { background:rgba(167,139,250,.05) !important; }
 html.dark .sv-pendente { background:transparent !important; }
@@ -458,7 +457,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 /* ══════════════════════
    CONTENT
 ══════════════════════ */
-.content { padding:14px 16px; flex:1; }
+.content { padding:18px 24px; flex:1; }
 .tab-panel { display:none; }
 .tab-panel.active { display:block; animation:fadeUp .18s ease; }
 @keyframes fadeUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
@@ -624,7 +623,6 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   margin-bottom:14px;
   box-shadow:var(--sh-sm);
 }
-.table-wrap table { width:100%; }
 
 .table-hdr {
   display:flex;
@@ -686,7 +684,7 @@ tbody tr:hover { background:#f5f7fa; }
 .cc  { font-size:.76rem; color:var(--blue-lt); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .cn  { font-weight:700; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .cts { font-size:.74rem; color:var(--text3); white-space:nowrap; }
-.ca  { text-align:right; white-space:nowrap; display:flex; align-items:center; justify-content:flex-end; gap:3px; padding-right:8px; }
+.ca  { text-align:right; white-space:nowrap; }
 
 /* ══════════════════════
    BADGES
@@ -798,8 +796,7 @@ tbody tr:hover { background:#f5f7fa; }
 
 .btn-blue:hover { background:#d3e4f7; }
 
-.btn-sm { padding:4px 9px; font-size:.75rem; }
-.btn-xs { padding:3px 7px; font-size:.7rem; }
+.btn-sm { padding:5px 10px; font-size:.77rem; }
 .btn-lg { padding:9px 20px; font-size:.9rem; }
 
 /* ══════════════════════
@@ -1039,12 +1036,10 @@ tbody tr:hover { background:#f5f7fa; }
 
 /* ── SALDO ROWS ── */
 .sv-contado  { background:#f5fbf8; }
-.sv-diverg   { background:#fff8f0; border-left:3px solid var(--amber) !important; }
 .sv-pendente { }
 .sv-recont   { background:#f8f5ff; }
 .sv-validado { background:#f0faf5; }
 .qtd-contada { font-weight:700; color:var(--green-txt); }
-.qtd-contada-diverg { font-weight:700; color:var(--amber); }
 .qtd-vazia   { font-size:.8rem; color:var(--text3); font-style:italic; }
 /* ── INFO BANNER ── */
 .info-banner {
@@ -1242,7 +1237,21 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
         </div>
       </div>
 
-
+      <!-- Imagens de logística -->
+      <div class="logistics-strip">
+        <div class="log-img-card">
+          <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=500&q=65" alt="Armazém">
+          <span class="log-img-label">Armazenagem</span>
+        </div>
+        <div class="log-img-card">
+          <img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=500&q=65" alt="Expedição">
+          <span class="log-img-label">Expedição</span>
+        </div>
+        <div class="log-img-card">
+          <img src="https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=500&q=65" alt="Conferência">
+          <span class="log-img-label">Conferência</span>
+        </div>
+      </div>
 
       <!-- Importação -->
       <div class="import-banner">
@@ -1294,21 +1303,21 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <button class="btn btn-ghost btn-sm" onclick="carregarValidacao()">↺</button>
           </div>
         </div>
-        <table style="table-layout:fixed;width:100%;font-size:.82rem">
+        <table style="table-layout:fixed;font-size:.82rem">
           <colgroup>
-            <col style="width:2.5%">
-            <col style="width:5%">
-            <col style="width:10%">
-            <col style="width:26.5%">
-            <col style="width:8%">
-            <col style="width:5%">
-            <col style="width:3.5%">
-            <col style="width:3.5%">
-            <col style="width:7%">
-            <col style="width:7%">
-            <col style="width:8.5%">
-            <col style="width:3.5%">
-            <col style="width:10%">
+            <col class="col-chk">
+            <col style="width:68px">
+            <col style="width:110px">
+            <col>
+            <col style="width:108px">
+            <col style="width:58px">
+            <col style="width:44px">
+            <col style="width:50px">
+            <col style="width:82px">
+            <col style="width:82px">
+            <col style="width:110px">
+            <col style="width:48px">
+            <col style="width:140px">
           </colgroup>
           <thead><tr>
             <th style="text-align:center;padding:9px 8px"><input type="checkbox" class="sv-check" id="chk-all" onclick="toggleTodos(this)" title="Selecionar todos"></th>
@@ -1551,99 +1560,113 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
     <!-- ══ TAB: ACURÁCIA ══ -->
     <div class="tab-panel" id="tab-acuracidade">
 
-      <!-- Filtros -->
-      <div class="table-wrap" style="margin-bottom:16px">
-        <div class="table-hdr" style="flex-wrap:wrap;gap:8px">
-          <div class="th-left">
-            <span class="table-title">Filtros de Acurácia</span>
+      <!-- KPIs — 2 cartões grandes -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+
+        <div class="stat-card" style="padding:20px 22px">
+          <div style="font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">% Contados (do histórico)</div>
+          <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:10px">
+            <div id="ac-pct" style="font-size:3rem;font-weight:800;line-height:1;letter-spacing:-.03em;color:var(--green)">—%</div>
+            <div style="margin-bottom:6px;font-size:.82rem;color:var(--text3)" id="ac-pct-abs">—</div>
           </div>
+          <div style="height:8px;background:var(--bg4);border-radius:4px;overflow:hidden">
+            <div id="ac-prog-bar" style="height:100%;width:0%;background:var(--green);border-radius:4px;transition:width .5s ease"></div>
+          </div>
+          <div style="margin-top:6px;font-size:.68rem;color:var(--text3)" id="ac-prog-txt">—</div>
+        </div>
+
+        <div class="stat-card" style="padding:20px 22px">
+          <div style="font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">% Com Erro (Divergência)</div>
+          <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:10px">
+            <div id="ac-pct-erro" style="font-size:3rem;font-weight:800;line-height:1;letter-spacing:-.03em;color:var(--red)">—%</div>
+            <div style="margin-bottom:6px;font-size:.82rem;color:var(--text3)" id="ac-erro-abs">—</div>
+          </div>
+          <div style="height:8px;background:var(--bg4);border-radius:4px;overflow:hidden">
+            <div id="ac-erro-bar" style="height:100%;width:0%;background:var(--red);border-radius:4px;transition:width .5s ease"></div>
+          </div>
+          <div style="margin-top:6px;font-size:.68rem;color:var(--text3)" id="ac-erro-txt">—</div>
+        </div>
+
+      </div>
+
+      <!-- Filtros -->
+      <div class="table-wrap" style="margin-bottom:12px">
+        <div class="table-hdr" style="flex-wrap:wrap;gap:8px">
+          <div class="th-left"><span class="table-title">Filtros</span></div>
           <div class="th-right" style="flex-wrap:wrap;gap:6px">
-            <input type="date" class="filter-sel" id="ac-de"  title="De" onchange="carregarAcuracidade()">
+            <input type="date" class="filter-sel" id="ac-de"  title="De"  onchange="carregarAcuracidade()">
             <input type="date" class="filter-sel" id="ac-ate" title="Até" onchange="carregarAcuracidade()">
-            <input type="text" class="search-inp" id="ac-prod" placeholder="Produto…" oninput="filtrarAcuracidade()" style="width:160px">
+            <input type="text" class="search-inp" id="ac-prod" placeholder="Produto / Código / Lote…" oninput="filtrarAcuracidade()" style="width:180px">
             <select class="filter-sel" id="ac-arm" onchange="filtrarAcuracidade()"><option value="">Todos arm.</option></select>
-            <select class="filter-sel" id="ac-op"  onchange="filtrarAcuracidade()"><option value="">Todos operadores</option></select>
-            <select class="filter-sel" id="ac-tipo" onchange="filtrarAcuracidade()">
+            <select class="filter-sel" id="ac-status-filt" onchange="filtrarAcuracidade()">
               <option value="">Todos</option>
               <option value="ok">Sem divergência</option>
-              <option value="positivo">Positivo</option>
-              <option value="negativo">Negativo</option>
-              <option value="justificado">Justificados</option>
-              <option value="nao_justificado">Não justificados</option>
+              <option value="divergencia">Com divergência</option>
             </select>
-            <button class="btn btn-ghost btn-sm" onclick="carregarAcuracidade()">↺</button>
+            <button class="btn btn-ghost btn-sm" onclick="carregarAcuracidade()">↺ Atualizar</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportarAcuracidade()">↓ Excel</button>
           </div>
         </div>
       </div>
 
-      <!-- KPIs -->
-      <div class="stat-grid" id="ac-kpis" style="margin-bottom:16px">
-        <div class="stat-card sc-g">
-          <div class="sc-bar" style="background:var(--green);margin-bottom:6px"></div>
-          <div class="sc-val" id="ac-pct" style="color:var(--green)">—%</div>
-          <div class="sc-lbl">Acurácia Geral</div>
-        </div>
-        <div class="stat-card sc-b">
-          <div class="sc-bar" style="background:var(--blue);margin-bottom:6px"></div>
-          <div class="sc-val" id="ac-total" style="color:var(--blue-lt)">—</div>
-          <div class="sc-lbl">Total Contados</div>
-        </div>
-        <div class="stat-card sc-g">
-          <div class="sc-bar" style="background:var(--green);margin-bottom:6px"></div>
-          <div class="sc-val" id="ac-ok" style="color:var(--green)">—</div>
-          <div class="sc-lbl">Sem Divergência</div>
-        </div>
-        <div class="stat-card sc-r">
-          <div class="sc-bar" style="background:var(--red);margin-bottom:6px"></div>
-          <div class="sc-val" id="ac-div" style="color:var(--red)">—</div>
-          <div class="sc-lbl">Com Divergência</div>
-        </div>
-        <div class="stat-card sc-a">
-          <div class="sc-bar" style="background:var(--amber-lt);margin-bottom:6px"></div>
-          <div class="sc-val" id="ac-just" style="color:var(--amber)">—</div>
-          <div class="sc-lbl">Justificados</div>
-        </div>
-        <div class="stat-card sc-g" style="border-color:var(--green-bd)">
-          <div class="sc-bar" style="background:var(--green);margin-bottom:6px"></div>
-          <div class="sc-val" id="ac-pct-real" style="color:var(--green)">—%</div>
-          <div class="sc-lbl">Acurácia c/ Justificativas</div>
+      <!-- Checklist xlsx separado -->
+      <div class="import-banner" style="margin-bottom:14px">
+        <span style="font-size:.82rem;font-weight:700;color:var(--blue)">📋 Checklist de Contagem (opcional)</span>
+        <span id="ac-import-status" style="font-size:.72rem;color:var(--text3);font-weight:500">Importe um .xlsx para marcar o que foi / não foi contado</span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+          <label class="import-drop" style="padding:5px 12px;cursor:pointer">
+            <span>📂</span>
+            <span style="font-size:.74rem;color:var(--text2);font-weight:600" id="ac-import-filename">Selecionar .xlsx</span>
+            <input type="file" id="ac-inp-xlsx" accept=".xlsx,.xls" style="display:none" onchange="onAcChecklistSelecionado(this)">
+          </label>
+          <button class="btn btn-blue btn-sm" id="ac-btn-toggle-chk" onclick="toggleChecklist()" style="display:none">📋 Ver Checklist</button>
+          <button class="btn btn-ghost btn-sm" onclick="limparChecklist()">✕ Limpar</button>
         </div>
       </div>
 
-      <!-- Gráfico de barras mensal -->
-      <div class="table-wrap" style="margin-bottom:16px">
-        <div class="table-hdr">
-          <div class="th-left"><span class="table-title">Evolução Mensal da Acurácia</span></div>
-        </div>
-        <div style="padding:16px 20px">
-          <div id="ac-chart" style="display:flex;align-items:flex-end;gap:8px;height:160px;overflow-x:auto;padding-bottom:4px"></div>
-          <div id="ac-chart-labels" style="display:flex;gap:8px;margin-top:6px;overflow-x:auto"></div>
+      <!-- Tabela checklist (oculta por padrão, abre com botão) -->
+      <div id="ac-checklist-wrap" style="display:none;margin-bottom:14px">
+        <div class="table-wrap">
+          <div class="table-hdr">
+            <div class="th-left">
+              <span class="table-title">Checklist — Marcar Contagem</span>
+              <span class="tcount" id="ac-chk-cnt">—</span>
+            </div>
+            <div class="th-right">
+              <span id="ac-chk-kpis" style="font-size:.78rem;font-weight:700;color:var(--text2)">—</span>
+              <button class="btn btn-primary btn-sm" onclick="marcarTodosContado()">✓ Marcar Todos</button>
+            </div>
+          </div>
+          <table style="font-size:.82rem">
+            <thead><tr>
+              <th>Produto</th><th style="text-align:right;width:160px">Status</th>
+            </tr></thead>
+            <tbody id="tbody-chk">
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <!-- Tabela detalhada -->
+      <!-- Tabela histórico -->
       <div class="table-wrap">
         <div class="table-hdr">
           <div class="th-left">
-            <span class="table-title">Detalhamento por Item</span>
+            <span class="table-title">Histórico de Contagens Validadas</span>
             <span class="tcount" id="ac-cnt">—</span>
-          </div>
-          <div class="th-right">
-            <button class="btn btn-ghost btn-sm" onclick="exportarAcuracidade()">↓ Excel</button>
           </div>
         </div>
         <table>
           <thead><tr>
-            <th>Data</th><th>Produto</th><th>Lote</th><th>Arm.</th>
-            <th>Qtd Contada</th><th>Saldo Sistema</th><th>Divergência</th>
-            <th>Tipo</th><th>Operador</th><th>Justificativa</th>
-            <th style="text-align:right">Ações</th>
+            <th>Data</th><th>Filial</th><th>Código</th><th>Produto</th><th>Lote</th>
+            <th>Arm.</th><th>Qtd Contada</th><th>Saldo</th><th>Divergência</th>
+            <th>Tipo</th><th>Operador</th>
           </tr></thead>
           <tbody id="tbody-ac">
             <tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Selecione o período e clique em Atualizar.</td></tr>
           </tbody>
         </table>
       </div>
+
     </div>
 
   </div>
@@ -2004,12 +2027,12 @@ function onFiltroFilialChange() {
   const match = onclick.match(/switchTab\('([^']+)'/);
   if (!match) return;
   const tab = match[1];
-  if (tab === 'validacao')      filtrarValidacao();
-  if (tab === 'registros')      filtrarLancamentos();
-  if (tab === 'historico')      filtrarHistorico();
-  if (tab === 'agendamentos')   carregarAgendamentos();
+  if (tab === 'validacao')     filtrarValidacao();
+  if (tab === 'registros')     filtrarLancamentos();
+  if (tab === 'historico')     filtrarHistorico();
+  if (tab === 'agendamentos')  { carregarAgendamentos(); }
   if (tab === 'transferencias') filtrarTransferencias();
-  if (tab === 'acuracidade')    filtrarAcuracidade();  // refiltra local sem rebuscar banco
+  if (tab === 'acuracidade')   carregarAcuracidade();
 }
 
 // ── INIT ───────────────────────────────────────────────────
@@ -2064,6 +2087,11 @@ function switchTab(nome, el) {
   if (nome === 'transferencias') carregarTransferencias();
   if (nome === 'performance')  carregarPerformance();
   if (nome === 'acuracidade')  carregarAcuracidade();
+}
+
+function irParaHistorico() {
+  const btnHist = [...document.querySelectorAll('.nav-item')].find(b => b.textContent.includes('Histórico'));
+  if (btnHist) switchTab('historico', btnHist);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2207,6 +2235,7 @@ function filtrarValidacao() {
     if (status === 'pendente'   && r.qtdContada !== null) return false;
     if (status === 'divergencia'&& (r.div === null || r.div === 0)) return false;
     if (status === 'recontagem' && !r.recontagem) return false;
+    if (r._validado) return false;
     return true;
   });
 
@@ -2220,11 +2249,10 @@ function filtrarValidacao() {
   const rowsNormais = data.map(r => {
     const isValidado  = r._validado === true;
     const temContagem = r.qtdContada !== null;
-    const temDiverg  = (temContagem && r.div !== null && r.div !== 0) || !temContagem;
-    const rowClass = isValidado  ? 'sv-validado'
+    const rowClass = isValidado ? 'sv-validado'
       : r.recontagem ? 'sv-recont'
-      : temDiverg    ? 'sv-diverg'
-      : 'sv-contado';
+      : temContagem  ? 'sv-contado'
+      : 'sv-pendente';
 
     let divCell = '<span style="color:var(--text3)">—</span>';
     if (r.div !== null) {
@@ -2246,15 +2274,14 @@ function filtrarValidacao() {
       qtdCell = `<span class="qtd-contada">${r.qtdContada}</span> <span style="font-family:var(--mono);font-size:.63rem;color:var(--green);margin-left:4px;font-weight:700">✓ Validado</span>`;
       acoes   = '';
     } else if (temContagem) {
-      const qtdClass = (r.div !== null && r.div !== 0) ? 'qtd-contada-diverg' : 'qtd-contada';
-      qtdCell = `<span class="${qtdClass}">${r.qtdContada}</span><span style="font-family:var(--mono);font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span>${reconBadge}`;
-      acoes   = `<button class="btn btn-primary btn-sm" onclick="abrirValidacao(${JSON.stringify(r).replace(/"/g,'&quot;')})">✓ Validar</button><button class="btn btn-amber btn-sm" onclick="abrirSolicitarRecontagem(${JSON.stringify(r).replace(/"/g,'&quot;')})">↺</button><button class="btn btn-ghost btn-sm" onclick="abrirEditSV(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>`;
+      qtdCell = `<span class="qtd-contada">${r.qtdContada}</span><span style="font-family:var(--mono);font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span>${reconBadge}`;
+      acoes   = `<button class="btn btn-primary btn-sm" onclick="abrirValidacao(${JSON.stringify(r).replace(/"/g,'&quot;')})">✓ Validar</button><button class="btn btn-amber btn-sm" style="margin-left:2px" onclick="abrirSolicitarRecontagem(${JSON.stringify(r).replace(/"/g,'&quot;')})">↺</button><button class="btn btn-ghost btn-sm" style="margin-left:2px" onclick="abrirEditSV(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>`;
     } else {
       qtdCell = `<span class="qtd-vazia">Não contado</span>`;
-      acoes   = `<button class="btn btn-primary btn-sm" onclick="abrirValidacaoManual(${JSON.stringify(r).replace(/"/g,'&quot;')})">✓ Validar</button><button class="btn btn-ghost btn-sm" onclick="abrirEditSV(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>`;
+      acoes   = `<button class="btn btn-primary btn-sm" onclick="abrirValidacaoManual(${JSON.stringify(r).replace(/"/g,'&quot;')})">✓ Validar</button><button class="btn btn-ghost btn-sm" style="margin-left:2px" onclick="abrirEditSV(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>`;
     }
 
-    const deleteBtn = `<button class="btn btn-danger btn-sm" title="Excluir este item" onclick="excluirItem(${r.id})">🗑</button>`;
+    const deleteBtn = `<button class="btn btn-danger btn-sm" style="margin-left:2px" title="Excluir este item" onclick="excluirItem(${r.id})">🗑</button>`;
     const acoesComExcluir = acoes ? acoes + deleteBtn : deleteBtn;
     return `<tr class="${rowClass}" data-id="${r.id}">
       <td class="td-chk"><input type="checkbox" class="sv-check row-chk" value="${r.id}" onchange="atualizarSelecao()"></td>
@@ -2269,7 +2296,7 @@ function filtrarValidacao() {
       <td class="cts" style="${vencStyle}">${dtVal}</td>
       <td>${qtdCell}</td>
       <td>${divCell}</td>
-      <td class="ca">${acoesComExcluir}</td>
+      <td class="ca" style="white-space:nowrap">${acoesComExcluir}</td>
     </tr>`;
   }).join('');
 
@@ -2288,18 +2315,18 @@ function filtrarValidacao() {
           <td>${filialBadgeHtml(r.filial)}</td>
           <td class="cc">${r.codigo||'—'}</td>
           <td class="cn">${r.descricao||'—'}</td>
-          <td class="cm" style="color:var(--amber);white-space:nowrap">${r.lote||'—'}</td>
+          <td class="cm" style="color:var(--amber)">${r.lote||'—'}</td>
           <td style="color:var(--text3)">—</td>
           <td style="color:var(--text3)">—</td>
-          <td style="white-space:nowrap"><span style="font-weight:700;color:var(--amber)">${r.armazem||'—'}</span><span style="font-size:.62rem;color:var(--text3);margin-left:4px">← info</span></td>
+          <td><span style="font-weight:700;color:var(--amber)">${r.armazem||'—'}</span><span style="font-size:.65rem;color:var(--text3);margin-left:5px">← info</span></td>
           <td class="cts">—</td>
           <td class="cts">—</td>
-          <td style="white-space:nowrap"><span class="qtd-contada" style="color:var(--amber)">${r.qtdContada}</span><span style="font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
-          <td><span style="font-size:.68rem;color:var(--amber);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:88px" title="${r.armazens_sistema}">↔ ${(r.armazens_sistema||'').split(', ').slice(0,3).join(', ')}${(r.armazens_sistema||'').split(', ').length>3?' …':''}</span></td>
-          <td class="ca">
+          <td><span class="qtd-contada" style="color:var(--amber)">${r.qtdContada}</span><span style="font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
+          <td><span style="font-size:.72rem;color:var(--amber)">Arm: ${r.armazens_sistema}</span></td>
+          <td class="ca" style="white-space:nowrap">
             <button class="btn btn-primary btn-sm" onclick="abrirValidacaoAvulsa(${JSON.stringify(r).replace(/"/g,'&quot;')}, 'arm_errado')">✓ Validar</button>
-            <button class="btn btn-ghost btn-sm" onclick="abrirEditSVAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>
-            <button class="btn btn-danger btn-sm" onclick="excluirLancAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✕</button>
+            <button class="btn btn-ghost btn-sm" style="margin-left:3px" onclick="abrirEditSVAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>
+            <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="excluirLancAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✕</button>
           </td>
         </tr>`).join('');
   }
@@ -2319,18 +2346,18 @@ function filtrarValidacao() {
           <td>${filialBadgeHtml(r.filial)}</td>
           <td class="cc">${r.codigo||'—'}</td>
           <td class="cn">${r.descricao||'—'}</td>
-          <td class="cm" style="color:var(--red);white-space:nowrap">${r.lote||'—'}</td>
-          <td style="font-size:.68rem;color:var(--red);white-space:nowrap">Lote não encontrado</td>
+          <td class="cm" style="color:var(--red)">${r.lote||'—'}</td>
+          <td style="font-size:.72rem;color:var(--red)">Lote não encontrado</td>
           <td style="color:var(--text3)">—</td>
-          <td style="font-weight:600;white-space:nowrap">${r.armazem||'—'}</td>
+          <td style="font-weight:600">${r.armazem||'—'}</td>
           <td class="cts">—</td>
           <td class="cts">—</td>
           <td><span class="qtd-contada" style="color:var(--red)">${r.qtdContada}</span><span style="font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
           <td><span class="div-neg">Verificar</span></td>
-          <td class="ca">
+          <td class="ca" style="white-space:nowrap">
             <button class="btn btn-primary btn-sm" onclick="abrirValidacaoAvulsa(${JSON.stringify(r).replace(/"/g,'&quot;')}, 'lote_nao_existe')">✓ Validar</button>
-            <button class="btn btn-ghost btn-sm" onclick="abrirEditSVAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>
-            <button class="btn btn-danger btn-sm" onclick="excluirLancAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✕</button>
+            <button class="btn btn-ghost btn-sm" style="margin-left:3px" onclick="abrirEditSVAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏</button>
+            <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="excluirLancAvulso(${JSON.stringify(r).replace(/"/g,'&quot;')})">✕</button>
           </td>
         </tr>`).join('');
   }
@@ -2545,6 +2572,7 @@ async function confirmarValidacao() {
     itemAtual = null;
     atualizarStatsSV();
     filtrarValidacao();
+    irParaHistorico();
   } catch(e) {
     toast('Erro: '+e.message,'err');
   } finally {
@@ -2721,7 +2749,7 @@ function renderLancamentos(data) {
       <td>${r.recontagem?'<span class="badge b-r">Recontagem</span>':'<span class="badge b-p">Normal</span>'}</td>
       <td class="ca">
         <button class="btn btn-ghost btn-sm" onclick="abrirEditRegistro(${JSON.stringify(r).replace(/"/g,'&quot;')},'lancamentos')">✏</button>
-        <button class="btn btn-danger btn-sm" onclick="excluirRegistro('${r.id}','lancamentos')">✕</button>
+        <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="excluirRegistro('${r.id}','lancamentos')">✕</button>
       </td>
     </tr>`).join('');
 }
@@ -2853,9 +2881,9 @@ function filtrarHistorico() {
       <td style="font-size:.82rem;color:var(--text2)">${h.usuario||'—'}</td>
       <td>${obsCell}</td>
       <td class="cts">${fmtTS(h.created_at)}</td>
-      <td class="ca">
+      <td class="ca" style="white-space:nowrap">
         <button class="btn btn-ghost btn-sm" onclick="abrirEditHistorico(${JSON.stringify(h).replace(/"/g,'&quot;')})">✏</button>
-        <button class="btn btn-danger btn-sm" onclick="excluirHistorico(${h.id})">🗑</button>
+        <button class="btn btn-danger btn-sm" style="margin-left:3px" onclick="excluirHistorico(${h.id})">🗑</button>
       </td>
     </tr>`;
   }).join('');
@@ -3272,7 +3300,7 @@ function filtrarTransferencias() {
       <td class="cts">${fmtTS(t.created_at)}</td>
       <td class="ca">
         ${t.status==='pendente'?`<button class="btn btn-primary btn-sm" onclick="concluirTf(${t.id})">✓ Concluir</button>`:'<span style="color:var(--text3);font-family:var(--mono);font-size:.68rem">concluído</span>'}
-        <button class="btn btn-danger btn-sm" onclick="excluirTf(${t.id})">✕</button>
+        <button class="btn btn-danger btn-sm" onclick="excluirTf(${t.id})" style="margin-left:4px">✕</button>
       </td>
     </tr>`).join('');
 }
@@ -3514,292 +3542,282 @@ async function validarTodos() {
   toast(`✓ ${ok} item${ok!==1?'ns':''} validado${ok!==1?'s':''}${erros?` · ${erros} erro${erros!==1?'s':''}`:''}.`,'ok',5000);
   atualizarStatsSV();
   filtrarValidacao();
+  irParaHistorico();
 }
 
 // ══════════════════════════════════════════════════════════
 // ACURÁCIA DE ESTOQUE
 // ══════════════════════════════════════════════════════════
 
-let _acDados   = [];   // todos os registros do histórico carregados
-let _acFiltrado= [];   // após filtros locais
+// ══════════════════════════════════════════════════════════
+// ACURÁCIA DE ESTOQUE — nova lógica
+// 1) Gestor importa lista de produtos do mês (.xlsx)
+// 2) Lista é cruzada com historico e lancamentos do banco
+// 3) Gestor marca "Contado" / "Não Contado" manualmente
+// ══════════════════════════════════════════════════════════
 
-async function carregarAcuracidade() {
-  const tbody = document.getElementById('tbody-ac');
-  tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr>';
+// ══════════════════════════════════════════════════════════
+// ACURÁCIA — lê do historico, checklist xlsx é separado
+// ══════════════════════════════════════════════════════════
 
-  // Período padrão: últimos 30 dias se não definido
-  const hoje = new Date().toISOString().split('T')[0];
-  const h30  = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
-  const de  = document.getElementById('ac-de').value  || h30;
-  const ate = document.getElementById('ac-ate').value || hoje;
-  if (!document.getElementById('ac-de').value)  document.getElementById('ac-de').value  = h30;
-  if (!document.getElementById('ac-ate').value) document.getElementById('ac-ate').value = hoje;
+let _acDados    = [];   // registros do historico
+let _acFiltrado = [];   // após filtros locais
 
-  try {
-    const { data, error } = await sb
-      .from('historico')
-      .select('*')
-      .gte('created_at', de + 'T00:00:00')
-      .lte('created_at', ate + 'T23:59:59')
-      .order('created_at', { ascending: false });
+// ── Checklist xlsx (independente, sem cruzamento) ─────────
+let _chkLista   = [];   // linhas do xlsx importado
 
-    if (error) throw error;
-    _acDados = data || [];
+const CHK_COL_MAP = {
+  'b8_produto':'codigo','b1_desc':'descricao','b8_filial':'filial',
+  'b8_lotectl':'lote','b8_local':'armazem',
+  'codigo':'codigo','código':'codigo','produto':'descricao','nome':'descricao',
+  'lote':'lote','armazem':'armazem','armazém':'armazem','filial':'filial',
+};
 
-    // Popula filtros de armazém e operador
-    const arms = [...new Set(_acDados.map(r => r.armazem).filter(Boolean))].sort();
-    const ops  = [...new Set(_acDados.map(r => r.usuario).filter(Boolean))].sort();
+function onAcChecklistSelecionado(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('ac-import-filename').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const wb  = XLSX.read(e.target.result, { type:'array', cellDates:true });
+      const ws  = wb.Sheets[wb.SheetNames[0]];
+      // Lê todas as células como array de arrays (sem assumir cabeçalho)
+      const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+      if (!rows.length) { toast('Planilha vazia.','warn'); return; }
 
-    const selArm = document.getElementById('ac-arm');
-    const selOp  = document.getElementById('ac-op');
-    const curArm = selArm.value, curOp = selOp.value;
-    selArm.innerHTML = '<option value="">Todos arm.</option>'       + arms.map(a=>`<option value="${a}"${a===curArm?' selected':''}>${a}</option>`).join('');
-    selOp.innerHTML  = '<option value="">Todos operadores</option>' + ops.map(o=>`<option value="${o}"${o===curOp?' selected':''}>${o}</option>`).join('');
+      // Tenta detectar se tem cabeçalho mapeável ou se a 1ª linha já é dado
+      const primeiraLinha = rows[0];
+      const temCabecalho  = primeiraLinha.some(v =>
+        CHK_COL_MAP[(String(v||'').trim().toLowerCase())]
+      );
+      const dataRows = temCabecalho ? rows.slice(1) : rows;
+      const headers  = temCabecalho ? primeiraLinha.map(v => String(v||'').trim().toLowerCase()) : null;
 
-    filtrarAcuracidade();
-  } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--red);font-size:.8rem">Erro: ${e.message}</td></tr>`;
+      _chkLista = dataRows.map(row => {
+        let nome = '';
+        if (headers) {
+          // Mapeia pelo cabeçalho
+          const out = {};
+          headers.forEach((h, i) => {
+            const campo = CHK_COL_MAP[h];
+            if (campo) out[campo] = typeof row[i] === 'string' ? row[i].trim() : row[i];
+          });
+          nome = out.descricao || out.codigo || '';
+        } else {
+          // Sem cabeçalho: pega a primeira célula não vazia como nome
+          nome = String(row.find(v => v !== null && v !== '') ?? '').trim();
+        }
+        return nome ? { descricao: nome, contado: false } : null;
+      }).filter(Boolean);
+      document.getElementById('ac-import-status').textContent =
+        `✓ ${_chkLista.length} produtos carregados`;
+      const btnToggle = document.getElementById('ac-btn-toggle-chk');
+      btnToggle.style.display = 'inline-flex';
+      btnToggle.textContent = `📋 Ver Checklist (${_chkLista.length})`;
+      document.getElementById('ac-checklist-wrap').style.display = 'none';
+      renderChecklist();
+      toast(`✓ ${_chkLista.length} itens no checklist.`, 'ok');
+    } catch(err) { toast('Erro ao ler: ' + err.message, 'err'); }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value = '';
+}
+
+function limparChecklist() {
+  _chkLista = [];
+  document.getElementById('ac-import-status').textContent = 'Importe um .xlsx para marcar o que foi / não foi contado';
+  document.getElementById('ac-import-filename').textContent = 'Selecionar .xlsx';
+  document.getElementById('ac-checklist-wrap').style.display = 'none';
+  document.getElementById('ac-btn-toggle-chk').style.display = 'none';
+}
+
+function toggleChecklist() {
+  const wrap = document.getElementById('ac-checklist-wrap');
+  const btn  = document.getElementById('ac-btn-toggle-chk');
+  const aberto = wrap.style.display !== 'none';
+  wrap.style.display = aberto ? 'none' : 'block';
+  const contados = _chkLista.filter(r => r.contado).length;
+  btn.textContent = aberto
+    ? `📋 Ver Checklist (${_chkLista.length})`
+    : `▲ Fechar Checklist`;
+}
+
+function marcarChk(idx, val) {
+  if (_chkLista[idx]) _chkLista[idx].contado = val;
+  renderChecklist();
+}
+
+function marcarTodosContado() {
+  _chkLista.forEach(r => r.contado = true);
+  renderChecklist();
+  toast('✓ Todos marcados!', 'ok');
+}
+
+function renderChecklist() {
+  const tbody = document.getElementById('tbody-chk');
+  const contados = _chkLista.filter(r => r.contado).length;
+  const total    = _chkLista.length;
+  const pct      = total ? ((contados/total)*100).toFixed(0) : 0;
+  document.getElementById('ac-chk-cnt').textContent   = `${total} itens`;
+  document.getElementById('ac-chk-kpis').textContent  = `${contados}/${total} contados (${pct}%)`;
+
+  // Atualiza label do botão toggle
+  const btnToggle = document.getElementById('ac-btn-toggle-chk');
+  const wrap = document.getElementById('ac-checklist-wrap');
+  if (btnToggle && wrap.style.display !== 'none') {
+    btnToggle.textContent = `▲ Fechar Checklist`;
+  } else if (btnToggle) {
+    btnToggle.textContent = `📋 Ver Checklist (${contados}/${total})`;
   }
-}
 
-function filtrarAcuracidade() {
-  const q    = (document.getElementById('ac-prod').value||'').toLowerCase();
-  const arm  = document.getElementById('ac-arm').value;
-  const op   = document.getElementById('ac-op').value;
-  const tipo = document.getElementById('ac-tipo').value;
-
-  const filial = getFiltroFilial();
-  _acFiltrado = _acDados.filter(r => {
-    if (q      && ![r.produto_nome,r.codigo,r.lote].join(' ').toLowerCase().includes(q)) return false;
-    if (arm    && r.armazem !== arm) return false;
-    if (op     && r.usuario !== op)  return false;
-    if (filial && (r.filial||'').toUpperCase() !== filial) return false;
-    // Filtro de tipo — não usa return direto para permitir combinar com outros filtros
-    if (tipo === 'ok'             && r.tipo !== 'ok') return false;
-    if (tipo === 'positivo'       && r.tipo !== 'positivo') return false;
-    if (tipo === 'negativo'       && r.tipo !== 'negativo') return false;
-    if (tipo === 'justificado'    && !r.justificativa_acuracia) return false;
-    if (tipo === 'nao_justificado'&& (r.tipo === 'ok' || !!r.justificativa_acuracia)) return false;
-    return true;
-  });
-
-  renderAcuracidade();
-}
-
-function renderAcuracidade() {
-  const dados = _acFiltrado;
-  const total = dados.length;
-  const semDiv= dados.filter(r => r.tipo === 'ok').length;
-  const comDiv= dados.filter(r => r.tipo !== 'ok').length;
-  const justif= dados.filter(r => r.tipo !== 'ok' && !!r.justificativa_acuracia).length;
-  // pctGeral: apenas itens OK / total (sem justificativas)
-  const pctGeral = total ? ((semDiv / total)*100).toFixed(1) : '—';
-  // pctReal: OK + justificados / total (acurácia ajustada)
-  const pctReal  = total ? (((semDiv + justif) / total)*100).toFixed(1) : '—';
-  // nao_justif: divergências sem nenhuma justificativa
-  const naoJustif = dados.filter(r => r.tipo !== 'ok' && !r.justificativa_acuracia).length;
-
-  document.getElementById('ac-total').textContent  = total;
-  document.getElementById('ac-ok').textContent     = semDiv;
-  document.getElementById('ac-div').textContent    = naoJustif;
-  document.getElementById('ac-just').textContent   = justif;
-  document.getElementById('ac-pct').textContent    = pctGeral !== '—' ? pctGeral+'%' : '—';
-  document.getElementById('ac-pct-real').textContent = pctReal !== '—' ? pctReal+'%' : '—';
-
-  // Cor proporcional para ambos os KPIs
-  const pctNum  = parseFloat(pctGeral);
-  const pctRNum = parseFloat(pctReal);
-  const corPct  = pctNum  >= 95 ? 'var(--green)' : pctNum  >= 80 ? 'var(--amber-lt)' : 'var(--red)';
-  const corReal = pctRNum >= 95 ? 'var(--green)' : pctRNum >= 80 ? 'var(--amber-lt)' : 'var(--red)';
-  document.getElementById('ac-pct').style.color      = corPct;
-  document.getElementById('ac-pct-real').style.color = corReal;
-
-  document.getElementById('ac-cnt').textContent = `${total} item${total!==1?'ns':''}`;
-
-  renderGraficoMensal();
-  renderTabelaAcuracidade(dados);
-}
-
-function renderGraficoMensal() {
-  // Agrupa por mês
-  const meses = {};
-  _acDados.forEach(r => {
-    const mes = (r.created_at||'').substring(0,7); // YYYY-MM
-    if (!mes) return;
-    if (!meses[mes]) meses[mes] = { total:0, ok:0, justif:0 };
-    meses[mes].total++;
-    if (r.tipo === 'ok') meses[mes].ok++;
-    if (r.tipo !== 'ok' && r.justificativa_acuracia) meses[mes].justif++;
-  });
-
-  const keys = Object.keys(meses).sort();
-  if (!keys.length) {
-    document.getElementById('ac-chart').innerHTML = '<div style="color:var(--text3);font-size:.8rem;padding:20px">Sem dados para o período.</div>';
-    document.getElementById('ac-chart-labels').innerHTML = '';
-    return;
-  }
-
-  const maxTotal = Math.max(...keys.map(k => meses[k].total), 1);
-  const HEIGHT   = 140;
-
-  const bars = keys.map(k => {
-    const m    = meses[k];
-    const pct  = m.total ? ((m.ok / m.total)*100).toFixed(0) : 0;
-    const pctR = m.total ? (((m.ok + m.justif) / m.total)*100).toFixed(0) : 0;
-    const hOk  = Math.round((m.ok / maxTotal) * HEIGHT);
-    const hJ   = Math.round((m.justif / maxTotal) * HEIGHT);
-    const hDiv = Math.round(((m.total - m.ok - m.justif) / maxTotal) * HEIGHT);
-    const cor  = pct >= 95 ? 'var(--green)' : pct >= 80 ? 'var(--amber-lt)' : 'var(--red)';
-
-    return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;flex:1">
-      <div style="font-size:.62rem;font-weight:700;color:${cor}">${pct}%</div>
-      <div style="display:flex;flex-direction:column;justify-content:flex-end;height:${HEIGHT}px;width:32px;gap:1px">
-        ${hDiv ? `<div style="height:${hDiv}px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:3px 3px 0 0" title="Divergências sem justificativa"></div>` : ''}
-        ${hJ   ? `<div style="height:${hJ}px;background:var(--amber-bg);border:1px solid var(--amber-bd)" title="Justificados"></div>` : ''}
-        ${hOk  ? `<div style="height:${hOk}px;background:var(--green-bg);border:1px solid var(--green-bd);border-radius:${!hJ&&!hDiv?'3px 3px':'0 0'} 0 0" title="Sem divergência"></div>` : ''}
-      </div>
-    </div>`;
-  }).join('');
-
-  const labels = keys.map(k => {
-    const [y, m] = k.split('-');
-    const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    return `<div style="min-width:44px;flex:1;text-align:center;font-size:.62rem;color:var(--text3);font-weight:600">${nomes[parseInt(m)-1]}/${y.slice(2)}</div>`;
-  }).join('');
-
-  // Legenda
-  const legenda = `<div style="display:flex;gap:12px;margin-top:10px;font-size:.65rem;font-weight:600">
-    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:var(--green-bg);border:1px solid var(--green-bd);border-radius:2px;display:inline-block"></span>Sem divergência</span>
-    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:2px;display:inline-block"></span>Justificados</span>
-    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:2px;display:inline-block"></span>Divergência</span>
-  </div>`;
-
-  document.getElementById('ac-chart').innerHTML = bars + legenda;
-  document.getElementById('ac-chart-labels').innerHTML = labels;
-}
-
-function renderTabelaAcuracidade(dados) {
-  const tbody = document.getElementById('tbody-ac');
-  if (!dados.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Nenhum registro encontrado.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = dados.map(r => {
-    const div = r.divergencia ?? 0;
-    const divCell = r.tipo === 'ok'
-      ? `<span class="div-ok">0</span>`
-      : `<span class="${div>0?'div-pos':'div-neg'}">${div>0?'+':''}${div}</span>`;
-
-    const tipoBadge = r.tipo === 'ok'
-      ? `<span class="badge b-v">✓ OK</span>`
-      : r.tipo === 'positivo'
-        ? `<span class="badge b-p">+ Positivo</span>`
-        : `<span class="badge b-r">− Negativo</span>`;
-
-    const justCell = r.justificativa_acuracia
-      ? `<span style="font-size:.72rem;color:var(--green-txt);font-weight:600;cursor:pointer" onclick="verTexto('Justificativa',${JSON.stringify(r.justificativa_acuracia).replace(/"/g,'&quot;')})">✓ Ver</span>`
-      : (r.tipo !== 'ok'
-          ? `<button class="btn btn-amber btn-sm" style="font-size:.65rem;padding:3px 8px" onclick="abrirJustificativa(${r.id},'${(r.produto_nome||'').replace(/'/g,"\'")}',${div})">+ Justificar</button>`
-          : '<span style="color:var(--text3)">—</span>');
-
-    // Linha: vermelha suave se divergência sem justificativa
-    const rowStyle = r.tipo !== 'ok' && !r.justificativa_acuracia
-      ? 'background:var(--red-bg);'
-      : r.justificativa_acuracia
-        ? 'background:var(--amber-bg);'
-        : '';
-
-    return `<tr style="${rowStyle}">
-      <td class="cts">${fmtTS(r.created_at)}</td>
-      <td class="cn" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.produto_nome||'—'}</td>
-      <td class="cm">${r.lote||'—'}</td>
-      <td style="font-weight:600">${r.armazem||'—'}</td>
-      <td style="font-weight:700">${r.quantidade??'—'}</td>
-      <td style="font-weight:700">${r.saldo_sistema??'—'}</td>
-      <td>${divCell}</td>
-      <td>${tipoBadge}</td>
-      <td class="cm">${r.usuario||'—'}</td>
-      <td style="max-width:150px">${justCell}</td>
-      <td class="ca">
-        <button class="btn btn-ghost btn-sm" style="font-size:.65rem;padding:3px 8px" onclick="verTexto('Observação','${(r.observacao||'Sem observação').replace(/'/g,"\'")}')">obs</button>
+  tbody.innerHTML = _chkLista.map((r, i) => {
+    const rowCls = r.contado ? 'sv-contado' : '';
+    const nome = r.descricao || r.codigo || '—';
+    return `<tr class="${rowCls}">
+      <td class="cn">${nome}</td>
+      <td style="text-align:right">
+        ${r.contado
+          ? `<span class="badge b-v">✓ Contado</span> <button class="btn btn-ghost btn-xs" onclick="marcarChk(${i},false)">↩</button>`
+          : `<button class="btn btn-primary btn-sm" onclick="marcarChk(${i},true)">✓ Marcar</button>`
+        }
       </td>
     </tr>`;
   }).join('');
 }
 
-// ── JUSTIFICATIVA ──────────────────────────────────────────
-function abrirJustificativa(id, produto, div) {
-  document.getElementById('mj-id').value    = id;
-  document.getElementById('mj-sub').textContent = produto;
-  document.getElementById('mj-div').textContent = (div>0?'+':'')+div;
-  document.getElementById('mj-div').style.color = div>0?'var(--amber-lt)':'var(--red)';
-  document.getElementById('mj-tipo').textContent= div>0?'Positivo':'Negativo';
-  document.getElementById('mj-texto').value = '';
-  document.getElementById('modal-justif').classList.add('open');
-}
+// ── Acurácia — lê do historico ────────────────────────────
+async function carregarAcuracidade() {
+  const tbody = document.getElementById('tbody-ac');
+  tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Carregando…</td></tr>';
 
-async function salvarJustificativa() {
-  const id   = document.getElementById('mj-id').value;
-  const txt  = document.getElementById('mj-texto').value.trim();
-  if (!txt) { toast('Informe a justificativa.','warn'); return; }
-
-  const btn  = document.querySelector('#modal-justif .btn-primary');
-  const spin = document.getElementById('mj-spin');
-  btn.disabled=true; spin.style.display='block';
+  const hoje = new Date().toISOString().split('T')[0];
+  const h30  = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+  const deEl  = document.getElementById('ac-de');
+  const ateEl = document.getElementById('ac-ate');
+  if (!deEl.value)  deEl.value  = h30;
+  if (!ateEl.value) ateEl.value = hoje;
+  const de  = deEl.value;
+  const ate = ateEl.value;
 
   try {
-    const { error } = await sb
-      .from('historico')
-      .update({ justificativa_acuracia: txt })
-      .eq('id', id);
+    const { data, error } = await sb
+      .from('historico').select('*')
+      .gte('created_at', de + 'T00:00:00')
+      .lte('created_at', ate + 'T23:59:59')
+      .order('created_at', { ascending: false });
     if (error) throw error;
-    fecharModal('modal-justif');
-    toast('✓ Justificativa salva! Item não afetará a acurácia.','ok');
-    carregarAcuracidade();
+    _acDados = data || [];
+
+    // Popula filtro armazém
+    const arms = [...new Set(_acDados.map(r => r.armazem).filter(Boolean))].sort();
+    const sel = document.getElementById('ac-arm');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Todos arm.</option>' +
+      arms.map(a => `<option value="${a}"${a===cur?' selected':''}>${a}</option>`).join('');
+
+    filtrarAcuracidade();
   } catch(e) {
-    toast('Erro: '+e.message,'err');
-  } finally {
-    btn.disabled=false; spin.style.display='none';
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--red);font-size:.8rem">Erro: ${e.message}</td></tr>`;
   }
 }
 
-// ── EXPORTAR PARA EXCEL (SheetJS) ────────────────────────
-function exportarXlsx(nomeArq, cabecalhos, linhas) {
-  const ws = XLSX.utils.aoa_to_sheet([cabecalhos, ...linhas]);
-  const colWidths = cabecalhos.map((h, i) => {
-    const max = Math.max(h.length, ...linhas.map(r => String(r[i]??'').length));
-    return { wch: Math.min(max + 2, 50) };
+function filtrarAcuracidade() {
+  const q      = (document.getElementById('ac-prod').value||'').toLowerCase();
+  const arm    = document.getElementById('ac-arm').value;
+  const status = document.getElementById('ac-status-filt').value;
+  const filial = getFiltroFilial();
+
+  _acFiltrado = _acDados.filter(r => {
+    if (q && ![r.produto_nome,r.codigo,r.lote].join(' ').toLowerCase().includes(q)) return false;
+    if (arm && r.armazem !== arm) return false;
+    if (filial && (r.filial||'').toUpperCase() !== filial) return false;
+    if (status === 'ok'         && r.tipo !== 'ok') return false;
+    if (status === 'divergencia'&& r.tipo === 'ok') return false;
+    return true;
   });
-  ws['!cols'] = colWidths;
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Dados');
-  XLSX.writeFile(wb, `${nomeArq}_${new Date().toISOString().split('T')[0]}.xlsx`);
-  toast('✓ Excel exportado!', 'ok');
+
+  renderKpisAcuracia();
+  renderTabelaAcuracia();
+}
+
+function renderKpisAcuracia() {
+  const total  = _acDados.length;   // KPIs sobre total sem filtro
+  const semDiv = _acDados.filter(r => r.tipo === 'ok').length;
+  const comDiv = _acDados.filter(r => r.tipo !== 'ok').length;
+
+  const pctCont = total ? ((semDiv / total)*100).toFixed(1) : null;
+  const pctErro = total ? ((comDiv / total)*100).toFixed(1) : null;
+
+  const pctContNum = pctCont !== null ? parseFloat(pctCont) : 0;
+  const pctErroNum = pctErro !== null ? parseFloat(pctErro) : 0;
+
+  const corCont = pctContNum >= 95 ? 'var(--green)' : pctContNum >= 70 ? 'var(--amber-lt)' : 'var(--red)';
+  const corErro = pctErroNum === 0  ? 'var(--green)' : pctErroNum <= 5  ? 'var(--amber-lt)' : 'var(--red)';
+
+  // % Contados (sem divergência)
+  document.getElementById('ac-pct').textContent     = pctCont !== null ? pctCont+'%' : '—%';
+  document.getElementById('ac-pct').style.color     = corCont;
+  document.getElementById('ac-pct-abs').textContent = total ? `${semDiv} de ${total} registros` : '';
+  const bar = document.getElementById('ac-prog-bar');
+  if (bar) { bar.style.width = pctContNum+'%'; bar.style.background = corCont; }
+  document.getElementById('ac-prog-txt').textContent = total ? `${semDiv} sem divergência · ${comDiv} com divergência` : '—';
+
+  // % Com Erro
+  document.getElementById('ac-pct-erro').textContent     = pctErro !== null ? pctErro+'%' : '—%';
+  document.getElementById('ac-pct-erro').style.color     = corErro;
+  document.getElementById('ac-erro-abs').textContent     = total ? `${comDiv} de ${total} registros` : '';
+  const erroBar = document.getElementById('ac-erro-bar');
+  if (erroBar) { erroBar.style.width = pctErroNum+'%'; erroBar.style.background = corErro; }
+  document.getElementById('ac-erro-txt').textContent = total && comDiv > 0
+    ? `${comDiv} item${comDiv!==1?'ns':''} com divergência` : total ? 'Sem divergências ✓' : '—';
+}
+
+function renderTabelaAcuracia() {
+  const tbody = document.getElementById('tbody-ac');
+  document.getElementById('ac-cnt').textContent = `${_acFiltrado.length} registro${_acFiltrado.length!==1?'s':''}`;
+
+  if (!_acFiltrado.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Nenhum registro no período.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = _acFiltrado.map(r => {
+    const div = r.divergencia ?? 0;
+    const divCell = r.tipo === 'ok'
+      ? `<span class="div-ok">0</span>`
+      : `<span class="${div>0?'div-pos':'div-neg'}">${div>0?'+':''}${div}</span>`;
+    const tipoBadge = r.tipo === 'ok'
+      ? `<span class="badge b-v">✓ OK</span>`
+      : r.tipo === 'positivo'
+        ? `<span class="badge b-p">+ Positivo</span>`
+        : `<span class="badge b-r">− Negativo</span>`;
+    const rowStyle = r.tipo !== 'ok' ? 'background:var(--red-bg)' : '';
+    return `<tr style="${rowStyle}">
+      <td class="cts">${fmtTS(r.created_at)}</td>
+      <td>${filialBadgeHtml(r.filial)}</td>
+      <td class="cc">${r.codigo||'—'}</td>
+      <td class="cn">${r.produto_nome||'—'}</td>
+      <td class="cm">${r.lote||'—'}</td>
+      <td style="font-weight:600;color:var(--amber)">${r.armazem||'—'}</td>
+      <td style="font-weight:700">${r.quantidade??'—'}</td>
+      <td>${r.saldo_sistema??'—'}</td>
+      <td>${divCell}</td>
+      <td>${tipoBadge}</td>
+      <td class="cm">${r.usuario||'—'}</td>
+    </tr>`;
+  }).join('');
 }
 
 function exportarAcuracidade() {
-  if (!_acFiltrado.length) { toast('Nenhum dado para exportar.', 'warn'); return; }
-  const cab = ['Filial','Data','Produto','Código','Lote','Armazém','Qtd Contada','Saldo Sistema','Divergência','Tipo','Operador','Justificativa','Observação'];
+  if (!_acFiltrado.length) { toast('Sem dados para exportar.','warn'); return; }
+  const cab = ['Data','Filial','Código','Produto','Lote','Armazém','Qtd Contada','Saldo Sistema','Divergência','Tipo','Operador'];
   const lin = _acFiltrado.map(r => [
-    r.filial||'', fmtTS(r.created_at), r.produto_nome||'', r.codigo||'', r.lote||'', r.armazem||'',
+    fmtTS(r.created_at), r.filial||'', r.codigo||'', r.produto_nome||'', r.lote||'', r.armazem||'',
     r.quantidade??'', r.saldo_sistema??'', r.divergencia??'',
     r.tipo==='ok'?'Sem divergência':r.tipo==='positivo'?'Positivo':'Negativo',
-    r.usuario||'', r.justificativa_acuracia||'', r.observacao||''
+    r.usuario||''
   ]);
   exportarXlsx('acuracia', cab, lin);
-}
-
-function exportarHistorico() {
-  if (!todoHistorico?.length) { toast('Carregue o histórico primeiro.', 'warn'); return; }
-  const cab = ['Filial','Data','Código','Produto','Lote','Qtd Contada','Saldo Sistema','Divergência','Tipo','Armazém','Operador','Observação','Recontagem'];
-  const lin = todoHistorico.map(h => [
-    h.filial||'', fmtTS(h.created_at), h.codigo||'', h.produto_nome||'', h.lote||'',
-    h.quantidade??'', h.saldo_sistema??'', h.divergencia??'',
-    h.tipo==='ok'?'Sem divergência':h.tipo==='positivo'?'Positivo':'Negativo',
-    h.armazem||'', h.usuario||'',
-    h.observacao||h.motivo_recontagem||'', h.is_recontagem?'Sim':'Não'
-  ]);
-  exportarXlsx('historico', cab, lin);
 }
 
 // Fechar modal justificativa pelo fundo
