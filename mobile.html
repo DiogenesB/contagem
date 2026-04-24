@@ -782,6 +782,9 @@ async function carregarAgendamentos() {
   const el = document.getElementById('ag-lista');
   el.innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><div class="empty-txt">Carregando…</div></div>';
   try {
+    // Reseta agendamentos travados em em_contagem de volta para pendente
+    await sb.from('agendamentos').update({ status: 'pendente' }).eq('status', 'em_contagem');
+
     const { data, error } = await sb.from('agendamentos')
       .select('*')
       .in('status', ['pendente', 'em_contagem'])
@@ -845,9 +848,6 @@ function abrirModalContar(ag) {
 
   // Busca saldo no sistema
   buscarSaldoModal(ag.codigo, ag.lote_especifico);
-
-  // Marca como em_contagem
-  sb.from('agendamentos').update({ status: 'em_contagem' }).eq('id', ag.id).then(() => {});
 
   document.getElementById('modal-contar').classList.add('open');
   setTimeout(() => document.getElementById('mc-qtd').focus(), 300);
