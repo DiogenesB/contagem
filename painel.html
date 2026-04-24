@@ -1305,21 +1305,21 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <button class="btn btn-ghost btn-sm" onclick="carregarValidacao()">↺</button>
           </div>
         </div>
-        <table style="table-layout:fixed;font-size:.82rem">
+        <table style="table-layout:fixed;width:100%;font-size:.82rem">
           <colgroup>
-            <col class="col-chk">
-            <col style="width:62px">
-            <col style="width:100px">
-            <col style="width:180px">
-            <col style="width:110px">
-            <col style="width:54px">
-            <col style="width:40px">
-            <col style="width:44px">
-            <col style="width:76px">
-            <col style="width:76px">
-            <col style="width:105px">
+            <col class="col-chk" style="width:32px">
+            <col style="width:58px">
+            <col style="width:108px">
+            <col>
+            <col style="width:108px">
+            <col style="width:52px">
             <col style="width:42px">
-            <col style="width:175px">
+            <col style="width:44px">
+            <col style="width:78px">
+            <col style="width:78px">
+            <col style="width:106px">
+            <col style="width:44px">
+            <col style="width:170px">
           </colgroup>
           <thead><tr>
             <th style="text-align:center;padding:9px 8px"><input type="checkbox" class="sv-check" id="chk-all" onclick="toggleTodos(this)" title="Selecionar todos"></th>
@@ -1337,7 +1337,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <th style="text-align:right;white-space:nowrap">Ações</th>
           </tr></thead>
           <tbody id="tbody-sv">
-            <tr><td colspan="14" style="text-align:center;padding:36px;color:var(--text3);font-size:.8rem">
+            <tr><td colspan="13" style="text-align:center;padding:36px;color:var(--text3);font-size:.8rem">
               Importe o saldo sistêmico para começar.
             </td></tr>
           </tbody>
@@ -2105,7 +2105,7 @@ async function carregarValidacao() {
     const { data: saldo } = await sb.from('saldo_sistema').select('*').order('codigo').order('lote');
     if (!saldo || !saldo.length) {
       document.getElementById('tbody-sv').innerHTML =
-        '<tr><td colspan="14" style="text-align:center;padding:32px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Importe o saldo sistêmico para começar.</td></tr>';
+        '<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Importe o saldo sistêmico para começar.</td></tr>';
       return;
     }
 
@@ -2307,7 +2307,7 @@ function filtrarValidacao() {
   if (svArmErrado?.length > 0) {
     rowsArmErrado = `
       <tr style="background:var(--amber-bg)">
-        <td colspan="14" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--amber-bd)">
+        <td colspan="13" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--amber-bd)">
           ⚠ Armazém não identificado — lote existe no sistema, mas armazém informado é diferente (${svArmErrado.length})
         </td>
       </tr>` +
@@ -2338,7 +2338,7 @@ function filtrarValidacao() {
   if (svLoteNaoExiste?.length > 0) {
     rowsNaoExiste = `
       <tr style="background:var(--red-bg)">
-        <td colspan="14" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--red-bd)">
+        <td colspan="13" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--red-bd)">
           ✕ Lote não existe no saldo sistêmico (${svLoteNaoExiste.length})
         </td>
       </tr>` +
@@ -2365,7 +2365,7 @@ function filtrarValidacao() {
   }
 
   if (!rowsNormais && !rowsArmErrado && !rowsNaoExiste) {
-    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--text3);font-size:.75rem">Nenhum item.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--text3);font-size:.75rem">Nenhum item.</td></tr>';
     return;
   }
   tbody.innerHTML = rowsNormais + rowsArmErrado + rowsNaoExiste;
