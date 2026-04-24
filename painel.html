@@ -8,42 +8,42 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Nunito+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:        #f0f2f5;
+  --bg:        #f4f6f9;
   --bg2:       #ffffff;
-  --bg3:       #f7f8fa;
-  --bg4:       #eef0f4;
-  --bg5:       #e4e7ed;
-  --border:    #dde1e8;
-  --border2:   #c8cdd8;
-  --border3:   #b0b7c6;
+  --bg3:       #f8f9fc;
+  --bg4:       #eef1f7;
+  --bg5:       #e3e8f0;
+  --border:    #dce2ef;
+  --border2:   #c4cde0;
+  --border3:   #a8b5ce;
 
-  --green:     #1a7f4b;
-  --green-lt:  #22a361;
-  --green-bg:  #eaf7f0;
-  --green-bd:  #b6e8cf;
-  --green-txt: #145e37;
+  --green:     #0e7a52;
+  --green-lt:  #13996a;
+  --green-bg:  #e8f7f1;
+  --green-bd:  #a3dfc4;
+  --green-txt: #0a5c3d;
 
   --amber:     #b45309;
   --amber-lt:  #d97706;
-  --amber-bg:  #fef3e2;
-  --amber-bd:  #fcd59a;
+  --amber-bg:  #fef4e2;
+  --amber-bd:  #fbd08a;
 
   --red:       #c0392b;
   --red-bg:    #fdecea;
   --red-bd:    #f5b8b2;
 
-  --blue:      #1d5fa8;
-  --blue-lt:   #2e7dd1;
-  --blue-bg:   #e8f0fb;
-  --blue-bd:   #a8c4ef;
+  --blue:      #1646a0;
+  --blue-lt:   #2563eb;
+  --blue-bg:   #eaf0fd;
+  --blue-bd:   #93b4f5;
 
-  --purple:    #6d4fc2;
-  --purple-bg: #f0ebfb;
-  --purple-bd: #c7b4ef;
+  --purple:    #5b3fa8;
+  --purple-bg: #ede8fb;
+  --purple-bd: #b8a4ef;
 
-  --text:      #1a2035;
-  --text2:     #4a5568;
-  --text3:     #8a95a8;
+  --text:      #0f172a;
+  --text2:     #374151;
+  --text3:     #6b7a99;
 
   --sans:      'Nunito Sans', 'Calibri', 'Segoe UI', sans-serif;
   --r:         8px;
@@ -51,26 +51,26 @@
   --r-xs:      4px;
   --nav-w:     230px;
   --topbar-h:  52px;
-  --sh:        0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
-  --sh-sm:     0 1px 3px rgba(0,0,0,.07);
+  --sh:        0 1px 3px rgba(22,70,160,.07), 0 4px 16px rgba(22,70,160,.07);
+  --sh-sm:     0 1px 3px rgba(22,70,160,.06);
 }
 
 /* ── TEMA ESCURO ── */
 html.dark {
-  --bg:        #0f1117;
-  --bg2:       #171b24;
-  --bg3:       #1d2230;
-  --bg4:       #232839;
-  --bg5:       #2a3045;
-  --border:    #2c3348;
-  --border2:   #38445e;
-  --border3:   #475568;
+  --bg:        #080d18;
+  --bg2:       #0d1425;
+  --bg3:       #111b30;
+  --bg4:       #162038;
+  --bg5:       #1c2944;
+  --border:    #1e2e4a;
+  --border2:   #283d5e;
+  --border3:   #344e74;
 
-  --green:     #22c55e;
-  --green-lt:  #34d874;
-  --green-bg:  rgba(34,197,94,.09);
-  --green-bd:  rgba(34,197,94,.28);
-  --green-txt: #86efac;
+  --green:     #10b981;
+  --green-lt:  #34d399;
+  --green-bg:  rgba(16,185,129,.09);
+  --green-bd:  rgba(16,185,129,.28);
+  --green-txt: #6ee7b7;
 
   --amber:     #f59e0b;
   --amber-lt:  #fbbf24;
@@ -81,40 +81,41 @@ html.dark {
   --red-bg:    rgba(244,63,94,.09);
   --red-bd:    rgba(244,63,94,.3);
 
-  --blue:      #60a5fa;
-  --blue-lt:   #93c5fd;
-  --blue-bg:   rgba(96,165,250,.1);
-  --blue-bd:   rgba(96,165,250,.28);
+  --blue:      #4f8ef7;
+  --blue-lt:   #7eb3ff;
+  --blue-bg:   rgba(79,142,247,.1);
+  --blue-bd:   rgba(79,142,247,.3);
 
   --purple:    #a78bfa;
   --purple-bg: rgba(167,139,250,.09);
   --purple-bd: rgba(167,139,250,.28);
 
-  --text:      #e8edf8;
-  --text2:     #8fa3be;
-  --text3:     #4a6080;
+  --text:      #e2e8f8;
+  --text2:     #7a95bc;
+  --text3:     #3d5278;
 
-  --sh:        0 1px 4px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
-  --sh-sm:     0 1px 3px rgba(0,0,0,.35);
+  --sh:        0 1px 4px rgba(0,0,0,.5), 0 4px 20px rgba(0,0,0,.4);
+  --sh-sm:     0 1px 3px rgba(0,0,0,.4);
 }
 
 /* Ajustes pontuais no dark mode */
-html.dark tbody tr:hover { background:rgba(255,255,255,.03) !important; }
+html.dark tbody tr:hover { background:rgba(79,142,247,.04) !important; }
 html.dark .field input[readonly] { background:var(--bg4); color:var(--text2); }
 html.dark .field input, html.dark .field select, html.dark .field textarea { background:var(--bg3); border-color:var(--border2); color:var(--text); }
 html.dark .search-inp, html.dark .filter-sel { background:var(--bg3); border-color:var(--border2); color:var(--text2); }
-html.dark .log-img-card img { filter:saturate(.4) brightness(.4); }
-html.dark .brand-ico { box-shadow:0 2px 12px rgba(34,197,94,.25); }
-html.dark .btn-primary { background:var(--green); color:#041a0e; border-color:rgba(34,197,94,.5); }
-html.dark .btn-primary:hover { background:var(--green-lt); }
+html.dark .log-img-card img { filter:saturate(.35) brightness(.35); }
+html.dark .brand-ico { box-shadow:0 2px 12px rgba(79,142,247,.3); }
+html.dark .btn-primary { background:var(--blue-lt); color:#04112e; border-color:rgba(79,142,247,.5); }
+html.dark .btn-primary:hover { background:#9ecaff; }
 html.dark .btn-ghost { background:var(--bg3); border-color:var(--border2); color:var(--text2); }
 html.dark .btn-ghost:hover { background:var(--bg4); border-color:var(--border3); color:var(--text); }
-html.dark .sv-contado  { background:rgba(34,197,94,.05) !important; }
-html.dark .sv-validado { background:rgba(34,197,94,.03) !important; }
+html.dark .sv-contado  { background:rgba(16,185,129,.05) !important; }
+html.dark .sv-validado { background:rgba(16,185,129,.03) !important; }
 html.dark .sv-recont   { background:rgba(167,139,250,.05) !important; }
 html.dark .sv-pendente { background:transparent !important; }
-html.dark .ag-finalizado  { background:rgba(34,197,94,.04) !important; }
-html.dark .ag-em-contagem { background:rgba(96,165,250,.04) !important; }
+html.dark .sv-diverg   { background:rgba(245,158,11,.07) !important; border-left:3px solid var(--amber) !important; }
+html.dark .ag-finalizado  { background:rgba(16,185,129,.04) !important; }
+html.dark .ag-em-contagem { background:rgba(79,142,247,.05) !important; }
 html.dark .info-banner { background:var(--blue-bg); border-color:var(--blue-bd); color:var(--blue); }
 html.dark .import-banner { background:var(--bg2); border-color:var(--border); }
 html.dark .divprev { background:var(--bg3); border-color:var(--border2); }
@@ -125,17 +126,18 @@ html.dark .page-header { background:var(--bg2); border-color:var(--border); }
 html.dark .table-wrap { background:var(--bg2); border-color:var(--border); }
 html.dark .table-hdr { background:var(--bg3); border-color:var(--border); }
 html.dark thead tr { background:var(--bg4); }
-html.dark td { border-color:rgba(255,255,255,.04); }
+html.dark td { border-color:rgba(255,255,255,.03); }
 html.dark .add-sec { background:var(--bg2); border-color:var(--border); }
 html.dark .add-sec-title { border-color:var(--border); }
 html.dark .sb-user { background:var(--bg3); border-color:var(--border); }
 html.dark .brand-status { background:var(--bg3); border-color:var(--border); }
-html.dark .modal-bg { background:rgba(0,0,0,.75); }
+html.dark .modal-bg { background:rgba(0,0,0,.8); }
 html.dark [style*="background:var(--bg3)"] { background:var(--bg3) !important; }
 html.dark .import-drop { background:var(--bg3); border-color:var(--border2); }
 html.dark .log-img-card { border-color:var(--border); }
 html.dark .perf-card { background:var(--bg2); border-color:var(--border); }
 html.dark .perf-row { border-color:var(--border); }
+html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); color:var(--blue); }
 
 /* ── FILIAL BADGES ── */
 .fil-badge {
@@ -223,13 +225,13 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 
 .brand-ico {
   width:38px; height:38px;
-  background:#1a7f4b;
+  background:#1646a0;
   border-radius:8px;
   display:flex;
   align-items:center;
   justify-content:center;
   flex-shrink:0;
-  box-shadow:0 2px 8px rgba(26,127,75,.3);
+  box-shadow:0 2px 8px rgba(22,70,160,.3);
 }
 
 .brand-ico svg { width:20px; height:20px; }
@@ -338,14 +340,14 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 }
 
 .nav-item.active {
-  background:var(--green-bg);
-  color:var(--green-txt);
-  border-color:var(--green-bd);
+  background:var(--blue-bg);
+  color:var(--blue);
+  border-color:var(--blue-bd);
   font-weight:700;
 }
 
 .nav-item.active .ni {
-  background:var(--green-bd);
+  background:var(--blue-bd);
 }
 
 .nav-divider {
@@ -373,7 +375,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 
 .sb-av {
   width:30px; height:30px;
-  background:linear-gradient(135deg,#2e7dd1,#6d4fc2);
+  background:linear-gradient(135deg,#1646a0,#2563eb);
   border-radius:50%;
   display:flex; align-items:center; justify-content:center;
   font-size:.72rem;
@@ -440,9 +442,9 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   gap:5px;
   font-size:.68rem;
   font-weight:600;
-  color:var(--green-txt);
-  background:var(--green-bg);
-  border:1px solid var(--green-bd);
+  color:var(--blue);
+  background:var(--blue-bg);
+  border:1px solid var(--blue-bd);
   border-radius:20px;
   padding:3px 10px;
 }
@@ -450,7 +452,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 .rt-dot {
   width:5px; height:5px;
   border-radius:50%;
-  background:var(--green);
+  background:var(--blue-lt);
   animation:pulse 1.8s infinite;
 }
 
@@ -756,13 +758,13 @@ tbody tr:hover { background:#f5f7fa; }
 .btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
 
 .btn-primary {
-  background:var(--green);
+  background:var(--blue-lt);
   color:#fff;
-  border-color:var(--green-txt);
-  box-shadow:0 1px 3px rgba(26,127,75,.25);
+  border-color:var(--blue);
+  box-shadow:0 1px 3px rgba(37,99,235,.25);
 }
 
-.btn-primary:hover { background:var(--green-lt); }
+.btn-primary:hover { background:#1d55d4; }
 
 .btn-ghost {
   background:var(--bg2);
@@ -891,7 +893,7 @@ tbody tr:hover { background:#f5f7fa; }
 .add-sec-title {
   font-size:.78rem;
   font-weight:700;
-  color:var(--green-txt);
+  color:var(--blue);
   text-transform:uppercase;
   letter-spacing:.07em;
   margin-bottom:12px;
@@ -1027,9 +1029,9 @@ tbody tr:hover { background:#f5f7fa; }
 .perf-time {
   font-size:.78rem;
   font-weight:700;
-  color:var(--green-txt);
-  background:var(--green-bg);
-  border:1px solid var(--green-bd);
+  color:var(--blue);
+  background:var(--blue-bg);
+  border:1px solid var(--blue-bd);
   border-radius:var(--r-sm);
   padding:3px 9px;
 }
@@ -1788,7 +1790,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
     </div>
 
     <div class="modal-acts">
-      <button class="btn btn-amber" onclick="solicitarRecontagem()" id="btn-recont">↺ Recontagem</button>
+      <button class="btn btn-amber" onclick="abrirSolicitarRecontagem(itemAtual)" id="btn-recont">↺ Recontagem</button>
       <button class="btn btn-ghost" onclick="fecharModal('modal-val')">Cancelar</button>
       <button class="btn btn-primary" id="btn-conf-val" onclick="confirmarValidacao()">
         <div class="spin" id="val-spin"></div>✓ Confirmar
@@ -3806,6 +3808,32 @@ function renderTabelaAcuracia() {
       <td class="cm">${r.usuario||'—'}</td>
     </tr>`;
   }).join('');
+}
+
+function exportarXlsx(nomeArq, cabecalhos, linhas) {
+  const ws = XLSX.utils.aoa_to_sheet([cabecalhos, ...linhas]);
+  const colWidths = cabecalhos.map((h, i) => {
+    const max = Math.max(h.length, ...linhas.map(r => String(r[i]??'').length));
+    return { wch: Math.min(max + 2, 50) };
+  });
+  ws['!cols'] = colWidths;
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Dados');
+  XLSX.writeFile(wb, `${nomeArq}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  toast('✓ Excel exportado!', 'ok');
+}
+
+function exportarHistorico() {
+  if (!todoHistorico?.length) { toast('Carregue o histórico primeiro.', 'warn'); return; }
+  const cab = ['Filial','Data','Código','Produto','Lote','Qtd Contada','Saldo Sistema','Divergência','Tipo','Armazém','Operador','Observação','Recontagem'];
+  const lin = todoHistorico.map(h => [
+    h.filial||'', fmtTS(h.created_at), h.codigo||'', h.produto_nome||'', h.lote||'',
+    h.quantidade??'', h.saldo_sistema??'', h.divergencia??'',
+    h.tipo==='ok'?'Sem divergência':h.tipo==='positivo'?'Positivo':'Negativo',
+    h.armazem||'', h.usuario||'',
+    h.observacao||h.motivo_recontagem||'', h.is_recontagem?'Sim':'Não'
+  ]);
+  exportarXlsx('historico', cab, lin);
 }
 
 function exportarAcuracidade() {
