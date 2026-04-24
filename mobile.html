@@ -9,50 +9,50 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:       #f0f2f5;
+  --bg:       #f4f6f9;
   --bg2:      #ffffff;
-  --bg3:      #f7f8fa;
-  --bg4:      #eef0f4;
-  --border:   #dde1e8;
-  --border2:  #c8cdd8;
-  --green:    #1a7f4b;
-  --green-lt: #22a361;
-  --green-bg: #eaf7f0;
-  --green-bd: #b6e8cf;
-  --green-txt:#145e37;
+  --bg3:      #f8f9fc;
+  --bg4:      #eef1f7;
+  --border:   #dce2ef;
+  --border2:  #c4cde0;
+  --green:    #0e7a52;
+  --green-lt: #13996a;
+  --green-bg: #e8f7f1;
+  --green-bd: #a3dfc4;
+  --green-txt:#0a5c3d;
   --amber:    #b45309;
   --amber-lt: #d97706;
-  --amber-bg: #fef3e2;
-  --amber-bd: #fcd59a;
+  --amber-bg: #fef4e2;
+  --amber-bd: #fbd08a;
   --red:      #c0392b;
   --red-bg:   #fdecea;
   --red-bd:   #f5b8b2;
-  --blue:     #1d5fa8;
-  --blue-lt:  #2e7dd1;
-  --blue-bg:  #e8f0fb;
-  --blue-bd:  #a8c4ef;
-  --purple:   #6d4fc2;
-  --text:     #1a2035;
-  --text2:    #4a5568;
-  --text3:    #8a95a8;
+  --blue:     #1646a0;
+  --blue-lt:  #2563eb;
+  --blue-bg:  #eaf0fd;
+  --blue-bd:  #93b4f5;
+  --purple:   #5b3fa8;
+  --text:     #0f172a;
+  --text2:    #374151;
+  --text3:    #6b7a99;
   --sans:     'Nunito Sans', sans-serif;
   --r:        12px;
   --r-sm:     8px;
-  --sh:       0 2px 8px rgba(0,0,0,.08);
+  --sh:       0 2px 8px rgba(22,70,160,.08);
 }
 
 html.dark {
-  --bg:       #0f1117;
-  --bg2:      #171b24;
-  --bg3:      #1d2230;
-  --bg4:      #232839;
-  --border:   #2c3348;
-  --border2:  #38445e;
-  --green:    #22c55e;
-  --green-lt: #34d874;
-  --green-bg: rgba(34,197,94,.09);
-  --green-bd: rgba(34,197,94,.28);
-  --green-txt:#86efac;
+  --bg:       #080d18;
+  --bg2:      #0d1425;
+  --bg3:      #111b30;
+  --bg4:      #162038;
+  --border:   #1e2e4a;
+  --border2:  #283d5e;
+  --green:    #10b981;
+  --green-lt: #34d399;
+  --green-bg: rgba(16,185,129,.09);
+  --green-bd: rgba(16,185,129,.28);
+  --green-txt:#6ee7b7;
   --amber:    #f59e0b;
   --amber-lt: #fbbf24;
   --amber-bg: rgba(245,158,11,.1);
@@ -60,13 +60,14 @@ html.dark {
   --red:      #f43f5e;
   --red-bg:   rgba(244,63,94,.09);
   --red-bd:   rgba(244,63,94,.3);
-  --blue:     #60a5fa;
-  --blue-lt:  #93c5fd;
-  --blue-bg:  rgba(96,165,250,.1);
-  --blue-bd:  rgba(96,165,250,.28);
-  --text:     #e8edf8;
-  --text2:    #8fa3be;
-  --text3:    #4a6080;
+  --blue:     #4f8ef7;
+  --blue-lt:  #7eb3ff;
+  --blue-bg:  rgba(79,142,247,.1);
+  --blue-bd:  rgba(79,142,247,.3);
+  --purple:   #a78bfa;
+  --text:     #e2e8f8;
+  --text2:    #7a95bc;
+  --text3:    #3d5278;
 }
 
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -84,7 +85,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 }
 .topbar-logo {
   width:32px; height:32px; border-radius:8px;
-  background:#1a7f4b;
+  background:#1646a0;
   display:flex; align-items:center; justify-content:center;
   flex-shrink:0;
 }
@@ -94,14 +95,14 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 .topbar-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
 .op-badge {
   display:flex; align-items:center; gap:6px;
-  background:var(--green-bg); border:1px solid var(--green-bd);
+  background:var(--blue-bg); border:1px solid var(--blue-bd);
   border-radius:20px; padding:3px 10px 3px 5px;
-  font-size:.75rem; font-weight:700; color:var(--green-txt);
+  font-size:.75rem; font-weight:700; color:var(--blue);
   cursor:pointer;
 }
 .op-av {
   width:22px; height:22px; border-radius:50%;
-  background:var(--green); color:#fff;
+  background:var(--blue-lt); color:#fff;
   display:flex; align-items:center; justify-content:center;
   font-size:.62rem; font-weight:800;
 }
@@ -130,7 +131,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   color:var(--text3); transition:color .12s;
   position:relative;
 }
-.bn-item.active { color:var(--green); }
+.bn-item.active { color:var(--blue-lt); }
 .bn-icon { font-size:1.3rem; line-height:1; }
 .bn-label { font-size:.62rem; font-weight:700; letter-spacing:.02em; }
 .bn-badge {
@@ -163,7 +164,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   width:56px; height:56px; border-radius:14px;
   background:#1a7f4b; margin:0 auto 16px;
   display:flex; align-items:center; justify-content:center;
-  box-shadow:0 4px 16px rgba(26,127,75,.3);
+  box-shadow:0 4px 16px rgba(22,70,160,.3);
 }
 .login-logo svg { width:28px; height:28px; }
 .login-title { font-size:1.2rem; font-weight:800; text-align:center; margin-bottom:4px; }
@@ -223,11 +224,11 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   font-family:var(--sans); font-size:.9rem; font-weight:800;
   cursor:pointer; display:flex; align-items:center;
   justify-content:center; gap:6px;
-  background:var(--green); color:#fff;
-  box-shadow:0 2px 8px rgba(26,127,75,.25);
+  background:var(--blue-lt); color:#fff;
+  box-shadow:0 2px 8px rgba(37,99,235,.25);
   transition:background .12s;
 }
-.ag-btn:active { background:var(--green-lt); transform:scale(.98); }
+.ag-btn:active { background:#1d55d4; transform:scale(.98); }
 
 /* ── FORM ── */
 .field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
@@ -259,8 +260,8 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 }
 .btn:active { transform:scale(.97); }
 .btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
-.btn-primary { background:var(--green); color:#fff; border-color:var(--green-txt); box-shadow:0 2px 8px rgba(26,127,75,.25); }
-.btn-primary:active { background:var(--green-lt); }
+.btn-primary { background:var(--blue-lt); color:#fff; border-color:var(--blue); box-shadow:0 2px 8px rgba(37,99,235,.25); }
+.btn-primary:active { background:#1d55d4; }
 .btn-ghost { background:var(--bg2); border-color:var(--border2); color:var(--text2); }
 .btn-ghost:active { background:var(--bg3); }
 .btn-amber { background:var(--amber-bg); border-color:var(--amber-bd); color:var(--amber); }
@@ -278,13 +279,13 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 /* ── LANÇAMENTO ITEM (sessão) ── */
 .lanc-item {
   display:flex; align-items:center; gap:10px;
-  background:var(--green-bg); border:1px solid var(--green-bd);
+  background:var(--blue-bg); border:1px solid var(--blue-bd);
   border-radius:var(--r-sm); padding:10px 14px; margin-bottom:8px;
 }
 .lanc-info { flex:1; min-width:0; }
 .lanc-nome { font-size:.88rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .lanc-meta { font-size:.72rem; color:var(--text3); margin-top:2px; }
-.lanc-qtd { font-size:1.3rem; font-weight:800; color:var(--green-txt); white-space:nowrap; }
+.lanc-qtd { font-size:1.3rem; font-weight:800; color:var(--blue); white-space:nowrap; }
 
 /* ── TOAST ── */
 .toast {
@@ -359,8 +360,9 @@ html.dark .stat-item { background:var(--bg3); border-color:var(--border); }
 html.dark .field input, html.dark .field select { background:var(--bg3); border-color:var(--border2); color:var(--text); }
 html.dark .field input[readonly] { background:var(--bg4); color:var(--text2); }
 html.dark .btn-ghost { background:var(--bg3); border-color:var(--border2); color:var(--text2); }
+html.dark .btn-primary { background:var(--blue-lt); color:#04112e; border-color:rgba(79,142,247,.5); }
 html.dark .modal { background:var(--bg2); }
-html.dark .lanc-item { background:rgba(34,197,94,.06); border-color:rgba(34,197,94,.2); }
+html.dark .lanc-item { background:rgba(79,142,247,.07); border-color:rgba(79,142,247,.25); }
 html.dark tbody tr:hover { background:rgba(255,255,255,.03); }
 </style>
 </head>
@@ -430,7 +432,7 @@ html.dark tbody tr:hover { background:rgba(255,255,255,.03); }
 
   <!-- HOME -->
   <div id="screen-home" class="screen">
-    <div class="card" style="background:linear-gradient(135deg,#1a7f4b,#22a361);border:none;color:#fff">
+    <div class="card" style="background:linear-gradient(135deg,#1646a0,#2563eb);border:none;color:#fff">
       <div style="font-size:.72rem;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Bem-vindo 👋</div>
       <div style="font-size:1.3rem;font-weight:800;margin-bottom:2px" id="home-nome">—</div>
       <div style="font-size:.78rem;opacity:.75" id="home-filial">—</div>
@@ -554,7 +556,7 @@ html.dark tbody tr:hover { background:rgba(255,255,255,.03); }
     <div class="bn-badge" id="bn-badge-ag">0</div>
   </button>
   <button class="bn-item" id="bn-avulsa" onclick="switchScreen('avulsa')">
-    <div class="bn-icon" style="width:44px;height:44px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-top:-14px;box-shadow:0 4px 12px rgba(26,127,75,.4)">➕</div>
+    <div class="bn-icon" style="width:44px;height:44px;background:var(--blue-lt);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-top:-14px;box-shadow:0 4px 12px rgba(37,99,235,.4)">➕</div>
     <div class="bn-label" style="margin-top:4px">Avulsa</div>
   </button>
   <button class="bn-item" id="bn-historico" onclick="switchScreen('historico')">
@@ -839,7 +841,7 @@ function abrirModalContar(ag) {
   document.getElementById('mc-ag-id').value         = ag.id;
   document.getElementById('mc-codigo-h').value      = ag.codigo;
   document.getElementById('mc-produto-h').value     = ag.produto_nome;
-  document.getElementById('mc-filial-h').value      = ag.filial || FILIAL;
+  document.getElementById('mc-filial-h').value      = ag.filial || '';
   document.getElementById('mc-recont-h').value      = ag.is_recontagem ? '1' : '';
   document.getElementById('mc-lote-inp').value      = ag.lote_especifico || '';
   document.getElementById('mc-arm-inp').value       = '';
@@ -880,7 +882,7 @@ async function confirmarContagem() {
   const agId    = document.getElementById('mc-ag-id').value;
   const codigo  = document.getElementById('mc-codigo-h').value;
   const produto = document.getElementById('mc-produto-h').value;
-  const filial  = document.getElementById('mc-filial-h').value || FILIAL;
+  const filial  = document.getElementById('mc-filial-h').value || null;
   const isRecont= document.getElementById('mc-recont-h').value === '1';
 
   if (isNaN(qtd) || qtd < 0) { toast('Quantidade inválida.', 'warn'); return; }
@@ -951,7 +953,7 @@ async function lancarAvulso() {
   const armazem  = document.getElementById('av-armazem').value.trim();
   const qtdStr   = document.getElementById('av-quantidade').value;
   const obs = null;
-  const filial   = _filialCache[codigo] || FILIAL || null;
+  const filial   = _filialCache[codigo] || null;
 
   if (!codigo)          { toast('Informe o código do produto.', 'warn'); return; }
   if (!lote)            { toast('Informe o lote.', 'warn'); return; }
