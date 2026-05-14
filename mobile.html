@@ -9,7 +9,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  /* ── SISTEMA ESCURO — padrão sempre dark ── */
   --bg:        #0a0c0f;
   --bg2:       #111419;
   --bg3:       #181c23;
@@ -58,7 +57,6 @@
   --r:         10px;
   --r-sm:      7px;
   --sh:        0 2px 12px rgba(0,0,0,.4);
-  --sh-glow:   0 0 0 1px rgba(34,197,94,.15), 0 4px 20px rgba(34,197,94,.08);
 }
 
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -72,7 +70,6 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   border-bottom:1px solid var(--border);
   display:flex; align-items:center; gap:10px;
   padding:0 16px;
-  box-shadow:0 1px 0 var(--border);
 }
 .topbar::after {
   content:''; position:absolute; bottom:0; left:0; right:0;
@@ -80,24 +77,18 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 }
 .topbar-logo {
   width:30px; height:30px; border-radius:7px;
-  background:var(--green-dim);
-  border:1px solid var(--green-bd);
-  display:flex; align-items:center; justify-content:center;
-  flex-shrink:0;
+  background:var(--green-dim); border:1px solid var(--green-bd);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
 }
 .topbar-logo svg { width:16px; height:16px; }
-.topbar-title {
-  font-size:.82rem; font-weight:600; color:var(--text2);
-  letter-spacing:.02em; font-family:var(--mono);
-}
+.topbar-title { font-size:.82rem; font-weight:600; color:var(--text2); letter-spacing:.02em; font-family:var(--mono); }
 .topbar-title em { color:var(--green); font-style:normal; }
 .topbar-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
 .op-badge {
   display:flex; align-items:center; gap:6px;
   background:var(--bg3); border:1px solid var(--border2);
   border-radius:6px; padding:4px 10px 4px 6px;
-  font-size:.72rem; font-weight:600; color:var(--text2);
-  font-family:var(--mono);
+  font-size:.72rem; font-weight:600; color:var(--text2); font-family:var(--mono);
   cursor:pointer;
 }
 .op-av {
@@ -106,12 +97,6 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   display:flex; align-items:center; justify-content:center;
   font-size:.6rem; font-weight:700;
 }
-.theme-btn {
-  width:30px; height:30px;
-  background:var(--bg3); border:1px solid var(--border2);
-  border-radius:6px; display:flex; align-items:center;
-  justify-content:center; cursor:pointer; font-size:.82rem;
-}
 
 /* ── MAIN ── */
 .main { padding-top:52px; padding-bottom:68px; min-height:100vh; }
@@ -119,10 +104,8 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 /* ── BOTTOM NAV ── */
 .bottom-nav {
   position:fixed; bottom:0; left:0; right:0; z-index:100;
-  background:var(--bg2);
-  border-top:1px solid var(--border);
+  background:var(--bg2); border-top:1px solid var(--border);
   display:flex; height:60px;
-  box-shadow:0 -1px 0 var(--border);
 }
 .bottom-nav::before {
   content:''; position:absolute; top:0; left:0; right:0;
@@ -133,8 +116,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   align-items:center; justify-content:center;
   gap:3px; cursor:pointer; border:none;
   background:none; font-family:var(--sans);
-  color:var(--text3); transition:color .12s;
-  position:relative;
+  color:var(--text3); transition:color .12s; position:relative;
 }
 .bn-item.active { color:var(--green); }
 .bn-icon { font-size:1.2rem; line-height:1; }
@@ -143,39 +125,14 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   position:absolute; top:7px; right:calc(50% - 18px);
   background:var(--red); color:#fff;
   font-size:.52rem; font-weight:700;
-  padding:1px 5px; border-radius:8px;
-  display:none; font-family:var(--mono);
+  padding:1px 5px; border-radius:8px; display:none; font-family:var(--mono);
 }
-.bn-item.active .bn-badge { background:var(--green); }
 .bn-item.active .bn-label { color:var(--green); }
 
 /* ── SCREENS ── */
 .screen { display:none; padding:14px; }
 .screen.active { display:block; animation:fadeUp .12s ease; }
 @keyframes fadeUp { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
-
-/* ── LOGIN ── */
-.login-wrap {
-  min-height:calc(100vh - 52px);
-  display:flex; align-items:center; justify-content:center;
-  padding:20px;
-}
-.login-card {
-  background:var(--bg2); border:1px solid var(--border);
-  border-radius:var(--r); padding:28px 24px;
-  width:100%; max-width:360px;
-  box-shadow:var(--sh);
-}
-.login-logo {
-  width:52px; height:52px; border-radius:12px;
-  background:var(--green-dim); border:1px solid var(--green-bd);
-  margin:0 auto 16px;
-  display:flex; align-items:center; justify-content:center;
-  box-shadow:0 0 24px rgba(34,197,94,.15);
-}
-.login-logo svg { width:26px; height:26px; }
-.login-title { font-size:1.1rem; font-weight:700; text-align:center; margin-bottom:3px; color:var(--text); }
-.login-sub { font-size:.75rem; color:var(--text3); text-align:center; margin-bottom:24px; font-family:var(--mono); }
 
 /* ── CARDS ── */
 .card {
@@ -191,39 +148,24 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 }
 
 /* ── STATS ── */
-.stat-row {
-  display:grid; grid-template-columns:repeat(3,1fr);
-  gap:8px; margin-bottom:10px;
-}
+.stat-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; }
 .stat-item {
   background:var(--bg3); border:1px solid var(--border2);
   border-radius:var(--r-sm); padding:12px 8px; text-align:center;
   position:relative; overflow:hidden;
 }
-.stat-item::before {
-  content:''; position:absolute; top:0; left:0; right:0;
-  height:2px; background:var(--border2);
-}
-.stat-val {
-  font-size:1.7rem; font-weight:700; line-height:1; margin-bottom:4px;
-  font-family:var(--mono);
-}
-.stat-lbl {
-  font-size:.55rem; color:var(--text3); font-weight:600;
-  text-transform:uppercase; letter-spacing:.08em;
-}
+.stat-item::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--border2); }
+.stat-val { font-size:1.7rem; font-weight:700; line-height:1; margin-bottom:4px; font-family:var(--mono); }
+.stat-lbl { font-size:.55rem; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:.08em; }
 
 /* ── AGENDAMENTO ITEM ── */
 .ag-item {
   background:var(--bg2); border:1px solid var(--border);
   border-left:3px solid var(--border3);
-  border-radius:var(--r); padding:12px 14px;
-  margin-bottom:8px;
-  cursor:pointer; transition:border-color .12s, border-left-color .12s;
+  border-radius:var(--r); padding:12px 14px; margin-bottom:8px;
 }
-.ag-item:active { transform:scale(.99); opacity:.9; }
-.ag-item:hover { border-color:var(--border2); border-left-color:var(--green-dim); }
 .ag-item.recont { border-left-color:var(--purple); }
+.ag-item.em-contagem { border-left-color:var(--blue); background:rgba(59,130,246,.04); }
 .ag-item-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:6px; }
 .ag-nome { font-size:.92rem; font-weight:600; color:var(--text); line-height:1.3; }
 .ag-cod { font-size:.7rem; color:var(--green); font-weight:500; margin-top:2px; font-family:var(--mono); letter-spacing:.03em; }
@@ -232,29 +174,28 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   display:inline-flex; align-items:center; gap:3px;
   background:var(--bg3); border:1px solid var(--border2);
   border-radius:5px; padding:2px 7px;
-  font-size:.65rem; font-weight:600; color:var(--text3);
-  font-family:var(--mono);
+  font-size:.65rem; font-weight:600; color:var(--text3); font-family:var(--mono);
 }
 .ag-pill.lote { background:var(--amber-bg); border-color:var(--amber-bd); color:var(--amber); }
 .ag-pill.arm  { background:var(--cyan-bg);  border-color:var(--cyan-bd);  color:var(--cyan);  }
 .ag-pill.recont { background:var(--purple-bg); border-color:var(--purple-bd); color:var(--purple); }
+.ag-pill.em-and { background:var(--blue-bg); border-color:var(--blue-bd); color:var(--blue-lt); }
+
+/* Botões de agendamento */
+.ag-btns { display:flex; gap:8px; margin-top:10px; }
 .ag-btn {
-  margin-top:10px; width:100%;
-  padding:10px; border:1px solid var(--green-bd); border-radius:var(--r-sm);
+  flex:1; padding:10px; border:1px solid var(--green-bd); border-radius:var(--r-sm);
   font-family:var(--sans); font-size:.88rem; font-weight:700;
-  cursor:pointer; display:flex; align-items:center;
-  justify-content:center; gap:6px;
-  background:var(--green-bg); color:var(--green-lt);
-  transition:all .12s;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;
+  background:var(--green-bg); color:var(--green-lt); transition:all .12s;
 }
 .ag-btn:active { background:rgba(34,197,94,.15); transform:scale(.98); }
+.ag-btn.continuar { background:var(--blue-bg); border-color:var(--blue-bd); color:var(--blue-lt); }
+.ag-btn.continuar:active { background:rgba(59,130,246,.15); }
 
 /* ── FORM ── */
 .field { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
-.field label {
-  font-size:.62rem; font-weight:600; color:var(--text3);
-  text-transform:uppercase; letter-spacing:.08em; font-family:var(--mono);
-}
+.field label { font-size:.62rem; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.08em; font-family:var(--mono); }
 .field input, .field select, .field textarea {
   background:var(--bg3); border:1px solid var(--border2);
   border-radius:var(--r-sm); color:var(--text);
@@ -264,8 +205,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   -webkit-appearance:none;
 }
 .field input:focus, .field select:focus, .field textarea:focus {
-  border-color:var(--green);
-  box-shadow:0 0 0 2px rgba(34,197,94,.12);
+  border-color:var(--green); box-shadow:0 0 0 2px rgba(34,197,94,.12);
 }
 .field input[readonly] { background:var(--bg4); color:var(--text3); cursor:default; }
 .field input[type=number] { font-family:var(--mono); }
@@ -280,14 +220,12 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 }
 .btn:active { transform:scale(.97); }
 .btn:disabled { opacity:.35; cursor:not-allowed; transform:none; }
-.btn-primary {
-  background:var(--green-bg); color:var(--green-lt);
-  border-color:var(--green-bd);
-  box-shadow:0 0 12px rgba(34,197,94,.1);
-}
+.btn-primary { background:var(--green-bg); color:var(--green-lt); border-color:var(--green-bd); }
 .btn-primary:active { background:rgba(34,197,94,.15); }
 .btn-ghost { background:var(--bg3); border-color:var(--border2); color:var(--text2); }
 .btn-ghost:active { background:var(--bg4); }
+.btn-blue { background:var(--blue-bg); border-color:var(--blue-bd); color:var(--blue-lt); }
+.btn-blue:active { background:rgba(59,130,246,.15); }
 .btn-amber { background:var(--amber-bg); border-color:var(--amber-bd); color:var(--amber); }
 .btn-danger { background:var(--red-bg); border-color:var(--red-bd); color:var(--red); }
 .btn-sm { padding:7px 12px; font-size:.78rem; width:auto; }
@@ -321,8 +259,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   transition:transform .25s cubic-bezier(.34,1.56,.64,1), opacity .25s;
   pointer-events:none; display:flex; align-items:center;
   gap:8px; box-shadow:0 4px 20px rgba(0,0,0,.5); border:1px solid transparent;
-  max-width:480px; margin:0 auto;
-  font-family:var(--mono);
+  max-width:480px; margin:0 auto; font-family:var(--mono);
 }
 .toast.show { transform:translateY(0); opacity:1; }
 .toast.ok   { background:var(--bg3); border-color:var(--green-bd);  color:var(--green-lt); }
@@ -333,34 +270,38 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 /* ── MODAL ── */
 .modal-bg {
   display:none; position:fixed; inset:0;
-  background:rgba(0,0,0,.7); backdrop-filter:blur(6px);
+  background:rgba(0,0,0,.75); backdrop-filter:blur(6px);
   z-index:200; align-items:flex-end; justify-content:center;
 }
 .modal-bg.open { display:flex; animation:fadeIn .15s ease; }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 .modal {
-  background:var(--bg2);
-  border:1px solid var(--border2);
-  border-bottom:none;
-  border-radius:var(--r) var(--r) 0 0;
+  background:var(--bg2); border:1px solid var(--border2);
+  border-bottom:none; border-radius:var(--r) var(--r) 0 0;
   padding:18px 18px 30px; width:100%; max-width:560px;
   max-height:93vh; overflow-y:auto;
   box-shadow:0 -12px 50px rgba(0,0,0,.6);
   animation:slideUp .2s ease;
 }
 @keyframes slideUp { from{transform:translateY(24px)} to{transform:none} }
-.modal-handle {
-  width:32px; height:3px; border-radius:2px;
-  background:var(--border3); margin:0 auto 16px;
-}
+.modal-handle { width:32px; height:3px; border-radius:2px; background:var(--border3); margin:0 auto 16px; }
 .modal-title { font-size:1rem; font-weight:700; color:var(--text); margin-bottom:3px; }
-.modal-sub { font-size:.75rem; color:var(--text3); margin-bottom:18px; font-family:var(--mono); }
+.modal-sub { font-size:.75rem; color:var(--text3); margin-bottom:16px; font-family:var(--mono); }
 
-/* ── PREVIEW SALDO ── */
+/* ── SESSÃO ATIVA CARD ── */
+.sessao-ativa-card {
+  background:var(--blue-bg); border:1px solid var(--blue-bd);
+  border-left:3px solid var(--blue-lt);
+  border-radius:var(--r); padding:12px 14px; margin-bottom:10px;
+}
+.sessao-ativa-titulo { font-size:.6rem; font-weight:700; color:var(--blue-lt); text-transform:uppercase; letter-spacing:.1em; margin-bottom:4px; font-family:var(--mono); }
+.sessao-ativa-nome { font-size:.92rem; font-weight:700; color:var(--text); margin-bottom:2px; }
+.sessao-ativa-sub { font-size:.7rem; color:var(--text2); font-family:var(--mono); }
+
+/* ── SALDO PREVIEW ── */
 .saldo-preview {
   background:var(--cyan-bg); border:1px solid var(--cyan-bd);
-  border-radius:var(--r-sm); padding:11px 13px; margin-bottom:12px;
-  display:none;
+  border-radius:var(--r-sm); padding:11px 13px; margin-bottom:12px; display:none;
 }
 .sp-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
 .sp-lbl { font-size:.58rem; color:var(--cyan); font-weight:700; text-transform:uppercase; margin-bottom:3px; letter-spacing:.06em; }
@@ -371,15 +312,37 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 .fil-simbiose { background:rgba(34,197,94,.1);   color:#86efac; border:1px solid rgba(34,197,94,.25); }
 .fil-bioma    { background:rgba(96,165,250,.1);   color:#93c5fd; border:1px solid rgba(96,165,250,.25); }
 .fil-biagro   { background:rgba(251,191,36,.1);   color:#fbbf24; border:1px solid rgba(251,191,36,.25); }
-.fil-unknown  { background:var(--bg4); color:var(--text3); border:1px solid var(--border2); }
 
 /* ── EMPTY ── */
 .empty { text-align:center; padding:48px 20px; color:var(--text3); }
 .empty-icon { font-size:2.2rem; margin-bottom:10px; opacity:.4; }
 .empty-txt { font-size:.82rem; font-weight:500; font-family:var(--mono); }
 
+/* ── DIVISOR DE SEÇÃO ── */
+.sec-label {
+  font-size:.6rem; font-weight:700; color:var(--text3);
+  text-transform:uppercase; letter-spacing:.1em;
+  margin-bottom:8px; margin-top:4px; font-family:var(--mono);
+}
+
+/* ── CONTADOR SESSAO ── */
+.sessao-counter {
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--bg3); border:1px solid var(--border2);
+  border-radius:var(--r-sm); padding:8px 12px; margin-bottom:10px;
+}
+.sessao-counter-info { font-size:.75rem; color:var(--text2); font-family:var(--mono); }
+.sessao-counter-val { font-size:1rem; font-weight:700; color:var(--green); font-family:var(--mono); }
+
 /* ── AUTOCOMPLETE ── */
 #av-autocomplete div { transition:background .08s; }
+
+/* ── FINALIZAR BTN ── */
+.btn-finalizar {
+  background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3);
+  color:#fca5a5; font-size:.88rem; font-weight:700;
+}
+.btn-finalizar:active { background:rgba(239,68,68,.18); }
 </style>
 </head>
 <body>
@@ -447,6 +410,18 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 
   <!-- HOME -->
   <div id="screen-home" class="screen">
+    <!-- Card sessão ativa (aparece quando há contagem em andamento) -->
+    <div id="home-sessao-ativa" style="display:none">
+      <div class="sessao-ativa-card">
+        <div class="sessao-ativa-titulo">▶ Contagem em andamento</div>
+        <div class="sessao-ativa-nome" id="home-sessao-nome">—</div>
+        <div class="sessao-ativa-sub" id="home-sessao-sub">—</div>
+        <button class="btn btn-blue" onclick="continuarSessaoAtiva()" style="margin-top:10px;font-size:.85rem;padding:10px">
+          → Continuar Contagem
+        </button>
+      </div>
+    </div>
+
     <div class="card" style="border-color:var(--green-bd);border-left:3px solid var(--green);background:var(--bg2)">
       <div style="font-size:.6rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;font-family:var(--mono)">// sessão ativa</div>
       <div style="font-size:1.15rem;font-weight:700;margin-bottom:2px;color:var(--text)" id="home-nome">—</div>
@@ -454,8 +429,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
     </div>
 
     <div class="stat-row">
-      <div class="stat-item" style="--top:var(--amber)">
-        <style>.stat-item:nth-child(1)::before{background:var(--amber)!important}.stat-item:nth-child(2)::before{background:var(--green)!important}.stat-item:nth-child(3)::before{background:var(--purple)!important}</style>
+      <div class="stat-item" style="position:relative">
         <div class="stat-val" id="home-pendentes" style="color:var(--amber)">—</div>
         <div class="stat-lbl">Pendentes</div>
       </div>
@@ -491,16 +465,13 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   <!-- CONTAGEM AVULSA -->
   <div id="screen-avulsa" class="screen">
     <div style="font-size:1rem;font-weight:800;margin-bottom:14px">➕ Contagem Avulsa</div>
-
     <div class="card">
       <div class="card-title">Dados do Produto</div>
-
       <div class="field">
         <label>Código do Produto *</label>
         <input type="text" id="av-codigo" placeholder="Ex: 5001" style="text-transform:uppercase"
           oninput="av_buscarProduto(this.value)" autocomplete="off">
       </div>
-
       <div id="av-saldo-preview" class="saldo-preview">
         <div class="sp-lbl" style="margin-bottom:8px">📊 Encontrado no sistema</div>
         <div class="sp-row">
@@ -509,7 +480,6 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
           <div><div class="sp-lbl">Armazém</div><div class="sp-val" id="av-prev-arm">—</div></div>
         </div>
       </div>
-
       <div class="field">
         <label>Nome do Produto</label>
         <input type="text" id="av-produto" placeholder="Preenchido automaticamente ou manual">
@@ -521,7 +491,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
         </div>
         <div class="field">
           <label>Armazém *</label>
-          <input type="text" id="av-armazem" placeholder="Ex: 1">
+          <input type="text" id="av-armazem" placeholder="Digite o armazém" inputmode="text">
         </div>
       </div>
       <div class="field">
@@ -529,7 +499,6 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
         <input type="number" id="av-quantidade" placeholder="0" min="0" step="1" inputmode="numeric"
           style="font-size:1.3rem;font-weight:800;text-align:center">
       </div>
-
       <button class="btn btn-primary" id="av-btn" onclick="lancarAvulso()" style="font-size:1rem;padding:14px;margin-top:4px">
         <div class="spin" id="av-spin"></div>✓ Lançar Contagem
       </button>
@@ -538,7 +507,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
       </button>
     </div>
 
-    <!-- Sessão -->
+    <!-- Sessão avulsa -->
     <div id="av-sessao-wrap" style="display:none">
       <div style="font-size:.78rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">
         Lançados nesta sessão (<span id="av-sessao-cnt">0</span>)
@@ -597,64 +566,106 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   </button>
 </nav>
 
-<!-- MODAL: LANÇAR CONTAGEM DO AGENDAMENTO -->
-<div class="modal-bg" id="modal-contar">
+<!-- ══════════ MODAL: SESSÃO DE CONTAGEM ══════════ -->
+<!-- Este modal substitui o antigo modal-contar.
+     Fluxo: Iniciar Contagem → modal abre com form de lançamento
+     Operador lança múltiplos produtos → cada um aparece na lista
+     Ao finalizar clica em "Finalizar Contagem" -->
+<div class="modal-bg" id="modal-sessao">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title" id="mc-titulo">Contar Produto</div>
-    <div class="modal-sub" id="mc-sub">—</div>
 
-    <!-- Motivo recontagem — só aparece quando é recontagem -->
-    <div id="mc-motivo-recont" style="display:none;background:rgba(91,63,168,.08);border:1px solid rgba(91,63,168,.25);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px">
-      <div style="font-size:.6rem;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">⚠ Motivo da Recontagem</div>
-      <div id="mc-motivo-recont-txt" style="font-size:.82rem;color:var(--text);font-weight:600">—</div>
-    </div>
+    <!-- Cabeçalho do produto agendado -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;font-family:var(--mono)">
+        <span id="ms-tipo-label">📦 Contagem de Produto</span>
+      </div>
 
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:16px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Código</div>
-          <div id="mc-codigo" style="font-size:.88rem;font-weight:700;color:var(--blue-lt)">—</div>
-        </div>
-        <div>
-          <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Lote</div>
-          <div id="mc-lote" style="font-size:.88rem;font-weight:700">—</div>
-        </div>
-        <div>
-          <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Armazém</div>
-          <div id="mc-armazem" style="font-size:.88rem;font-weight:700;color:var(--amber)">—</div>
-        </div>
-        <div>
-          <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:3px">Saldo Sistema</div>
-          <div id="mc-saldo" style="font-size:.88rem;font-weight:700;color:var(--green)">—</div>
+      <!-- Motivo recontagem (só quando é recontagem) -->
+      <div id="ms-motivo-recont" style="display:none;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:10px">
+        <div style="font-size:.6rem;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">⚠ Motivo da Recontagem</div>
+        <div id="ms-motivo-recont-txt" style="font-size:.82rem;color:var(--text);font-weight:600">—</div>
+      </div>
+
+      <!-- Info do agendamento -->
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:11px 13px">
+        <div style="font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:4px" id="ms-produto-nome">—</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Código</div>
+            <div id="ms-codigo" style="font-size:.82rem;font-weight:700;color:var(--blue-lt);font-family:var(--mono)">—</div>
+          </div>
+          <div>
+            <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Lote ref.</div>
+            <div id="ms-lote-ref" style="font-size:.82rem;font-weight:700;color:var(--amber);font-family:var(--mono)">—</div>
+          </div>
+          <div>
+            <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Saldo Sistema</div>
+            <div id="ms-saldo" style="font-size:.82rem;font-weight:700;color:var(--green);font-family:var(--mono)">—</div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="field">
-      <label>Quantidade Contada *</label>
-      <input type="number" id="mc-qtd" placeholder="0" min="0" step="1" inputmode="numeric"
-        style="font-size:1.6rem;font-weight:800;text-align:center;padding:16px">
-    </div>
-    <div class="field">
-      <label>Lote (confirmar)</label>
-      <input type="text" id="mc-lote-inp" placeholder="Confirme o lote" style="text-transform:uppercase">
-    </div>
-    <div class="field">
-      <label>Armazém (confirmar)</label>
-      <input type="text" id="mc-arm-inp" placeholder="Confirme o armazém">
+    <!-- Separador -->
+    <div style="height:1px;background:var(--border2);margin-bottom:14px"></div>
+
+    <!-- Contador de lançamentos desta sessão -->
+    <div class="sessao-counter" id="ms-counter" style="display:none">
+      <span class="sessao-counter-info">Produtos lançados nesta sessão</span>
+      <span class="sessao-counter-val" id="ms-counter-val">0</span>
     </div>
 
-    <input type="hidden" id="mc-ag-id">
-    <input type="hidden" id="mc-codigo-h">
-    <input type="hidden" id="mc-produto-h">
-    <input type="hidden" id="mc-filial-h">
-    <input type="hidden" id="mc-recont-h">
+    <!-- Lista de lançamentos da sessão -->
+    <div id="ms-lista-sessao" style="margin-bottom:12px"></div>
 
-    <div style="display:flex;gap:8px;margin-top:16px">
-      <button class="btn btn-ghost" onclick="fecharModal('modal-contar')" style="flex:0 0 auto;width:auto;padding:12px 16px">Cancelar</button>
-      <button class="btn btn-primary" id="mc-btn" onclick="confirmarContagem()" style="flex:1;font-size:.95rem;padding:12px">
-        <div class="spin" id="mc-spin"></div>✓ Confirmar
+    <!-- Formulário de lançamento -->
+    <div id="ms-form-wrap">
+      <div style="font-size:.65rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;font-family:var(--mono)">
+        + Lançar produto
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field">
+          <label>Lote *</label>
+          <input type="text" id="ms-lote" placeholder="Ex: 017-26-5004" style="text-transform:uppercase"
+            onkeydown="if(event.key==='Enter')document.getElementById('ms-armazem').focus()">
+        </div>
+        <div class="field">
+          <label>Armazém *</label>
+          <input type="text" id="ms-armazem" placeholder="Digite o armazém" inputmode="text"
+            onkeydown="if(event.key==='Enter')document.getElementById('ms-quantidade').focus()">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Quantidade Contada *</label>
+        <input type="number" id="ms-quantidade" placeholder="0" min="0" step="1" inputmode="numeric"
+          style="font-size:1.6rem;font-weight:800;text-align:center;padding:16px"
+          onkeydown="if(event.key==='Enter')lancarItemSessao()">
+      </div>
+
+      <button class="btn btn-primary" id="ms-btn-lancar" onclick="lancarItemSessao()" style="font-size:1rem;padding:14px">
+        <div class="spin" id="ms-spin-lancar"></div>+ Lançar
+      </button>
+    </div>
+
+    <!-- Campos ocultos (estado da sessão) -->
+    <input type="hidden" id="ms-ag-id">
+    <input type="hidden" id="ms-codigo-h">
+    <input type="hidden" id="ms-produto-h">
+    <input type="hidden" id="ms-filial-h">
+    <input type="hidden" id="ms-recont-h">
+    <input type="hidden" id="ms-lote-ref-h">
+
+    <!-- Ações finais -->
+    <div style="display:flex;gap:8px;margin-top:16px;border-top:1px solid var(--border2);padding-top:14px">
+      <button class="btn btn-ghost" onclick="cancelarSessao()" style="flex:0 0 auto;width:auto;padding:12px 14px;font-size:.82rem">
+        ← Voltar
+      </button>
+      <button class="btn btn-finalizar" id="ms-btn-finalizar" onclick="finalizarContagem()" style="flex:1;font-size:.92rem;padding:12px" disabled>
+        <div class="spin" id="ms-spin-finalizar" style="border-top-color:#fca5a5"></div>
+        ✓ Finalizar Contagem
       </button>
     </div>
   </div>
@@ -669,7 +680,10 @@ const SUPABASE_KEY = 'sb_publishable_IbvCmbnbazxMGcQTF9-mRg_Tt2RkAng';
 
 let sb = null;
 let OPERADOR = '';
-let FILIAL   = '';
+
+// Estado da sessão de contagem do agendamento
+let _sessaoAtiva = null; // { agId, codigo, produtoNome, filial, isRecont, loteRef, lancamentos:[] }
+
 let _agendamentos = [];
 let _avSessao = [];
 let _filialCache = {};
@@ -678,21 +692,20 @@ let _filialAvulsa = '';
 // ── INIT ─────────────────────────────────────────────────
 function init() {
   sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  // Restaura sessão salva
   const saved = localStorage.getItem('op-sessao');
   if (saved) {
     try {
       const s = JSON.parse(saved);
       OPERADOR = s.nome;
+      // Restaura sessão ativa se houver
+      const sessaoSalva = localStorage.getItem('op-sessao-contagem');
+      if (sessaoSalva) {
+        try { _sessaoAtiva = JSON.parse(sessaoSalva); } catch {}
+      }
       mostrarApp();
     } catch {}
   }
-
-  // Tema escuro fixo — sistema
 }
-
-function toggleTheme() { /* tema escuro fixo */ }
 
 // ── LOGIN ─────────────────────────────────────────────────
 function quickLogin(nome) {
@@ -724,8 +737,10 @@ function mostrarApp() {
 
 function trocarOperador() {
   if (!confirm('Sair e trocar de operador?')) return;
-  OPERADOR = ''; FILIAL = '';
+  OPERADOR = '';
+  _sessaoAtiva = null;
   localStorage.removeItem('op-sessao');
+  localStorage.removeItem('op-sessao-contagem');
   location.reload();
 }
 
@@ -735,7 +750,6 @@ function toast(msg, tipo='ok', dur=3500) {
   el.textContent = msg; el.className = `toast ${tipo} show`;
   clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), dur);
 }
-function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
 function norm(v) { return String(v||'').trim().toUpperCase().replace(/\s+/g,''); }
 function fmtData(s) { if (!s) return '—'; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
 function fmtTS(ts) {
@@ -743,7 +757,6 @@ function fmtTS(ts) {
   const d = new Date(ts);
   return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 }
-
 function filialCurta(f) {
   if (!f) return '—';
   const u = f.toUpperCase();
@@ -759,6 +772,15 @@ function filialBadgeHtml(f) {
   if (u.includes('BIOMA'))    return '<span class="fil-badge fil-bioma">Bioma</span>';
   if (u.includes('BIAGRO'))   return '<span class="fil-badge fil-biagro">Biagro</span>';
   return '';
+}
+
+// Salva sessão ativa no localStorage
+function salvarSessaoLocal() {
+  if (_sessaoAtiva) {
+    localStorage.setItem('op-sessao-contagem', JSON.stringify(_sessaoAtiva));
+  } else {
+    localStorage.removeItem('op-sessao-contagem');
+  }
 }
 
 // ── SCREENS ──────────────────────────────────────────────
@@ -789,6 +811,9 @@ async function carregarFilialCache() {
 
 // ── HOME ─────────────────────────────────────────────────
 async function carregarHome() {
+  // Mostra card de sessão ativa se houver
+  atualizarCardSessaoHome();
+
   try {
     const { data: ags } = await sb.from('agendamentos')
       .select('*').in('status',['pendente','em_contagem']);
@@ -808,6 +833,23 @@ async function carregarHome() {
     badge.textContent = pendentes;
     badge.style.display = pendentes > 0 ? 'block' : 'none';
   } catch {}
+}
+
+function atualizarCardSessaoHome() {
+  const card = document.getElementById('home-sessao-ativa');
+  if (_sessaoAtiva && _sessaoAtiva.lancamentos && _sessaoAtiva.lancamentos.length > 0) {
+    document.getElementById('home-sessao-nome').textContent = _sessaoAtiva.produtoNome || _sessaoAtiva.codigo;
+    document.getElementById('home-sessao-sub').textContent =
+      `${_sessaoAtiva.lancamentos.length} lançamento${_sessaoAtiva.lancamentos.length!==1?'s':''} · ${filialCurta(_sessaoAtiva.filial)}`;
+    card.style.display = 'block';
+  } else {
+    card.style.display = 'none';
+  }
+}
+
+function continuarSessaoAtiva() {
+  if (!_sessaoAtiva) return;
+  abrirModalSessao(_sessaoAtiva);
 }
 
 // ── AGENDAMENTOS ─────────────────────────────────────────
@@ -831,8 +873,13 @@ async function carregarAgendamentos() {
       return;
     }
 
-    el.innerHTML = _agendamentos.map(a => `
-      <div class="ag-item${a.is_recontagem?' recont':''}" onclick="abrirModalContar(${JSON.stringify(a).replace(/"/g,'&quot;')})">
+    el.innerHTML = _agendamentos.map(a => {
+      const isEmContagem = a.status === 'em_contagem';
+      const isSessaoLocal = _sessaoAtiva && _sessaoAtiva.agId === a.id;
+      const lancamentosLocais = isSessaoLocal ? (_sessaoAtiva.lancamentos||[]).length : 0;
+
+      return `
+      <div class="ag-item${a.is_recontagem?' recont':''}${isEmContagem?' em-contagem':''}">
         <div class="ag-item-top">
           <div>
             <div class="ag-nome">${a.produto_nome}</div>
@@ -846,53 +893,119 @@ async function carregarAgendamentos() {
         </div>
         <div class="ag-meta">
           ${a.lote_especifico ? `<span class="ag-pill lote">🏷 ${a.lote_especifico}</span>` : ''}
-          ${a.armazem ? `<span class="ag-pill arm">📦 ${a.armazem}</span>` : ''}
           ${filialBadgeHtml(a.filial)}
-          ${a.status === 'em_contagem' ? '<span class="ag-pill" style="background:var(--blue-bg);border-color:var(--blue-bd);color:var(--blue)">▶ Em andamento</span>' : ''}
+          ${isEmContagem ? `<span class="ag-pill em-and">▶ Em andamento${isSessaoLocal && lancamentosLocais > 0 ? ' · '+lancamentosLocais+' lançado'+(lancamentosLocais!==1?'s':'') : ''}</span>` : ''}
         </div>
-        <button class="ag-btn" onclick="event.stopPropagation();abrirModalContar(${JSON.stringify(a).replace(/"/g,'&quot;')})">
-          📦 Contar Agora
-        </button>
-      </div>`).join('');
+        <div class="ag-btns">
+          ${isSessaoLocal && lancamentosLocais > 0
+            ? `<button class="ag-btn continuar" onclick="abrirSessaoAgendamento(${JSON.stringify(a).replace(/"/g,'&quot;')})">
+                ▶ Continuar (${lancamentosLocais})
+              </button>`
+            : `<button class="ag-btn" onclick="abrirSessaoAgendamento(${JSON.stringify(a).replace(/"/g,'&quot;')})">
+                📦 Iniciar Contagem
+              </button>`
+          }
+        </div>
+      </div>`;
+    }).join('');
   } catch(e) {
     el.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-txt">Erro: ${e.message}</div></div>`;
   }
 }
 
-// ── MODAL CONTAR ─────────────────────────────────────────
-function abrirModalContar(ag) {
-  document.getElementById('mc-titulo').textContent  = ag.is_recontagem ? '↺ Recontagem' : '📦 Contar Produto';
-  document.getElementById('mc-sub').textContent     = ag.produto_nome;
-  // Mostra/oculta bloco de motivo da recontagem
-  const motiBlock = document.getElementById('mc-motivo-recont');
-  const motiTxt   = document.getElementById('mc-motivo-recont-txt');
-  if (motiBlock && motiTxt) {
-    if (ag.is_recontagem && ag.motivo_recontagem) {
-      motiTxt.textContent = ag.motivo_recontagem;
-      motiBlock.style.display = 'block';
-    } else {
-      motiBlock.style.display = 'none';
-    }
+// ── ABRIR SESSÃO DE CONTAGEM ──────────────────────────────
+async function abrirSessaoAgendamento(ag) {
+  // Se há sessão de outro agendamento em andamento com lançamentos, avisa
+  if (_sessaoAtiva && _sessaoAtiva.agId !== ag.id && _sessaoAtiva.lancamentos.length > 0) {
+    const confirma = confirm(
+      `Você tem ${_sessaoAtiva.lancamentos.length} lançamento(s) em andamento para "${_sessaoAtiva.produtoNome}".\n\nSe iniciar outra contagem, os lançamentos anteriores serão mantidos no banco mas a sessão local será descartada.\n\nDeseja continuar?`
+    );
+    if (!confirma) return;
   }
-  document.getElementById('mc-codigo').textContent  = ag.codigo;
-  document.getElementById('mc-lote').textContent    = ag.lote_especifico || '—';
-  document.getElementById('mc-saldo').textContent   = '—';
-  document.getElementById('mc-armazem').textContent = '—';
-  document.getElementById('mc-ag-id').value         = ag.id;
-  document.getElementById('mc-codigo-h').value      = ag.codigo;
-  document.getElementById('mc-produto-h').value     = ag.produto_nome;
-  document.getElementById('mc-filial-h').value      = ag.filial || '';
-  document.getElementById('mc-recont-h').value      = ag.is_recontagem ? '1' : '';
-  document.getElementById('mc-lote-inp').value      = ag.lote_especifico || '';
-  document.getElementById('mc-arm-inp').value       = ag.armazem || '';
-  document.getElementById('mc-qtd').value           = '';
-  
+
+  // Monta o objeto de sessão
+  const sessao = {
+    agId:       ag.id,
+    codigo:     ag.codigo,
+    produtoNome: ag.produto_nome,
+    filial:     ag.filial || null,
+    isRecont:   ag.is_recontagem || false,
+    motivoRecont: ag.motivo_recontagem || null,
+    loteRef:    ag.lote_especifico || null,
+    lancamentos: [],
+  };
+
+  // Se era sessão do mesmo agendamento, mantém lançamentos locais
+  if (_sessaoAtiva && _sessaoAtiva.agId === ag.id) {
+    sessao.lancamentos = _sessaoAtiva.lancamentos || [];
+  }
+
+  _sessaoAtiva = sessao;
+  salvarSessaoLocal();
+
+  // Marca agendamento como em_contagem no banco
+  try {
+    await sb.from('agendamentos').update({ status: 'em_contagem' }).eq('id', ag.id);
+  } catch {}
+
+  abrirModalSessao(_sessaoAtiva);
+}
+
+function abrirModalSessao(sessao) {
+  // Preenche cabeçalho
+  const isRecont = sessao.isRecont;
+  document.getElementById('ms-tipo-label').textContent = isRecont ? '↺ Recontagem de Produto' : '📦 Contagem de Produto';
+
+  const motiBlock = document.getElementById('ms-motivo-recont');
+  const motiTxt   = document.getElementById('ms-motivo-recont-txt');
+  if (isRecont && sessao.motivoRecont) {
+    motiTxt.textContent = sessao.motivoRecont;
+    motiBlock.style.display = 'block';
+  } else {
+    motiBlock.style.display = 'none';
+  }
+
+  document.getElementById('ms-produto-nome').textContent = sessao.produtoNome;
+  document.getElementById('ms-codigo').textContent       = sessao.codigo;
+  document.getElementById('ms-lote-ref').textContent     = sessao.loteRef || '—';
+  document.getElementById('ms-saldo').textContent        = '—';
+
+  // Campos ocultos
+  document.getElementById('ms-ag-id').value      = sessao.agId;
+  document.getElementById('ms-codigo-h').value   = sessao.codigo;
+  document.getElementById('ms-produto-h').value  = sessao.produtoNome;
+  document.getElementById('ms-filial-h').value   = sessao.filial || '';
+  document.getElementById('ms-recont-h').value   = isRecont ? '1' : '';
+  document.getElementById('ms-lote-ref-h').value = sessao.loteRef || '';
+
+  // Pré-preenche lote se vier do agendamento e lista local vazia
+  const loteInp = document.getElementById('ms-lote');
+  if (sessao.loteRef && !loteInp.value) {
+    loteInp.value = sessao.loteRef;
+  }
+
+  // Limpa armazém e quantidade para novo lançamento
+  document.getElementById('ms-armazem').value  = '';
+  document.getElementById('ms-quantidade').value = '';
+
+  // Renderiza lista de lançamentos já feitos nesta sessão
+  renderListaSessao();
 
   // Busca saldo no sistema
-  buscarSaldoModal(ag.codigo, ag.lote_especifico);
+  buscarSaldoModal(sessao.codigo, sessao.loteRef);
 
-  document.getElementById('modal-contar').classList.add('open');
-  setTimeout(() => document.getElementById('mc-qtd').focus(), 300);
+  document.getElementById('modal-sessao').classList.add('open');
+
+  // Foco no campo armazém se lote já preenchido, senão no lote
+  setTimeout(() => {
+    const arm = document.getElementById('ms-armazem');
+    const lot = document.getElementById('ms-lote');
+    if (loteInp.value) {
+      arm.focus();
+    } else {
+      lot.focus();
+    }
+  }, 350);
 }
 
 async function buscarSaldoModal(codigo, lote) {
@@ -902,57 +1015,149 @@ async function buscarSaldoModal(codigo, lote) {
     if (lote) q = q.ilike('lote', `%${lote}%`);
     const { data } = await q.limit(1).maybeSingle();
     if (data) {
-      document.getElementById('mc-saldo').textContent   = data.saldo ?? '—';
-      document.getElementById('mc-armazem').textContent = data.armazem || '—';
-      if (!document.getElementById('mc-lote-inp').value)
-        document.getElementById('mc-lote-inp').value    = data.lote || '';
-      if (!document.getElementById('mc-arm-inp').value)
-        document.getElementById('mc-arm-inp').value     = data.armazem || '';
+      document.getElementById('ms-saldo').textContent = data.saldo ?? '—';
+      // Pré-preenche lote se ainda vazio
+      const loteInp = document.getElementById('ms-lote');
+      if (!loteInp.value && data.lote) loteInp.value = data.lote;
     }
   } catch {}
 }
 
-async function confirmarContagem() {
-  const qtdStr = document.getElementById('mc-qtd').value;
-  if (qtdStr === '') { toast('Informe a quantidade (pode ser 0).', 'warn'); return; }
-  const qtd     = parseFloat(qtdStr);
-  const lote    = document.getElementById('mc-lote-inp').value.trim().toUpperCase();
-  const armazem = document.getElementById('mc-arm-inp').value.trim();
-  const obs = null;
-  const agId    = document.getElementById('mc-ag-id').value;
-  const codigo  = document.getElementById('mc-codigo-h').value;
-  const produto = document.getElementById('mc-produto-h').value;
-  const filial  = document.getElementById('mc-filial-h').value || null;
-  const isRecont= document.getElementById('mc-recont-h').value === '1';
+// ── RENDERIZAR LISTA DA SESSÃO ────────────────────────────
+function renderListaSessao() {
+  const lista    = _sessaoAtiva?.lancamentos || [];
+  const counter  = document.getElementById('ms-counter');
+  const counterV = document.getElementById('ms-counter-val');
+  const listEl   = document.getElementById('ms-lista-sessao');
+  const btnFinal = document.getElementById('ms-btn-finalizar');
 
+  counter.style.display = lista.length > 0 ? 'flex' : 'none';
+  counterV.textContent  = lista.length;
+  btnFinal.disabled     = lista.length === 0;
+
+  if (!lista.length) {
+    listEl.innerHTML = '';
+    return;
+  }
+
+  listEl.innerHTML = lista.map((r, i) => `
+    <div class="lanc-item">
+      <div class="lanc-info">
+        <div class="lanc-nome">Lote: ${r.lote}</div>
+        <div class="lanc-meta">Arm. ${r.armazem}</div>
+      </div>
+      <div class="lanc-qtd">${r.quantidade}</div>
+      <button onclick="removerItemSessao(${i},'${r.id}')"
+        style="background:none;border:none;font-size:1rem;color:var(--red);cursor:pointer;padding:4px;flex-shrink:0">✕</button>
+    </div>`).join('');
+}
+
+// ── LANÇAR ITEM NA SESSÃO ─────────────────────────────────
+async function lancarItemSessao() {
+  const lote    = document.getElementById('ms-lote').value.trim().toUpperCase();
+  const armazem = document.getElementById('ms-armazem').value.trim();
+  const qtdStr  = document.getElementById('ms-quantidade').value;
+
+  if (!lote)         { toast('Informe o lote.', 'warn'); document.getElementById('ms-lote').focus(); return; }
+  if (!armazem)      { toast('Informe o armazém.', 'warn'); document.getElementById('ms-armazem').focus(); return; }
+  if (qtdStr === '') { toast('Informe a quantidade (pode ser 0).', 'warn'); document.getElementById('ms-quantidade').focus(); return; }
+
+  const qtd = parseFloat(qtdStr);
   if (isNaN(qtd) || qtd < 0) { toast('Quantidade inválida.', 'warn'); return; }
-  if (!lote)    { toast('Confirme o lote.', 'warn'); return; }
-  if (!armazem) { toast('Confirme o armazém.', 'warn'); return; }
 
-  const btn = document.getElementById('mc-btn');
+  const btn = document.getElementById('ms-btn-lancar');
   btn.disabled = true;
-  document.getElementById('mc-spin').style.display = 'block';
+  document.getElementById('ms-spin-lancar').style.display = 'block';
 
   try {
-    await sb.from('lancamentos').insert({
-      codigo, produto_nome: produto, lote, armazem,
+    const codigo  = document.getElementById('ms-codigo-h').value;
+    const produto = document.getElementById('ms-produto-h').value;
+    const filial  = document.getElementById('ms-filial-h').value || null;
+    const isRecont= document.getElementById('ms-recont-h').value === '1';
+
+    const { data, error } = await sb.from('lancamentos').insert({
+      codigo, produto_nome: produto || codigo, lote, armazem,
       quantidade: qtd, usuario: OPERADOR, filial,
       status: 'pendente', recontagem: isRecont,
+    }).select().single();
+    if (error) throw error;
+
+    // Adiciona à sessão local
+    _sessaoAtiva.lancamentos.push({
+      id: data.id, lote, armazem, quantidade: qtd
     });
+    salvarSessaoLocal();
 
-    // Marca agendamento como finalizado
-    await sb.from('agendamentos').update({ status: 'finalizado' }).eq('id', agId);
+    toast(`✓ Lançado! Lote ${lote} · ${qtd} un.`, 'ok');
 
-    fecharModal('modal-contar');
-    toast(`✓ Contagem lançada! ${codigo} — ${qtd} un.`, 'ok');
-    carregarAgendamentos();
-    carregarHome();
+    // Limpa quantidade e armazém para próximo lançamento; mantém lote
+    document.getElementById('ms-armazem').value  = '';
+    document.getElementById('ms-quantidade').value = '';
+    renderListaSessao();
+
+    // Foca no campo armazém para facilitar próximo lançamento
+    setTimeout(() => document.getElementById('ms-armazem').focus(), 150);
+
   } catch(e) {
     toast('Erro: ' + e.message, 'err');
   } finally {
     btn.disabled = false;
-    document.getElementById('mc-spin').style.display = 'none';
+    document.getElementById('ms-spin-lancar').style.display = 'none';
   }
+}
+
+// ── REMOVER ITEM DA SESSÃO ────────────────────────────────
+async function removerItemSessao(idx, id) {
+  if (!confirm('Remover este lançamento?')) return;
+  try {
+    await sb.from('lancamentos').delete().eq('id', id);
+    _sessaoAtiva.lancamentos.splice(idx, 1);
+    salvarSessaoLocal();
+    renderListaSessao();
+    toast('Lançamento removido.', 'warn');
+  } catch(e) { toast('Erro: ' + e.message, 'err'); }
+}
+
+// ── FINALIZAR CONTAGEM ────────────────────────────────────
+async function finalizarContagem() {
+  if (!_sessaoAtiva || _sessaoAtiva.lancamentos.length === 0) {
+    toast('Lance ao menos um produto antes de finalizar.', 'warn'); return;
+  }
+
+  const agId = document.getElementById('ms-ag-id').value;
+  const btn  = document.getElementById('ms-btn-finalizar');
+  btn.disabled = true;
+  document.getElementById('ms-spin-finalizar').style.display = 'block';
+
+  try {
+    // Marca agendamento como finalizado
+    await sb.from('agendamentos').update({ status: 'finalizado' }).eq('id', agId);
+
+    const total = _sessaoAtiva.lancamentos.length;
+    const nome  = _sessaoAtiva.produtoNome;
+
+    // Limpa sessão local
+    _sessaoAtiva = null;
+    salvarSessaoLocal();
+
+    document.getElementById('modal-sessao').classList.remove('open');
+    toast(`✓ Contagem finalizada! ${total} lançamento${total!==1?'s':''} para ${nome}.`, 'ok', 5000);
+
+    carregarAgendamentos();
+    carregarHome();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+    btn.disabled = false;
+    document.getElementById('ms-spin-finalizar').style.display = 'none';
+  }
+}
+
+// ── CANCELAR / VOLTAR SEM FINALIZAR ──────────────────────
+function cancelarSessao() {
+  // Não descarta a sessão — só fecha o modal
+  // Os lançamentos ficam no banco e na sessão local
+  document.getElementById('modal-sessao').classList.remove('open');
+  carregarAgendamentos();
 }
 
 // ── CONTAGEM AVULSA ───────────────────────────────────────
@@ -960,11 +1165,9 @@ async function av_buscarProduto(codigo) {
   const prev = document.getElementById('av-saldo-preview');
   if (!codigo || codigo.length < 2) { prev.style.display = 'none'; renderAutocompleteProdutos([]); return; }
 
-  // Filial pelo cache
   const filDet = _filialCache[codigo.trim().toUpperCase()];
   if (filDet) _filialAvulsa = filDet;
 
-  // Busca saldo no sistema
   try {
     const { data } = await sb.from('saldo_sistema')
       .select('descricao, saldo, lote, armazem')
@@ -976,10 +1179,9 @@ async function av_buscarProduto(codigo) {
       document.getElementById('av-prev-lote').textContent  = data.lote  || '—';
       document.getElementById('av-prev-arm').textContent   = data.armazem || '—';
       prev.style.display = 'block';
+      // Preenche lote automaticamente (mas NÃO o armazém — operador deve digitar)
       if (!document.getElementById('av-lote').value)
-        document.getElementById('av-lote').value    = data.lote || '';
-      if (!document.getElementById('av-armazem').value)
-        document.getElementById('av-armazem').value = data.armazem || '';
+        document.getElementById('av-lote').value = data.lote || '';
       renderAutocompleteProdutos([]);
       return;
     } else {
@@ -987,7 +1189,6 @@ async function av_buscarProduto(codigo) {
     }
   } catch { prev.style.display = 'none'; }
 
-  // Se não achou no saldo, busca autocomplete na tabela produtos por nome
   try {
     const { data: prods } = await sb.from('produtos')
       .select('codigo, nome, filial')
@@ -1010,7 +1211,7 @@ function renderAutocompleteProdutos(list) {
   }
   box.style.display = 'block';
   box.innerHTML = list.map(p => `
-    <div onclick="selecionarAutocompleteProduto('${p.codigo}','${(p.nome||'').replace(/'/g,"\'")}')"
+    <div onclick="selecionarAutocompleteProduto('${p.codigo}','${(p.nome||'').replace(/'/g,"\\'")}')"
       style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.85rem;transition:background .1s"
       onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
       <div style="font-weight:700;color:var(--text)">${p.nome||p.codigo}</div>
@@ -1023,11 +1224,9 @@ function selecionarAutocompleteProduto(codigo, nome) {
   document.getElementById('av-produto').value = nome;
   const box = document.getElementById('av-autocomplete');
   if (box) box.style.display = 'none';
-  // Atualiza filial e saldo com o código selecionado
   av_buscarProduto(codigo);
 }
 
-// Fecha autocomplete ao clicar fora
 document.addEventListener('click', e => {
   const box = document.getElementById('av-autocomplete');
   if (box && !box.contains(e.target) && e.target.id !== 'av-codigo') {
@@ -1041,7 +1240,6 @@ async function lancarAvulso() {
   const lote     = document.getElementById('av-lote').value.trim().toUpperCase();
   const armazem  = document.getElementById('av-armazem').value.trim();
   const qtdStr   = document.getElementById('av-quantidade').value;
-  const obs = null;
   const filial   = _filialCache[codigo] || _filialAvulsa || null;
 
   if (!codigo)          { toast('Informe o código do produto.', 'warn'); return; }
@@ -1063,13 +1261,10 @@ async function lancarAvulso() {
     }).select().single();
     if (error) throw error;
 
-    // Adiciona na sessão local
     _avSessao.unshift({ id: data.id, codigo, produto_nome: produto||codigo, lote, armazem, quantidade: qtd });
     renderSessaoAvulsa();
-
     toast(`✓ ${codigo} — ${qtd} un. lançado!`, 'ok');
 
-    // Limpa campos (mantém operador/filial)
     ['av-codigo','av-produto','av-lote','av-armazem','av-quantidade'].forEach(id => {
       document.getElementById(id).value = '';
     });
@@ -1087,11 +1282,9 @@ function renderSessaoAvulsa() {
   const wrap = document.getElementById('av-sessao-wrap');
   const lista = document.getElementById('av-sessao-lista');
   const cnt   = document.getElementById('av-sessao-cnt');
-
   if (!_avSessao.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   cnt.textContent = _avSessao.length;
-
   lista.innerHTML = _avSessao.map((r, i) => `
     <div class="lanc-item">
       <div class="lanc-info">
@@ -1155,9 +1348,9 @@ async function carregarHistoricoOp() {
   }
 }
 
-// ── FECHAR MODAL ──────────────────────────────────────────
-document.getElementById('modal-contar').addEventListener('click', e => {
-  if (e.target === e.currentTarget) fecharModal('modal-contar');
+// ── FECHAR MODAL PELO FUNDO ───────────────────────────────
+document.getElementById('modal-sessao').addEventListener('click', e => {
+  if (e.target === e.currentTarget) cancelarSessao();
 });
 
 // ── START ─────────────────────────────────────────────────
