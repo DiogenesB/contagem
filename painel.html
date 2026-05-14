@@ -1494,6 +1494,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             </div>
           </div>
           <div class="field"><label>Lote Específico <span style="color:var(--text3)">(opcional)</span></label><input type="text" id="ag-lote" placeholder="Ex: 017-26-5004" style="text-transform:uppercase"></div>
+          <div class="field"><label>Armazém <span style="color:var(--text3)">(opcional)</span></label><input type="text" id="ag-armazem" placeholder="Ex: 42, D2, D7" style="text-transform:uppercase"></div>
           <div class="field"><label>Data Agendada</label><input type="date" id="ag-data"></div>
         </div>
         <button class="btn btn-primary" onclick="criarAgendamento()"><div class="spin" id="ag-spin"></div>+ Criar Agendamento</button>
@@ -1520,8 +1521,8 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
           </div>
         </div>
         <table>
-          <thead><tr><th>Filial</th><th>Código</th><th>Produto</th><th>Lote</th><th>Data Agendada</th><th>Antecipado</th><th>Status</th><th>Criado em</th><th style="text-align:right">Ações</th></tr></thead>
-          <tbody id="tbody-ag"><tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr></tbody>
+          <thead><tr><th>Filial</th><th>Código</th><th>Produto</th><th>Lote</th><th>Armazém</th><th>Data Agendada</th><th>Antecipado</th><th>Status</th><th>Criado em</th><th style="text-align:right">Ações</th></tr></thead>
+          <tbody id="tbody-ag"><tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1888,6 +1889,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
       <div class="field"><label>Lote Específico</label><input type="text" id="ea-lote" style="text-transform:uppercase" placeholder="Opcional"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px">
+      <div class="field"><label>Armazém</label><input type="text" id="ea-armazem" style="text-transform:uppercase" placeholder="Ex: 42, D2, D7"></div>
       <div class="field"><label>Status</label><select id="ea-status"><option value="pendente">Pendente</option><option value="em_contagem">Em contagem</option><option value="finalizado">Finalizado</option></select></div>
       <div class="field"><label>Data Agendada</label><input type="date" id="ea-data"></div>
     </div>
@@ -3092,22 +3094,24 @@ async function buscarProdutoAg(codigo) {
 }
 
 async function criarAgendamento() {
-  const codigo = document.getElementById('ag-codigo').value.trim().toUpperCase();
-  const nome   = document.getElementById('ag-nome').value.trim();
-  const lote   = document.getElementById('ag-lote').value.trim().toUpperCase();
-  const data   = document.getElementById('ag-data').value;
-  const filial = detectarFilialPorCodigo(codigo) || document.getElementById('ag-filial').value.trim() || null;
+  const codigo  = document.getElementById('ag-codigo').value.trim().toUpperCase();
+  const nome    = document.getElementById('ag-nome').value.trim();
+  const lote    = document.getElementById('ag-lote').value.trim().toUpperCase();
+  const armazem = document.getElementById('ag-armazem').value.trim().toUpperCase();
+  const data    = document.getElementById('ag-data').value;
+  const filial  = detectarFilialPorCodigo(codigo) || document.getElementById('ag-filial').value.trim() || null;
   if (!codigo||!nome) { toast('Informe código e nome.','warn'); return; }
   if (!filial || filial.includes('não encontrado')) { toast('⚠ Filial não detectada — importe o saldo primeiro ou verifique o código.','warn'); return; }
   document.getElementById('ag-spin').style.display='block';
   try {
     const { error } = await sb.from('agendamentos').insert({
       codigo, produto_nome:nome, lote_especifico:lote||null,
+      armazem: armazem||null,
       status:'pendente', data_agendada:data||null, filial
     });
     if (error) throw error;
     toast(`✓ Agendamento criado! [${filialCurta(filial)}]`,'ok');
-    ['ag-codigo','ag-nome','ag-lote','ag-data'].forEach(id=>document.getElementById(id).value='');
+    ['ag-codigo','ag-nome','ag-lote','ag-armazem','ag-data'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('ag-filial').value='';
     document.getElementById('ag-filial').style.color='';
     document.getElementById('ag-filial').style.fontWeight='';
@@ -3155,7 +3159,7 @@ function filtrarAgendamentos() {
 
   document.getElementById('cnt-ag').textContent=`${data.length} agendamento${data.length!==1?'s':''}`;
   const tbody=document.getElementById('tbody-ag');
-  if (!data.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum agendamento.</td></tr>';return;}
+  if (!data.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum agendamento.</td></tr>';return;}
   tbody.innerHTML=data.map(a=>{
     const isFinalizado = a.status === 'finalizado';
     const isEmContagem = a.status === 'em_contagem';
@@ -3175,6 +3179,7 @@ function filtrarAgendamentos() {
       <td class="cc">${a.codigo}</td>
       <td class="cn">${a.produto_nome}${a.is_recontagem?'<span class="badge-recont">↺ Recontagem</span>':''}</td>
       <td class="cm">${a.lote_especifico||'—'}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:var(--amber)">${a.armazem||'—'}</td>
       <td class="cts">${fmtData(a.data_agendada)}</td>
       <td>${a.data_antecipada?`<span style="font-family:var(--mono);font-size:.72rem;color:var(--blue)">⚡ ${fmtData(a.data_antecipada)}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
       <td>${statusBadge}</td>
@@ -3187,14 +3192,15 @@ function filtrarAgendamentos() {
 }
 
 function abrirEditAg(a) {
-  document.getElementById('ea-id').value      = a.id;
-  document.getElementById('ea-cod').value     = a.codigo;
-  document.getElementById('ea-nome').value    = a.produto_nome;
-  document.getElementById('ea-filial').value  = a.filial||'';
-  document.getElementById('ea-lote').value    = a.lote_especifico||'';
-  document.getElementById('ea-data').value    = a.data_agendada||'';
-  document.getElementById('ea-antecip').value = a.data_antecipada||'';
-  document.getElementById('ea-status').value  = a.status;
+  document.getElementById('ea-id').value       = a.id;
+  document.getElementById('ea-cod').value      = a.codigo;
+  document.getElementById('ea-nome').value     = a.produto_nome;
+  document.getElementById('ea-filial').value   = a.filial||'';
+  document.getElementById('ea-lote').value     = a.lote_especifico||'';
+  document.getElementById('ea-armazem').value  = a.armazem||'';
+  document.getElementById('ea-data').value     = a.data_agendada||'';
+  document.getElementById('ea-antecip').value  = a.data_antecipada||'';
+  document.getElementById('ea-status').value   = a.status;
   document.getElementById('modal-edit-ag').classList.add('open');
 }
 async function salvarEditAgendamento() {
@@ -3206,6 +3212,7 @@ async function salvarEditAgendamento() {
       produto_nome:    document.getElementById('ea-nome').value.trim(),
       filial:          document.getElementById('ea-filial').value||null,
       lote_especifico: document.getElementById('ea-lote').value.trim().toUpperCase()||null,
+      armazem:         document.getElementById('ea-armazem').value.trim().toUpperCase()||null,
       data_agendada:   document.getElementById('ea-data').value||null,
       data_antecipada: document.getElementById('ea-antecip').value||null,
       status:          document.getElementById('ea-status').value,
