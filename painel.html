@@ -1743,9 +1743,13 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
       </div>
       <div id="mv-recont-info" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--green-bd)">
         <div style="font-size:.62rem;color:var(--purple);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;font-weight:700">↺ Esta é uma Recontagem</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div><div style="font-size:.62rem;color:var(--text3);margin-bottom:2px">1ª Contagem</div><div id="mv-qtd-primeira" style="font-size:.85rem;font-weight:600;color:var(--text2)">—</div></div>
-          <div><div style="font-size:.62rem;color:var(--text3);margin-bottom:2px">Recontagem</div><div id="mv-qtd-recont" style="font-size:.85rem;font-weight:700;color:var(--purple)">—</div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+          <div><div style="font-size:.62rem;color:var(--text3);margin-bottom:2px">1ª Contagem (histórico)</div><div id="mv-qtd-primeira" style="font-size:.85rem;font-weight:600;color:var(--text2)">—</div></div>
+          <div><div style="font-size:.62rem;color:var(--text3);margin-bottom:2px">Nova Contagem</div><div id="mv-qtd-recont" style="font-size:.85rem;font-weight:700;color:var(--purple)">—</div></div>
+        </div>
+        <div id="mv-motivo-original-wrap" style="display:none;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:6px;padding:7px 10px">
+          <div style="font-size:.6rem;color:var(--purple);font-weight:700;text-transform:uppercase;margin-bottom:3px">Motivo da solicitação</div>
+          <div id="mv-motivo-original" style="font-size:.78rem;color:var(--text2)">—</div>
         </div>
       </div>
     </div>
@@ -1802,12 +1806,18 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
 
 <!-- MODAL: RECONTAGEM -->
 <div class="modal-bg" id="modal-recont">
-  <div class="modal" style="max-width:420px">
-    <div class="modal-title">Solicitar Recontagem</div>
-    <div class="modal-sub" id="mr-sub">—</div>
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title">↺ Solicitar Recontagem</div>
+    <div style="background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:.82rem">
+      <div style="font-size:.62rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Item a recontar</div>
+      <div id="mr-sub" style="font-weight:700;color:var(--text)">—</div>
+    </div>
     <div class="field" style="margin-bottom:16px">
       <label>Motivo da Recontagem <span style="color:var(--red)">*</span></label>
       <textarea id="mr-motivo" placeholder="Ex: Divergência detectada, embalagem aberta, suspeita de erro de contagem…" style="min-height:80px"></textarea>
+    </div>
+    <div style="font-size:.72rem;color:var(--text3);margin-bottom:14px;padding:8px 12px;background:var(--bg3);border-radius:var(--r-sm);border:1px solid var(--border)">
+      ℹ️ Um novo agendamento será criado com o lote e armazém originais. O operador será notificado na próxima vez que abrir o sistema.
     </div>
     <div class="modal-acts">
       <button class="btn btn-ghost" onclick="fecharModal('modal-recont')">Cancelar</button>
@@ -2243,7 +2253,19 @@ function filtrarValidacao() {
     return true;
   });
 
-  const total = data.length + (svArmErrado?.length||0) + (svLoteNaoExiste?.length||0);
+  // Aplica filtro de tipo recontagem também nas seções de arm_errado e lote_nao_existe
+  const status_filt = document.getElementById('filt-sv-status').value;
+  const armFilt = status_filt === 'recontagem'
+    ? (svArmErrado||[]).filter(r => r.recontagem)
+    : status_filt === 'pendente' || status_filt === 'contado' || status_filt === 'divergencia'
+    ? []  // arm_errado não tem status pendente/contado/divergencia no sentido normal
+    : (svArmErrado||[]);
+  const lneFilt = status_filt === 'recontagem'
+    ? (svLoteNaoExiste||[]).filter(r => r.recontagem)
+    : status_filt === 'pendente' || status_filt === 'contado' || status_filt === 'divergencia'
+    ? []
+    : (svLoteNaoExiste||[]);
+  const total = data.length + armFilt.length + lneFilt.length;
   document.getElementById('cnt-sv').textContent = `${total} item${total!==1?'ns':''}`;
 
   const hoje = new Date();
@@ -2436,8 +2458,23 @@ function abrirValidacao(item) {
   document.getElementById('btn-recont').style.display     = isRecont ? 'none' : 'inline-flex';
 
   if (isRecont) {
-    document.getElementById('mv-qtd-recont').textContent = item.qtdContada ?? '—';
-    document.getElementById('mv-qtd-primeira').textContent = '— (buscar no histórico)';
+    document.getElementById('mv-qtd-recont').textContent    = item.qtdContada ?? '—';
+    document.getElementById('mv-qtd-primeira').textContent  = '⏳ buscando…';
+    // Pré-preenche motivo com o que foi informado ao solicitar (se vier no item)
+    const motivoOriginal = item.motivo_recontagem || '';
+    const motivoEl = document.getElementById('mv-motivo');
+    if (motivoOriginal && !motivoEl.value) motivoEl.value = motivoOriginal;
+    const lblMotivo = document.querySelector('#mv-motivo-wrap label');
+    if (lblMotivo) lblMotivo.innerHTML = 'Motivo da Recontagem <span style="color:var(--text3);font-size:.6rem">(pré-preenchido da solicitação)</span>';
+    // Mostra motivo original como referência
+    const mow = document.getElementById('mv-motivo-original-wrap');
+    const mo  = document.getElementById('mv-motivo-original');
+    if (mow && mo) {
+      if (motivoOriginal) { mo.textContent = motivoOriginal; mow.style.display = 'block'; }
+      else { mow.style.display = 'none'; }
+    }
+    // Busca valor da 1ª contagem no histórico
+    buscarPrimeiraContagem(item.codigo, item.lote, item.armazem);
   }
 
   // Pré-preenche saldo e calcula divergência
@@ -2453,6 +2490,31 @@ function abrirValidacao(item) {
   calcDiv();
 
   document.getElementById('modal-val').classList.add('open');
+}
+
+async function buscarPrimeiraContagem(codigo, lote, armazem) {
+  try {
+    const { data } = await sb.from('historico')
+      .select('quantidade, created_at, usuario')
+      .eq('codigo', (codigo||'').trim())
+      .eq('lote',   (lote||'').trim())
+      .eq('armazem',(armazem||'').trim())
+      .order('created_at', { ascending: false })
+      .limit(1).maybeSingle();
+    const el = document.getElementById('mv-qtd-primeira');
+    if (el) {
+      if (data) {
+        el.textContent = `${data.quantidade} (${fmtTS(data.created_at)} · ${data.usuario||'—'})`;
+        el.style.color = 'var(--amber)';
+      } else {
+        el.textContent = '— sem registro anterior';
+        el.style.color = 'var(--text3)';
+      }
+    }
+  } catch { 
+    const el = document.getElementById('mv-qtd-primeira');
+    if (el) el.textContent = '— erro ao buscar';
+  }
 }
 
 function calcDivManual() {
@@ -2513,7 +2575,8 @@ async function confirmarValidacao() {
     qtdFinal = qtdManualVal;
     if (!motivo) { toast('Informe a justificativa da validação manual.','warn'); return; }
   } else if (isRecont && !motivo) {
-    toast('Informe o motivo da recontagem.','warn'); return;
+    // Motivo já foi informado ao solicitar; aceita mesmo vazio aqui
+    // mas se não veio pré-preenchido, avisa suavemente
   }
 
   const div = (qtdFinal||0) - saldo;
@@ -2622,6 +2685,7 @@ async function confirmarSolicitarRecontagem() {
       produto_nome:      item.descricao || cod,
       filial:            filialRecont,
       lote_especifico:   lot,
+      armazem:           arm || null,
       status:            'pendente',
       data_agendada:     new Date().toISOString().split('T')[0],
       is_recontagem:     true,
@@ -3827,12 +3891,12 @@ function exportarHistorico() {
 
 function exportarAcuracidade() {
   if (!_acFiltrado.length) { toast('Sem dados para exportar.','warn'); return; }
-  const cab = ['Data','Filial','Código','Produto','Lote','Armazém','Qtd Contada','Saldo Sistema','Divergência','Tipo','Operador'];
+  const cab = ['Data','Filial','Código','Produto','Lote','Armazém','Qtd Contada','Saldo Sistema','Divergência','Tipo','Operador','Recontagem'];
   const lin = _acFiltrado.map(r => [
     fmtTS(r.created_at), r.filial||'', r.codigo||'', r.produto_nome||'', r.lote||'', r.armazem||'',
     r.quantidade??'', r.saldo_sistema??'', r.divergencia??'',
     r.tipo==='ok'?'Sem divergência':r.tipo==='positivo'?'Positivo':'Negativo',
-    r.usuario||''
+    r.usuario||'', r.is_recontagem?'Sim':'Não'
   ]);
   exportarXlsx('acuracia', cab, lin);
 }
