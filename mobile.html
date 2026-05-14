@@ -201,7 +201,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   border-radius:var(--r); padding:14px 16px;
   margin-bottom:10px; box-shadow:var(--sh);
   cursor:pointer; transition:border-color .12s, box-shadow .12s;
-  active-transform:scale(.98);
+  /* transform handled in :active rule below */
 }
 .ag-item:active { transform:scale(.98); }
 .ag-item.recont { border-left:4px solid var(--purple); }
@@ -635,6 +635,7 @@ let FILIAL   = '';
 let _agendamentos = [];
 let _avSessao = [];
 let _filialCache = {};
+let _filialAvulsa = '';
 
 // ── INIT ─────────────────────────────────────────────────
 function init() {
@@ -748,7 +749,7 @@ function irParaAvulsa() { switchScreen('avulsa'); }
 // ── FILIAL CACHE ──────────────────────────────────────────
 async function carregarFilialCache() {
   try {
-    const { data } = await sb.from('saldo_sistema').select('codigo, filial').not('filial','is',null);
+    const { data } = await sb.from('produtos').select('codigo, filial').not('filial','is',null);
     if (data) data.forEach(r => {
       if (r.codigo && r.filial)
         _filialCache[r.codigo.trim().toUpperCase()] = r.filial.trim().toUpperCase();
@@ -784,9 +785,6 @@ async function carregarAgendamentos() {
   const el = document.getElementById('ag-lista');
   el.innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><div class="empty-txt">Carregando…</div></div>';
   try {
-    // Reseta agendamentos travados em em_contagem de volta para pendente
-    await sb.from('agendamentos').update({ status: 'pendente' }).eq('status', 'em_contagem');
-
     const { data, error } = await sb.from('agendamentos')
       .select('*')
       .in('status', ['pendente', 'em_contagem'])
@@ -818,6 +816,7 @@ async function carregarAgendamentos() {
         </div>
         <div class="ag-meta">
           ${a.lote_especifico ? `<span class="ag-pill lote">🏷 ${a.lote_especifico}</span>` : ''}
+          ${a.armazem ? `<span class="ag-pill arm">📦 ${a.armazem}</span>` : ''}
           ${filialBadgeHtml(a.filial)}
           ${a.status === 'em_contagem' ? '<span class="ag-pill" style="background:var(--blue-bg);border-color:var(--blue-bd);color:var(--blue)">▶ Em andamento</span>' : ''}
         </div>
@@ -844,7 +843,7 @@ function abrirModalContar(ag) {
   document.getElementById('mc-filial-h').value      = ag.filial || '';
   document.getElementById('mc-recont-h').value      = ag.is_recontagem ? '1' : '';
   document.getElementById('mc-lote-inp').value      = ag.lote_especifico || '';
-  document.getElementById('mc-arm-inp').value       = '';
+  document.getElementById('mc-arm-inp').value       = ag.armazem || '';
   document.getElementById('mc-qtd').value           = '';
   
 
@@ -918,12 +917,13 @@ async function confirmarContagem() {
 // ── CONTAGEM AVULSA ───────────────────────────────────────
 async function av_buscarProduto(codigo) {
   const prev = document.getElementById('av-saldo-preview');
-  if (!codigo || codigo.length < 2) { prev.style.display = 'none'; return; }
+  if (!codigo || codigo.length < 2) { prev.style.display = 'none'; renderAutocompleteProdutos([]); return; }
 
   // Filial pelo cache
   const filDet = _filialCache[codigo.trim().toUpperCase()];
-  if (filDet) document.getElementById('av-produto'); // já existe, filial auto
+  if (filDet) _filialAvulsa = filDet;
 
+  // Busca saldo no sistema
   try {
     const { data } = await sb.from('saldo_sistema')
       .select('descricao, saldo, lote, armazem')
@@ -935,16 +935,64 @@ async function av_buscarProduto(codigo) {
       document.getElementById('av-prev-lote').textContent  = data.lote  || '—';
       document.getElementById('av-prev-arm').textContent   = data.armazem || '—';
       prev.style.display = 'block';
-      // Auto-fill lote e armazém se estiverem vazios
       if (!document.getElementById('av-lote').value)
         document.getElementById('av-lote').value    = data.lote || '';
       if (!document.getElementById('av-armazem').value)
         document.getElementById('av-armazem').value = data.armazem || '';
+      renderAutocompleteProdutos([]);
+      return;
     } else {
       prev.style.display = 'none';
     }
   } catch { prev.style.display = 'none'; }
+
+  // Se não achou no saldo, busca autocomplete na tabela produtos por nome
+  try {
+    const { data: prods } = await sb.from('produtos')
+      .select('codigo, nome, filial')
+      .or(`codigo.ilike.%${codigo.trim()}%,nome.ilike.%${codigo.trim()}%`)
+      .limit(6);
+    renderAutocompleteProdutos(prods || []);
+  } catch { renderAutocompleteProdutos([]); }
 }
+
+function renderAutocompleteProdutos(list) {
+  let box = document.getElementById('av-autocomplete');
+  if (!list.length) { if (box) box.style.display = 'none'; return; }
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'av-autocomplete';
+    box.style.cssText = 'position:absolute;z-index:300;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:0 4px 16px rgba(0,0,0,.12);width:100%;max-height:220px;overflow-y:auto;margin-top:2px';
+    const wrap = document.getElementById('av-codigo').parentElement;
+    wrap.style.position = 'relative';
+    wrap.appendChild(box);
+  }
+  box.style.display = 'block';
+  box.innerHTML = list.map(p => `
+    <div onclick="selecionarAutocompleteProduto('${p.codigo}','${(p.nome||'').replace(/'/g,"\'")}')"
+      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.85rem;transition:background .1s"
+      onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
+      <div style="font-weight:700;color:var(--text)">${p.nome||p.codigo}</div>
+      <div style="font-size:.7rem;color:var(--text3);margin-top:2px">${p.codigo}${p.filial?' · '+p.filial:''}</div>
+    </div>`).join('');
+}
+
+function selecionarAutocompleteProduto(codigo, nome) {
+  document.getElementById('av-codigo').value  = codigo;
+  document.getElementById('av-produto').value = nome;
+  const box = document.getElementById('av-autocomplete');
+  if (box) box.style.display = 'none';
+  // Atualiza filial e saldo com o código selecionado
+  av_buscarProduto(codigo);
+}
+
+// Fecha autocomplete ao clicar fora
+document.addEventListener('click', e => {
+  const box = document.getElementById('av-autocomplete');
+  if (box && !box.contains(e.target) && e.target.id !== 'av-codigo') {
+    box.style.display = 'none';
+  }
+});
 
 async function lancarAvulso() {
   const codigo   = document.getElementById('av-codigo').value.trim().toUpperCase();
@@ -953,7 +1001,7 @@ async function lancarAvulso() {
   const armazem  = document.getElementById('av-armazem').value.trim();
   const qtdStr   = document.getElementById('av-quantidade').value;
   const obs = null;
-  const filial   = _filialCache[codigo] || null;
+  const filial   = _filialCache[codigo] || _filialAvulsa || null;
 
   if (!codigo)          { toast('Informe o código do produto.', 'warn'); return; }
   if (!lote)            { toast('Informe o lote.', 'warn'); return; }
