@@ -1198,7 +1198,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
         </select>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="recarregar()">↺ Atualizar</button>
-      <a href="/mobile" target="_blank" class="btn btn-ghost btn-sm">📱 Operador</a>
+
       <button class="theme-toggle" id="btn-theme" onclick="toggleTheme()" title="Alternar tema claro/escuro">🌙</button>
     </div>
   </div>
@@ -2542,9 +2542,9 @@ async function confirmarValidacao() {
 
     await Promise.all([
       sb.from('lancamentos').delete().eq('status','pendente')
-        .ilike('codigo',`%${cod}%`).ilike('lote',`%${lot}%`).ilike('armazem',`%${arm}%`),
+        .eq('codigo', cod).eq('lote', lot).eq('armazem', arm),
       sb.from('contagens').delete().eq('status','pendente')
-        .ilike('codigo',`%${cod}%`).ilike('lote',`%${lot}%`).ilike('armazem',`%${arm}%`),
+        .eq('codigo', cod).eq('lote', lot).eq('armazem', arm),
       // Grava validado=true no saldo_sistema para persistir após reload
       itemAtual.id ? sb.from('saldo_sistema').update({
         validado:     true,
@@ -2607,15 +2607,11 @@ async function confirmarSolicitarRecontagem() {
     // Marca lancamentos/contagens como recontagem=true
     await sb.from('lancamentos').update({ recontagem: true })
       .eq('status','pendente')
-      .ilike('codigo', `%${cod}%`)
-      .ilike('lote',   `%${lot}%`)
-      .ilike('armazem',`%${arm}%`);
+      .eq('codigo', cod).eq('lote', lot).eq('armazem', arm);
 
     await sb.from('contagens').update({ recontagem: true })
       .eq('status','pendente')
-      .ilike('codigo', `%${cod}%`)
-      .ilike('lote',   `%${lot}%`)
-      .ilike('armazem',`%${arm}%`);
+      .eq('codigo', cod).eq('lote', lot).eq('armazem', arm);
 
     // Cria agendamento de recontagem com lote e motivo específicos
     const filialRecont = item.filial || detectarFilialPorCodigo(cod) || null;
@@ -2670,7 +2666,8 @@ async function carregarLancamentos() {
   } catch(e) { toast('Erro lançamentos: '+e.message,'err'); }
 }
 
-function filtrarLancamentos() {
+// Função utilitária — filtro centralizado de lançamentos (evita duplicação)
+function getFilteredLancamentos(incluirFiltroFilial = true) {
   const q      = (document.getElementById('search-lanc').value||'').toLowerCase();
   const arm    = document.getElementById('filt-lanc-arm').value;
   const op     = document.getElementById('filt-lanc-op').value;
@@ -2678,42 +2675,27 @@ function filtrarLancamentos() {
   const status = document.getElementById('filt-lanc-status').value;
   const de     = document.getElementById('filt-lanc-de').value;
   const ate    = document.getElementById('filt-lanc-ate').value;
-
-  const filial = getFiltroFilial();
-  const data = todosLanc.filter(r => {
+  const filial = incluirFiltroFilial ? getFiltroFilial() : '';
+  return todosLanc.filter(r => {
     if (q && ![r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem].join(' ').toLowerCase().includes(q)) return false;
     if (arm    && r.armazem !== arm) return false;
     if (op     && r.usuario !== op)  return false;
     if (tipo === 'normal'     && r.recontagem)  return false;
     if (tipo === 'recontagem' && !r.recontagem) return false;
     if (status && r.status !== status) return false;
-    if (de  && r.created_at < de+'T00:00:00') return false;
-    if (ate && r.created_at > ate+'T23:59:59') return false;
+    if (de  && new Date(r.created_at) < new Date(de+'T00:00:00')) return false;
+    if (ate && new Date(r.created_at) > new Date(ate+'T23:59:59')) return false;
     if (filial && (r.filial||'').toUpperCase() !== filial) return false;
     return true;
   });
-  renderLancamentos(data);
+}
+
+function filtrarLancamentos() {
+  renderLancamentos(getFilteredLancamentos(true));
 }
 
 function exportarLancamentosExcel() {
-  const q      = (document.getElementById('search-lanc').value||'').toLowerCase();
-  const arm    = document.getElementById('filt-lanc-arm').value;
-  const op     = document.getElementById('filt-lanc-op').value;
-  const tipo   = document.getElementById('filt-lanc-tipo').value;
-  const status = document.getElementById('filt-lanc-status').value;
-  const de     = document.getElementById('filt-lanc-de').value;
-  const ate    = document.getElementById('filt-lanc-ate').value;
-  const data = todosLanc.filter(r => {
-    if (q && ![r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem].join(' ').toLowerCase().includes(q)) return false;
-    if (arm    && r.armazem !== arm) return false;
-    if (op     && r.usuario !== op)  return false;
-    if (tipo === 'normal'     && r.recontagem)  return false;
-    if (tipo === 'recontagem' && !r.recontagem) return false;
-    if (status && r.status !== status) return false;
-    if (de  && r.created_at < de+'T00:00:00') return false;
-    if (ate && r.created_at > ate+'T23:59:59') return false;
-    return true;
-  });
+  const data = getFilteredLancamentos(false);
   if (!data.length) { toast('Nenhum dado para exportar.','warn'); return; }
   const rows = data.map(r => ({
     'Filial':     r.filial||'',
@@ -2813,6 +2795,10 @@ async function carregarHistorico() {
     if (error) throw error;
     todoHistorico = data || [];
 
+    // Avisa se bateu no limite de 500
+    const limiteEl = document.getElementById('hist-limite-aviso');
+    if (limiteEl) limiteEl.style.display = todoHistorico.length >= 500 ? 'block' : 'none';
+
     // Popula filtro de armazéns e operadores
     const arms = [...new Set(todoHistorico.map(r=>r.armazem).filter(Boolean))].sort();
     const ops  = [...new Set(todoHistorico.map(r=>r.usuario).filter(Boolean))].sort();
@@ -2847,7 +2833,7 @@ function filtrarHistorico() {
     return true;
   });
 
-  document.getElementById('cnt-hist').textContent = `${data.length} registro${data.length!==1?'s':''}`;
+  document.getElementById('cnt-hist').textContent = `${data.length} registro${data.length!==1?'s':''}${todoHistorico.length>=500?' (limitado a 500 — use filtros de data)':''}`;
   const tbody = document.getElementById('tbody-hist');
   if (!data.length) { tbody.innerHTML='<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Nenhum registro.</td></tr>'; return; }
 
@@ -3451,16 +3437,12 @@ async function salvarEditSV() {
     const { error: e1 } = await sb.from('lancamentos')
       .update({ lote: novoLote, armazem: novoArm })
       .eq('status','pendente')
-      .ilike('codigo',`%${cod}%`)
-      .ilike('lote',`%${lot}%`)
-      .ilike('armazem',`%${arm}%`);
+      .eq('codigo', cod).eq('lote', lot).eq('armazem', arm);
 
     const { error: e2 } = await sb.from('contagens')
       .update({ lote: novoLote, armazem: novoArm })
       .eq('status','pendente')
-      .ilike('codigo',`%${cod}%`)
-      .ilike('lote',`%${lot}%`)
-      .ilike('armazem',`%${arm}%`);
+      .eq('codigo', cod).eq('lote', lot).eq('armazem', arm);
 
     fecharModal('modal-edit-sv');
     toast('✓ Lançamentos atualizados!','ok');
@@ -3477,9 +3459,9 @@ async function excluirLancAvulso(item) {
     const lot = (item.lote||'').trim();
     const arm = (item.armazem||'').trim();
     await sb.from('lancamentos').delete().eq('status','pendente')
-      .ilike('codigo',`%${cod}%`).ilike('lote',`%${lot}%`).ilike('armazem',`%${arm}%`);
+      .eq('codigo', cod).eq('lote', lot).eq('armazem', arm);
     await sb.from('contagens').delete().eq('status','pendente')
-      .ilike('codigo',`%${cod}%`).ilike('lote',`%${lot}%`).ilike('armazem',`%${arm}%`);
+      .eq('codigo', cod).eq('lote', lot).eq('armazem', arm);
     toast('Lançamento excluído.','warn');
     carregarValidacao();
   } catch(e) { toast('Erro: '+e.message,'err'); }
@@ -3532,8 +3514,8 @@ async function validarTodos() {
         filial: item.filial || detectarFilialPorCodigo(item.codigo) || null,
       });
       const cod=(item.codigo||'').trim(), lot=(item.lote||'').trim(), arm=(item.armazem||'').trim();
-      await sb.from('lancamentos').delete().eq('status','pendente').ilike('codigo',`%${cod}%`).ilike('lote',`%${lot}%`).ilike('armazem',`%${arm}%`);
-      await sb.from('contagens').delete().eq('status','pendente').ilike('codigo',`%${cod}%`).ilike('lote',`%${lot}%`).ilike('armazem',`%${arm}%`);
+      await sb.from('lancamentos').delete().eq('status','pendente').eq('codigo',cod).eq('lote',lot).eq('armazem',arm);
+      await sb.from('contagens').delete().eq('status','pendente').eq('codigo',cod).eq('lote',lot).eq('armazem',arm);
       // Marca localmente
       const idx = svLinhas.findIndex(r => r._k === item._k);
       if (idx !== -1) svLinhas[idx]._validado = true;
