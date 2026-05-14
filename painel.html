@@ -3629,10 +3629,15 @@ let _acFiltrado = [];   // após filtros locais
 let _chkLista   = [];   // linhas do xlsx importado
 
 const CHK_COL_MAP = {
-  'b8_produto':'codigo','b1_desc':'descricao','b8_filial':'filial',
+  // colunas do Protheus / exportação padrão Simbiose
+  'b8_produto':'codigo','b1_desc':'descricao',
+  'b8_filial':'filial','m0_filial':'filial',
   'b8_lotectl':'lote','b8_local':'armazem',
-  'codigo':'codigo','código':'codigo','produto':'descricao','nome':'descricao',
-  'lote':'lote','armazem':'armazem','armazém':'armazem','filial':'filial',
+  // nomes genéricos
+  'codigo':'codigo','código':'codigo',
+  'produto':'descricao','nome':'descricao','descricao':'descricao','descrição':'descricao',
+  'lote':'lote','armazem':'armazem','armazém':'armazem',
+  'filial':'filial','filiais':'filial',
 };
 
 function onAcChecklistSelecionado(input) {
