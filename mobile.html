@@ -572,6 +572,12 @@ html.dark tbody tr:hover { background:rgba(255,255,255,.03); }
     <div class="modal-title" id="mc-titulo">Contar Produto</div>
     <div class="modal-sub" id="mc-sub">—</div>
 
+    <!-- Motivo recontagem — só aparece quando é recontagem -->
+    <div id="mc-motivo-recont" style="display:none;background:rgba(91,63,168,.08);border:1px solid rgba(91,63,168,.25);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px">
+      <div style="font-size:.6rem;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">⚠ Motivo da Recontagem</div>
+      <div id="mc-motivo-recont-txt" style="font-size:.82rem;color:var(--text);font-weight:600">—</div>
+    </div>
+
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:16px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
@@ -763,7 +769,7 @@ async function carregarHome() {
     const { data: ags } = await sb.from('agendamentos')
       .select('*').in('status',['pendente','em_contagem']);
     const pendentes   = (ags||[]).length;
-    const recontagens = (ags||[]).filter(a => a.is_recontagem).length;
+    const recontagens = (ags||[]).filter(a => a.is_recontagem && a.status === 'pendente').length;
 
     const hoje = new Date().toISOString().split('T')[0];
     const { data: lancHoje } = await sb.from('lancamentos')
@@ -810,7 +816,7 @@ async function carregarAgendamentos() {
           </div>
           <div style="text-align:right;flex-shrink:0">
             ${a.is_recontagem
-              ? '<span class="ag-pill recont">↺ Recontagem</span>'
+              ? `<span class="ag-pill recont">↺ Recontagem</span>`
               : `<span style="font-size:.68rem;color:var(--text3)">${fmtData(a.data_agendada)}</span>`}
           </div>
         </div>
@@ -833,6 +839,17 @@ async function carregarAgendamentos() {
 function abrirModalContar(ag) {
   document.getElementById('mc-titulo').textContent  = ag.is_recontagem ? '↺ Recontagem' : '📦 Contar Produto';
   document.getElementById('mc-sub').textContent     = ag.produto_nome;
+  // Mostra/oculta bloco de motivo da recontagem
+  const motiBlock = document.getElementById('mc-motivo-recont');
+  const motiTxt   = document.getElementById('mc-motivo-recont-txt');
+  if (motiBlock && motiTxt) {
+    if (ag.is_recontagem && ag.motivo_recontagem) {
+      motiTxt.textContent = ag.motivo_recontagem;
+      motiBlock.style.display = 'block';
+    } else {
+      motiBlock.style.display = 'none';
+    }
+  }
   document.getElementById('mc-codigo').textContent  = ag.codigo;
   document.getElementById('mc-lote').textContent    = ag.lote_especifico || '—';
   document.getElementById('mc-saldo').textContent   = '—';
