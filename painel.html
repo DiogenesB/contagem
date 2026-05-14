@@ -1637,12 +1637,19 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             </div>
             <div class="th-right">
               <span id="ac-chk-kpis" style="font-size:.78rem;font-weight:700;color:var(--text2)">—</span>
-              <button class="btn btn-primary btn-sm" onclick="marcarTodosContado()">✓ Marcar Todos</button>
+              <select class="filter-sel" id="filt-chk-filial" onchange="renderChecklist()" style="min-width:140px">
+                <option value="">Todas as filiais</option>
+                <option value="BIAGRO CRUZ ALTA">Biagro</option>
+                <option value="BIOMA CRUZ ALTA RS">Bioma</option>
+                <option value="SIMBIOSE-AGRO CRUZ ALTA RS">Simbiose</option>
+              </select>
+              <button class="btn btn-primary btn-sm" onclick="marcarFiltradosContado()">✓ Marcar Visíveis</button>
+              <button class="btn btn-ghost btn-sm" onclick="marcarTodosContado()">✓ Todos</button>
             </div>
           </div>
           <table style="font-size:.82rem">
             <thead><tr>
-              <th>Produto</th><th style="text-align:right;width:160px">Status</th>
+              <th>Filial</th><th>Produto</th><th style="text-align:right;width:140px">Status</th>
             </tr></thead>
             <tbody id="tbody-chk">
             </tbody>
@@ -3658,11 +3665,13 @@ function onAcChecklistSelecionado(input) {
             if (campo) out[campo] = typeof row[i] === 'string' ? row[i].trim() : row[i];
           });
           nome = out.descricao || out.codigo || '';
+          return nome ? { descricao: nome, filial: (out.filial||'').trim().toUpperCase(), codigo: out.codigo||'', contado: false } : null;
         } else {
           // Sem cabeçalho: pega a primeira célula não vazia como nome
           nome = String(row.find(v => v !== null && v !== '') ?? '').trim();
+          return nome ? { descricao: nome, filial: '', codigo: '', contado: false } : null;
         }
-        return nome ? { descricao: nome, contado: false } : null;
+
       }).filter(Boolean);
       document.getElementById('ac-import-status').textContent =
         `✓ ${_chkLista.length} produtos carregados`;
@@ -3709,35 +3718,81 @@ function marcarTodosContado() {
 }
 
 function renderChecklist() {
-  const tbody = document.getElementById('tbody-chk');
-  const contados = _chkLista.filter(r => r.contado).length;
-  const total    = _chkLista.length;
-  const pct      = total ? ((contados/total)*100).toFixed(0) : 0;
-  document.getElementById('ac-chk-cnt').textContent   = `${total} itens`;
-  document.getElementById('ac-chk-kpis').textContent  = `${contados}/${total} contados (${pct}%)`;
+  const tbody    = document.getElementById('tbody-chk');
+  const filtFilial = (document.getElementById('filt-chk-filial')?.value || '').toUpperCase();
 
-  // Atualiza label do botão toggle
+  const lista = _chkLista.map((r, i) => ({ ...r, _i: i }));
+  const filtrada = filtFilial
+    ? lista.filter(r => (r.filial||'').toUpperCase().includes(filtFilial) ||
+        (filtFilial === 'BIAGRO CRUZ ALTA' && (r.filial||'').toUpperCase().includes('BIAGRO')) ||
+        (filtFilial === 'BIOMA CRUZ ALTA RS' && (r.filial||'').toUpperCase().includes('BIOMA')) ||
+        (filtFilial === 'SIMBIOSE-AGRO CRUZ ALTA RS' && (r.filial||'').toUpperCase().includes('SIMBIOSE')))
+    : lista;
+
+  const contadosTotal = _chkLista.filter(r => r.contado).length;
+  const total         = _chkLista.length;
+  const contadosFilt  = filtrada.filter(r => r.contado).length;
+  const pct           = total ? ((contadosTotal/total)*100).toFixed(0) : 0;
+
+  document.getElementById('ac-chk-cnt').textContent  = filtFilial
+    ? `${filtrada.length} de ${total} itens`
+    : `${total} itens`;
+  document.getElementById('ac-chk-kpis').textContent = `${contadosTotal}/${total} contados (${pct}%)`;
+
   const btnToggle = document.getElementById('ac-btn-toggle-chk');
   const wrap = document.getElementById('ac-checklist-wrap');
   if (btnToggle && wrap.style.display !== 'none') {
     btnToggle.textContent = `▲ Fechar Checklist`;
   } else if (btnToggle) {
-    btnToggle.textContent = `📋 Ver Checklist (${contados}/${total})`;
+    btnToggle.textContent = `📋 Ver Checklist (${contadosTotal}/${total})`;
   }
 
-  tbody.innerHTML = _chkLista.map((r, i) => {
+  // Popula opções de filial com o que existe nos dados
+  const filialSel = document.getElementById('filt-chk-filial');
+  if (filialSel && _chkLista.some(r => r.filial)) {
+    const filiais = [...new Set(_chkLista.map(r => r.filial).filter(Boolean))].sort();
+    const curVal  = filialSel.value;
+    filialSel.innerHTML = '<option value="">Todas as filiais</option>' +
+      filiais.map(f => {
+        const label = f.includes('BIAGRO') ? 'Biagro' : f.includes('BIOMA') ? 'Bioma' : f.includes('SIMBIOSE') ? 'Simbiose' : f;
+        return `<option value="${f}"${f===curVal?' selected':''}>${label}</option>`;
+      }).join('');
+  }
+
+  tbody.innerHTML = filtrada.map(r => {
+    const i      = r._i;
     const rowCls = r.contado ? 'sv-contado' : '';
-    const nome = r.descricao || r.codigo || '—';
+    const nome   = r.descricao || r.codigo || '—';
+    const filial = r.filial || '';
+    const filBadge = filial
+      ? `<span class="${filial.includes('BIAGRO')?'fil-badge fil-biagro':filial.includes('BIOMA')?'fil-badge fil-bioma':'fil-badge fil-simbiose'}">${filial.includes('BIAGRO')?'Biagro':filial.includes('BIOMA')?'Bioma':'Simbiose'}</span>`
+      : '<span style="color:var(--text3);font-size:.72rem">—</span>';
     return `<tr class="${rowCls}">
+      <td>${filBadge}</td>
       <td class="cn">${nome}</td>
-      <td style="text-align:right">
+      <td style="text-align:right;white-space:nowrap">
         ${r.contado
-          ? `<span class="badge b-v">✓ Contado</span> <button class="btn btn-ghost btn-xs" onclick="marcarChk(${i},false)">↩</button>`
+          ? `<span class="badge b-v">✓ Contado</span> <button class="btn btn-ghost btn-xs" onclick="marcarChk(${i},false)" style="padding:2px 7px;font-size:.7rem">↩</button>`
           : `<button class="btn btn-primary btn-sm" onclick="marcarChk(${i},true)">✓ Marcar</button>`
         }
       </td>
     </tr>`;
-  }).join('');
+  }).join('') || '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--text3)">Nenhum item para esta filial.</td></tr>';
+}
+
+function marcarFiltradosContado() {
+  const filtFilial = (document.getElementById('filt-chk-filial')?.value || '').toUpperCase();
+  if (!filtFilial) { marcarTodosContado(); return; }
+  _chkLista.forEach(r => {
+    const f = (r.filial||'').toUpperCase();
+    if (
+      (filtFilial.includes('BIAGRO')   && f.includes('BIAGRO'))  ||
+      (filtFilial.includes('BIOMA')    && f.includes('BIOMA'))   ||
+      (filtFilial.includes('SIMBIOSE') && f.includes('SIMBIOSE'))
+    ) r.contado = true;
+  });
+  renderChecklist();
+  toast('✓ Itens visíveis marcados!', 'ok');
 }
 
 // ── Acurácia — lê do historico ────────────────────────────
