@@ -1563,44 +1563,14 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
     <!-- ══ TAB: ACURÁCIA ══ -->
     <div class="tab-panel" id="tab-acuracidade">
 
-      <!-- KPIs — 2 cartões grandes -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-
-        <div class="stat-card" style="padding:20px 22px">
-          <div style="font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">% Contados (do histórico)</div>
-          <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:10px">
-            <div id="ac-pct" style="font-size:3rem;font-weight:800;line-height:1;letter-spacing:-.03em;color:var(--green)">—%</div>
-            <div style="margin-bottom:6px;font-size:.82rem;color:var(--text3)" id="ac-pct-abs">—</div>
-          </div>
-          <div style="height:8px;background:var(--bg4);border-radius:4px;overflow:hidden">
-            <div id="ac-prog-bar" style="height:100%;width:0%;background:var(--green);border-radius:4px;transition:width .5s ease"></div>
-          </div>
-          <div style="margin-top:6px;font-size:.68rem;color:var(--text3)" id="ac-prog-txt">—</div>
-        </div>
-
-        <div class="stat-card" style="padding:20px 22px">
-          <div style="font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">% Com Erro (Divergência)</div>
-          <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:10px">
-            <div id="ac-pct-erro" style="font-size:3rem;font-weight:800;line-height:1;letter-spacing:-.03em;color:var(--red)">—%</div>
-            <div style="margin-bottom:6px;font-size:.82rem;color:var(--text3)" id="ac-erro-abs">—</div>
-          </div>
-          <div style="height:8px;background:var(--bg4);border-radius:4px;overflow:hidden">
-            <div id="ac-erro-bar" style="height:100%;width:0%;background:var(--red);border-radius:4px;transition:width .5s ease"></div>
-          </div>
-          <div style="margin-top:6px;font-size:.68rem;color:var(--text3)" id="ac-erro-txt">—</div>
-        </div>
-
-      </div>
-
-      <!-- Filtros -->
-      <div class="table-wrap" style="margin-bottom:12px">
+      <!-- ── Barra de filtros ────────────────────────────────────── -->
+      <div class="table-wrap" style="margin-bottom:14px">
         <div class="table-hdr" style="flex-wrap:wrap;gap:8px">
-          <div class="th-left"><span class="table-title">Filtros</span></div>
+          <div class="th-left"><span class="table-title">Filtros de Acurácia</span></div>
           <div class="th-right" style="flex-wrap:wrap;gap:6px">
             <input type="date" class="filter-sel" id="ac-de"  title="De"  onchange="carregarAcuracidade()">
             <input type="date" class="filter-sel" id="ac-ate" title="Até" onchange="carregarAcuracidade()">
-            <input type="text" class="search-inp" id="ac-prod" placeholder="Produto / Código / Lote…" oninput="filtrarAcuracidade()" style="width:180px">
-            <select class="filter-sel" id="ac-arm" onchange="filtrarAcuracidade()"><option value="">Todos arm.</option></select>
+            <input type="text" class="search-inp" id="ac-prod" placeholder="Produto / Código / Lote…" oninput="filtrarAcuracidade()" style="width:190px">
             <select class="filter-sel" id="ac-status-filt" onchange="filtrarAcuracidade()">
               <option value="">Todos</option>
               <option value="ok">Sem divergência</option>
@@ -1612,70 +1582,32 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
         </div>
       </div>
 
-      <!-- Checklist xlsx separado -->
-      <div class="import-banner" style="margin-bottom:14px">
-        <span style="font-size:.82rem;font-weight:700;color:var(--blue)">📋 Checklist de Contagem (opcional)</span>
-        <span id="ac-import-status" style="font-size:.72rem;color:var(--text3);font-weight:500">Importe um .xlsx para marcar o que foi / não foi contado</span>
-        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-          <label class="import-drop" style="padding:5px 12px;cursor:pointer">
-            <span>📂</span>
-            <span style="font-size:.74rem;color:var(--text2);font-weight:600" id="ac-import-filename">Selecionar .xlsx</span>
-            <input type="file" id="ac-inp-xlsx" accept=".xlsx,.xls" style="display:none" onchange="onAcChecklistSelecionado(this)">
-          </label>
-          <button class="btn btn-blue btn-sm" id="ac-btn-toggle-chk" onclick="toggleChecklist()" style="display:none">📋 Ver Checklist</button>
-          <button class="btn btn-ghost btn-sm" onclick="limparChecklist()">✕ Limpar</button>
-        </div>
+      <!-- ── KPIs globais ─────────────────────────────────────────── -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:16px" id="ac-kpi-grid">
+        <!-- preenchido por renderKpisAcuracia() -->
       </div>
 
-      <!-- Tabela checklist (oculta por padrão, abre com botão) -->
-      <div id="ac-checklist-wrap" style="display:none;margin-bottom:14px">
-        <div class="table-wrap">
-          <div class="table-hdr">
-            <div class="th-left">
-              <span class="table-title">Checklist — Marcar Contagem</span>
-              <span class="tcount" id="ac-chk-cnt">—</span>
-            </div>
-            <div class="th-right">
-              <span id="ac-chk-kpis" style="font-size:.78rem;font-weight:700;color:var(--text2)">—</span>
-              <select class="filter-sel" id="filt-chk-filial" onchange="renderChecklist()" style="min-width:140px">
-                <option value="">Todas as filiais</option>
-                <option value="BIAGRO CRUZ ALTA">Biagro</option>
-                <option value="BIOMA CRUZ ALTA RS">Bioma</option>
-                <option value="SIMBIOSE-AGRO CRUZ ALTA RS">Simbiose</option>
-              </select>
-              <button class="btn btn-primary btn-sm" onclick="marcarFiltradosContado()">✓ Marcar Visíveis</button>
-              <button class="btn btn-ghost btn-sm" onclick="marcarTodosContado()">✓ Todos</button>
-            </div>
-          </div>
-          <table style="font-size:.82rem">
-            <thead><tr>
-              <th>Filial</th><th>Produto</th><th style="text-align:right;width:140px">Status</th>
-            </tr></thead>
-            <tbody id="tbody-chk">
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Tabela histórico -->
-      <div class="table-wrap">
+      <!-- ── Total do Estoque (inserção manual obrigatória ≥ 1x) ─── -->
+      <div class="table-wrap" style="margin-bottom:14px" id="ac-total-wrap">
         <div class="table-hdr">
           <div class="th-left">
-            <span class="table-title">Histórico de Contagens Validadas</span>
-            <span class="tcount" id="ac-cnt">—</span>
+            <span class="table-title">📦 Volume Total do Estoque (Litros)</span>
+            <span style="font-size:.7rem;color:var(--text3);font-weight:500;margin-left:6px">Insira ao menos 1x para calcular % de cobertura</span>
+          </div>
+          <div class="th-right" style="gap:6px">
+            <span id="ac-total-est-val" style="font-size:.9rem;font-weight:700;color:var(--green);font-family:var(--mono)">—</span>
+            <span style="font-size:.7rem;color:var(--text3)">litros no estoque</span>
+            <button class="btn btn-blue btn-sm" onclick="abrirModalTotalEstoque()">✎ Definir Total</button>
           </div>
         </div>
-        <table>
-          <thead><tr>
-            <th>Data</th><th>Filial</th><th>Código</th><th>Produto</th><th>Lote</th>
-            <th>Arm.</th><th>Qtd Contada</th><th>Saldo</th><th>Divergência</th>
-            <th>Tipo</th><th>Operador</th>
-          </tr></thead>
-          <tbody id="tbody-ac">
-            <tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Selecione o período e clique em Atualizar.</td></tr>
-          </tbody>
-        </table>
       </div>
+
+      <!-- ── Cards de contagem por produto+data ──────────────────── -->
+      <div id="ac-grupos-wrap">
+        <!-- preenchido por renderGruposAcuracia() -->
+      </div>
+
+    </div>
 
     </div>
 
@@ -1967,6 +1899,7 @@ const SUPABASE_KEY = 'sb_publishable_IbvCmbnbazxMGcQTF9-mRg_Tt2RkAng';
 
 let sb = null;
 let itemAtual = null;   // linha do saldo sendo validada
+let _acTotalEstoque = null;
 let todosLanc = [];
 let todoHistorico = [];
 let todosSaldo = [];
@@ -3459,6 +3392,10 @@ async function importarSaldoSistema() {
     const dt=new Date().toLocaleString('pt-BR');
     document.getElementById('saldo-status-txt').textContent=`✓ Importado em ${dt} · ${inseridos} registros`;
     toast(`✓ ${inseridos} registros importados!`,'ok',5000);
+    // Saldo atualizado — total do estoque precisa ser redefinido
+    await sb.from('config').delete().eq('chave','total_estoque_litros');
+    _acTotalEstoque = null;
+    atualizarExibicaoTotalEstoque();
     _filialCacheLoaded = false;  // força reconstrução do cache de filial
     await carregarFilialCache();
     saldoXlsxData=null;
@@ -3629,15 +3566,10 @@ let _acFiltrado = [];   // após filtros locais
 let _chkLista   = [];   // linhas do xlsx importado
 
 const CHK_COL_MAP = {
-  // colunas do Protheus / exportação padrão Simbiose
-  'b8_produto':'codigo','b1_desc':'descricao',
-  'b8_filial':'filial','m0_filial':'filial',
+  'b8_produto':'codigo','b1_desc':'descricao','b8_filial':'filial',
   'b8_lotectl':'lote','b8_local':'armazem',
-  // nomes genéricos
-  'codigo':'codigo','código':'codigo',
-  'produto':'descricao','nome':'descricao','descricao':'descricao','descrição':'descricao',
-  'lote':'lote','armazem':'armazem','armazém':'armazem',
-  'filial':'filial','filiais':'filial',
+  'codigo':'codigo','código':'codigo','produto':'descricao','nome':'descricao',
+  'lote':'lote','armazem':'armazem','armazém':'armazem','filial':'filial',
 };
 
 function onAcChecklistSelecionado(input) {
@@ -3802,8 +3734,8 @@ function marcarFiltradosContado() {
 
 // ── Acurácia — lê do historico ────────────────────────────
 async function carregarAcuracidade() {
-  const tbody = document.getElementById('tbody-ac');
-  tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Carregando…</td></tr>';
+  const container = document.getElementById('ac-grupos-wrap');
+  container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</div>';
 
   const hoje = new Date().toISOString().split('T')[0];
   const h30  = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
@@ -3823,143 +3755,319 @@ async function carregarAcuracidade() {
     if (error) throw error;
     _acDados = data || [];
 
-    // Popula filtro armazém
-    const arms = [...new Set(_acDados.map(r => r.armazem).filter(Boolean))].sort();
-    const sel = document.getElementById('ac-arm');
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">Todos arm.</option>' +
-      arms.map(a => `<option value="${a}"${a===cur?' selected':''}>${a}</option>`).join('');
+    // Carrega total do estoque do Supabase (centralizado)
+    await carregarTotalEstoque();
+
+
 
     filtrarAcuracidade();
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--red);font-size:.8rem">Erro: ${e.message}</td></tr>`;
+    container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--red);font-size:.8rem">Erro: ' + e.message + '</div>';
   }
 }
 
 function filtrarAcuracidade() {
   const q      = (document.getElementById('ac-prod').value||'').toLowerCase();
-  const arm    = document.getElementById('ac-arm').value;
   const status = document.getElementById('ac-status-filt').value;
   const filial = getFiltroFilial();
 
   _acFiltrado = _acDados.filter(r => {
     if (q && ![r.produto_nome,r.codigo,r.lote].join(' ').toLowerCase().includes(q)) return false;
-    if (arm && r.armazem !== arm) return false;
     if (filial && (r.filial||'').toUpperCase() !== filial) return false;
-    if (status === 'ok'         && r.tipo !== 'ok') return false;
-    if (status === 'divergencia'&& r.tipo === 'ok') return false;
+    if (status === 'ok'          && r.tipo !== 'ok') return false;
+    if (status === 'divergencia' && r.tipo === 'ok') return false;
     return true;
   });
 
   renderKpisAcuracia();
-  renderTabelaAcuracia();
+  renderGruposAcuracia();
 }
 
+// ── KPIs globais (sobre todos os dados sem filtro) ────────────────────────
 function renderKpisAcuracia() {
-  const total  = _acDados.length;   // KPIs sobre total sem filtro
-  const semDiv = _acDados.filter(r => r.tipo === 'ok').length;
-  const comDiv = _acDados.filter(r => r.tipo !== 'ok').length;
+  const total    = _acDados.length;
+  const semDiv   = _acDados.filter(r => r.tipo === 'ok').length;
+  const comDiv   = total - semDiv;
 
-  const pctCont = total ? ((semDiv / total)*100).toFixed(1) : null;
-  const pctErro = total ? ((comDiv / total)*100).toFixed(1) : null;
+  // Produtos distintos conferidos (codigo+data únicos)
+  const gruposDistintos = new Set(_acDados.map(r =>
+    (r.codigo||'') + '|' + (r.created_at||'').split('T')[0]
+  )).size;
 
-  const pctContNum = pctCont !== null ? parseFloat(pctCont) : 0;
-  const pctErroNum = pctErro !== null ? parseFloat(pctErro) : 0;
+  const pctAcur   = total ? ((semDiv / total)*100).toFixed(1) : null;
+  const pctErro   = total ? ((comDiv / total)*100).toFixed(1) : null;
+  // Soma de todo o saldo físico contado no período (em litros)
+  const totalFisicoGlobal = _acDados.reduce((s,r) => s + (r.quantidade ?? 0), 0);
+  const cobertPct = (_acTotalEstoque && totalFisicoGlobal)
+    ? ((totalFisicoGlobal / _acTotalEstoque)*100).toFixed(1)
+    : null;
 
-  const corCont = pctContNum >= 95 ? 'var(--green)' : pctContNum >= 70 ? 'var(--amber-lt)' : 'var(--red)';
-  const corErro = pctErroNum === 0  ? 'var(--green)' : pctErroNum <= 5  ? 'var(--amber-lt)' : 'var(--red)';
+  const corAcur  = pctAcur  !== null ? (parseFloat(pctAcur)  >= 95 ? 'var(--green)' : parseFloat(pctAcur)  >= 70 ? 'var(--amber-lt)' : 'var(--red)') : 'var(--text3)';
+  const corErro  = pctErro  !== null ? (parseFloat(pctErro)  === 0  ? 'var(--green)' : parseFloat(pctErro)  <= 5  ? 'var(--amber-lt)' : 'var(--red)') : 'var(--text3)';
+  const corCob   = cobertPct !== null ? (parseFloat(cobertPct) >= 80 ? 'var(--green)' : parseFloat(cobertPct) >= 40 ? 'var(--amber-lt)' : 'var(--red)') : 'var(--text3)';
 
-  // % Contados (sem divergência)
-  document.getElementById('ac-pct').textContent     = pctCont !== null ? pctCont+'%' : '—%';
-  document.getElementById('ac-pct').style.color     = corCont;
-  document.getElementById('ac-pct-abs').textContent = total ? `${semDiv} de ${total} registros` : '';
-  const bar = document.getElementById('ac-prog-bar');
-  if (bar) { bar.style.width = pctContNum+'%'; bar.style.background = corCont; }
-  document.getElementById('ac-prog-txt').textContent = total ? `${semDiv} sem divergência · ${comDiv} com divergência` : '—';
-
-  // % Com Erro
-  document.getElementById('ac-pct-erro').textContent     = pctErro !== null ? pctErro+'%' : '—%';
-  document.getElementById('ac-pct-erro').style.color     = corErro;
-  document.getElementById('ac-erro-abs').textContent     = total ? `${comDiv} de ${total} registros` : '';
-  const erroBar = document.getElementById('ac-erro-bar');
-  if (erroBar) { erroBar.style.width = pctErroNum+'%'; erroBar.style.background = corErro; }
-  document.getElementById('ac-erro-txt').textContent = total && comDiv > 0
-    ? `${comDiv} item${comDiv!==1?'ns':''} com divergência` : total ? 'Sem divergências ✓' : '—';
+  document.getElementById('ac-kpi-grid').innerHTML = `
+    <div class="stat-card" style="padding:18px 20px">
+      <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">✓ Acurácia Geral</div>
+      <div style="font-size:2.6rem;font-weight:800;line-height:1;color:${corAcur};letter-spacing:-.03em">${pctAcur !== null ? pctAcur+'%' : '—'}</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">${semDiv} de ${total} lotes sem divergência</div>
+      <div style="margin-top:8px;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
+        <div style="width:${pctAcur||0}%;height:100%;background:${corAcur};border-radius:3px;transition:width .5s"></div>
+      </div>
+    </div>
+    <div class="stat-card" style="padding:18px 20px">
+      <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">⚠ % Com Divergência</div>
+      <div style="font-size:2.6rem;font-weight:800;line-height:1;color:${corErro};letter-spacing:-.03em">${pctErro !== null ? pctErro+'%' : '—'}</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">${comDiv} lote${comDiv!==1?'s':''} com divergência</div>
+      <div style="margin-top:8px;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
+        <div style="width:${pctErro||0}%;height:100%;background:${corErro};border-radius:3px;transition:width .5s"></div>
+      </div>
+    </div>
+    <div class="stat-card" style="padding:18px 20px">
+      <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📊 % Estoque Conferido</div>
+      <div style="font-size:2.6rem;font-weight:800;line-height:1;color:${corCob};letter-spacing:-.03em">${cobertPct !== null ? cobertPct+'%' : '—'}</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">${totalFisicoGlobal.toLocaleString('pt-BR')} L contados · total: ${_acTotalEstoque ? _acTotalEstoque.toLocaleString('pt-BR')+' L' : '?'}</div>
+      <div style="margin-top:8px;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
+        <div style="width:${Math.min(cobertPct||0,100)}%;height:100%;background:${corCob};border-radius:3px;transition:width .5s"></div>
+      </div>
+    </div>
+    <div class="stat-card" style="padding:18px 20px">
+      <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">🗂 Contagens no Período</div>
+      <div style="font-size:2.6rem;font-weight:800;line-height:1;color:var(--blue);letter-spacing:-.03em">${gruposDistintos}</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">${total} lote${total!==1?'s':''} validado${total!==1?'s':''} no total</div>
+    </div>`;
 }
 
-function renderTabelaAcuracia() {
-  const tbody = document.getElementById('tbody-ac');
-  document.getElementById('ac-cnt').textContent = `${_acFiltrado.length} registro${_acFiltrado.length!==1?'s':''}`;
-
+// ── Grupos: agrupa por codigo + data da contagem ──────────────────────────
+function renderGruposAcuracia() {
+  const container = document.getElementById('ac-grupos-wrap');
   if (!_acFiltrado.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Nenhum registro no período.</td></tr>';
+    container.innerHTML = '<div style="text-align:center;padding:36px;color:var(--text3);font-size:.82rem">Nenhum registro no período.</div>';
     return;
   }
 
-  tbody.innerHTML = _acFiltrado.map(r => {
-    const div = r.divergencia ?? 0;
-    const divCell = r.tipo === 'ok'
-      ? `<span class="div-ok">0</span>`
-      : `<span class="${div>0?'div-pos':'div-neg'}">${div>0?'+':''}${div}</span>`;
-    const tipoBadge = r.tipo === 'ok'
-      ? `<span class="badge b-v">✓ OK</span>`
-      : r.tipo === 'positivo'
-        ? `<span class="badge b-p">+ Positivo</span>`
-        : `<span class="badge b-r">− Negativo</span>`;
-    const rowStyle = r.tipo !== 'ok' ? 'background:var(--red-bg)' : '';
-    return `<tr style="${rowStyle}">
-      <td class="cts">${fmtTS(r.created_at)}</td>
-      <td>${filialBadgeHtml(r.filial)}</td>
-      <td class="cc">${r.codigo||'—'}</td>
-      <td class="cn">${r.produto_nome||'—'}</td>
-      <td class="cm">${r.lote||'—'}</td>
-      <td style="font-weight:600;color:var(--amber)">${r.armazem||'—'}</td>
-      <td style="font-weight:700">${r.quantidade??'—'}</td>
-      <td>${r.saldo_sistema??'—'}</td>
-      <td>${divCell}</td>
-      <td>${tipoBadge}</td>
-      <td class="cm">${r.usuario||'—'}</td>
-    </tr>`;
-  }).join('');
-}
-
-function exportarXlsx(nomeArq, cabecalhos, linhas) {
-  const ws = XLSX.utils.aoa_to_sheet([cabecalhos, ...linhas]);
-  const colWidths = cabecalhos.map((h, i) => {
-    const max = Math.max(h.length, ...linhas.map(r => String(r[i]??'').length));
-    return { wch: Math.min(max + 2, 50) };
+  // Agrupa por codigo+data (dia de created_at)
+  const grupos = {};
+  _acFiltrado.forEach(r => {
+    const dia  = (r.created_at||'').split('T')[0];
+    const chave = (r.codigo||'?') + '||' + dia;
+    if (!grupos[chave]) grupos[chave] = {
+      codigo: r.codigo||'—',
+      produto_nome: r.produto_nome||'—',
+      filial: r.filial||null,
+      data: dia,
+      lotes: [],
+      totalEstoqueLocal: null, // inserido manualmente pelo usuário neste grupo
+    };
+    grupos[chave].lotes.push(r);
   });
-  ws['!cols'] = colWidths;
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Dados');
-  XLSX.writeFile(wb, `${nomeArq}_${new Date().toISOString().split('T')[0]}.xlsx`);
-  toast('✓ Excel exportado!', 'ok');
+
+  // totaisLocais removido — % usa saldo físico em litros diretamente
+  const totaisLocais = {};
+
+  const html = Object.entries(grupos)
+    .sort(([,a],[,b]) => b.data.localeCompare(a.data) || a.codigo.localeCompare(b.codigo))
+    .map(([chave, g]) => {
+      const totalLotes    = g.lotes.length;
+      const saldoSistema  = g.lotes.reduce((s,r) => s + (r.saldo_sistema ?? 0), 0);
+      const saldoFisico   = g.lotes.reduce((s,r) => s + (r.quantidade ?? 0), 0);
+      const saldoDiv      = saldoFisico - saldoSistema;
+      const temDiv        = g.lotes.some(r => r.tipo !== 'ok');
+      const lotesOk       = g.lotes.filter(r => r.tipo === 'ok').length;
+      const lotesDiv      = totalLotes - lotesOk;
+      const acurPct       = totalLotes ? ((lotesOk / totalLotes)*100).toFixed(1) : 0;
+
+      const totalEst      = totaisLocais[chave] ?? null;
+      // % de cobertura: saldo físico deste grupo (L) sobre total do estoque (L) — pode passar de 100%
+      const cobPct        = _acTotalEstoque
+        ? ((saldoFisico / _acTotalEstoque)*100).toFixed(1)
+        : null;
+
+      const divSinal      = saldoDiv > 0 ? '+' : '';
+      const corDiv        = saldoDiv === 0 ? 'var(--green)' : saldoDiv > 0 ? 'var(--amber-lt)' : 'var(--red)';
+      const corAcur       = parseFloat(acurPct) >= 95 ? 'var(--green)' : parseFloat(acurPct) >= 70 ? 'var(--amber-lt)' : 'var(--red)';
+      const resultBadge   = !temDiv
+        ? '<span class="badge b-v" style="font-size:.7rem;padding:3px 8px">✓ Sem Divergência</span>'
+        : '<span class="badge b-r" style="font-size:.7rem;padding:3px 8px">⚠ Com Divergência</span>';
+      const [y,m,d]       = (g.data||'').split('-');
+      const dataFmt       = g.data ? `${d}/${m}/${y}` : '—';
+
+      // Gera linhas de lotes
+      const lotesHtml = g.lotes.map(r => {
+        const div  = r.divergencia ?? (r.quantidade - (r.saldo_sistema??0));
+        const sDiv = div > 0 ? `<span class="div-pos">+${div}</span>` : div < 0 ? `<span class="div-neg">${div}</span>` : '<span class="div-ok">0</span>';
+        const tb   = r.tipo === 'ok' ? '<span class="badge b-v" style="font-size:.62rem;padding:2px 6px">OK</span>'
+                   : r.tipo === 'positivo' ? '<span class="badge b-p" style="font-size:.62rem;padding:2px 6px">+</span>'
+                   : '<span class="badge b-r" style="font-size:.62rem;padding:2px 6px">−</span>';
+        return `<tr>
+          <td class="cm" style="font-size:.78rem">${r.lote||'—'}</td>
+          <td style="font-weight:600;color:var(--amber);font-size:.78rem">${r.armazem||'—'}</td>
+          <td style="text-align:right;font-family:var(--mono);font-size:.8rem">${r.saldo_sistema??'—'}</td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:700;font-size:.8rem">${r.quantidade??'—'}</td>
+          <td style="text-align:right">${sDiv}</td>
+          <td style="text-align:center">${tb}</td>
+          <td class="cm" style="font-size:.72rem">${r.usuario||'—'}</td>
+        </tr>`;
+      }).join('');
+
+      const gid = 'grp_' + chave.replace(/[^a-z0-9]/gi,'_');
+
+      return `
+      <div class="table-wrap" style="margin-bottom:14px">
+        <!-- Cabeçalho do grupo -->
+        <div class="table-hdr" style="flex-wrap:wrap;gap:8px;cursor:pointer" onclick="toggleGrupo('${gid}')">
+          <div class="th-left" style="flex-wrap:wrap;gap:8px;min-width:0">
+            <span style="font-size:.72rem;font-weight:700;color:var(--text3);font-family:var(--mono)">${dataFmt}</span>
+            ${filialBadgeHtml(g.filial)}
+            <span style="font-size:.82rem;font-weight:700;color:var(--blue-lt);font-family:var(--mono)">${g.codigo}</span>
+            <span style="font-size:.88rem;font-weight:700;color:var(--text)">${g.produto_nome}</span>
+            ${resultBadge}
+          </div>
+          <div class="th-right" style="gap:10px;flex-wrap:wrap">
+            <!-- Mini KPIs inline -->
+            <span style="font-size:.72rem;color:var(--text3)">Lotes: <b style="color:var(--text)">${totalLotes}</b></span>
+            <span style="font-size:.72rem;color:var(--text3)">Saldo Sis.: <b style="font-family:var(--mono);color:var(--green)">${saldoSistema}</b></span>
+            <span style="font-size:.72rem;color:var(--text3)">Saldo Fís.: <b style="font-family:var(--mono);color:var(--text)">${saldoFisico}</b></span>
+            <span style="font-size:.72rem;color:var(--text3)">Div.: <b style="font-family:var(--mono);color:${corDiv}">${divSinal}${saldoDiv}</b></span>
+            <span style="font-size:.72rem;color:var(--text3)">Acur.: <b style="color:${corAcur}">${acurPct}%</b></span>
+            <span style="font-size:.7rem;color:var(--text3)" id="${gid}_chevron">▼</span>
+          </div>
+        </div>
+
+        <!-- Corpo expansível -->
+        <div id="${gid}" style="display:none">
+
+          <!-- KPIs do produto nesta contagem -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;padding:12px 14px;background:var(--bg3);border-bottom:1px solid var(--border)">
+            <div style="text-align:center">
+              <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Data Conferência</div>
+              <div style="font-size:.95rem;font-weight:800;color:var(--blue-lt)">${dataFmt}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Total de Lotes</div>
+              <div style="font-size:.95rem;font-weight:800;color:var(--text)">${totalLotes}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Saldo Sistema</div>
+              <div style="font-size:.95rem;font-weight:800;color:var(--green);font-family:var(--mono)">${saldoSistema}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Saldo Físico</div>
+              <div style="font-size:.95rem;font-weight:800;font-family:var(--mono);color:var(--text)">${saldoFisico}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Divergência</div>
+              <div style="font-size:.95rem;font-weight:800;font-family:var(--mono);color:${corDiv}">${divSinal}${saldoDiv}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Acurácia</div>
+              <div style="font-size:.95rem;font-weight:800;color:${corAcur}">${acurPct}%</div>
+              <div style="margin-top:5px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
+                <div style="width:${acurPct}%;height:100%;background:${corAcur};border-radius:2px"></div>
+              </div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">% Estoque Coberto</div>
+              <div style="font-size:.95rem;font-weight:800;color:${cobPct!==null && parseFloat(cobPct)>100 ? 'var(--amber-lt)' : 'var(--blue-lt)'}">${cobPct !== null ? cobPct+'%' : '—'}</div>
+              <div style="font-size:.62rem;color:var(--text3);margin-top:2px">${saldoFisico.toLocaleString('pt-BR')} L contados${cobPct!==null && parseFloat(cobPct)>100 ? ' ↑ acima do total' : ''}</div>
+            </div>
+            <div style="text-align:center;display:flex;align-items:center;justify-content:center">
+              ${resultBadge}
+            </div>
+          </div>
+
+          <!-- Tabela de lotes -->
+          <div style="overflow-x:auto">
+            <table style="font-size:.82rem">
+              <thead><tr>
+                <th>Lote</th><th>Arm.</th>
+                <th style="text-align:right">Saldo Sis.</th>
+                <th style="text-align:right">Saldo Fís.</th>
+                <th style="text-align:right">Divergência</th>
+                <th style="text-align:center">Resultado</th>
+                <th>Operador</th>
+              </tr></thead>
+              <tbody>${lotesHtml}</tbody>
+            </table>
+          </div>
+
+        </div><!-- /corpo -->
+      </div>`;
+    }).join('');
+
+  container.innerHTML = html || '<div style="text-align:center;padding:36px;color:var(--text3);font-size:.82rem">Nenhum registro.</div>';
 }
 
-function exportarHistorico() {
-  if (!todoHistorico?.length) { toast('Carregue o histórico primeiro.', 'warn'); return; }
-  const cab = ['Filial','Data','Código','Produto','Lote','Qtd Contada','Saldo Sistema','Divergência','Tipo','Armazém','Operador','Observação','Recontagem'];
-  const lin = todoHistorico.map(h => [
-    h.filial||'', fmtTS(h.created_at), h.codigo||'', h.produto_nome||'', h.lote||'',
-    h.quantidade??'', h.saldo_sistema??'', h.divergencia??'',
-    h.tipo==='ok'?'Sem divergência':h.tipo==='positivo'?'Positivo':'Negativo',
-    h.armazem||'', h.usuario||'',
-    h.observacao||h.motivo_recontagem||'', h.is_recontagem?'Sim':'Não'
-  ]);
-  exportarXlsx('historico', cab, lin);
+function toggleGrupo(gid) {
+  const el  = document.getElementById(gid);
+  const chv = document.getElementById(gid + '_chevron');
+  if (!el) return;
+  const aberto = el.style.display !== 'none';
+  el.style.display  = aberto ? 'none' : 'block';
+  if (chv) chv.textContent = aberto ? '▼' : '▲';
 }
+
+// ── Total do Estoque global ───────────────────────────────────────────────
+async function abrirModalTotalEstoque() {
+  const cur = _acTotalEstoque ? _acTotalEstoque : '';
+  const val = prompt('Informe o volume total do estoque em LITROS (pode inserir novamente para atualizar):', cur);
+  if (val === null) return;
+  const n = parseFloat(val.replace(',','.'));
+  if (isNaN(n) || n <= 0) { toast('Valor inválido.','warn'); return; }
+  try {
+    const { error } = await sb.from('config').upsert(
+      { chave: 'total_estoque_litros', valor: String(n) },
+      { onConflict: 'chave' }
+    );
+    if (error) throw error;
+    _acTotalEstoque = n;
+    atualizarExibicaoTotalEstoque();
+    filtrarAcuracidade();
+    toast('✓ Total do estoque: ' + n.toLocaleString('pt-BR') + ' L', 'ok');
+  } catch(e) {
+    toast('Erro ao salvar: ' + e.message, 'err');
+  }
+}
+
+function atualizarExibicaoTotalEstoque() {
+  const el = document.getElementById('ac-total-est-val');
+  if (el) el.textContent = _acTotalEstoque ? _acTotalEstoque.toLocaleString('pt-BR') + ' L' : '—';
+}
+
+async function carregarTotalEstoque() {
+  try {
+    const { data, error } = await sb.from('config')
+      .select('valor').eq('chave', 'total_estoque_litros').maybeSingle();
+    if (error) throw error;
+    _acTotalEstoque = data ? parseFloat(data.valor) : null;
+  } catch {
+    _acTotalEstoque = null;
+  }
+  atualizarExibicaoTotalEstoque();
+}
+
+// (definirTotalLocal removido — % usa saldo físico em litros diretamente)
 
 function exportarAcuracidade() {
   if (!_acFiltrado.length) { toast('Sem dados para exportar.','warn'); return; }
-  const cab = ['Data','Filial','Código','Produto','Lote','Armazém','Qtd Contada','Saldo Sistema','Divergência','Tipo','Operador','Recontagem'];
-  const lin = _acFiltrado.map(r => [
-    fmtTS(r.created_at), r.filial||'', r.codigo||'', r.produto_nome||'', r.lote||'', r.armazem||'',
-    r.quantidade??'', r.saldo_sistema??'', r.divergencia??'',
-    r.tipo==='ok'?'Sem divergência':r.tipo==='positivo'?'Positivo':'Negativo',
-    r.usuario||'', r.is_recontagem?'Sim':'Não'
-  ]);
+  const cab = ['Data Conferência','Filial','Código','Produto','Lote','Armazém',
+    'Saldo Sistema (L)','Saldo Físico (L)','Divergência (L)','% Cobertura','Resultado','Operador','Recontagem'];
+  const lin = _acFiltrado.map(r => {
+    const dia = (r.created_at||'').split('T')[0];
+    const [y,m,d] = (dia||'').split('-');
+    const dataFmt = dia ? `${d}/${m}/${y}` : '';
+    const div = r.divergencia ?? (r.quantidade - (r.saldo_sistema??0));
+    const cobE = _acTotalEstoque ? ((r.quantidade??0) / _acTotalEstoque * 100).toFixed(2)+'%' : '—';
+    return [
+      dataFmt, r.filial||'', r.codigo||'', r.produto_nome||'', r.lote||'', r.armazem||'',
+      r.saldo_sistema??'', r.quantidade??'', div, cobE,
+      r.tipo==='ok'?'Sem divergência':r.tipo==='positivo'?'Positivo':'Negativo',
+      r.usuario||'', r.is_recontagem?'Sim':'Não'
+    ];
+  });
   exportarXlsx('acuracia', cab, lin);
 }
+
 
 // Fechar modal justificativa pelo fundo
 document.getElementById('modal-justif').addEventListener('click', e => {
@@ -4068,6 +4176,9 @@ async function excluirTudo() {
     toast('✓ Todos os dados importados foram excluídos.', 'ok', 5000);
     document.getElementById('saldo-status-txt').textContent = 'Nenhum saldo importado';
     document.getElementById('btn-limpar-tudo').style.display = 'none';
+    await sb.from('config').delete().eq('chave','total_estoque_litros');
+    _acTotalEstoque = null;
+    atualizarExibicaoTotalEstoque();
     await carregarValidacao();
   } catch(e) { toast('Erro: ' + e.message, 'err'); }
 }
