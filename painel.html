@@ -1167,6 +1167,9 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
     <button class="nav-item" onclick="switchTab('acuracidade',this)">
       <span class="ni">🎯</span> Acurácia
     </button>
+    <button class="nav-item" onclick="switchTab('hist-acuracia',this)">
+      <span class="ni">📅</span> Hist. Acurácia
+    </button>
   </div>
 
   <div class="sidebar-footer">
@@ -1609,6 +1612,32 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
 
     </div>
 
+    <!-- ══ TAB: HISTÓRICO DE ACURÁCIA ══ -->
+    <div class="tab-panel" id="tab-hist-acuracia">
+
+      <div class="table-wrap" style="margin-bottom:14px">
+        <div class="table-hdr">
+          <div class="th-left">
+            <span class="table-title">📅 Histórico Mensal de Acurácia</span>
+            <span style="font-size:.7rem;color:var(--text3);font-weight:500;margin-left:6px">Fechamento automático no 1º de cada mês</span>
+          </div>
+          <div class="th-right" style="gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="carregarHistAcuracia()">↺ Atualizar</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportarHistAcuracia()">↓ Excel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPIs rápidos (último mês fechado) -->
+      <div id="hac-kpi-wrap" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:16px"></div>
+
+      <!-- Lista de meses -->
+      <div id="hac-lista-wrap">
+        <div style="text-align:center;padding:40px;color:var(--text3);font-size:.82rem">Carregando histórico…</div>
+      </div>
+
+    </div>
+
     </div>
 
   </div>
@@ -1914,7 +1943,7 @@ let svArmErrado = [];
 const NOMES_TABS = {
   validacao:'Saldo / Validação', registros:'Registros de Contagem',
   historico:'Histórico Validado', performance:'Performance de Operadores',
-  agendamentos:'Agendamentos', transferencias:'Transferências', acuracidade:'Acurácia de Estoque'
+  agendamentos:'Agendamentos', transferencias:'Transferências', acuracidade:'Acurácia de Estoque', 'hist-acuracia':'Histórico de Acurácia'
 };
 
 const COL_MAP = {
@@ -2041,6 +2070,7 @@ function switchTab(nome, el) {
   if (nome === 'transferencias') carregarTransferencias();
   if (nome === 'performance')  carregarPerformance();
   if (nome === 'acuracidade')  carregarAcuracidade();
+  if (nome === 'hist-acuracia') { carregarHistAcuracia(); verificarFechamentoMes(); }
 }
 
 function irParaHistorico() {
@@ -2938,123 +2968,147 @@ async function salvarEditHistorico() {
 
 async function carregarPerformance() {
   try {
-    const op=document.getElementById('filt-perf-op').value;
-    const de=document.getElementById('filt-perf-de').value;
-    const ate=document.getElementById('filt-perf-ate').value;
-    let q=sb.from('sessoes_contagem').select('*').not('fim','is',null).order('inicio',{ascending:false}).limit(500);
-    if (op)  q=q.eq('usuario',op);
-    if (de)  q=q.gte('inicio',de+'T00:00:00');
-    if (ate) q=q.lte('inicio',ate+'T23:59:59');
+    const op  = document.getElementById('filt-perf-op').value;
+    const de  = document.getElementById('filt-perf-de').value;
+    const ate = document.getElementById('filt-perf-ate').value;
+
+    let q = sb.from('lancamentos').select('*').order('created_at', { ascending: false }).limit(2000);
+    if (op)  q = q.eq('usuario', op);
+    if (de)  q = q.gte('created_at', de + 'T00:00:00');
+    if (ate) q = q.lte('created_at', ate + 'T23:59:59');
     const { data, error } = await q;
     if (error) throw error;
 
-    if (!op) {
-      const ops=[...new Set((data||[]).map(r=>r.usuario).filter(Boolean))];
-      const sel=document.getElementById('filt-perf-op');
-      const cur=sel.value;
-      sel.innerHTML='<option value="">Todos os operadores</option>'+ops.map(o=>`<option value="${o}"${o===cur?' selected':''}>${o}</option>`).join('');
-    }
+    const { data: allLanc } = await sb.from('lancamentos').select('usuario').not('usuario','is',null);
+    const todosOps = [...new Set((allLanc||[]).map(r => r.usuario).filter(Boolean))].sort();
+    const sel = document.getElementById('filt-perf-op');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Todos os operadores</option>' +
+      todosOps.map(o => `<option value="${o}"${o===cur?' selected':''}>${o}</option>`).join('');
 
     todosPerf = data || [];
     filtrarPerformance();
-  } catch(e) { toast('Erro performance: '+e.message,'err'); }
+  } catch(e) { toast('Erro performance: ' + e.message, 'err'); }
 }
 
 function filtrarPerformance() {
-  const q    = (document.getElementById('search-perf').value||'').toLowerCase();
+  const q    = (document.getElementById('search-perf').value || '').toLowerCase();
   const tipo = document.getElementById('filt-perf-tipo').value;
 
-  const data = todosPerf.filter(s => {
-    if (q && ![s.produto_nome,s.codigo,s.usuario].join(' ').toLowerCase().includes(q)) return false;
-    if (tipo === 'normal'     && s.is_recontagem)  return false;
-    if (tipo === 'recontagem' && !s.is_recontagem) return false;
+  const data = todosPerf.filter(r => {
+    if (q && ![r.produto_nome, r.codigo, r.usuario].join(' ').toLowerCase().includes(q)) return false;
+    if (tipo === 'normal'     && r.recontagem)  return false;
+    if (tipo === 'recontagem' && !r.recontagem) return false;
     return true;
   });
 
-  // ── Cards por operador ──
-  const byOp={};
-  data.forEach(s=>{
-    if (!byOp[s.usuario]) byOp[s.usuario]={total:0,durTotal:0,lanc:0,recontagens:0};
-    byOp[s.usuario].total++;
-    byOp[s.usuario].durTotal+=s.duracao_seg||0;
-    byOp[s.usuario].lanc+=s.total_lancamentos||0;
-    if (s.is_recontagem) byOp[s.usuario].recontagens++;
+  // Cards por operador
+  const byOp = {};
+  data.forEach(r => {
+    const op = r.usuario || '—';
+    if (!byOp[op]) byOp[op] = { lanc: 0, produtos: new Set(), recontagens: 0, dias: new Set() };
+    byOp[op].lanc++;
+    byOp[op].produtos.add((r.codigo||'').trim().toUpperCase());
+    if (r.recontagem) byOp[op].recontagens++;
+    if (r.created_at) byOp[op].dias.add(r.created_at.split('T')[0]);
   });
 
-  document.getElementById('perf-stats').innerHTML=Object.entries(byOp).map(([op,v])=>`
-    <div class="stat-card sc-b">
-      <div class="sc-val" style="color:var(--blue);font-size:1.1rem;margin-bottom:2px">${op}</div>
-      <div class="sc-lbl">${v.total} sessão${v.total!==1?'s':''} · ${v.lanc} lançamento${v.lanc!==1?'s':''} · ${v.recontagens} recontagem${v.recontagens!==1?'s':''}</div>
-      <div style="margin-top:8px;font-family:var(--mono);font-size:.78rem;color:var(--green)">Tempo médio: ${fmtDur(Math.round(v.durTotal/v.total))}</div>
-    </div>`).join('')||'<div style="color:var(--text3);font-family:var(--mono);font-size:.78rem">Sem dados no período.</div>';
+  document.getElementById('perf-stats').innerHTML = Object.entries(byOp).map(([op, v]) => `
+    <div class="stat-card">
+      <div class="sc-val" style="color:var(--blue);font-size:1.05rem;margin-bottom:4px">${op}</div>
+      <div class="sc-lbl">${v.lanc} lançamento${v.lanc!==1?'s':''} · ${v.produtos.size} produto${v.produtos.size!==1?'s':''}</div>
+      <div style="margin-top:6px;font-size:.72rem;color:var(--text3)">${v.dias.size} dia${v.dias.size!==1?'s':''} de atividade · ${v.recontagens} recontagem${v.recontagens!==1?'s':''}</div>
+      <div style="margin-top:8px;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden">
+        <div style="width:100%;height:100%;background:var(--blue-lt);border-radius:2px"></div>
+      </div>
+    </div>`).join('') || '<div style="color:var(--text3);font-size:.78rem">Sem lançamentos no período.</div>';
 
-  // ── Tempo médio por produto ──
-  const byProd = {};
-  data.forEach(s => {
-    const key = (s.codigo||'?') + '||' + (s.produto_nome||'?');
-    if (!byProd[key]) byProd[key] = {
-      codigo: s.codigo||'—', nome: s.produto_nome||'—',
-      total: 0, durTotal: 0, durMin: Infinity, durMax: 0, lanc: 0
+  // Agrupa por codigo+usuario+dia → sessão simulada
+  const sessoes = {};
+  data.forEach(r => {
+    const dia = (r.created_at || '').split('T')[0];
+    const k   = `${(r.codigo||'').trim().toUpperCase()}|${r.usuario||'?'}|${dia}`;
+    if (!sessoes[k]) sessoes[k] = {
+      codigo: r.codigo || '—', nome: r.produto_nome || '—',
+      usuario: r.usuario || '—', dia, lancs: [], recontagem: false,
     };
-    const dur = s.duracao_seg || 0;
-    byProd[key].total++;
-    byProd[key].durTotal += dur;
-    if (dur > 0 && dur < byProd[key].durMin) byProd[key].durMin = dur;
-    if (dur > byProd[key].durMax) byProd[key].durMax = dur;
-    byProd[key].lanc += s.total_lancamentos || 0;
+    sessoes[k].lancs.push(r);
+    if (r.recontagem) sessoes[k].recontagem = true;
+  });
+
+  // Tabela por produto
+  const byProd = {};
+  Object.values(sessoes).forEach(s => {
+    const key = (s.codigo||'?') + '||' + (s.nome||'?');
+    if (!byProd[key]) byProd[key] = { codigo: s.codigo, nome: s.nome, sessoes: 0, lanc: 0 };
+    byProd[key].sessoes++;
+    byProd[key].lanc += s.lancs.length;
   });
 
   const prodRows = Object.values(byProd)
-    .map(p => ({ ...p, media: Math.round(p.durTotal / p.total) }))
-    .sort((a,b) => b.media - a.media); // mais lento primeiro
+    .map(p => ({ ...p, mediaLanc: p.lanc / p.sessoes }))
+    .sort((a, b) => b.mediaLanc - a.mediaLanc);
 
   document.getElementById('cnt-perf-prod').textContent =
     `${prodRows.length} produto${prodRows.length!==1?'s':''}`;
 
-  const tbodyProd = document.getElementById('tbody-perf-prod');
-  if (!prodRows.length) {
-    tbodyProd.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3);font-size:.8rem">Sem dados.</td></tr>';
-  } else {
-    const maxMedia = prodRows[0]?.media || 1;
-    tbodyProd.innerHTML = prodRows.map(p => {
-      const pct = Math.round((p.media / maxMedia) * 100);
-      const barColor = pct > 75 ? 'var(--red)' : pct > 40 ? 'var(--amber-lt)' : 'var(--green)';
-      return `<tr>
-        <td class="cc">${p.codigo}</td>
-        <td>
-          <div style="font-size:.85rem;font-weight:600;color:var(--text)">${p.nome}</div>
-          <div style="margin-top:4px;height:4px;border-radius:2px;background:var(--bg4);overflow:hidden">
-            <div style="width:${pct}%;height:100%;background:${barColor};border-radius:2px;transition:width .3s"></div>
-          </div>
-        </td>
-        <td style="text-align:center;font-family:var(--mono);font-size:.82rem">${p.total}</td>
-        <td style="text-align:center">
-          <span style="font-family:var(--mono);font-weight:700;font-size:.82rem;color:${barColor}">${fmtDur(p.media)}</span>
-        </td>
-        <td style="text-align:center;font-family:var(--mono);font-size:.78rem;color:var(--green)">${p.durMin===Infinity?'—':fmtDur(p.durMin)}</td>
-        <td style="text-align:center;font-family:var(--mono);font-size:.78rem;color:var(--red)">${fmtDur(p.durMax)}</td>
-        <td style="text-align:center;font-family:var(--mono);font-size:.78rem">${p.lanc}</td>
-      </tr>`;
-    }).join('');
+  const maxMedia = prodRows[0]?.mediaLanc || 1;
+  document.getElementById('tbody-perf-prod').innerHTML = prodRows.length ? prodRows.map(p => {
+    const pct = Math.round((p.mediaLanc / maxMedia) * 100);
+    const barColor = pct > 75 ? 'var(--red)' : pct > 40 ? 'var(--amber-lt)' : 'var(--green)';
+    return `<tr>
+      <td class="cc">${p.codigo}</td>
+      <td>
+        <div style="font-size:.85rem;font-weight:600;color:var(--text)">${p.nome}</div>
+        <div style="margin-top:4px;height:4px;border-radius:2px;background:var(--bg4);overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${barColor};border-radius:2px;transition:width .3s"></div>
+        </div>
+      </td>
+      <td style="text-align:center;font-family:var(--mono);font-size:.82rem">${p.sessoes}</td>
+      <td style="text-align:center">
+        <span style="font-family:var(--mono);font-weight:700;font-size:.82rem;color:var(--blue)">${p.mediaLanc.toFixed(1)} lanç/sessão</span>
+      </td>
+      <td style="text-align:center;color:var(--text3);font-size:.78rem">—</td>
+      <td style="text-align:center;color:var(--text3);font-size:.78rem">—</td>
+      <td style="text-align:center;font-family:var(--mono);font-size:.78rem">${p.lanc}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3);font-size:.8rem">Sem dados.</td></tr>';
+
+  // Tabela de sessões
+  const sessList = Object.values(sessoes)
+    .sort((a, b) => b.dia.localeCompare(a.dia) || a.usuario.localeCompare(b.usuario));
+
+  document.getElementById('cnt-perf').textContent =
+    `${sessList.length} sessão${sessList.length !== 1 ? 'ões' : ''}`;
+
+  const tbody = document.getElementById('tbody-perf');
+  if (!sessList.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum lançamento no período.</td></tr>';
+    return;
   }
 
-  // ── Tabela de sessões ──
-  document.getElementById('cnt-perf').textContent=`${data.length} sessão${data.length!==1?'ões':''}`;
-  const tbody=document.getElementById('tbody-perf');
-  if (!data.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhuma sessão.</td></tr>';return;}
-  tbody.innerHTML=data.map(s=>`
-    <tr>
-      <td class="cn">${s.usuario||'—'}</td>
-      <td>${s.produto_nome||'—'} <span class="cm" style="font-size:.68rem">(${s.codigo})</span></td>
-      <td class="cts">${fmtTS(s.inicio)}</td>
-      <td class="cts">${fmtTS(s.fim)}</td>
-      <td><span style="font-family:var(--mono);font-weight:600;color:var(--green);background:var(--green-bg);border:1px solid var(--green-bd);padding:3px 9px;border-radius:4px;font-size:.75rem">${fmtDur(s.duracao_seg)}</span></td>
-      <td><span style="font-family:var(--mono);font-size:.78rem">${s.total_lancamentos||0}</span></td>
-      <td>${s.is_recontagem?'<span class="badge b-r">↺ Recontagem</span>':'<span class="badge b-p">Normal</span>'}</td>
-    </tr>`).join('');
+  tbody.innerHTML = sessList.map(s => {
+    const timestamps = s.lancs.map(r => r.created_at).filter(Boolean).sort();
+    const inicio = timestamps[0] ? fmtTS(timestamps[0]) : '—';
+    const fim    = timestamps[timestamps.length-1] ? fmtTS(timestamps[timestamps.length-1]) : '—';
+    let durStr = '—';
+    if (timestamps.length >= 2) {
+      const diffSeg = Math.round((new Date(timestamps[timestamps.length-1]) - new Date(timestamps[0])) / 1000);
+      durStr = diffSeg > 0 ? fmtDur(diffSeg) : '< 1min';
+    }
+    return `<tr>
+      <td class="cn">${s.usuario}</td>
+      <td>${s.nome} <span class="cm" style="font-size:.68rem">(${s.codigo})</span></td>
+      <td class="cts">${inicio}</td>
+      <td class="cts">${fim}</td>
+      <td><span style="font-family:var(--mono);font-weight:600;color:var(--green);background:var(--green-bg);border:1px solid var(--green-bd);padding:3px 9px;border-radius:4px;font-size:.75rem">${durStr}</span></td>
+      <td><span style="font-family:var(--mono);font-size:.78rem">${s.lancs.length}</span></td>
+      <td>${s.recontagem ? '<span class="badge b-r">↺ Recontagem</span>' : '<span class="badge b-p">Normal</span>'}</td>
+    </tr>`;
+  }).join('');
 }
 
-// ══════════════════════════════════════════════════════════
+
 // AGENDAMENTOS (com fix de exclusão)
 // ══════════════════════════════════════════════════════════
 
@@ -3393,9 +3447,9 @@ async function importarSaldoSistema() {
     document.getElementById('saldo-status-txt').textContent=`✓ Importado em ${dt} · ${inseridos} registros`;
     toast(`✓ ${inseridos} registros importados!`,'ok',5000);
     // Saldo atualizado — total do estoque precisa ser redefinido
-    await sb.from('config').delete().eq('chave','total_estoque_litros');
-    _acTotalEstoque = null;
-    atualizarExibicaoTotalEstoque();
+
+
+
     _filialCacheLoaded = false;  // força reconstrução do cache de filial
     await carregarFilialCache();
     saldoXlsxData=null;
@@ -4069,6 +4123,251 @@ function exportarAcuracidade() {
 }
 
 
+
+// ══════════════════════════════════════════════════════════
+// HISTÓRICO DE ACURÁCIA MENSAL
+// ══════════════════════════════════════════════════════════
+
+let _hacDados = [];
+
+// ── Verifica se precisa fechar o mês (roda ao abrir o painel ou a aba) ──
+async function verificarFechamentoMes() {
+  const hoje = new Date();
+  // Só fecha no dia 1º
+  if (hoje.getDate() !== 1) return;
+
+  // Qual mês anterior?
+  const mesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+  const mesRef = mesAnterior.toISOString().slice(0, 7); // 'YYYY-MM'
+
+  // Já foi fechado?
+  const { data: jaFechado } = await sb.from('acuracia_historico')
+    .select('id').eq('mes_ref', mesRef).maybeSingle();
+  if (jaFechado) return; // já fechado, nada a fazer
+
+  // Busca todos os registros do histórico do mês anterior
+  const de  = mesRef + '-01T00:00:00';
+  const ate = new Date(hoje.getFullYear(), hoje.getMonth(), 0).toISOString().split('T')[0] + 'T23:59:59';
+
+  const { data: registros } = await sb.from('historico')
+    .select('*')
+    .gte('created_at', de)
+    .lte('created_at', ate);
+
+  if (!registros || !registros.length) return; // sem dados, não fecha
+
+  // Calcula KPIs do mês
+  const total    = registros.length;
+  const ok       = registros.filter(r => r.tipo === 'ok').length;
+  const div      = total - ok;
+  const pctAcur  = total ? parseFloat(((ok / total) * 100).toFixed(2)) : 0;
+  const pctDiv   = total ? parseFloat(((div / total) * 100).toFixed(2)) : 0;
+  const totalFis = registros.reduce((s, r) => s + (r.quantidade ?? 0), 0);
+
+  // Busca total do estoque (snapshot do momento do fechamento)
+  const { data: cfg } = await sb.from('config')
+    .select('valor').eq('chave', 'total_estoque_litros').maybeSingle();
+  const totalEst = cfg ? parseFloat(cfg.valor) : null;
+  const pctConf  = (totalEst && totalFis) ? parseFloat(((totalFis / totalEst) * 100).toFixed(2)) : null;
+
+  // Grava no histórico
+  await sb.from('acuracia_historico').upsert({
+    mes_ref:        mesRef,
+    fechado_em:     new Date().toISOString(),
+    total_lotes:    total,
+    lotes_ok:       ok,
+    lotes_div:      div,
+    pct_acuracia:   pctAcur,
+    pct_divergencia:pctDiv,
+    total_fisico_l: totalFis,
+    total_estoque_l:totalEst,
+    pct_conferido:  pctConf,
+    registros:      registros,
+  }, { onConflict: 'mes_ref' });
+
+  toast(`✓ Mês ${mesRef} fechado automaticamente na acurácia.`, 'ok', 6000);
+}
+
+// ── Carrega e renderiza o histórico ──────────────────────
+async function carregarHistAcuracia() {
+  const wrap = document.getElementById('hac-lista-wrap');
+  wrap.innerHTML = '<div style="text-align:center;padding:36px;color:var(--text3);font-size:.82rem">Carregando…</div>';
+
+  const { data, error } = await sb.from('acuracia_historico')
+    .select('*').order('mes_ref', { ascending: false });
+
+  if (error) {
+    wrap.innerHTML = `<div style="text-align:center;padding:36px;color:var(--red);font-size:.82rem">Erro: ${error.message}</div>`;
+    return;
+  }
+  _hacDados = data || [];
+  renderHistAcuracia();
+}
+
+function renderHistAcuracia() {
+  const wrap = document.getElementById('hac-lista-wrap');
+  const kpiWrap = document.getElementById('hac-kpi-wrap');
+
+  if (!_hacDados.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-size:.82rem">Nenhum mês fechado ainda.<br><span style="font-size:.72rem;opacity:.7">O fechamento ocorre automaticamente no 1º dia de cada mês.</span></div>';
+    kpiWrap.innerHTML = '';
+    return;
+  }
+
+  // KPIs do mês mais recente
+  const ult = _hacDados[0];
+  const corA = ult.pct_acuracia >= 95 ? 'var(--green)' : ult.pct_acuracia >= 70 ? 'var(--amber-lt)' : 'var(--red)';
+  const corD = ult.pct_divergencia === 0 ? 'var(--green)' : ult.pct_divergencia <= 5 ? 'var(--amber-lt)' : 'var(--red)';
+  const corC = ult.pct_conferido >= 80 ? 'var(--green)' : ult.pct_conferido >= 40 ? 'var(--amber-lt)' : 'var(--red)';
+  const [y,m] = ult.mes_ref.split('-');
+  const meses = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const mesLabel = meses[parseInt(m)] + '/' + y;
+
+  kpiWrap.innerHTML = `
+    <div class="stat-card" style="padding:18px 20px">
+      <div style="font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Último fechamento · ${mesLabel}</div>
+      <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">✓ Acurácia</div>
+      <div style="font-size:2.4rem;font-weight:800;line-height:1;color:${corA}">${ult.pct_acuracia ?? '—'}%</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">${ult.lotes_ok} de ${ult.total_lotes} lotes sem divergência</div>
+    </div>
+    <div class="stat-card" style="padding:18px 20px">
+      <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">⚠ Divergência</div>
+      <div style="font-size:2.4rem;font-weight:800;line-height:1;color:${corD}">${ult.pct_divergencia ?? '—'}%</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">${ult.lotes_div} lote${ult.lotes_div!==1?'s':''} com divergência</div>
+    </div>
+    <div class="stat-card" style="padding:18px 20px">
+      <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📊 % Conferido</div>
+      <div style="font-size:2.4rem;font-weight:800;line-height:1;color:${corC}">${ult.pct_conferido !== null ? ult.pct_conferido+'%' : '—'}</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">${(ult.total_fisico_l??0).toLocaleString('pt-BR')} L contados</div>
+    </div>
+    <div class="stat-card" style="padding:18px 20px">
+      <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📅 Meses Fechados</div>
+      <div style="font-size:2.4rem;font-weight:800;line-height:1;color:var(--blue)">${_hacDados.length}</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">desde ${_hacDados[_hacDados.length-1]?.mes_ref||'—'}</div>
+    </div>`;
+
+  // Tabela de meses
+  const rows = _hacDados.map(h => {
+    const [hy,hm] = h.mes_ref.split('-');
+    const label = meses[parseInt(hm)] + '/' + hy;
+    const corAh = h.pct_acuracia >= 95 ? 'var(--green)' : h.pct_acuracia >= 70 ? 'var(--amber-lt)' : 'var(--red)';
+    const fechFmt = h.fechado_em ? new Date(h.fechado_em).toLocaleDateString('pt-BR') : '—';
+    const badgeAcur = h.pct_acuracia >= 95
+      ? '<span class="badge b-v" style="font-size:.68rem;padding:2px 7px">✓ Excelente</span>'
+      : h.pct_acuracia >= 70
+        ? '<span class="badge b-a" style="font-size:.68rem;padding:2px 7px">⚠ Regular</span>'
+        : '<span class="badge b-r" style="font-size:.68rem;padding:2px 7px">✕ Crítica</span>';
+
+    return `<tr>
+      <td style="font-weight:700;font-size:.88rem">${label}</td>
+      <td style="font-weight:800;color:${corAh};font-family:var(--mono)">${h.pct_acuracia ?? '—'}%</td>
+      <td style="font-family:var(--mono)">${h.pct_divergencia ?? '—'}%</td>
+      <td style="font-family:var(--mono)">${h.pct_conferido !== null ? h.pct_conferido+'%' : '—'}</td>
+      <td style="font-family:var(--mono)">${h.total_lotes}</td>
+      <td style="font-family:var(--mono)">${(h.total_fisico_l??0).toLocaleString('pt-BR')} L</td>
+      <td style="font-family:var(--mono)">${h.total_estoque_l ? h.total_estoque_l.toLocaleString('pt-BR')+' L' : '—'}</td>
+      <td>${badgeAcur}</td>
+      <td style="font-size:.75rem;color:var(--text3)">${fechFmt}</td>
+      <td class="ca">
+        <button class="btn btn-ghost btn-sm" onclick="verDetalhesHac('${h.mes_ref}')">📋 Detalhes</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Mês</th>
+          <th>Acurácia</th>
+          <th>% Divergência</th>
+          <th>% Conferido</th>
+          <th>Total Lotes</th>
+          <th>Qtd Física</th>
+          <th>Total Estoque</th>
+          <th>Resultado</th>
+          <th>Fechado em</th>
+          <th style="text-align:right">Ações</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── Ver detalhes de um mês fechado ───────────────────────
+function verDetalhesHac(mesRef) {
+  const h = _hacDados.find(d => d.mes_ref === mesRef);
+  if (!h) return;
+
+  const registros = h.registros || [];
+  const [y,m] = mesRef.split('-');
+  const meses = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const label = meses[parseInt(m)] + '/' + y;
+
+  const rows = registros.map(r => {
+    const div = r.divergencia ?? ((r.quantidade ?? 0) - (r.saldo_sistema ?? 0));
+    const divFmt = div === 0
+      ? '<span class="div-badge div-badge-ok">✓ OK</span>'
+      : div > 0
+        ? `<span class="div-badge div-badge-pos">▲ +${div}</span>`
+        : `<span class="div-badge div-badge-neg">▼ ${div}</span>`;
+    const dia = (r.created_at||'').split('T')[0];
+    const [ry,rm,rd] = (dia||'--').split('-');
+    return `<tr>
+      <td style="font-size:.78rem;color:var(--text3)">${dia ? rd+'/'+rm+'/'+ry : '—'}</td>
+      <td class="cc">${r.codigo||'—'}</td>
+      <td class="cn">${r.produto_nome||'—'}</td>
+      <td class="cm">${r.lote||'—'}</td>
+      <td style="font-family:var(--mono)">${r.armazem||'—'}</td>
+      <td style="font-family:var(--mono);font-weight:700">${r.saldo_sistema??'—'}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:var(--green-txt)">${r.quantidade??'—'}</td>
+      <td>${divFmt}</td>
+      <td style="font-size:.75rem;color:var(--text3)">${r.usuario||'—'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text3)">Sem registros detalhados.</td></tr>';
+
+  document.getElementById('vt-titulo').textContent = `Detalhes — ${label}`;
+  document.getElementById('vt-corpo').innerHTML = `
+    <div style="margin-bottom:10px;font-size:.78rem;color:var(--text2)">
+      ${registros.length} lote${registros.length!==1?'s':''} validados neste mês.
+    </div>
+    <div style="overflow-x:auto">
+    <table style="font-size:.8rem;width:100%">
+      <thead><tr style="font-size:.7rem">
+        <th>Data</th><th>Código</th><th>Produto</th><th>Lote</th>
+        <th>Arm.</th><th>Saldo Sis.</th><th>Qtd Física</th>
+        <th>Divergência</th><th>Operador</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>`;
+  // Reusar o modal ver-texto existente
+  document.getElementById('modal-ver-texto').classList.add('open');
+}
+
+// ── Exportar histórico para Excel ─────────────────────────
+function exportarHistAcuracia() {
+  if (!_hacDados.length) { toast('Sem dados para exportar.','warn'); return; }
+  const cab = ['Mês','Acurácia (%)','Divergência (%)','% Conferido','Total Lotes','Ok','Com Div.','Qtd Física (L)','Total Estoque (L)','Fechado em'];
+  const lin = _hacDados.map(h => {
+    const [hy,hm] = h.mes_ref.split('-');
+    const meses = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return [
+      meses[parseInt(hm)]+'/'+hy,
+      h.pct_acuracia, h.pct_divergencia, h.pct_conferido,
+      h.total_lotes, h.lotes_ok, h.lotes_div,
+      h.total_fisico_l, h.total_estoque_l,
+      h.fechado_em ? new Date(h.fechado_em).toLocaleDateString('pt-BR') : ''
+    ];
+  });
+  exportarXlsx('historico_acuracia', cab, lin);
+}
+
+// ── Verifica fechamento ao carregar o painel ──────────────
+window.addEventListener('load', () => {
+  setTimeout(verificarFechamentoMes, 3000);
+});
+
 // Fechar modal justificativa pelo fundo
 document.getElementById('modal-justif').addEventListener('click', e => {
   if (e.target === e.currentTarget) fecharModal('modal-justif');
@@ -4171,14 +4470,12 @@ async function excluirTudo() {
   if (!confirm(`Isso irá excluir TODOS os ${total} itens do saldo sistêmico importado (incluindo não validados). Deseja continuar?`)) return;
   if (!confirm('Tem certeza? Esta ação não pode ser desfeita.')) return;
   try {
-    const { error } = await sb.from('saldo_sistema').delete().eq('validado', false);
+    const { error } = await sb.from('saldo_sistema').delete().neq('id', 0);
     if (error) throw error;
     toast('✓ Todos os dados importados foram excluídos.', 'ok', 5000);
     document.getElementById('saldo-status-txt').textContent = 'Nenhum saldo importado';
     document.getElementById('btn-limpar-tudo').style.display = 'none';
-    await sb.from('config').delete().eq('chave','total_estoque_litros');
-    _acTotalEstoque = null;
-    atualizarExibicaoTotalEstoque();
+    // total_estoque_litros persiste — valor fixo, não apaga com limpeza
     await carregarValidacao();
   } catch(e) { toast('Erro: ' + e.message, 'err'); }
 }
