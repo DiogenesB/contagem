@@ -1305,6 +1305,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <button class="btn btn-primary btn-sm" id="btn-validar-todos" onclick="validarTodos()" style="display:none">✓ Validar Tudo</button>
             <button class="btn btn-ghost btn-sm" id="btn-modo-exclusao" onclick="toggleModoExclusao()" title="Ativar seleção para exclusão">🗑 Excluir</button>
             <button class="btn btn-danger btn-sm" id="btn-limpar-tudo" onclick="excluirTudo()" style="display:none">🗑 Limpar Tudo</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportarSaldoExcel()">↓ Excel</button>
             <button class="btn btn-ghost btn-sm" onclick="carregarValidacao()">↺</button>
           </div>
         </div>
@@ -2728,6 +2729,47 @@ function getFilteredLancamentos(incluirFiltroFilial = true) {
 
 function filtrarLancamentos() {
   renderLancamentos(getFilteredLancamentos(true));
+}
+
+function exportarSaldoExcel() {
+  const dados = svLinhas || [];
+  if (!dados.length) { toast('Sem dados para exportar.', 'warn'); return; }
+
+  // Exporta o que está visível (filtrado), incluindo arm_errado e lote_nao_existe
+  const visiveis = [
+    ...dados,
+    ...(svArmErrado || []).map(r => ({ ...r, _obs: 'Armazém não identificado' })),
+    ...(svLoteNaoExiste || []).map(r => ({ ...r, _obs: 'Lote não existe no sistema' })),
+  ];
+
+  const rows = visiveis.map(r => {
+    const status = r._validado ? 'Validado'
+      : r.recontagem ? 'Recontagem'
+      : r.qtdContada !== null ? 'Contado'
+      : 'Não contado';
+    const div = r.div !== null && r.div !== undefined ? r.div : '';
+    return {
+      'Filial':         r.filial || '',
+      'Código':         r.codigo || '',
+      'Produto':        r.descricao || '',
+      'Lote':           r.lote || '',
+      'Armazém':        r.armazem || '',
+      'Saldo Sistema':  r.saldo ?? '',
+      'Empenho':        r.empenho ?? '',
+      'Dt. Fabricação': r.dt_fabricacao ? new Date(r.dt_fabricacao).toLocaleDateString('pt-BR') : '',
+      'Dt. Validade':   r.dt_validade   ? new Date(r.dt_validade).toLocaleDateString('pt-BR')   : '',
+      'Saldo Contado':  r.qtdContada !== null ? r.qtdContada : '',
+      'Divergência':    div,
+      'Status':         status,
+      'Observação':     r._obs || '',
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Saldo Validação');
+  XLSX.writeFile(wb, `saldo_validacao_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('✓ Excel exportado!', 'ok');
 }
 
 function exportarLancamentosExcel() {
