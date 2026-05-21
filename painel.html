@@ -2638,7 +2638,6 @@ async function confirmarValidacao() {
     itemAtual = null;
     atualizarStatsSV();
     filtrarValidacao();
-    irParaHistorico();
   } catch(e) {
     toast('Erro: '+e.message,'err');
   } finally {
@@ -3956,7 +3955,6 @@ async function validarTodos() {
   toast(`✓ ${ok} item${ok!==1?'ns':''} validado${ok!==1?'s':''}${erros?` · ${erros} erro${erros!==1?'s':''}`:''}.`,'ok',5000);
   atualizarStatsSV();
   filtrarValidacao();
-  irParaHistorico();
 }
 
 // ══════════════════════════════════════════════════════════
