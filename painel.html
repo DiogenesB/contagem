@@ -1045,7 +1045,7 @@ tbody tr:hover { background:#f5f7fa; }
 .sv-diverg-neg { background:#fff3f3 !important; border-left:3px solid #ef4444 !important; }
 .qtd-contada   { font-weight:700; color:var(--green-txt); }
 .qtd-vazia     { font-size:.8rem; color:var(--text3); font-style:italic; }
-.div-badge     { display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:.78rem;font-weight:700;font-family:var(--mono); }
+.div-badge     { display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:4px;font-size:.72rem;font-weight:700;font-family:var(--mono);white-space:nowrap; }
 .div-badge-pos { background:#fff3cd;color:#b45309;border:1px solid #fbbf24; }
 .div-badge-neg { background:#fee2e2;color:#b91c1c;border:1px solid #f87171; }
 .div-badge-ok  { background:#dcfce7;color:#15803d;border:1px solid #4ade80; }
@@ -1332,8 +1332,8 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <col style="width:44px">
             <col style="width:78px">
             <col style="width:78px">
-            <col style="width:106px">
-            <col style="width:44px">
+            <col style="width:96px">
+            <col style="width:82px">
             <col style="width:170px">
           </colgroup>
           <thead><tr>
@@ -2268,7 +2268,7 @@ function filtrarValidacao() {
     let divCell = '<span style="color:var(--text3)">—</span>';
     if (r.div !== null) {
       if (r.div === 0) {
-        divCell = `<span class="div-badge div-badge-ok">✓ OK</span>`;
+        divCell = `<span class="div-badge div-badge-ok">✓ 0</span>`;
       } else if (r.div > 0) {
         divCell = `<span class="div-badge div-badge-pos">▲ +${r.div}</span>`;
       } else {
@@ -2748,6 +2748,292 @@ function getFilteredLancamentos(incluirFiltroFilial = true) {
 
 function filtrarLancamentos() {
   renderLancamentos(getFilteredLancamentos(true));
+}
+
+
+
+
+// ══════════════════════════════════════════════════════════
+// RELATÓRIO FINAL DE CONTAGEM — Excel Formatado
+// ══════════════════════════════════════════════════════════
+function exportarRelatorioContagem() {
+  if (!svLinhas.length) { toast('Sem dados para exportar.', 'warn'); return; }
+
+  const wb   = XLSX.utils.book_new();
+  const hoje = new Date();
+  const dataFmt = hoje.toLocaleDateString('pt-BR');
+  const horaFmt = hoje.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+
+  // ── Paleta ───────────────────────────────────────────────
+  const V = { // verde
+    h:'1A7F4B', hf:'FFFFFF',
+    bg:'D1FAE5', fg:'065F46', bd:'6EE7B7'
+  };
+  const R = { bg:'FEE2E2', fg:'991B1B', bd:'FCA5A5' };   // vermelho
+  const A = { bg:'FFF3CD', fg:'92400E', bd:'FCD34D' };   // âmbar
+  const P = { bg:'EDE9FE', fg:'5B21B6', bd:'C4B5FD' };   // roxo
+  const G = { bg:'F9FAFB', fg:'374151', bd:'E5E7EB' };   // cinza
+  const D = { bg:'EFF6FF', fg:'1E40AF', bd:'BFDBFE' };   // azul
+  const TITULO = '0F5132';
+
+  const thin = (rgb) => ({ style:'thin', color:{ rgb } });
+  const med  = (rgb) => ({ style:'medium', color:{ rgb } });
+
+  function brd(c) {
+    return { top:thin(c), bottom:thin(c), left:thin(c), right:thin(c) };
+  }
+  function brdMed(c) {
+    return { top:med(c), bottom:med(c), left:thin(c), right:thin(c) };
+  }
+
+  function C(v, { bold=false, bg=null, fg='1F2937', fmt=null, italic=false,
+                   wrap=false, sz=10, align=null, border=null } = {}) {
+    const isNum = typeof v === 'number';
+    return {
+      v, t: isNum ? 'n' : 's',
+      s: {
+        font: { name:'Calibri', sz, bold, italic, color:{ rgb: fg } },
+        fill: bg ? { fgColor:{ rgb: bg }, patternType:'solid' } : undefined,
+        alignment: { vertical:'center', horizontal: align || (isNum ? 'right' : 'left'), wrapText: wrap },
+        border: border || brd('D1D5DB'),
+        numFmt: fmt || undefined,
+      }
+    };
+  }
+
+  // Célula título (faixa verde escura)
+  const CT = (v, sz=13) => C(v, { bold:true, bg:TITULO, fg:'FFFFFF', sz, border:brdMed(TITULO) });
+  // Célula subtítulo / seção
+  const CS = (v) => C(v, { bold:true, bg:'1A7F4B', fg:'FFFFFF', sz:10, border:brdMed('1A7F4B') });
+  // Célula cabeçalho de coluna
+  const CH = (v) => C(v, { bold:true, bg:'1A7F4B', fg:'FFFFFF', sz:9, align:'center', border:brdMed('1A7F4B') });
+  // Célula label (linha de KPI)
+  const CL = (v) => C(v, { bold:false, bg:'F9FAFB', fg:'6B7280', sz:10 });
+  // Célula valor KPI
+  const CV = (v, fmt, col) => C(v, { bold:true, bg: col?.bg||null, fg: col?.fg||'1F2937', fmt, sz:11 });
+  // Célula linha normal
+  const CN = (v, bg, fg, fmt, center) => C(v, { bg: bg||null, fg: fg||'374151', fmt, sz:9, align: center?'center':null });
+  // Célula vazia espaçador
+  const CE = () => C('', { border: brd('FFFFFF') });
+
+  // ── Cálculos globais ─────────────────────────────────────
+  const total     = svLinhas.length;
+  const contados  = svLinhas.filter(r => r.qtdContada !== null).length;
+  const pendentes = svLinhas.filter(r => r.qtdContada === null && !r._validado).length;
+  const validados = svLinhas.filter(r => r._validado).length;
+  const comDiv    = svLinhas.filter(r => r.div !== null && r.div !== 0 && !r._validado).length;
+  const semDiv    = svLinhas.filter(r => r.div === 0).length;
+  const recont    = svLinhas.filter(r => r.recontagem && !r._validado).length;
+  const armErr    = (svArmErrado    || []).length;
+  const loteNEx   = (svLoteNaoExiste|| []).length;
+
+  // Quantidades (em unidades do ERP — geralmente litros)
+  const totalSaldoL   = svLinhas.reduce((s,r) => s + (r.saldo ?? 0), 0);
+  const totalContadoL = svLinhas.filter(r => r.qtdContada !== null).reduce((s,r) => s + (r.qtdContada ?? 0), 0);
+  const totalDivL     = svLinhas.reduce((s,r) => s + (r.div ?? 0), 0);
+
+  // Lotes únicos
+  const totalLotes    = new Set(svLinhas.map(r => r.lote).filter(Boolean)).size;
+  const lotesComDiv   = new Set(svLinhas.filter(r=>r.div!==null&&r.div!==0).map(r=>r.lote)).size;
+
+  const pctConf = total ? (contados / total * 100) : 0;
+  const pctAcur = (semDiv + validados) > 0 ? ((semDiv + validados) / total * 100) : 0;
+  const corAcur = pctAcur >= 95 ? V : pctAcur >= 70 ? A : R;
+
+  const N0 = '#,##0';
+  const N1 = '#,##0.0';
+  const PCT = '0.0%';
+  const SIGN = '+#,##0;-#,##0;0';
+
+  // ══════════════════════════════════════════════════════════
+  // ABA 1 — RESUMO EXECUTIVO
+  // ══════════════════════════════════════════════════════════
+  const aR = [];
+
+  // Título
+  aR.push([CT('RELATÓRIO FINAL DE CONTAGEM DE ESTOQUE', 14), CE(), CE(), CE(), CE()]);
+  aR.push([C(`Simbiose Agro  ·  Gerado em ${dataFmt} às ${horaFmt}`, { bg:'1A7F4B', fg:'A7F3D0', sz:9, italic:true, border:brdMed(TITULO) }), CE(), CE(), CE(), CE()]);
+  aR.push([CE(), CE(), CE(), CE(), CE()]);
+
+  // Bloco KPI — linha 1
+  aR.push([CS('COBERTURA DA CONTAGEM'), CE(), CS('RESULTADO'), CE(), CS('VOLUMES')]);
+  aR.push([CL('Total de itens (lotes)'), CV(total, N0), CL('Sem divergência ✓'), CV(semDiv + validados, N0, V), CL('Saldo sistema (L)')]);
+  aR.push([CL('Itens contados'), CV(contados, N0), CL('Com divergência ⚠'), CV(comDiv, N0, comDiv > 0 ? R : V), CV(totalSaldoL, N0)]);
+  aR.push([CL('Itens pendentes'), CV(pendentes, N0, pendentes > 0 ? A : null), CL('Em recontagem ↺'), CV(recont, N0, recont > 0 ? P : null), CL('Saldo contado (L)')]);
+  aR.push([CL('Lotes únicos'), CV(totalLotes, N0), CL('Lotes com divergência'), CV(lotesComDiv, N0, lotesComDiv > 0 ? R : null), CV(totalContadoL, N0)]);
+  aR.push([CL('% Itens conferidos'), CV(pctConf/100, PCT), CL(''), CE(), CL('Diferença (L)')]);
+  aR.push([CE(), CE(), CE(), CE(), CV(totalDivL, SIGN, totalDivL < 0 ? R : totalDivL > 0 ? A : V)]);
+  aR.push([CE(), CE(), CE(), CE(), CE()]);
+
+  // Acurácia destaque
+  aR.push([
+    C('ACURÁCIA ESTIMADA', { bold:true, bg:corAcur.bg, fg:corAcur.fg, sz:11, border:brdMed(corAcur.bd) }),
+    C(pctAcur/100, { bold:true, bg:corAcur.bg, fg:corAcur.fg, fmt:PCT, sz:14, border:brdMed(corAcur.bd) }),
+    C(pctAcur >= 95 ? '✓ Excelente' : pctAcur >= 70 ? '⚠ Regular' : '✕ Crítica',
+      { bold:true, bg:corAcur.bg, fg:corAcur.fg, sz:11, border:brdMed(corAcur.bd) }),
+    CE(), CE()
+  ]);
+  aR.push([CE(), CE(), CE(), CE(), CE()]);
+
+  // Alertas
+  if (armErr + loteNEx > 0) {
+    aR.push([CS('ALERTAS DE INCONSISTÊNCIA'), CE(), CE(), CE(), CE()]);
+    if (armErr > 0)  aR.push([CL('Lançamentos com armazém divergente'), CV(armErr, N0, A), CE(), CE(), CE()]);
+    if (loteNEx > 0) aR.push([CL('Lançamentos com lote inexistente'), CV(loteNEx, N0, R), CE(), CE(), CE()]);
+  }
+
+  const shR = XLSX.utils.aoa_to_sheet(aR);
+  shR['!cols'] = [{ wch:34 },{ wch:16 },{ wch:28 },{ wch:16 },{ wch:26 }];
+  shR['!rows'] = [{ hpt:30 },{ hpt:14 },{hpt:6},{hpt:18},{hpt:20},{hpt:20},{hpt:20},{hpt:20},{hpt:20},{hpt:20},{hpt:6},{hpt:28},{hpt:6}];
+  shR['!merges'] = [
+    { s:{r:0,c:0}, e:{r:0,c:4} },
+    { s:{r:1,c:0}, e:{r:1,c:4} },
+    { s:{r:2,c:0}, e:{r:2,c:4} },
+    { s:{r:10,c:0},e:{r:10,c:4} },
+    { s:{r:11,c:0},e:{r:11,c:4} },
+  ];
+  XLSX.utils.book_append_sheet(wb, shR, '📊 Resumo');
+
+  // ══════════════════════════════════════════════════════════
+  // ABA 2 — DIVERGÊNCIAS
+  // ══════════════════════════════════════════════════════════
+  const divs = svLinhas.filter(r => r.div !== null && r.div !== 0 && !r._validado)
+    .sort((a,b) => Math.abs(b.div) - Math.abs(a.div));
+
+  const aD = [];
+  aD.push([CT('ITENS COM DIVERGÊNCIA', 13), ...Array(9).fill(CE())]);
+  aD.push([C(`${divs.length} item${divs.length!==1?'ns':''} · ordenado por divergência absoluta`, { bg:'1A7F4B', fg:'A7F3D0', sz:9, italic:true, border:brdMed(TITULO) }), ...Array(9).fill(CE())]);
+  aD.push(Array(10).fill(CE()));
+  aD.push(['Filial','Código','Produto','Lote','Arm.','Qtd Lotes','Saldo Sistema (L)','Saldo Contado (L)','Divergência (L)','Tipo'].map(CH));
+
+  divs.forEach(r => {
+    const neg = r.div < 0;
+    const col = neg ? R : A;
+    const fmt = (v, f) => CN(v, col.bg, col.fg, f);
+    aD.push([
+      fmt(r.filial||''),
+      fmt(r.codigo||''),
+      fmt(r.descricao||''),
+      fmt(r.lote||''),
+      fmt(r.armazem||''),
+      CN(r.nlanc||1, col.bg, col.fg, N0, true),
+      fmt(r.saldo??0, N0),
+      fmt(r.qtdContada??0, N0),
+      C(r.div, { bold:true, bg:col.bg, fg:col.fg, fmt:SIGN, sz:9 }),
+      fmt(neg ? '▼ Negativa' : '▲ Positiva'),
+    ]);
+  });
+
+  if (!divs.length) aD.push([C('Nenhuma divergência encontrada ✓', { bg:V.bg, fg:V.fg, bold:true }), ...Array(9).fill(CE())]);
+
+  // Totalizador
+  const totSis  = divs.reduce((s,r) => s + (r.saldo??0), 0);
+  const totCont = divs.reduce((s,r) => s + (r.qtdContada??0), 0);
+  const totDiv  = divs.reduce((s,r) => s + (r.div??0), 0);
+  aD.push([
+    C('TOTAL', { bold:true, bg:G.bg, fg:'374151' }),
+    CE(), CE(), CE(), CE(),
+    CN(divs.length, G.bg, '374151', N0, true),
+    CN(totSis,  G.bg, '374151', N0),
+    CN(totCont, G.bg, '374151', N0),
+    C(totDiv, { bold:true, bg:G.bg, fg: totDiv < 0 ? R.fg : A.fg, fmt:SIGN }),
+    CE()
+  ]);
+
+  const shD = XLSX.utils.aoa_to_sheet(aD);
+  shD['!cols'] = [{ wch:12 },{ wch:14 },{ wch:36 },{ wch:16 },{ wch:6 },{ wch:10 },{ wch:18 },{ wch:18 },{ wch:16 },{ wch:12 }];
+  shD['!rows'] = [{ hpt:28 },{ hpt:13 },{hpt:6}];
+  shD['!merges'] = [{ s:{r:0,c:0},e:{r:0,c:9} },{ s:{r:1,c:0},e:{r:1,c:9} },{ s:{r:2,c:0},e:{r:2,c:9} }];
+  XLSX.utils.book_append_sheet(wb, shD, '⚠ Divergências');
+
+  // ══════════════════════════════════════════════════════════
+  // ABA 3 — CONFERÊNCIA COMPLETA
+  // ══════════════════════════════════════════════════════════
+  const aA = [];
+  aA.push([CT('CONFERÊNCIA COMPLETA — TODOS OS ITENS', 13), ...Array(12).fill(CE())]);
+  aA.push([C(`${svLinhas.length} itens · ${dataFmt}`, { bg:'1A7F4B', fg:'A7F3D0', sz:9, italic:true, border:brdMed(TITULO) }), ...Array(12).fill(CE())]);
+  aA.push(Array(13).fill(CE()));
+  aA.push(['Filial','Código','Produto','Lote','Arm.','Unid.','Saldo Sis.','Empenho','Dt. Fabric.','Dt. Validade','Saldo Contado','Divergência','Status'].map(CH));
+
+  svLinhas.forEach(r => {
+    const st = r._validado ? 'Validado' : r.recontagem ? 'Recontagem' : r.qtdContada!==null ? 'Contado' : 'Pendente';
+    let col = null;
+    if (st === 'Validado')   col = V;
+    else if (st === 'Recontagem') col = P;
+    else if (st === 'Pendente')   col = G;
+    else if (r.div !== null && r.div < 0) col = R;
+    else if (r.div !== null && r.div > 0) col = A;
+    else if (r.div === 0) col = { bg: V.bg, fg: V.fg };
+
+    const bg = col?.bg || null;
+    const fg = col?.fg || '374151';
+    const f  = (v, fmt, center) => CN(v, bg, fg, fmt, center);
+    const dtFab = r.dt_fabricacao ? new Date(r.dt_fabricacao).toLocaleDateString('pt-BR') : '';
+    const dtVal = r.dt_validade   ? new Date(r.dt_validade).toLocaleDateString('pt-BR')   : '';
+
+    aA.push([
+      f(r.filial||''), f(r.codigo||''), f(r.descricao||''), f(r.lote||''),
+      f(r.armazem||'','',true), f(r.unidade||'','',true),
+      f(r.saldo??'', N0), f(r.empenho??'', N0),
+      f(dtFab), f(dtVal),
+      f(r.qtdContada!==null ? r.qtdContada : '', N0),
+      r.div!==null ? C(r.div, { bg, fg, fmt:SIGN, sz:9 }) : f(''),
+      f(st, '', true),
+    ]);
+  });
+
+  // Totais finais
+  const tSaldo = svLinhas.reduce((s,r)=>s+(r.saldo??0),0);
+  const tCont  = svLinhas.filter(r=>r.qtdContada!==null).reduce((s,r)=>s+(r.qtdContada??0),0);
+  const tDiv   = svLinhas.reduce((s,r)=>s+(r.div??0),0);
+  aA.push([
+    C('TOTAL GERAL', {bold:true,bg:G.bg,fg:'374151'}),
+    ...Array(5).fill(C('',{bg:G.bg})),
+    CN(tSaldo, G.bg,'374151',N0), C('',{bg:G.bg}), C('',{bg:G.bg}), C('',{bg:G.bg}),
+    CN(tCont,  G.bg,'374151',N0),
+    C(tDiv, {bold:true,bg:G.bg,fg:tDiv<0?R.fg:tDiv>0?A.fg:V.fg,fmt:SIGN,sz:9}),
+    C('',{bg:G.bg})
+  ]);
+
+  const shA = XLSX.utils.aoa_to_sheet(aA);
+  shA['!cols'] = [{ wch:12 },{ wch:14 },{ wch:36 },{ wch:16 },{ wch:6 },{ wch:6 },{ wch:11 },{ wch:9 },{ wch:12 },{ wch:12 },{ wch:13 },{ wch:12 },{ wch:11 }];
+  shA['!rows'] = [{ hpt:28 },{ hpt:13 },{hpt:6}];
+  shA['!merges'] = [{ s:{r:0,c:0},e:{r:0,c:12} },{ s:{r:1,c:0},e:{r:1,c:12} },{ s:{r:2,c:0},e:{r:2,c:12} }];
+  XLSX.utils.book_append_sheet(wb, shA, '📋 Conferência Completa');
+
+  // ══════════════════════════════════════════════════════════
+  // ABA 4 — ALERTAS
+  // ══════════════════════════════════════════════════════════
+  const alertas = [
+    ...(svArmErrado    ||[]).map(r=>({...r,_alert:'Armazém divergente',_col:A})),
+    ...(svLoteNaoExiste||[]).map(r=>({...r,_alert:'Lote inexistente',  _col:R})),
+  ];
+  if (alertas.length) {
+    const aAl = [];
+    aAl.push([CT('ALERTAS — LANÇAMENTOS COM INCONSISTÊNCIA', 13), ...Array(7).fill(CE())]);
+    aAl.push([C(`${alertas.length} inconsistência${alertas.length!==1?'s':''} detectada${alertas.length!==1?'s':''}`, { bg:'1A7F4B', fg:'A7F3D0', sz:9, italic:true, border:brdMed(TITULO) }), ...Array(7).fill(CE())]);
+    aAl.push(Array(8).fill(CE()));
+    aAl.push(['Tipo','Código','Produto','Lote','Arm. Contado','Arm. Sistema','Qtd Contada (L)','Operador'].map(CH));
+    alertas.forEach(r => {
+      const col = r._col;
+      const f = (v,fmt) => CN(v, col.bg, col.fg, fmt);
+      aAl.push([
+        C(r._alert, {bold:true,bg:col.bg,fg:col.fg,sz:9}),
+        f(r.codigo||''), f(r.descricao||''), f(r.lote||''),
+        f(r.armazem||''), f(r.armazens_sistema||'—'),
+        f(r.qtdContada??'', N0), f(r.ops||''),
+      ]);
+    });
+    const shAl = XLSX.utils.aoa_to_sheet(aAl);
+    shAl['!cols'] = [{ wch:20 },{ wch:14 },{ wch:36 },{ wch:16 },{ wch:12 },{ wch:14 },{ wch:15 },{ wch:22 }];
+    shAl['!rows'] = [{ hpt:28 },{ hpt:13 },{hpt:6}];
+    shAl['!merges'] = [{ s:{r:0,c:0},e:{r:0,c:7} },{ s:{r:1,c:0},e:{r:1,c:7} },{ s:{r:2,c:0},e:{r:2,c:7} }];
+    XLSX.utils.book_append_sheet(wb, shAl, '🚨 Alertas');
+  }
+
+  const nome = `relatorio_contagem_${hoje.toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, nome);
+  toast(`✓ Relatório exportado: ${nome}`, 'ok', 5000);
 }
 
 function exportarSaldoExcel() {
@@ -4001,9 +4287,12 @@ function renderGruposAcuracia() {
       const divSinal      = saldoDiv > 0 ? '+' : '';
       const corDiv        = saldoDiv === 0 ? 'var(--green)' : saldoDiv > 0 ? 'var(--amber-lt)' : 'var(--red)';
       const corAcur       = parseFloat(acurPct) >= 95 ? 'var(--green)' : parseFloat(acurPct) >= 70 ? 'var(--amber-lt)' : 'var(--red)';
-      const resultBadge   = !temDiv
+      const divsNaoResolvidas = g.lotes.filter(r => r.tipo !== 'ok' && r.divergencia_resolvida !== true);
+      const resultBadge   = !temDiv || divsNaoResolvidas.length === 0
         ? '<span class="badge b-v" style="font-size:.7rem;padding:3px 8px">✓ Sem Divergência</span>'
-        : '<span class="badge b-r" style="font-size:.7rem;padding:3px 8px">⚠ Com Divergência</span>';
+        : g.lotes.some(r => r.tipo !== 'ok' && r.divergencia_resolvida === false)
+          ? '<span class="badge b-r" style="font-size:.7rem;padding:3px 8px">✕ Divergência Persiste</span>'
+          : '<span class="badge b-r" style="font-size:.7rem;padding:3px 8px">⚠ Com Divergência</span>';
       const [y,m,d]       = (g.data||'').split('-');
       const dataFmt       = g.data ? `${d}/${m}/${y}` : '—';
 
@@ -4014,7 +4303,18 @@ function renderGruposAcuracia() {
         const tb   = r.tipo === 'ok' ? '<span class="badge b-v" style="font-size:.62rem;padding:2px 6px">OK</span>'
                    : r.tipo === 'positivo' ? '<span class="badge b-p" style="font-size:.62rem;padding:2px 6px">+</span>'
                    : '<span class="badge b-r" style="font-size:.62rem;padding:2px 6px">−</span>';
-        return `<tr>
+        // Célula de resolução
+        let resCell = '';
+        if (r.tipo !== 'ok') {
+          if (r.divergencia_resolvida === true) {
+            resCell = `<span class="badge b-v" style="font-size:.62rem;padding:2px 7px" title="${r.resolucao_justificativa||''}">✓ Resolvida</span>`;
+          } else if (r.divergencia_resolvida === false) {
+            resCell = `<span class="badge b-r" style="font-size:.62rem;padding:2px 7px" title="${r.resolucao_justificativa||''}">✕ Persiste</span>`;
+          } else {
+            resCell = `<button class="btn btn-amber btn-sm" style="font-size:.68rem;padding:2px 8px" onclick="abrirModalResolucao(${JSON.stringify(r).replace(/"/g,'&quot;')})">⚑ Verificar</button>`;
+          }
+        }
+        return `<tr${r.divergencia_resolvida === true ? ' style="opacity:.6"' : ''}>
           <td class="cm" style="font-size:.78rem">${r.lote||'—'}</td>
           <td style="font-weight:600;color:var(--amber);font-size:.78rem">${r.armazem||'—'}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:.8rem">${r.saldo_sistema??'—'}</td>
@@ -4022,6 +4322,7 @@ function renderGruposAcuracia() {
           <td style="text-align:right">${sDiv}</td>
           <td style="text-align:center">${tb}</td>
           <td class="cm" style="font-size:.72rem">${r.usuario||'—'}</td>
+          <td style="text-align:center;white-space:nowrap">${resCell}</td>
         </tr>`;
       }).join('');
 
@@ -4101,6 +4402,7 @@ function renderGruposAcuracia() {
                 <th style="text-align:right">Divergência</th>
                 <th style="text-align:center">Resultado</th>
                 <th>Operador</th>
+                <th style="text-align:center">Resolução</th>
               </tr></thead>
               <tbody>${lotesHtml}</tbody>
             </table>
@@ -4120,6 +4422,77 @@ function toggleGrupo(gid) {
   const aberto = el.style.display !== 'none';
   el.style.display  = aberto ? 'none' : 'block';
   if (chv) chv.textContent = aberto ? '▼' : '▲';
+}
+
+
+// ══════════════════════════════════════════════════════════
+// RESOLUÇÃO DE DIVERGÊNCIA NA ACURÁCIA
+// ══════════════════════════════════════════════════════════
+let _mresItem = null;
+let _mresResolvida = null;
+
+function abrirModalResolucao(r) {
+  _mresItem     = r;
+  _mresResolvida = null;
+  document.getElementById('mres-titulo').textContent = 'Resolução — ' + (r.produto_nome||r.codigo||'');
+  document.getElementById('mres-info').innerHTML =
+    '<b>Lote:</b> ' + (r.lote||'—') + ' &nbsp;·&nbsp; ' +
+    '<b>Arm.:</b> ' + (r.armazem||'—') + ' &nbsp;·&nbsp; ' +
+    '<b>Divergência:</b> <span style="font-weight:700;color:var(--red)">' +
+    (r.divergencia !== undefined ? (r.divergencia > 0 ? '+' : '') + r.divergencia : '—') + '</span>';
+  document.getElementById('mres-justificativa').value = '';
+  selecionarResolucao(null);
+  document.getElementById('modal-resolucao').classList.add('open');
+}
+
+function fecharModalResolucao() {
+  document.getElementById('modal-resolucao').classList.remove('open');
+  _mresItem = null; _mresResolvida = null;
+}
+
+function selecionarResolucao(val) {
+  _mresResolvida = val;
+  const btnSim = document.getElementById('mres-btn-sim');
+  const btnNao = document.getElementById('mres-btn-nao');
+  btnSim.style.background = val === true  ? 'var(--green)' : '';
+  btnSim.style.color      = val === true  ? '#fff' : '';
+  btnNao.style.background = val === false ? 'var(--red)'   : '';
+  btnNao.style.color      = val === false ? '#fff' : '';
+  // Habilitar salvar só se escolheu E tem justificativa
+  atualizarBtnSalvarResolucao();
+}
+
+function atualizarBtnSalvarResolucao() {
+  const just = (document.getElementById('mres-justificativa')?.value||'').trim();
+  const btn  = document.getElementById('mres-btn-salvar');
+  if (btn) btn.disabled = (_mresResolvida === null || !just);
+}
+
+async function salvarResolucao() {
+  if (!_mresItem || _mresResolvida === null) return;
+  const just = (document.getElementById('mres-justificativa').value||'').trim();
+  if (!just) { toast('Informe a justificativa.', 'warn'); return; }
+
+  const btn = document.getElementById('mres-btn-salvar');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  try {
+    const { error } = await sb.from('historico').update({
+      divergencia_resolvida:      _mresResolvida,
+      resolucao_justificativa:    just,
+      resolvido_em:               new Date().toISOString(),
+      resolvido_por:              'Gestor',
+    }).eq('id', _mresItem.id);
+
+    if (error) throw error;
+
+    toast(_mresResolvida ? '✓ Divergência marcada como resolvida.' : '✓ Registrado que divergência persiste.', 'ok', 4000);
+    fecharModalResolucao();
+    await carregarAcuracidade(); // recarrega a aba
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+    btn.disabled = false; btn.textContent = 'Salvar Resolução';
+  }
 }
 
 // ── Total do Estoque global ───────────────────────────────────────────────
@@ -4563,6 +4936,36 @@ carregarValidacao();
 carregarLancamentos();
 carregarAgendamentos();
 </script>
+
+
+<!-- ══ MODAL RESOLUÇÃO DE DIVERGÊNCIA ══ -->
+<div class="modal-bg" id="modal-resolucao" onclick="fecharModalResolucao()">
+  <div class="modal" style="max-width:480px;width:90%" onclick="event.stopPropagation()">
+    <div class="modal-title" id="mres-titulo">Resolução de Divergência</div>
+    <div class="modal-sub" id="mres-info" style="margin-bottom:16px">—</div>
+
+    <div style="font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">A divergência foi solucionada?</div>
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <button id="mres-btn-sim" class="btn btn-ghost" style="flex:1;justify-content:center;padding:10px 0;font-size:.82rem"
+        onclick="selecionarResolucao(true)">✓ Sim, foi solucionada</button>
+      <button id="mres-btn-nao" class="btn btn-ghost" style="flex:1;justify-content:center;padding:10px 0;font-size:.82rem"
+        onclick="selecionarResolucao(false)">✕ Não, persiste</button>
+    </div>
+
+    <div style="font-size:.68rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">
+      Justificativa <span style="color:var(--red)">*</span>
+    </div>
+    <textarea id="mres-justificativa" rows="3" oninput="atualizarBtnSalvarResolucao()"
+      style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:.82rem;font-family:var(--font);background:var(--bg2);color:var(--text);resize:vertical;margin-bottom:16px"
+      placeholder="Descreva o que foi verificado ou a ação tomada…"></textarea>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="fecharModalResolucao()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="mres-btn-salvar" onclick="salvarResolucao()" disabled>Salvar Resolução</button>
+    </div>
+  </div>
+</div>
+
 
 </body>
 </html>
