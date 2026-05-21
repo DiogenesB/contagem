@@ -1367,7 +1367,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
         <div class="table-hdr" style="flex-wrap:wrap;gap:6px">
           <div class="th-left"><span class="table-title">Lançamentos da Agenda</span><span class="tcount" id="cnt-lanc">—</span></div>
           <div class="th-right" style="flex-wrap:wrap;gap:6px">
-            <input type="text" class="search-inp" id="search-lanc" placeholder="Produto / Código / Lote…" oninput="filtrarLancamentos()" style="width:180px">
+            <input type="text" class="search-inp" id="search-lanc" placeholder="Produto / Código / Lote…" oninput="filtrarLancamentosD()" style="width:180px">
             <select class="filter-sel" id="filt-lanc-arm" onchange="filtrarLancamentos()"><option value="">Todos arm.</option></select>
             <select class="filter-sel" id="filt-lanc-op" onchange="filtrarLancamentos()"><option value="">Todos operadores</option></select>
             <select class="filter-sel" id="filt-lanc-tipo" onchange="filtrarLancamentos()">
@@ -1402,7 +1402,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
           <div class="th-right" style="flex-wrap:wrap;gap:6px">
             <input type="date" class="filter-sel" id="filt-hist-de"  onchange="carregarHistorico()" title="De">
             <input type="date" class="filter-sel" id="filt-hist-ate" onchange="carregarHistorico()" title="Até">
-            <input type="text" class="search-inp" id="search-hist" placeholder="Produto / Lote / Código…" oninput="filtrarHistorico()" style="width:170px">
+            <input type="text" class="search-inp" id="search-hist" placeholder="Produto / Lote / Código…" oninput="filtrarHistoricoD()" style="width:170px">
             <select class="filter-sel" id="filt-hist-arm" onchange="filtrarHistorico()">
               <option value="">Todos arm.</option>
             </select>
@@ -1585,7 +1585,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
           <div class="th-right" style="flex-wrap:wrap;gap:6px">
             <input type="date" class="filter-sel" id="ac-de"  title="De"  onchange="carregarAcuracidade()">
             <input type="date" class="filter-sel" id="ac-ate" title="Até" onchange="carregarAcuracidade()">
-            <input type="text" class="search-inp" id="ac-prod" placeholder="Produto / Código / Lote…" oninput="filtrarAcuracidade()" style="width:190px">
+            <input type="text" class="search-inp" id="ac-prod" placeholder="Produto / Código / Lote…" oninput="filtrarAcuracidadeD()" style="width:190px">
             <select class="filter-sel" id="ac-status-filt" onchange="filtrarAcuracidade()">
               <option value="">Todos</option>
               <option value="ok">Sem divergência</option>
@@ -1593,6 +1593,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             </select>
             <button class="btn btn-ghost btn-sm" onclick="carregarAcuracidade()">↺ Atualizar</button>
             <button class="btn btn-ghost btn-sm" onclick="exportarAcuracidade()">↓ Excel</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportarRelatorioAcuracia()">📋 Relatório</button>
           </div>
         </div>
       </div>
@@ -2066,6 +2067,12 @@ function fmtDur(seg) {
   const m=Math.floor(seg/60), s=seg%60, h=Math.floor(m/60);
   return h>0 ? `${h}h ${String(m%60).padStart(2,'0')}m` : `${m}m ${String(s).padStart(2,'0')}s`;
 }
+function debounce(fn, ms) {
+  let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+const filtrarLancamentosD = debounce(filtrarLancamentos, 220);
+const filtrarHistoricoD   = debounce(filtrarHistorico,   220);
+const filtrarAcuracidadeD = debounce(filtrarAcuracidade, 220);
 function norm(v) { return String(v||'').trim().toUpperCase().replace(/\s+/g,''); }
 function recarregar() { carregarValidacao(); carregarLancamentos(); }
 
@@ -2095,6 +2102,8 @@ function irParaHistorico() {
 // ══════════════════════════════════════════════════════════
 
 async function carregarValidacao() {
+  document.getElementById('tbody-sv').innerHTML =
+    '<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Carregando…</td></tr>';
   try {
     const { data: saldo } = await sb.from('saldo_sistema').select('*').order('codigo').order('lote');
     if (!saldo || !saldo.length) {
@@ -2705,7 +2714,7 @@ async function confirmarSolicitarRecontagem() {
 
 async function carregarLancamentos() {
   try {
-    const { data, error } = await sb.from('lancamentos').select('*').order('created_at',{ascending:false});
+    const { data, error } = await sb.from('lancamentos').select('*').order('created_at',{ascending:false}).limit(1000);
     if (error) throw error;
     todosLanc = data || [];
 
@@ -3168,6 +3177,8 @@ async function salvarEditRegistro() {
 // ══════════════════════════════════════════════════════════
 
 async function carregarHistorico() {
+  const tbody = document.getElementById('tbody-hist');
+  tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Carregando…</td></tr>';
   try {
     const de  = document.getElementById('filt-hist-de').value;
     const ate = document.getElementById('filt-hist-ate').value;
@@ -3319,15 +3330,14 @@ async function carregarPerformance() {
     const de  = document.getElementById('filt-perf-de').value;
     const ate = document.getElementById('filt-perf-ate').value;
 
-    let q = sb.from('lancamentos').select('*').order('created_at', { ascending: false }).limit(2000);
+    let q = sb.from('lancamentos').select('id,codigo,produto_nome,lote,armazem,quantidade,usuario,filial,created_at,recontagem,status').order('created_at', { ascending: false }).limit(2000);
     if (op)  q = q.eq('usuario', op);
     if (de)  q = q.gte('created_at', de + 'T00:00:00');
     if (ate) q = q.lte('created_at', ate + 'T23:59:59');
     const { data, error } = await q;
     if (error) throw error;
 
-    const { data: allLanc } = await sb.from('lancamentos').select('usuario').not('usuario','is',null);
-    const todosOps = [...new Set((allLanc||[]).map(r => r.usuario).filter(Boolean))].sort();
+    const todosOps = [...new Set((data||[]).map(r => r.usuario).filter(Boolean))].sort();
     const sel = document.getElementById('filt-perf-op');
     const cur = sel.value;
     sel.innerHTML = '<option value="">Todos os operadores</option>' +
@@ -3527,6 +3537,8 @@ async function criarAgendamento() {
 }
 
 async function carregarAgendamentos() {
+  const tbody = document.getElementById('tbody-ag');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Carregando…</td></tr>';
   try {
     const filt=document.getElementById('filt-ag').value;
     let q=sb.from('agendamentos').select('*').order('data_agendada',{ascending:true});
@@ -3661,6 +3673,8 @@ async function criarTransferencia() {
 }
 
 async function carregarTransferencias() {
+  const tbody = document.getElementById('tbody-tf');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Carregando…</td></tr>';
   try {
     const filt=document.getElementById('filt-tf').value;
     let q=sb.from('transferencias').select('*').order('created_at',{ascending:false});
@@ -4187,8 +4201,8 @@ function filtrarAcuracidade() {
 // ── KPIs globais (sobre todos os dados sem filtro) ────────────────────────
 function renderKpisAcuracia() {
   const total    = _acDados.length;
-  const semDiv   = _acDados.filter(r => r.tipo === 'ok').length;
-  const comDiv   = total - semDiv;
+  const semDiv   = _acDados.filter(r => r.tipo === 'ok' || r.divergencia_resolvida === true).length;
+  const comDiv   = _acDados.filter(r => r.tipo !== 'ok' && r.divergencia_resolvida !== true).length;
 
   // Produtos distintos conferidos (codigo+data únicos)
   const gruposDistintos = new Set(_acDados.map(r =>
@@ -4197,15 +4211,23 @@ function renderKpisAcuracia() {
 
   const pctAcur   = total ? ((semDiv / total)*100).toFixed(1) : null;
   const pctErro   = total ? ((comDiv / total)*100).toFixed(1) : null;
-  // Soma de todo o saldo físico contado no período (em litros)
-  const totalFisicoGlobal = _acDados.reduce((s,r) => s + (r.quantidade ?? 0), 0);
-  const cobertPct = (_acTotalEstoque && totalFisicoGlobal)
-    ? ((totalFisicoGlobal / _acTotalEstoque)*100).toFixed(1)
+  // % Estoque Conferido: saldo sistêmico único por lote sobre total do estoque
+  // Usamos saldo_sistema de cada registro (sem duplicar por multiplas contagens do mesmo lote)
+  // Soma acumulada — contagem cíclica: 200% = contou 2x o estoque no período
+  const totalSistemicoUnico = _acDados.reduce((s,r) => s + (r.saldo_sistema ?? 0), 0);
+  const totalFisicoGlobal   = _acDados.reduce((s,r) => s + (r.quantidade ?? 0), 0);
+  const cobertPctRaw = (_acTotalEstoque && totalSistemicoUnico)
+    ? (totalSistemicoUnico / _acTotalEstoque)*100
     : null;
+  const cobertPct = cobertPctRaw !== null ? cobertPctRaw.toFixed(1) : null;
+  const cobertOk  = cobertPctRaw !== null && cobertPctRaw <= 100.5; // margem de arredondamento
 
   const corAcur  = pctAcur  !== null ? (parseFloat(pctAcur)  >= 95 ? 'var(--green)' : parseFloat(pctAcur)  >= 70 ? 'var(--amber-lt)' : 'var(--red)') : 'var(--text3)';
   const corErro  = pctErro  !== null ? (parseFloat(pctErro)  === 0  ? 'var(--green)' : parseFloat(pctErro)  <= 5  ? 'var(--amber-lt)' : 'var(--red)') : 'var(--text3)';
-  const corCob   = cobertPct !== null ? (parseFloat(cobertPct) >= 80 ? 'var(--green)' : parseFloat(cobertPct) >= 40 ? 'var(--amber-lt)' : 'var(--red)') : 'var(--text3)';
+  const corCob   = cobertPct === null ? 'var(--text3)'
+    : parseFloat(cobertPct) >= 100 ? 'var(--green)'
+    : parseFloat(cobertPct) >= 50  ? 'var(--amber-lt)'
+    : 'var(--red)';
 
   document.getElementById('ac-kpi-grid').innerHTML = `
     <div class="stat-card" style="padding:18px 20px">
@@ -4225,11 +4247,12 @@ function renderKpisAcuracia() {
       </div>
     </div>
     <div class="stat-card" style="padding:18px 20px">
-      <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📊 % Estoque Conferido</div>
+      <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📊 Cobertura Acumulada</div>
       <div style="font-size:2.6rem;font-weight:800;line-height:1;color:${corCob};letter-spacing:-.03em">${cobertPct !== null ? cobertPct+'%' : '—'}</div>
-      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">${totalFisicoGlobal.toLocaleString('pt-BR')} L contados · total: ${_acTotalEstoque ? _acTotalEstoque.toLocaleString('pt-BR')+' L' : '?'}</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">${totalSistemicoUnico.toLocaleString('pt-BR')} L contados · estoque: ${_acTotalEstoque ? _acTotalEstoque.toLocaleString('pt-BR')+' L' : '?'} · ${cobertPctRaw !== null ? (cobertPctRaw/100).toFixed(1)+'x o estoque' : ''}</div>
+
       <div style="margin-top:8px;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
-        <div style="width:${Math.min(cobertPct||0,100)}%;height:100%;background:${corCob};border-radius:3px;transition:width .5s"></div>
+        <div style="width:${Math.min((parseFloat(cobertPct)||0) % 100 || (parseFloat(cobertPct)>=100?100:0), 100)}%;height:100%;background:${corCob};border-radius:3px;transition:width .5s"></div>
       </div>
     </div>
     <div class="stat-card" style="padding:18px 20px">
@@ -4242,6 +4265,11 @@ function renderKpisAcuracia() {
 // ── Grupos: agrupa por codigo + data da contagem ──────────────────────────
 function renderGruposAcuracia() {
   const container = document.getElementById('ac-grupos-wrap');
+  container.innerHTML = '<div style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Renderizando…</div>';
+  // defer para não travar UI
+  requestAnimationFrame(() => _renderGruposAcuraciaInterno(container));
+}
+function _renderGruposAcuraciaInterno(container) {
   if (!_acFiltrado.length) {
     container.innerHTML = '<div style="text-align:center;padding:36px;color:var(--text3);font-size:.82rem">Nenhum registro no período.</div>';
     return;
@@ -4273,15 +4301,15 @@ function renderGruposAcuracia() {
       const saldoSistema  = g.lotes.reduce((s,r) => s + (r.saldo_sistema ?? 0), 0);
       const saldoFisico   = g.lotes.reduce((s,r) => s + (r.quantidade ?? 0), 0);
       const saldoDiv      = saldoFisico - saldoSistema;
-      const temDiv        = g.lotes.some(r => r.tipo !== 'ok');
-      const lotesOk       = g.lotes.filter(r => r.tipo === 'ok').length;
+      const temDiv        = g.lotes.some(r => r.tipo !== 'ok' && r.divergencia_resolvida !== true);
+      const lotesOk       = g.lotes.filter(r => r.tipo === 'ok' || r.divergencia_resolvida === true).length;
       const lotesDiv      = totalLotes - lotesOk;
       const acurPct       = totalLotes ? ((lotesOk / totalLotes)*100).toFixed(1) : 0;
 
       const totalEst      = totaisLocais[chave] ?? null;
-      // % de cobertura: saldo físico deste grupo (L) sobre total do estoque (L) — pode passar de 100%
-      const cobPct        = _acTotalEstoque
-        ? ((saldoFisico / _acTotalEstoque)*100).toFixed(1)
+      // % de cobertura: saldo físico / saldo sistema do próprio produto (acurácia de volume)
+      const cobPct        = saldoSistema
+        ? Math.min((saldoFisico / saldoSistema)*100, 999).toFixed(1)
         : null;
 
       const divSinal      = saldoDiv > 0 ? '+' : '';
@@ -4307,9 +4335,11 @@ function renderGruposAcuracia() {
         let resCell = '';
         if (r.tipo !== 'ok') {
           if (r.divergencia_resolvida === true) {
-            resCell = `<span class="badge b-v" style="font-size:.62rem;padding:2px 7px" title="${r.resolucao_justificativa||''}">✓ Resolvida</span>`;
+            const just = r.resolucao_justificativa ? `<div style="font-size:.65rem;color:var(--text3);margin-bottom:3px;max-width:180px;white-space:normal;line-height:1.3" title="${r.resolucao_justificativa}">${r.resolucao_justificativa.length>60?r.resolucao_justificativa.slice(0,60)+'…':r.resolucao_justificativa}</div>` : '';
+            resCell = just + `<span class="badge b-v" style="font-size:.62rem;padding:2px 7px">✓ Resolvida</span>`;
           } else if (r.divergencia_resolvida === false) {
-            resCell = `<span class="badge b-r" style="font-size:.62rem;padding:2px 7px" title="${r.resolucao_justificativa||''}">✕ Persiste</span>`;
+            const just = r.resolucao_justificativa ? `<div style="font-size:.65rem;color:var(--text3);margin-bottom:3px;max-width:180px;white-space:normal;line-height:1.3" title="${r.resolucao_justificativa}">${r.resolucao_justificativa.length>60?r.resolucao_justificativa.slice(0,60)+'…':r.resolucao_justificativa}</div>` : '';
+            resCell = just + `<span class="badge b-r" style="font-size:.62rem;padding:2px 7px">✕ Persiste</span>`;
           } else {
             resCell = `<button class="btn btn-amber btn-sm" style="font-size:.68rem;padding:2px 8px" onclick="abrirModalResolucao(${JSON.stringify(r).replace(/"/g,'&quot;')})">⚑ Verificar</button>`;
           }
@@ -4383,7 +4413,7 @@ function renderGruposAcuracia() {
               </div>
             </div>
             <div style="text-align:center">
-              <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">% Estoque Coberto</div>
+              <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">% Cobertura Física</div>
               <div style="font-size:.95rem;font-weight:800;color:${cobPct!==null && parseFloat(cobPct)>100 ? 'var(--amber-lt)' : 'var(--blue-lt)'}">${cobPct !== null ? cobPct+'%' : '—'}</div>
               <div style="font-size:.62rem;color:var(--text3);margin-top:2px">${saldoFisico.toLocaleString('pt-BR')} L contados${cobPct!==null && parseFloat(cobPct)>100 ? ' ↑ acima do total' : ''}</div>
             </div>
@@ -4495,12 +4525,204 @@ async function salvarResolucao() {
   }
 }
 
+
+// ══════════════════════════════════════════════════════════
+// RELATÓRIO DE ACURÁCIA — Excel formatado (5 abas)
+// ══════════════════════════════════════════════════════════
+function exportarRelatorioAcuracia() {
+  if (!_acDados.length) { toast('Sem dados para gerar relatório.', 'warn'); return; }
+
+  const hoje    = new Date();
+  const dataFmt = hoje.toLocaleDateString('pt-BR');
+  const horaFmt = hoje.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  const deEl    = document.getElementById('ac-de');
+  const ateEl   = document.getElementById('ac-ate');
+  const periodoFmt = (deEl?.value && ateEl?.value)
+    ? new Date(deEl.value+'T12:00:00').toLocaleDateString('pt-BR') + ' a ' + new Date(ateEl.value+'T12:00:00').toLocaleDateString('pt-BR')
+    : 'Período completo';
+
+  const fmtD = s => { if (!s) return '—'; const [y,m,d] = s.split('T')[0].split('-'); return d+'/'+m+'/'+y; };
+
+  // ── Cálculos ──
+  const total          = _acDados.length;
+  const semDiv         = _acDados.filter(r => r.tipo === 'ok' || r.divergencia_resolvida === true).length;
+  const comDiv         = _acDados.filter(r => r.tipo !== 'ok' && r.divergencia_resolvida !== true).length;
+  const resolvidas     = _acDados.filter(r => r.tipo !== 'ok' && r.divergencia_resolvida === true).length;
+  const pendentes      = _acDados.filter(r => r.tipo !== 'ok' && r.divergencia_resolvida === null).length;
+  const persistem      = _acDados.filter(r => r.divergencia_resolvida === false).length;
+  const pctAcur        = total ? semDiv / total * 100 : 0;
+  const pctErro        = total ? comDiv / total * 100 : 0;
+  const totalFisico    = _acDados.reduce((s,r) => s + (r.quantidade ?? 0), 0);
+  const totalSistemico = _acDados.reduce((s,r) => s + (r.saldo_sistema ?? 0), 0);
+  const totalDiv       = _acDados.reduce((s,r) => s + (r.divergencia ?? 0), 0);
+  const cobPctRaw      = _acTotalEstoque ? totalSistemico / _acTotalEstoque * 100 : null;
+  const ciclos         = cobPctRaw !== null ? (cobPctRaw / 100).toFixed(2) : null;
+  const gruposDistintos= new Set(_acDados.map(r => (r.codigo||'')+'|'+(r.created_at||'').split('T')[0])).size;
+  const lblAcur        = pctAcur >= 95 ? 'Excelente' : pctAcur >= 70 ? 'Regular' : 'Crítica';
+
+  // Evolução diária
+  const byDia = {};
+  _acDados.forEach(r => {
+    const d = (r.created_at||'').split('T')[0]; if (!d) return;
+    if (!byDia[d]) byDia[d] = { ok:0, div:0 };
+    if (r.tipo==='ok' || r.divergencia_resolvida===true) byDia[d].ok++; else byDia[d].div++;
+  });
+  const diasOrdenados = Object.keys(byDia).sort();
+
+  // Operadores
+  const byOp = {};
+  _acDados.forEach(r => {
+    const op = r.usuario || '—';
+    if (!byOp[op]) byOp[op] = { total:0, ok:0, div:0, dias:new Set() };
+    byOp[op].total++;
+    if (r.tipo==='ok' || r.divergencia_resolvida===true) byOp[op].ok++; else byOp[op].div++;
+    if (r.created_at) byOp[op].dias.add(r.created_at.split('T')[0]);
+  });
+
+  // ── Estilos ──
+  const wb = XLSX.utils.book_new();
+  const N0='#,##0', PCT='0.0%', SIGN='+#,##0;-#,##0;0', X='0.00x';
+  const VERDE={ bg:'D1FAE5', fg:'065F46', bd:'6EE7B7' };
+  const VERM ={ bg:'FEE2E2', fg:'991B1B', bd:'FCA5A5' };
+  const AMB  ={ bg:'FFF3CD', fg:'92400E', bd:'FCD34D' };
+  const CINZA={ bg:'F9FAFB', fg:'6B7280' };
+  const TITULO='0F5132';
+
+  const thin = rgb => ({ style:'thin',   color:{ rgb } });
+  const med  = rgb => ({ style:'medium', color:{ rgb } });
+  const brd  = c => ({ top:thin(c), bottom:thin(c), left:thin(c), right:thin(c) });
+  const brdM = c => ({ top:med(c),  bottom:med(c),  left:thin(c), right:thin(c) });
+
+  function C(v, { bold=false, bg=null, fg='1F2937', fmt=null, sz=10, align=null, border=null, italic=false }={}) {
+    return { v, t:typeof v==='number'?'n':'s', s:{
+      font:{ name:'Calibri', sz, bold, italic, color:{ rgb:fg } },
+      fill: bg ? { fgColor:{ rgb:bg }, patternType:'solid' } : undefined,
+      alignment:{ vertical:'center', horizontal:align||(typeof v==='number'?'right':'left') },
+      border: border || brd('E5E7EB'), numFmt:fmt||undefined,
+    }};
+  }
+  const CT  = (v,sz=13) => C(v,{ bold:true, bg:TITULO, fg:'FFFFFF', sz, border:brdM(TITULO) });
+  const CH  = v => C(v,{ bold:true, bg:'1A7F4B', fg:'FFFFFF', sz:9, align:'center', border:brdM('1A7F4B') });
+  const CS  = v => C(v,{ bold:true, bg:'1A7F4B', fg:'FFFFFF', sz:10, border:brdM('1A7F4B') });
+  const CL  = v => C(v,{ bg:'F9FAFB', fg:'6B7280' });
+  const CV  = (v,fmt,col) => C(v,{ bold:true, bg:col?.bg||null, fg:col?.fg||'111827', fmt, sz:11 });
+  const CN  = (v,bg,fg,fmt,c) => C(v,{ bg:bg||null, fg:fg||'374151', fmt, sz:9, align:c?'center':null });
+  const CE  = () => C('',{ border:brd('FFFFFF') });
+
+  const corAcurCol = pctAcur>=95?VERDE:pctAcur>=70?AMB:VERM;
+
+  // ══ ABA 1 — RESUMO ══
+  const aR = [];
+  aR.push([CT('RELATÓRIO DE ACURÁCIA DE ESTOQUE',14),CE(),CE(),CE()]);
+  aR.push([C('Simbiose Agro  ·  '+periodoFmt+'  ·  '+dataFmt+' às '+horaFmt,
+    { bg:'1A7F4B', fg:'A7F3D0', sz:9, italic:true, border:brdM(TITULO) }),CE(),CE(),CE()]);
+  aR.push([CE(),CE(),CE(),CE()]);
+  aR.push([CS('RESULTADO GERAL'),CE(),CS('VOLUMES'),CE()]);
+  aR.push([CL('Acurácia Geral'),CV(pctAcur/100,PCT,corAcurCol),CL('Saldo Físico Total (L)'),CV(totalFisico,N0)]);
+  aR.push([CL('% Com Divergência'),CV(pctErro/100,PCT,comDiv>0?VERM:VERDE),CL('Saldo Sistêmico Total (L)'),CV(totalSistemico,N0)]);
+  aR.push([CL('Lotes Analisados'),CV(total,N0),CL('Divergência Líquida (L)'),CV(totalDiv,SIGN,totalDiv<0?VERM:totalDiv>0?AMB:VERDE)]);
+  aR.push([CL('Com Divergência'),CV(comDiv,N0,comDiv>0?VERM:null),CL('Cobertura Acumulada (%)'),cobPctRaw!==null?CV(cobPctRaw/100,PCT):C('—')]);
+  aR.push([CL('Resolvidas'),CV(resolvidas,N0,VERDE),CL('Ciclos do Estoque'),ciclos!==null?CV(Number(ciclos),X):C('—')]);
+  aR.push([CL('Persistem / Pendentes'),CV(persistem+' / '+pendentes,null,persistem>0?VERM:null),CL('Sessões de Contagem'),CV(gruposDistintos,N0)]);
+  aR.push([CE(),CE(),CE(),CE()]);
+  aR.push([C('Classificação: '+lblAcur+(pctAcur>=95?' ✓':pctAcur>=70?' ⚠':' ✕'),
+    { bold:true, bg:corAcurCol.bg, fg:corAcurCol.fg, sz:12, border:brdM(corAcurCol.bd) }),CE(),CE(),CE()]);
+  const shR = XLSX.utils.aoa_to_sheet(aR);
+  shR['!cols']=[{ wch:32 },{ wch:18 },{ wch:30 },{ wch:18 }];
+  shR['!rows']=[{ hpt:28 },{ hpt:13 },{hpt:6},{hpt:18}];
+  shR['!merges']=[{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:1,c:0},e:{r:1,c:3}},{s:{r:2,c:0},e:{r:2,c:3}},{s:{r:10,c:0},e:{r:10,c:3}},{s:{r:11,c:0},e:{r:11,c:3}}];
+  XLSX.utils.book_append_sheet(wb, shR, '📊 Resumo');
+
+  // ══ ABA 2 — EVOLUÇÃO DIÁRIA ══
+  const aD=[];
+  aD.push([CT('EVOLUÇÃO DIÁRIA',13),CE(),CE(),CE(),CE()]);
+  aD.push([C(diasOrdenados.length+' dias',{ bg:'1A7F4B',fg:'A7F3D0',sz:9,italic:true,border:brdM(TITULO) }),CE(),CE(),CE(),CE()]);
+  aD.push(Array(5).fill(CE()));
+  aD.push(['Data','Total','OK','Divergências','Acurácia (%)'].map(CH));
+  diasOrdenados.forEach(d => {
+    const v=byDia[d]; const tot=v.ok+v.div;
+    const pct=tot?v.ok/tot:0;
+    const col=pct>=0.95?VERDE:pct>=0.70?AMB:VERM;
+    const [y,m,dd]=d.split('-');
+    aD.push([CN(dd+'/'+m+'/'+y,null,null,null,true),CN(tot,null,null,N0,true),CN(v.ok,VERDE.bg,VERDE.fg,N0,true),CN(v.div,v.div>0?VERM.bg:null,v.div>0?VERM.fg:null,N0,true),C(pct,{ bold:true,bg:col.bg,fg:col.fg,fmt:PCT,sz:9,align:'center' })]);
+  });
+  // Total
+  const totD=diasOrdenados.reduce((s,d)=>s+byDia[d].div,0);
+  const totO=diasOrdenados.reduce((s,d)=>s+byDia[d].ok,0);
+  const totT=totO+totD;
+  aD.push([C('TOTAL',{bold:true,bg:CINZA.bg,fg:'374151'}),CN(totT,CINZA.bg,'374151',N0,true),CN(totO,VERDE.bg,VERDE.fg,N0,true),CN(totD,totD>0?VERM.bg:null,totD>0?VERM.fg:'374151',N0,true),C(totT?totO/totT:0,{bold:true,bg:corAcurCol.bg,fg:corAcurCol.fg,fmt:PCT,sz:9,align:'center'})]);
+  const shD=XLSX.utils.aoa_to_sheet(aD);
+  shD['!cols']=[{ wch:12 },{ wch:10 },{ wch:10 },{ wch:14 },{ wch:14 }];
+  shD['!merges']=[{s:{r:0,c:0},e:{r:0,c:4}},{s:{r:1,c:0},e:{r:1,c:4}},{s:{r:2,c:0},e:{r:2,c:4}}];
+  XLSX.utils.book_append_sheet(wb, shD, '📅 Evolução Diária');
+
+  // ══ ABA 3 — OPERADORES ══
+  const aO=[];
+  aO.push([CT('ACURÁCIA POR OPERADOR',13),...Array(5).fill(CE())]);
+  aO.push([C(Object.keys(byOp).length+' operadores',{ bg:'1A7F4B',fg:'A7F3D0',sz:9,italic:true,border:brdM(TITULO) }),...Array(5).fill(CE())]);
+  aO.push(Array(6).fill(CE()));
+  aO.push(['Operador','Total','OK','Divergências','Acurácia (%)','Dias Ativo'].map(CH));
+  Object.entries(byOp).sort((a,b)=>b[1].total-a[1].total).forEach(([op,v]) => {
+    const pct=v.total?v.ok/v.total:0; const col=pct>=0.95?VERDE:pct>=0.70?AMB:VERM;
+    aO.push([CN(op),CN(v.total,null,null,N0,true),CN(v.ok,VERDE.bg,VERDE.fg,N0,true),CN(v.div,v.div>0?VERM.bg:null,v.div>0?VERM.fg:null,N0,true),C(pct,{ bold:true,bg:col.bg,fg:col.fg,fmt:PCT,sz:9,align:'center' }),CN(v.dias.size,null,null,N0,true)]);
+  });
+  const shO=XLSX.utils.aoa_to_sheet(aO);
+  shO['!cols']=[{ wch:26 },{ wch:10 },{ wch:10 },{ wch:14 },{ wch:14 },{ wch:12 }];
+  shO['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}},{s:{r:2,c:0},e:{r:2,c:5}}];
+  XLSX.utils.book_append_sheet(wb, shO, '👤 Operadores');
+
+  // ══ ABA 4 — DIVERGÊNCIAS ══
+  const aDiv=[];
+  aDiv.push([CT('DETALHAMENTO DAS DIVERGÊNCIAS',13),...Array(9).fill(CE())]);
+  const nDiv=_acDados.filter(r=>r.tipo!=='ok').length;
+  aDiv.push([C(nDiv+' registros com divergência',{ bg:'1A7F4B',fg:'A7F3D0',sz:9,italic:true,border:brdM(TITULO) }),...Array(9).fill(CE())]);
+  aDiv.push(Array(10).fill(CE()));
+  aDiv.push(['Data','Código','Produto','Lote','Arm.','Saldo Sis.','Contado','Divergência','Operador','Status'].map(CH));
+  _acDados.filter(r=>r.tipo!=='ok').sort((a,b)=>Math.abs(b.divergencia??0)-Math.abs(a.divergencia??0)).forEach(r => {
+    const div=r.divergencia??0; const col=div<0?VERM:AMB;
+    const status=r.divergencia_resolvida===true?'Resolvida':r.divergencia_resolvida===false?'Persiste':'Pendente';
+    const colSt=r.divergencia_resolvida===true?VERDE:r.divergencia_resolvida===false?VERM:CINZA;
+    aDiv.push([CN(fmtD(r.created_at),col.bg,'374151',null,true),CN(r.codigo||'',col.bg,'374151'),CN(r.produto_nome||'',col.bg,'374151'),CN(r.lote||'',col.bg,'374151'),CN(r.armazem||'',col.bg,'374151',null,true),CN(r.saldo_sistema??0,col.bg,'374151',N0),CN(r.quantidade??0,col.bg,'374151',N0),C(div,{ bold:true,bg:col.bg,fg:col.fg,fmt:SIGN,sz:9 }),CN(r.usuario||'',col.bg,'374151'),C(status,{ bold:true,bg:colSt.bg,fg:colSt.fg,sz:9,align:'center' })]);
+  });
+  const totDS=_acDados.filter(r=>r.tipo!=='ok').reduce((s,r)=>s+(r.saldo_sistema??0),0);
+  const totDF=_acDados.filter(r=>r.tipo!=='ok').reduce((s,r)=>s+(r.quantidade??0),0);
+  aDiv.push([C('TOTAL',{bold:true,bg:CINZA.bg,fg:'374151'}),...Array(4).fill(C('',{bg:CINZA.bg})),CN(totDS,CINZA.bg,'374151',N0),CN(totDF,CINZA.bg,'374151',N0),C(totalDiv,{bold:true,bg:CINZA.bg,fg:totalDiv<0?VERM.fg:totalDiv>0?AMB.fg:VERDE.fg,fmt:SIGN,sz:9}),...Array(2).fill(C('',{bg:CINZA.bg}))]);
+  const shDiv=XLSX.utils.aoa_to_sheet(aDiv);
+  shDiv['!cols']=[{ wch:12 },{ wch:14 },{ wch:36 },{ wch:16 },{ wch:6 },{ wch:12 },{ wch:12 },{ wch:12 },{ wch:20 },{ wch:12 }];
+  shDiv['!merges']=[{s:{r:0,c:0},e:{r:0,c:9}},{s:{r:1,c:0},e:{r:1,c:9}},{s:{r:2,c:0},e:{r:2,c:9}}];
+  XLSX.utils.book_append_sheet(wb, shDiv, '⚠ Divergências');
+
+  // ══ ABA 5 — TODOS OS REGISTROS ══
+  const aAll=[];
+  aAll.push([CT('TODOS OS REGISTROS DO PERÍODO',13),...Array(8).fill(CE())]);
+  aAll.push([C(total+' lotes · '+periodoFmt,{ bg:'1A7F4B',fg:'A7F3D0',sz:9,italic:true,border:brdM(TITULO) }),...Array(8).fill(CE())]);
+  aAll.push(Array(9).fill(CE()));
+  aAll.push(['Data','Código','Produto','Lote','Arm.','Saldo Sis.','Contado','Divergência','Operador'].map(CH));
+  _acDados.forEach(r => {
+    const div=r.divergencia??0;
+    const isOk=r.tipo==='ok'||r.divergencia_resolvida===true;
+    const bg=isOk?null:div<0?VERM.bg:AMB.bg;
+    const fg=isOk?null:div<0?VERM.fg:AMB.fg;
+    aAll.push([CN(fmtD(r.created_at),bg,bg?fg:'374151',null,true),CN(r.codigo||'',bg,bg?fg:'374151'),CN(r.produto_nome||'',bg,bg?fg:'374151'),CN(r.lote||'',bg,bg?fg:'374151'),CN(r.armazem||'',bg,bg?fg:'374151',null,true),CN(r.saldo_sistema??0,bg,bg?fg:'374151',N0),CN(r.quantidade??0,bg,bg?fg:'374151',N0),C(div,{ bg,fg:bg?(div<0?VERM.fg:AMB.fg):'374151',fmt:SIGN,sz:9 }),CN(r.usuario||'',bg,bg?fg:'374151')]);
+  });
+  const shAll=XLSX.utils.aoa_to_sheet(aAll);
+  shAll['!cols']=[{ wch:12 },{ wch:14 },{ wch:36 },{ wch:16 },{ wch:6 },{ wch:12 },{ wch:12 },{ wch:12 },{ wch:20 }];
+  shAll['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}},{s:{r:1,c:0},e:{r:1,c:8}},{s:{r:2,c:0},e:{r:2,c:8}}];
+  XLSX.utils.book_append_sheet(wb, shAll, '📋 Todos os Registros');
+
+  const nome='acuracia_'+hoje.toISOString().slice(0,10)+'.xlsx';
+  XLSX.writeFile(wb, nome);
+  toast('✓ Relatório exportado: '+nome, 'ok', 5000);
+}
+
+
 // ── Total do Estoque global ───────────────────────────────────────────────
 async function abrirModalTotalEstoque() {
   const cur = _acTotalEstoque ? _acTotalEstoque : '';
-  const val = prompt('Informe o volume total do estoque em LITROS (pode inserir novamente para atualizar):', cur);
+  const curFmt = _acTotalEstoque ? _acTotalEstoque.toLocaleString('pt-BR') : '';
+  const val = prompt('Informe o volume total do estoque em LITROS:\nExemplo: 837547 ou 837.547\n(Ponto = milhar, sem casas decimais)', curFmt);
   if (val === null) return;
-  const n = parseFloat(val.replace(',','.'));
+  const n = parseFloat(val.replace(/\./g,'').replace(',','.'));
   if (isNaN(n) || n <= 0) { toast('Valor inválido.','warn'); return; }
   try {
     const { error } = await sb.from('config').upsert(
