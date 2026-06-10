@@ -1,5 +1,5 @@
 /* Service Worker — Simbiose Expedição PWA */
-const CACHE = 'simbiose-v1';
+const CACHE = 'simbiose-v2';
 const URLS  = ['./mobile.html', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -16,10 +16,44 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Cache first, fallback to network
 self.addEventListener('fetch', e => {
+  const req = e.request;
+
+  // Só intercepta GET (POST/PATCH/DELETE do Supabase passam direto)
+  if (req.method !== 'GET') return;
+
+  const url = new URL(req.url);
+
+  // Requisições de API (Supabase etc.) nunca passam pelo cache
+  if (url.origin !== self.location.origin) return;
+
+  const isHTML = req.mode === 'navigate' || url.pathname.endsWith('.html');
+
+  if (isHTML) {
+    // NETWORK FIRST para HTML: deploy novo chega na hora;
+    // cache só é usado quando offline.
+    e.respondWith(
+      fetch(req)
+        .then(res => {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(req, copy));
+          return res;
+        })
+        .catch(() => caches.match(req).then(r => r || caches.match('./mobile.html')))
+    );
+    return;
+  }
+
+  // CACHE FIRST para o resto (manifest, ícones…), atualizando em background
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    caches.match(req).then(cached => {
+      const fetched = fetch(req).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(req, copy));
+        return res;
+      }).catch(() => cached);
+      return cached || fetched;
+    })
   );
 });
 
