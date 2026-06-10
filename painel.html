@@ -1384,12 +1384,13 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
               <option value="rejeitado">Rejeitado</option>
             </select>
             <button class="btn btn-ghost btn-sm" onclick="exportarLancamentosExcel()">↓ Excel</button>
+            <button class="btn btn-danger btn-sm" id="btn-excluir-tudo-lanc" onclick="excluirTudoLancamentos()" style="display:none">🗑 Excluir Tudo</button>
             <button class="btn btn-ghost btn-sm" onclick="carregarLancamentos()">↺</button>
           </div>
         </div>
         <table>
           <thead><tr><th>Filial</th><th>Código</th><th>Produto</th><th>Lote</th><th>Qtd</th><th>Armazém</th><th>Operador</th><th>Data</th><th>Tipo</th><th style="text-align:right">Ações</th></tr></thead>
-          <tbody id="tbody-lanc"><tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr></tbody>
+          <tbody id="tbody-lanc"><tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1907,7 +1908,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-bottom:11px">
       <div class="field"><label>Lote</label><input type="text" id="esv-lote" style="text-transform:uppercase"></div>
       <div class="field"><label>Armazém</label><input type="text" id="esv-armazem"></div>
-      <div class="field"><label>Qtd Contada</label><input type="number" id="esv-qtd" min="0"></div>
+      <div class="field"><label>Qtd Contada (soma)</label><input type="number" id="esv-qtd" readonly style="opacity:.6" title="Soma dos lançamentos — edite os lançamentos individuais na aba Registros"></div>
     </div>
     <div style="background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--r-sm);padding:9px 12px;font-size:.74rem;color:var(--amber);margin-bottom:14px;font-weight:600">
       ⚠ Atualiza lote e armazém em todos os lançamentos pendentes com este código/lote/armazém original.
@@ -2204,7 +2205,7 @@ function atualizarStatsSV() {
   const validados = svLinhas.filter(r => r._validado).length;
   const contados  = svLinhas.filter(r => r.qtdContada !== null && !r._validado).length;
   const pend      = total - contados - validados;
-  const diverg    = svLinhas.filter(r => r.div !== null && r.div !== 0).length;
+  const diverg    = svLinhas.filter(r => r.div !== null && r.div !== 0 && !r._validado).length;
   const recont    = svLinhas.filter(r => r.recontagem && !r._validado).length;
 
   document.getElementById('sv-total').textContent      = total;
@@ -2563,6 +2564,8 @@ async function confirmarValidacao() {
 
   // Validação manual: usa qtd do campo manual
   const isManual = itemAtual.qtdContada === null || itemAtual.qtdContada === undefined;
+  // Validação avulsa (armazém errado / lote inexistente): item não tem id do saldo_sistema
+  const isAvulsa = !isManual && !itemAtual.id;
   let qtdFinal = itemAtual.qtdContada;
   if (isManual) {
     const qtdManualEl = document.getElementById('mv-qtd-manual');
@@ -2572,6 +2575,8 @@ async function confirmarValidacao() {
     if (isNaN(qtdManualVal) || qtdManualVal < 0) { toast('Quantidade inválida.','warn'); return; }
     qtdFinal = qtdManualVal;
     if (!motivo) { toast('Informe a justificativa da validação manual.','warn'); return; }
+  } else if (isAvulsa && !motivo) {
+    toast('Informe a justificativa (campo obrigatório).','warn'); return;
   } else if (isRecont && !motivo) {
     // Motivo já foi informado ao solicitar; aceita mesmo vazio aqui
     // mas se não veio pré-preenchido, avisa suavemente
@@ -2590,7 +2595,7 @@ async function confirmarValidacao() {
       saldo_sistema:    saldo,
       divergencia:      div,
       tipo:             tipo || (div===0?'ok':div>0?'positivo':'negativo'),
-      observacao:       obs || null,
+      observacao:       obs || (!isRecont && motivo ? motivo : null),
       armazem:          itemAtual.armazem,
       usuario:          itemAtual.ops || (isManual ? 'Gestor (manual)' : null),
       is_recontagem:    isRecont || false,
@@ -3109,6 +3114,8 @@ function exportarLancamentosExcel() {
 function renderLancamentos(data) {
   document.getElementById('cnt-lanc').textContent = `${data.length} registro${data.length!==1?'s':''}`;
   const tbody = document.getElementById('tbody-lanc');
+  const btnExc = document.getElementById('btn-excluir-tudo-lanc');
+  if (btnExc) btnExc.style.display = data.length > 0 ? 'inline-flex' : 'none';
   if (!data.length) { tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum lançamento.</td></tr>'; return; }
   tbody.innerHTML = data.map(r => `
     <tr>
@@ -3136,6 +3143,47 @@ async function excluirRegistro(id, tabela) {
     toast('Registro excluído.','warn');
     carregarLancamentos();
   } catch(e) { toast('Erro: '+e.message,'err'); }
+}
+
+async function excluirTudoLancamentos() {
+  const filtrados = getFilteredLancamentos(true);
+  const total = filtrados.length;
+  if (!total) { toast('Nenhum registro para excluir.', 'warn'); return; }
+
+  const temFiltro = [
+    document.getElementById('search-lanc').value,
+    document.getElementById('filt-lanc-arm').value,
+    document.getElementById('filt-lanc-op').value,
+    document.getElementById('filt-lanc-tipo').value,
+    document.getElementById('filt-lanc-status').value,
+    document.getElementById('filt-lanc-de').value,
+    document.getElementById('filt-lanc-ate').value,
+    getFiltroFilial(),
+  ].some(v => v);
+
+  const msg = temFiltro
+    ? `Excluir os ${total} registro(s) filtrados atualmente?`
+    : `Excluir TODOS os ${total} registro(s) de lançamentos?`;
+
+  if (!confirm(msg)) return;
+  if (!confirm('Tem certeza? Esta ação não pode ser desfeita.')) return;
+
+  const btn = document.getElementById('btn-excluir-tudo-lanc');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Excluindo…'; }
+  try {
+    const ids = filtrados.map(r => r.id).filter(Boolean);
+    // Exclui em lotes de 200 para não estourar o limite de URL do PostgREST
+    for (let i = 0; i < ids.length; i += 200) {
+      const { error } = await sb.from('lancamentos').delete().in('id', ids.slice(i, i + 200));
+      if (error) throw error;
+    }
+    toast(`✓ ${ids.length} registro(s) excluído(s).`, 'ok', 5000);
+    await carregarLancamentos();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🗑 Excluir Tudo'; }
+  }
 }
 
 // carregarContagens removida — aba de contagens avulsas foi removida do painel
@@ -3856,7 +3904,8 @@ async function salvarEditSV() {
   const k       = document.getElementById('esv-k').value;
   const novoLote= document.getElementById('esv-lote').value.trim().toUpperCase();
   const novoArm = document.getElementById('esv-armazem').value.trim();
-  const novaQtd = parseFloat(document.getElementById('esv-qtd').value);
+  if (!novoLote) { toast('Informe o lote.','warn'); return; }
+  if (!novoArm)  { toast('Informe o armazém.','warn'); return; }
   document.getElementById('esv-spin').style.display = 'block';
 
   try {
@@ -3866,11 +3915,13 @@ async function salvarEditSV() {
       .update({ lote: novoLote, armazem: novoArm })
       .eq('status','pendente')
       .eq('codigo', cod).eq('lote', lot).eq('armazem', arm);
+    if (e1) throw e1;
 
     const { error: e2 } = await sb.from('contagens')
       .update({ lote: novoLote, armazem: novoArm })
       .eq('status','pendente')
       .eq('codigo', cod).eq('lote', lot).eq('armazem', arm);
+    if (e2) throw e2;
 
     fecharModal('modal-edit-sv');
     toast('✓ Lançamentos atualizados!','ok');
@@ -3944,6 +3995,17 @@ async function validarTodos() {
       const cod=(item.codigo||'').trim(), lot=(item.lote||'').trim(), arm=(item.armazem||'').trim();
       await sb.from('lancamentos').delete().eq('status','pendente').eq('codigo',cod).eq('lote',lot).eq('armazem',arm);
       await sb.from('contagens').delete().eq('status','pendente').eq('codigo',cod).eq('lote',lot).eq('armazem',arm);
+      // Persiste validado=true no saldo_sistema (senão após reload o item volta como "não contado")
+      if (item.id) {
+        await sb.from('saldo_sistema').update({
+          validado:    true,
+          qtd_contada: item.qtdContada,
+          divergencia: 0,
+          tipo_div:    'ok',
+          operador:    item.ops || null,
+          validado_em: new Date().toISOString(),
+        }).eq('id', item.id);
+      }
       // Marca localmente
       const idx = svLinhas.findIndex(r => r._k === item._k);
       if (idx !== -1) svLinhas[idx]._validado = true;
