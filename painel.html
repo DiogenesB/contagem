@@ -1591,6 +1591,8 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
               <option value="">Todos</option>
               <option value="ok">Sem divergência</option>
               <option value="divergencia">Com divergência</option>
+              <option value="ajustado">✓ Ajustados</option>
+              <option value="persiste">✕ Persiste</option>
             </select>
             <button class="btn btn-ghost btn-sm" onclick="carregarAcuracidade()">↺ Atualizar</button>
             <button class="btn btn-ghost btn-sm" onclick="exportarAcuracidade()">↓ Excel</button>
@@ -1927,6 +1929,43 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;font-size:.9rem;line-height:1.65;color:var(--text2);white-space:pre-wrap;word-break:break-word;min-height:60px;max-height:300px;overflow-y:auto" id="vt-corpo">—</div>
     <div class="modal-acts" style="margin-top:14px">
       <button class="btn btn-ghost" onclick="fecharModal('modal-ver-texto')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DETALHES MÊS DE ACURÁCIA -->
+<div class="modal-bg" id="modal-hac-detalhe" onclick="if(event.target===this)fecharModal('modal-hac-detalhe')">
+  <div class="modal" style="max-width:900px;width:96%;max-height:92vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
+    <!-- Header fixo -->
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;background:var(--bg2)">
+      <div style="font-size:1rem;font-weight:800;color:var(--text);flex:1" id="hac-det-titulo">Detalhes</div>
+      <button class="btn btn-ghost btn-sm" onclick="exportarMesHac()">↓ Excel</button>
+      <button class="btn btn-ghost btn-sm" onclick="fecharModal('modal-hac-detalhe')">✕ Fechar</button>
+    </div>
+    <!-- KPIs do mês -->
+    <div id="hac-det-summary" style="flex-shrink:0"></div>
+    <!-- Tabela scrollável -->
+    <div style="overflow:auto;flex:1;padding:0">
+      <table style="width:100%;font-size:.82rem;border-collapse:collapse">
+        <thead style="position:sticky;top:0;z-index:2">
+          <tr style="background:var(--bg4)">
+            <th style="padding:9px 12px;font-size:.67rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;border-bottom:1px solid var(--border)">Data</th>
+            <th style="padding:9px 12px;font-size:.67rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;border-bottom:1px solid var(--border)">Código</th>
+            <th style="padding:9px 12px;font-size:.67rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)">Produto</th>
+            <th style="padding:9px 12px;font-size:.67rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;border-bottom:1px solid var(--border)">Lote</th>
+            <th style="padding:9px 12px;font-size:.67rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;border-bottom:1px solid var(--border)">Arm.</th>
+            <th style="padding:9px 12px;font-size:.67rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border)">Saldo Sis.</th>
+            <th style="padding:9px 12px;font-size:.67rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border)">Saldo Fís.</th>
+            <th style="padding:9px 12px;font-size:.67rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border)">Div.</th>
+            <th style="padding:9px 12px;font-size:.67rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;border-bottom:1px solid var(--border)">Operador</th>
+            <th style="padding:9px 12px;font-size:.67rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;border-bottom:1px solid var(--border)">Obs. Gestor</th>
+            <th style="padding:9px 12px;font-size:.67rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;text-align:center;white-space:nowrap;border-bottom:1px solid var(--border)">Ajuste / Resolução</th>
+          </tr>
+        </thead>
+        <tbody id="hac-det-tbody">
+          <tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3)">Carregando…</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -4249,8 +4288,14 @@ function filtrarAcuracidade() {
   _acFiltrado = _acDados.filter(r => {
     if (q && ![r.produto_nome,r.codigo,r.lote].join(' ').toLowerCase().includes(q)) return false;
     if (filial && (r.filial||'').toUpperCase() !== filial) return false;
-    if (status === 'ok'          && r.tipo !== 'ok') return false;
-    if (status === 'divergencia' && r.tipo === 'ok') return false;
+    // ok = tipo ok OU ajustado
+    if (status === 'ok'          && r.tipo !== 'ok' && r.divergencia_resolvida !== true) return false;
+    // divergencia = tem div E não foi ajustado
+    if (status === 'divergencia' && (r.tipo === 'ok' || r.divergencia_resolvida === true)) return false;
+    // ajustado = tinha div E foi marcado como resolvido
+    if (status === 'ajustado'    && !(r.tipo !== 'ok' && r.divergencia_resolvida === true)) return false;
+    // persiste = tinha div E foi marcado como persiste
+    if (status === 'persiste'    && r.divergencia_resolvida !== false) return false;
     return true;
   });
 
@@ -4261,7 +4306,9 @@ function filtrarAcuracidade() {
 // ── KPIs globais (sobre todos os dados sem filtro) ────────────────────────
 function renderKpisAcuracia() {
   const total    = _acDados.length;
+  // Sem divergência = tipo ok OU divergência já resolvida
   const semDiv   = _acDados.filter(r => r.tipo === 'ok' || r.divergencia_resolvida === true).length;
+  // Com divergência = tipo diferente de ok E NÃO foi resolvida (null ou false)
   const comDiv   = _acDados.filter(r => r.tipo !== 'ok' && r.divergencia_resolvida !== true).length;
 
   // Produtos distintos conferidos (codigo+data únicos)
@@ -4376,11 +4423,15 @@ function _renderGruposAcuraciaInterno(container) {
       const corDiv        = saldoDiv === 0 ? 'var(--green)' : saldoDiv > 0 ? 'var(--amber-lt)' : 'var(--red)';
       const corAcur       = parseFloat(acurPct) >= 95 ? 'var(--green)' : parseFloat(acurPct) >= 70 ? 'var(--amber-lt)' : 'var(--red)';
       const divsNaoResolvidas = g.lotes.filter(r => r.tipo !== 'ok' && r.divergencia_resolvida !== true);
+      const divsAjustadas     = g.lotes.filter(r => r.tipo !== 'ok' && r.divergencia_resolvida === true);
+      const ajustBadgeExtra   = divsAjustadas.length > 0
+        ? ` <span class="badge b-v" style="font-size:.65rem;padding:2px 6px">✓ ${divsAjustadas.length} ajust.</span>`
+        : '';
       const resultBadge   = !temDiv || divsNaoResolvidas.length === 0
-        ? '<span class="badge b-v" style="font-size:.7rem;padding:3px 8px">✓ Sem Divergência</span>'
+        ? `<span class="badge b-v" style="font-size:.7rem;padding:3px 8px">✓ Sem Divergência</span>${ajustBadgeExtra}`
         : g.lotes.some(r => r.tipo !== 'ok' && r.divergencia_resolvida === false)
-          ? '<span class="badge b-r" style="font-size:.7rem;padding:3px 8px">✕ Divergência Persiste</span>'
-          : '<span class="badge b-r" style="font-size:.7rem;padding:3px 8px">⚠ Com Divergência</span>';
+          ? `<span class="badge b-r" style="font-size:.7rem;padding:3px 8px">✕ Divergência Persiste</span>${ajustBadgeExtra}`
+          : `<span class="badge" style="font-size:.7rem;padding:3px 8px;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)">⚠ Com Divergência</span>${ajustBadgeExtra}`;
       const [y,m,d]       = (g.data||'').split('-');
       const dataFmt       = g.data ? `${d}/${m}/${y}` : '—';
 
@@ -4391,20 +4442,25 @@ function _renderGruposAcuraciaInterno(container) {
         const tb   = r.tipo === 'ok' ? '<span class="badge b-v" style="font-size:.62rem;padding:2px 6px">OK</span>'
                    : r.tipo === 'positivo' ? '<span class="badge b-p" style="font-size:.62rem;padding:2px 6px">+</span>'
                    : '<span class="badge b-r" style="font-size:.62rem;padding:2px 6px">−</span>';
-        // Célula de resolução
+        // Obs do gestor (observacao ou motivo_recontagem gravados na validação)
+        const obsGestor = r.observacao || r.motivo_recontagem || '';
+        const obsCell = obsGestor
+          ? `<span style="font-size:.68rem;color:var(--blue);max-width:150px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;text-decoration:underline dotted" title="${obsGestor}" onclick="verTexto('Observação — ${(r.produto_nome||r.codigo||'').replace(/'/g,'')}',${'`'+obsGestor+'`'})">${obsGestor.length>40?obsGestor.slice(0,40)+'…':obsGestor}</span>`
+          : '<span style="color:var(--text3);font-size:.7rem">—</span>';
+        // Célula de resolução — "Ajustado" em vez de "Resolvida"
         let resCell = '';
         if (r.tipo !== 'ok') {
           if (r.divergencia_resolvida === true) {
-            const just = r.resolucao_justificativa ? `<div style="font-size:.65rem;color:var(--text3);margin-bottom:3px;max-width:180px;white-space:normal;line-height:1.3" title="${r.resolucao_justificativa}">${r.resolucao_justificativa.length>60?r.resolucao_justificativa.slice(0,60)+'…':r.resolucao_justificativa}</div>` : '';
-            resCell = just + `<span class="badge b-v" style="font-size:.62rem;padding:2px 7px">✓ Resolvida</span>`;
+            const just = r.resolucao_justificativa ? `<div style="font-size:.63rem;color:var(--text3);margin-bottom:3px;max-width:160px;white-space:normal;line-height:1.3;cursor:pointer" title="${r.resolucao_justificativa}" onclick="verTexto('Justificativa',\`${r.resolucao_justificativa.replace(/`/g,"'")}\`)">${r.resolucao_justificativa.length>50?r.resolucao_justificativa.slice(0,50)+'…':r.resolucao_justificativa}</div>` : '';
+            resCell = just + `<span class="badge b-v" style="font-size:.62rem;padding:2px 7px">✓ Ajustado</span>`;
           } else if (r.divergencia_resolvida === false) {
-            const just = r.resolucao_justificativa ? `<div style="font-size:.65rem;color:var(--text3);margin-bottom:3px;max-width:180px;white-space:normal;line-height:1.3" title="${r.resolucao_justificativa}">${r.resolucao_justificativa.length>60?r.resolucao_justificativa.slice(0,60)+'…':r.resolucao_justificativa}</div>` : '';
+            const just = r.resolucao_justificativa ? `<div style="font-size:.63rem;color:var(--text3);margin-bottom:3px;max-width:160px;white-space:normal;line-height:1.3;cursor:pointer" title="${r.resolucao_justificativa}" onclick="verTexto('Justificativa',\`${r.resolucao_justificativa.replace(/`/g,"'")}\`)">${r.resolucao_justificativa.length>50?r.resolucao_justificativa.slice(0,50)+'…':r.resolucao_justificativa}</div>` : '';
             resCell = just + `<span class="badge b-r" style="font-size:.62rem;padding:2px 7px">✕ Persiste</span>`;
           } else {
             resCell = `<button class="btn btn-amber btn-sm" style="font-size:.68rem;padding:2px 8px" onclick="abrirModalResolucao(${JSON.stringify(r).replace(/"/g,'&quot;')})">⚑ Verificar</button>`;
           }
         }
-        return `<tr${r.divergencia_resolvida === true ? ' style="opacity:.6"' : ''}>
+        return `<tr${r.divergencia_resolvida === true ? ' style="opacity:.65"' : ''}>
           <td class="cm" style="font-size:.78rem">${r.lote||'—'}</td>
           <td style="font-weight:600;color:var(--amber);font-size:.78rem">${r.armazem||'—'}</td>
           <td style="text-align:right;font-family:var(--mono);font-size:.8rem">${r.saldo_sistema??'—'}</td>
@@ -4412,6 +4468,7 @@ function _renderGruposAcuraciaInterno(container) {
           <td style="text-align:right">${sDiv}</td>
           <td style="text-align:center">${tb}</td>
           <td class="cm" style="font-size:.72rem">${r.usuario||'—'}</td>
+          <td style="max-width:160px">${obsCell}</td>
           <td style="text-align:center;white-space:nowrap">${resCell}</td>
         </tr>`;
       }).join('');
@@ -4492,7 +4549,8 @@ function _renderGruposAcuraciaInterno(container) {
                 <th style="text-align:right">Divergência</th>
                 <th style="text-align:center">Resultado</th>
                 <th>Operador</th>
-                <th style="text-align:center">Resolução</th>
+                <th>Obs. Gestor</th>
+                <th style="text-align:center">Ajuste / Resolução</th>
               </tr></thead>
               <tbody>${lotesHtml}</tbody>
             </table>
@@ -4931,56 +4989,103 @@ function renderHistAcuracia() {
     return;
   }
 
-  // KPIs do mês mais recente
-  const ult = _hacDados[0];
-  const corA = ult.pct_acuracia >= 95 ? 'var(--green)' : ult.pct_acuracia >= 70 ? 'var(--amber-lt)' : 'var(--red)';
-  const corD = ult.pct_divergencia === 0 ? 'var(--green)' : ult.pct_divergencia <= 5 ? 'var(--amber-lt)' : 'var(--red)';
-  const corC = ult.pct_conferido >= 80 ? 'var(--green)' : ult.pct_conferido >= 40 ? 'var(--amber-lt)' : 'var(--red)';
-  const [y,m] = ult.mes_ref.split('-');
+  // KPIs — recalcula a partir dos registros do mês mais recente para refletir resoluções pós-fechamento
   const meses = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const ult = _hacDados[0];
+  const regs = ult.registros || [];
+  const ultTotal  = regs.length || ult.total_lotes || 0;
+  const ultSemDiv = regs.length
+    ? regs.filter(r => r.tipo === 'ok' || r.divergencia_resolvida === true).length
+    : ult.lotes_ok || 0;
+  const ultComDiv = ultTotal - ultSemDiv;
+  const ultAjust  = regs.length ? regs.filter(r => r.tipo !== 'ok' && r.divergencia_resolvida === true).length : 0;
+  const ultPersist= regs.length ? regs.filter(r => r.divergencia_resolvida === false).length : 0;
+  const ultPctAcur= ultTotal ? parseFloat((ultSemDiv/ultTotal*100).toFixed(1)) : (ult.pct_acuracia ?? 0);
+  const ultPctDiv = ultTotal ? parseFloat((ultComDiv/ultTotal*100).toFixed(1)) : (ult.pct_divergencia ?? 0);
+  const [y,m] = ult.mes_ref.split('-');
   const mesLabel = meses[parseInt(m)] + '/' + y;
+
+  // Tendência: compara com mês anterior se existir
+  let tendAcur = '';
+  if (_hacDados.length >= 2) {
+    const ant = _hacDados[1];
+    const antRegs = ant.registros || [];
+    const antTotal  = antRegs.length || ant.total_lotes || 0;
+    const antSemDiv = antRegs.length
+      ? antRegs.filter(r => r.tipo === 'ok' || r.divergencia_resolvida === true).length
+      : ant.lotes_ok || 0;
+    const antPct = antTotal ? parseFloat((antSemDiv/antTotal*100).toFixed(1)) : (ant.pct_acuracia ?? 0);
+    const diff = parseFloat((ultPctAcur - antPct).toFixed(1));
+    const [ay,am] = ant.mes_ref.split('-');
+    const antLabel = meses[parseInt(am)] + '/' + ay;
+    if (diff > 0) tendAcur = `<span style="font-size:.7rem;color:var(--green);font-weight:700">▲ +${diff}pp vs ${antLabel}</span>`;
+    else if (diff < 0) tendAcur = `<span style="font-size:.7rem;color:var(--red);font-weight:700">▼ ${diff}pp vs ${antLabel}</span>`;
+    else tendAcur = `<span style="font-size:.7rem;color:var(--text3);font-weight:600">= igual a ${antLabel}</span>`;
+  }
+
+  const corA = ultPctAcur >= 95 ? 'var(--green)' : ultPctAcur >= 70 ? 'var(--amber-lt)' : 'var(--red)';
+  const corD = ultPctDiv  === 0 ? 'var(--green)' : ultPctDiv  <= 5  ? 'var(--amber-lt)' : 'var(--red)';
+  const corC = (ult.pct_conferido??0) >= 80 ? 'var(--green)' : (ult.pct_conferido??0) >= 40 ? 'var(--amber-lt)' : 'var(--text3)';
 
   kpiWrap.innerHTML = `
     <div class="stat-card" style="padding:18px 20px">
       <div style="font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Último fechamento · ${mesLabel}</div>
       <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">✓ Acurácia</div>
-      <div style="font-size:2.4rem;font-weight:800;line-height:1;color:${corA}">${ult.pct_acuracia ?? '—'}%</div>
-      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">${ult.lotes_ok} de ${ult.total_lotes} lotes sem divergência</div>
+      <div style="font-size:2.4rem;font-weight:800;line-height:1;color:${corA}">${ultPctAcur}%</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:5px">${ultSemDiv} de ${ultTotal} lotes sem divergência</div>
+      <div style="margin-top:6px">${tendAcur}</div>
+      <div style="margin-top:8px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
+        <div style="width:${ultPctAcur}%;height:100%;background:${corA};border-radius:2px;transition:width .5s"></div>
+      </div>
     </div>
     <div class="stat-card" style="padding:18px 20px">
-      <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">⚠ Divergência</div>
-      <div style="font-size:2.4rem;font-weight:800;line-height:1;color:${corD}">${ult.pct_divergencia ?? '—'}%</div>
-      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">${ult.lotes_div} lote${ult.lotes_div!==1?'s':''} com divergência</div>
+      <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">⚠ Com Divergência</div>
+      <div style="font-size:2.4rem;font-weight:800;line-height:1;color:${corD}">${ultComDiv}</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:5px">${ultPctDiv}% dos lotes · ${ultPersist} persiste${ultPersist!==1?'m':''}</div>
+      <div style="margin-top:6px;font-size:.7rem;color:var(--green);font-weight:600">${ultAjust > 0 ? `✓ ${ultAjust} ajustado${ultAjust!==1?'s':''}` : ''}</div>
     </div>
     <div class="stat-card" style="padding:18px 20px">
       <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📊 % Conferido</div>
       <div style="font-size:2.4rem;font-weight:800;line-height:1;color:${corC}">${ult.pct_conferido !== null ? ult.pct_conferido+'%' : '—'}</div>
-      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">${(ult.total_fisico_l??0).toLocaleString('pt-BR')} L contados</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:5px">${(ult.total_fisico_l??0).toLocaleString('pt-BR')} L físicos contados</div>
     </div>
     <div class="stat-card" style="padding:18px 20px">
       <div style="font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📅 Meses Fechados</div>
       <div style="font-size:2.4rem;font-weight:800;line-height:1;color:var(--blue)">${_hacDados.length}</div>
-      <div style="font-size:.72rem;color:var(--text3);margin-top:6px">desde ${_hacDados[_hacDados.length-1]?.mes_ref||'—'}</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-top:5px">desde ${_hacDados[_hacDados.length-1]?.mes_ref||'—'}</div>
     </div>`;
 
-  // Tabela de meses
+  // Tabela de meses — recalcula acurácia a partir dos registros para refletir resoluções
   const rows = _hacDados.map(h => {
     const [hy,hm] = h.mes_ref.split('-');
     const label = meses[parseInt(hm)] + '/' + hy;
-    const corAh = h.pct_acuracia >= 95 ? 'var(--green)' : h.pct_acuracia >= 70 ? 'var(--amber-lt)' : 'var(--red)';
+    const hRegs    = h.registros || [];
+    const hTotal   = hRegs.length || h.total_lotes || 0;
+    const hSemDiv  = hRegs.length
+      ? hRegs.filter(r => r.tipo === 'ok' || r.divergencia_resolvida === true).length
+      : h.lotes_ok || 0;
+    const hComDiv  = hTotal - hSemDiv;
+    const hAjust   = hRegs.length ? hRegs.filter(r => r.tipo !== 'ok' && r.divergencia_resolvida === true).length : 0;
+    const hPctAcur = hTotal ? parseFloat((hSemDiv/hTotal*100).toFixed(1)) : (h.pct_acuracia ?? 0);
+    const hPctDiv  = hTotal ? parseFloat((hComDiv/hTotal*100).toFixed(1)) : (h.pct_divergencia ?? 0);
+    const corAh = hPctAcur >= 95 ? 'var(--green)' : hPctAcur >= 70 ? 'var(--amber-lt)' : 'var(--red)';
     const fechFmt = h.fechado_em ? new Date(h.fechado_em).toLocaleDateString('pt-BR') : '—';
-    const badgeAcur = h.pct_acuracia >= 95
+    const badgeAcur = hPctAcur >= 95
       ? '<span class="badge b-v" style="font-size:.68rem;padding:2px 7px">✓ Excelente</span>'
-      : h.pct_acuracia >= 70
-        ? '<span class="badge b-a" style="font-size:.68rem;padding:2px 7px">⚠ Regular</span>'
+      : hPctAcur >= 70
+        ? '<span class="badge" style="font-size:.68rem;padding:2px 7px;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)">⚠ Regular</span>'
         : '<span class="badge b-r" style="font-size:.68rem;padding:2px 7px">✕ Crítica</span>';
+    const ajustCell = hAjust > 0
+      ? `<span style="font-size:.75rem;color:var(--green);font-weight:700">${hAjust} ajust.</span>`
+      : '<span style="color:var(--text3);font-size:.72rem">—</span>';
 
     return `<tr>
       <td style="font-weight:700;font-size:.88rem">${label}</td>
-      <td style="font-weight:800;color:${corAh};font-family:var(--mono)">${h.pct_acuracia ?? '—'}%</td>
-      <td style="font-family:var(--mono)">${h.pct_divergencia ?? '—'}%</td>
+      <td style="font-weight:800;color:${corAh};font-family:var(--mono)">${hPctAcur}%</td>
+      <td style="font-family:var(--mono);color:${hComDiv>0?'var(--red)':'var(--green)'}">${hComDiv} (${hPctDiv}%)</td>
+      <td style="text-align:center">${ajustCell}</td>
       <td style="font-family:var(--mono)">${h.pct_conferido !== null ? h.pct_conferido+'%' : '—'}</td>
-      <td style="font-family:var(--mono)">${h.total_lotes}</td>
+      <td style="font-family:var(--mono)">${hTotal}</td>
       <td style="font-family:var(--mono)">${(h.total_fisico_l??0).toLocaleString('pt-BR')} L</td>
       <td style="font-family:var(--mono)">${h.total_estoque_l ? h.total_estoque_l.toLocaleString('pt-BR')+' L' : '—'}</td>
       <td>${badgeAcur}</td>
@@ -4997,7 +5102,8 @@ function renderHistAcuracia() {
         <thead><tr>
           <th>Mês</th>
           <th>Acurácia</th>
-          <th>% Divergência</th>
+          <th>Com Divergência</th>
+          <th style="text-align:center">Ajustados</th>
           <th>% Conferido</th>
           <th>Total Lotes</th>
           <th>Qtd Física</th>
@@ -5012,54 +5118,140 @@ function renderHistAcuracia() {
 }
 
 // ── Ver detalhes de um mês fechado ───────────────────────
+let _hacDetalheAtual = null;
+
 function verDetalhesHac(mesRef) {
   const h = _hacDados.find(d => d.mes_ref === mesRef);
   if (!h) return;
+  _hacDetalheAtual = h;
 
   const registros = h.registros || [];
   const [y,m] = mesRef.split('-');
   const meses = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const label = meses[parseInt(m)] + '/' + y;
 
-  const rows = registros.map(r => {
+  const total   = registros.length;
+  const semDiv  = registros.filter(r => r.tipo === 'ok' || r.divergencia_resolvida === true).length;
+  const comDiv  = total - semDiv;
+  const pctAcur = total ? ((semDiv/total)*100).toFixed(1) : 0;
+  const totalFis= registros.reduce((s,r)=>s+(r.quantidade??0),0);
+  const totalSis= registros.reduce((s,r)=>s+(r.saldo_sistema??0),0);
+  const totalDiv= registros.reduce((s,r)=>s+(r.divergencia??0),0);
+  const corAcur = pctAcur >= 95 ? 'var(--green)' : pctAcur >= 70 ? 'var(--amber-lt)' : 'var(--red)';
+
+  // Ordena: divergências primeiro, depois ok
+  const ordenados = [...registros].sort((a,b) => {
+    const aDiv = a.tipo !== 'ok' && a.divergencia_resolvida !== true;
+    const bDiv = b.tipo !== 'ok' && b.divergencia_resolvida !== true;
+    if (aDiv && !bDiv) return -1;
+    if (!aDiv && bDiv) return 1;
+    return (a.codigo||'').localeCompare(b.codigo||'');
+  });
+
+  const rows = ordenados.map(r => {
     const div = r.divergencia ?? ((r.quantidade ?? 0) - (r.saldo_sistema ?? 0));
     const divFmt = div === 0
-      ? '<span class="div-badge div-badge-ok">✓ OK</span>'
+      ? '<span class="div-badge div-badge-ok">✓ 0</span>'
       : div > 0
         ? `<span class="div-badge div-badge-pos">▲ +${div}</span>`
         : `<span class="div-badge div-badge-neg">▼ ${div}</span>`;
+    const isResolvida = r.divergencia_resolvida === true;
+    const isPersiste  = r.divergencia_resolvida === false;
+    let resolBadge = '';
+    if (r.tipo !== 'ok') {
+      if (isResolvida) resolBadge = '<span class="badge b-v" style="font-size:.62rem;padding:2px 6px">✓ Ajustado</span>';
+      else if (isPersiste) resolBadge = '<span class="badge b-r" style="font-size:.62rem;padding:2px 6px">✕ Persiste</span>';
+      else resolBadge = '<span class="badge b-p" style="font-size:.62rem;padding:2px 6px">Pendente</span>';
+    }
+    const obsGestor = r.observacao || r.motivo_recontagem || '';
+    const obsHacCell = obsGestor
+      ? `<span style="font-size:.7rem;color:var(--blue);cursor:pointer;text-decoration:underline dotted;max-width:120px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${obsGestor}" onclick="verTexto('Observação',\`${obsGestor.replace(/`/g,"'")}\`)">${obsGestor.length>30?obsGestor.slice(0,30)+'…':obsGestor}</span>`
+      : '<span style="color:var(--text3);font-size:.7rem">—</span>';
+    const justCell = (isResolvida || isPersiste) && r.resolucao_justificativa
+      ? `<span style="font-size:.7rem;color:var(--text2);cursor:pointer;text-decoration:underline dotted;max-width:120px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.resolucao_justificativa}" onclick="verTexto('Justificativa do Ajuste',\`${r.resolucao_justificativa.replace(/`/g,"'")}\`)">${r.resolucao_justificativa.length>30?r.resolucao_justificativa.slice(0,30)+'…':r.resolucao_justificativa}</span>`
+      : '';
     const dia = (r.created_at||'').split('T')[0];
     const [ry,rm,rd] = (dia||'--').split('-');
-    return `<tr>
-      <td style="font-size:.78rem;color:var(--text3)">${dia ? rd+'/'+rm+'/'+ry : '—'}</td>
+    const rowStyle = r.tipo !== 'ok' && !isResolvida
+      ? (div < 0 ? 'background:var(--red-bg)' : 'background:var(--amber-bg)')
+      : '';
+    return `<tr style="${rowStyle}">
+      <td style="font-size:.75rem;color:var(--text3);white-space:nowrap">${dia ? rd+'/'+rm+'/'+ry : '—'}</td>
       <td class="cc">${r.codigo||'—'}</td>
-      <td class="cn">${r.produto_nome||'—'}</td>
-      <td class="cm">${r.lote||'—'}</td>
-      <td style="font-family:var(--mono)">${r.armazem||'—'}</td>
-      <td style="font-family:var(--mono);font-weight:700">${r.saldo_sistema??'—'}</td>
-      <td style="font-family:var(--mono);font-weight:700;color:var(--green-txt)">${r.quantidade??'—'}</td>
-      <td>${divFmt}</td>
-      <td style="font-size:.75rem;color:var(--text3)">${r.usuario||'—'}</td>
+      <td style="font-size:.82rem;font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.produto_nome||'—'}</td>
+      <td class="cm" style="white-space:nowrap">${r.lote||'—'}</td>
+      <td style="font-family:var(--mono);font-weight:600;color:var(--amber)">${r.armazem||'—'}</td>
+      <td style="font-family:var(--mono);font-size:.8rem;text-align:right">${r.saldo_sistema??'—'}</td>
+      <td style="font-family:var(--mono);font-weight:700;font-size:.8rem;text-align:right;color:var(--green-txt)">${r.quantidade??'—'}</td>
+      <td style="text-align:right">${divFmt}</td>
+      <td style="font-size:.75rem;color:var(--text2);white-space:nowrap">${r.usuario||'—'}</td>
+      <td style="max-width:130px">${obsHacCell}</td>
+      <td style="text-align:center;max-width:130px">${resolBadge}${justCell ? '<br>'+justCell : ''}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text3)">Sem registros detalhados.</td></tr>';
+  }).join('') || '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--text3)">Sem registros.</td></tr>';
 
-  document.getElementById('vt-titulo').textContent = `Detalhes — ${label}`;
-  document.getElementById('vt-corpo').innerHTML = `
-    <div style="margin-bottom:10px;font-size:.78rem;color:var(--text2)">
-      ${registros.length} lote${registros.length!==1?'s':''} validados neste mês.
-    </div>
-    <div style="overflow-x:auto">
-    <table style="font-size:.8rem;width:100%">
-      <thead><tr style="font-size:.7rem">
-        <th>Data</th><th>Código</th><th>Produto</th><th>Lote</th>
-        <th>Arm.</th><th>Saldo Sis.</th><th>Qtd Física</th>
-        <th>Divergência</th><th>Operador</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+  document.getElementById('hac-det-titulo').textContent = `📅 Detalhes — ${label}`;
+  document.getElementById('hac-det-summary').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;padding:14px 16px;background:var(--bg3);border-bottom:1px solid var(--border)">
+      <div style="text-align:center">
+        <div style="font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Acurácia</div>
+        <div style="font-size:1.6rem;font-weight:800;color:${corAcur}">${pctAcur}%</div>
+        <div style="font-size:.68rem;color:var(--text3)">${semDiv} de ${total} sem div.</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Com Divergência</div>
+        <div style="font-size:1.6rem;font-weight:800;color:${comDiv>0?'var(--red)':'var(--green)'}">${comDiv}</div>
+        <div style="font-size:.68rem;color:var(--text3)">lote${comDiv!==1?'s':''}</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Saldo Sistema</div>
+        <div style="font-size:1.4rem;font-weight:800;color:var(--green);font-family:var(--mono)">${totalSis.toLocaleString('pt-BR')}</div>
+        <div style="font-size:.68rem;color:var(--text3)">litros</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Saldo Físico</div>
+        <div style="font-size:1.4rem;font-weight:800;font-family:var(--mono);color:var(--text)">${totalFis.toLocaleString('pt-BR')}</div>
+        <div style="font-size:.68rem;color:var(--text3)">litros</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Divergência</div>
+        <div style="font-size:1.4rem;font-weight:800;font-family:var(--mono);color:${totalDiv===0?'var(--green)':totalDiv<0?'var(--red)':'var(--amber-lt)'}">${totalDiv>0?'+':''}${totalDiv.toLocaleString('pt-BR')}</div>
+        <div style="font-size:.68rem;color:var(--text3)">litros</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Total Lotes</div>
+        <div style="font-size:1.6rem;font-weight:800;color:var(--blue)">${total}</div>
+        <div style="font-size:.68rem;color:var(--text3)">registros</div>
+      </div>
     </div>`;
-  // Reusar o modal ver-texto existente
-  document.getElementById('modal-ver-texto').classList.add('open');
+
+  document.getElementById('hac-det-tbody').innerHTML = rows;
+  document.getElementById('modal-hac-detalhe').classList.add('open');
+}
+
+function exportarMesHac() {
+  const h = _hacDetalheAtual;
+  if (!h || !h.registros?.length) { toast('Sem dados para exportar.','warn'); return; }
+  const [y,m] = h.mes_ref.split('-');
+  const meses = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const label = meses[parseInt(m)] + '_' + y;
+
+  const cab = ['Data','Filial','Código','Produto','Lote','Armazém','Saldo Sistema (L)','Saldo Físico (L)','Divergência (L)','Resultado','Operador','Resolução','Justificativa'];
+  const lin = h.registros.map(r => {
+    const dia = (r.created_at||'').split('T')[0];
+    const [ry,rm,rd] = (dia||'--').split('-');
+    const div = r.divergencia ?? ((r.quantidade??0)-(r.saldo_sistema??0));
+    const result = r.tipo==='ok' ? 'Sem divergência' : r.tipo==='positivo' ? 'Positivo' : 'Negativo';
+    const resolucao = r.divergencia_resolvida===true ? 'Resolvida' : r.divergencia_resolvida===false ? 'Persiste' : r.tipo==='ok' ? '' : 'Pendente';
+    return [
+      dia ? rd+'/'+rm+'/'+ry : '',
+      r.filial||'', r.codigo||'', r.produto_nome||'', r.lote||'', r.armazem||'',
+      r.saldo_sistema??'', r.quantidade??'', div, result,
+      r.usuario||'', resolucao, r.resolucao_justificativa||''
+    ];
+  });
+  exportarXlsx('acuracia_'+label, cab, lin);
+  toast('✓ Excel exportado!', 'ok');
 }
 
 // ── Exportar histórico para Excel ─────────────────────────
@@ -5195,6 +5387,45 @@ async function excluirTudo() {
     // total_estoque_litros persiste — valor fixo, não apaga com limpeza
     await carregarValidacao();
   } catch(e) { toast('Erro: ' + e.message, 'err'); }
+}
+
+// ── HELPER GENÉRICO DE EXPORT ────────────────────────────
+function exportarXlsx(nome, cabecalho, linhas) {
+  const ws = XLSX.utils.aoa_to_sheet([cabecalho, ...linhas]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Dados');
+  XLSX.writeFile(wb, `${nome}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function exportarHistorico() {
+  if (!todoHistorico.length) { toast('Sem dados para exportar.','warn'); return; }
+  // Usa os dados filtrados atualmente
+  const q    = (document.getElementById('search-hist').value||'').toLowerCase();
+  const arm  = document.getElementById('filt-hist-arm').value;
+  const op   = document.getElementById('filt-hist-op').value;
+  const tipo = document.getElementById('filt-hist-tipo').value;
+  const filial = getFiltroFilial();
+  const data = todoHistorico.filter(r => {
+    const txt = [r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem].join(' ').toLowerCase();
+    if (q && !txt.includes(q)) return false;
+    if (arm && r.armazem !== arm) return false;
+    if (op  && r.usuario !== op)  return false;
+    if (tipo === 'ok'        && r.tipo !== 'ok') return false;
+    if (tipo === 'positivo'  && r.tipo !== 'positivo') return false;
+    if (tipo === 'negativo'  && r.tipo !== 'negativo') return false;
+    if (tipo === 'recontagem'&& !r.is_recontagem) return false;
+    if (filial && (r.filial||'').toUpperCase() !== filial) return false;
+    return true;
+  });
+  const cab = ['Data','Filial','Código','Produto','Lote','Qtd Contada','Saldo Sistema','Divergência','Tipo','Armazém','Operador','Recontagem','Observação'];
+  const lin = data.map(r => [
+    fmtTS(r.created_at), r.filial||'', r.codigo||'', r.produto_nome||'', r.lote||'',
+    r.quantidade??'', r.saldo_sistema??'', r.divergencia??'',
+    r.tipo||'', r.armazem||'', r.usuario||'',
+    r.is_recontagem?'Sim':'Não', r.observacao||r.motivo_recontagem||''
+  ]);
+  exportarXlsx('historico_validado', cab, lin);
+  toast('✓ Excel exportado!','ok');
 }
 
 // ── TEMA CLARO/ESCURO ────────────────────────────────────
