@@ -62,7 +62,7 @@
 }
 
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html, body { height:100%; background:var(--bg); color:var(--text); font-family:var(--sans); font-size:15px; }
+html, body { height:100%; background:var(--bg); color:var(--text); font-family:var(--sans); font-size:15px; overflow-x:hidden; }
 
 /* ── TOPBAR ── */
 .topbar {
@@ -345,6 +345,60 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   color:#fca5a5; font-size:.88rem; font-weight:700;
 }
 .btn-finalizar:active { background:rgba(239,68,68,.18); }
+
+/* ── POSIÇÃO DROPDOWN ── */
+.pos-dropdown {
+  position:fixed; z-index:300;
+  background:var(--bg2); border:1px solid var(--border2);
+  border-radius:var(--r-sm); box-shadow:0 4px 16px rgba(0,0,0,.3);
+  left:14px; right:14px;
+  max-height:200px; overflow-y:auto; margin-top:2px;
+}
+.pos-opt {
+  padding:9px 14px; cursor:pointer; font-size:.85rem;
+  font-family:var(--mono); color:var(--text2);
+  border-bottom:1px solid var(--border);
+  transition:background .08s;
+}
+.pos-opt:hover { background:var(--bg3); color:var(--text); }
+.pos-opt:last-child { border-bottom:none; }
+
+/* ── POPUP POSIÇÃO ── */
+.pos-popup {
+  position:fixed; inset:0; background:rgba(0,0,0,.75);
+  backdrop-filter:blur(4px); z-index:300;
+  display:flex; align-items:flex-end; justify-content:center;
+}
+.pos-popup-box {
+  background:var(--bg2); border:1px solid var(--border2);
+  border-bottom:none; border-radius:var(--r) var(--r) 0 0;
+  padding:18px 18px 30px; width:100%; max-width:480px;
+  animation:slideUp .18s ease;
+}
+.pos-popup-handle { width:32px; height:3px; border-radius:2px; background:var(--border3); margin:0 auto 14px; }
+.pos-popup-cod { font-size:1.1rem; font-weight:800; color:var(--cyan); font-family:var(--mono); margin-bottom:4px; }
+.pos-popup-info { font-size:.78rem; color:var(--text3); margin-bottom:14px; }
+.pos-popup-item {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:9px 0; border-bottom:1px solid var(--border);
+}
+.pos-popup-item:last-child { border-bottom:none; }
+.pos-popup-prod { font-size:.85rem; font-weight:600; color:var(--text); }
+.pos-popup-meta { font-size:.68rem; color:var(--text3); font-family:var(--mono); margin-top:2px; }
+.pos-popup-qtd { font-size:1rem; font-weight:800; color:var(--green); font-family:var(--mono); }
+
+/* ── CONFLITO DE POSIÇÃO ── */
+.conflito-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; border:1px solid var(--border2);
+  border-radius:var(--r-sm); background:var(--bg3);
+  cursor:pointer; transition:border-color .12s, background .12s;
+}
+.conflito-item:has(.conflito-chk:checked) {
+  border-color:var(--amber-bd); background:var(--amber-lt);
+  background:rgba(245,158,11,.08);
+}
+.conflito-chk { width:18px; height:18px; accent-color:var(--amber); cursor:pointer; flex-shrink:0; }
 </style>
 </head>
 <body>
@@ -493,8 +547,13 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
         </div>
         <div class="field">
           <label>Armazém *</label>
-          <input type="text" id="av-armazem" placeholder="Digite o armazém" inputmode="text">
+          <input type="text" id="av-armazem" placeholder="Ex: 42, D2" inputmode="text">
         </div>
+      </div>
+      <div class="field">
+        <label>Posição <span style="color:var(--text3);font-weight:400">(opcional)</span></label>
+        <input type="text" id="av-posicao" placeholder="Ex: A1-04-1-2" style="text-transform:uppercase"
+          oninput="filtrarPosicoes('av-posicao','av-pos-drop')" autocomplete="off">
       </div>
       <div class="field">
         <label>Quantidade Contada *</label>
@@ -511,10 +570,9 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
 
     <!-- Sessão avulsa -->
     <div id="av-sessao-wrap" style="display:none">
-      <div style="font-size:.78rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">
+      <div style="font-size:.78rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">
         Lançados nesta sessão (<span id="av-sessao-cnt">0</span>)
       </div>
-      <div id="av-sessao-lista"></div>
     </div>
   </div>
 
@@ -618,9 +676,6 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
       <span class="sessao-counter-val" id="ms-counter-val">0</span>
     </div>
 
-    <!-- Lista de lançamentos da sessão -->
-    <div id="ms-lista-sessao" style="margin-bottom:12px"></div>
-
     <!-- Formulário de lançamento -->
     <div id="ms-form-wrap">
       <div style="font-size:.65rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;font-family:var(--mono)">
@@ -635,9 +690,16 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
         </div>
         <div class="field">
           <label>Armazém *</label>
-          <input type="text" id="ms-armazem" placeholder="Digite o armazém" inputmode="text"
-            onkeydown="if(event.key==='Enter')document.getElementById('ms-quantidade').focus()">
+          <input type="text" id="ms-armazem" placeholder="Ex: 42, D2" inputmode="text"
+            onkeydown="if(event.key==='Enter')document.getElementById('ms-posicao').focus()">
         </div>
+      </div>
+      <div class="field">
+        <label>Posição <span style="color:var(--text3);font-weight:400">(opcional)</span></label>
+        <input type="text" id="ms-posicao" placeholder="Ex: A1-04-1-2" style="text-transform:uppercase"
+          oninput="filtrarPosicoes('ms-posicao','ms-pos-drop')"
+          onkeydown="if(event.key==='Enter')document.getElementById('ms-quantidade').focus()"
+          autocomplete="off">
       </div>
 
       <div class="field">
@@ -1030,28 +1092,11 @@ function renderListaSessao() {
   const lista    = _sessaoAtiva?.lancamentos || [];
   const counter  = document.getElementById('ms-counter');
   const counterV = document.getElementById('ms-counter-val');
-  const listEl   = document.getElementById('ms-lista-sessao');
   const btnFinal = document.getElementById('ms-btn-finalizar');
 
   counter.style.display = lista.length > 0 ? 'flex' : 'none';
   counterV.textContent  = lista.length;
   btnFinal.disabled     = lista.length === 0;
-
-  if (!lista.length) {
-    listEl.innerHTML = '';
-    return;
-  }
-
-  listEl.innerHTML = lista.map((r, i) => `
-    <div class="lanc-item">
-      <div class="lanc-info">
-        <div class="lanc-nome">Lote: ${r.lote}</div>
-        <div class="lanc-meta">Arm. ${r.armazem}</div>
-      </div>
-      <div class="lanc-qtd">${r.quantidade}</div>
-      <button onclick="removerItemSessao(${i},'${r.id}')"
-        style="background:none;border:none;font-size:1rem;color:var(--red);cursor:pointer;padding:4px;flex-shrink:0">✕</button>
-    </div>`).join('');
 }
 
 // ── LANÇAR ITEM NA SESSÃO ─────────────────────────────────
@@ -1067,6 +1112,16 @@ async function lancarItemSessao() {
   const qtd = parseFloat(qtdStr);
   if (isNaN(qtd) || qtd < 0) { toast('Quantidade inválida.', 'warn'); return; }
 
+  await tentarLancar('sessao');
+}
+
+async function executarLancamentoSessao() {
+  const lote    = document.getElementById('ms-lote').value.trim().toUpperCase();
+  const armazem = document.getElementById('ms-armazem').value.trim();
+  const posicao = document.getElementById('ms-posicao').value.trim().toUpperCase();
+  const qtdStr  = document.getElementById('ms-quantidade').value;
+  const qtd     = parseFloat(qtdStr);
+
   const btn = document.getElementById('ms-btn-lancar');
   btn.disabled = true;
   document.getElementById('ms-spin-lancar').style.display = 'block';
@@ -1081,19 +1136,21 @@ async function lancarItemSessao() {
       codigo, produto_nome: produto || codigo, lote, armazem,
       quantidade: qtd, usuario: OPERADOR, filial,
       status: 'pendente', recontagem: isRecont,
+      posicao: posicao || null, ocupacao_ativa: true,
     }).select().single();
     if (error) throw error;
 
     // Adiciona à sessão local
     _sessaoAtiva.lancamentos.push({
-      id: data.id, lote, armazem, quantidade: qtd
+      id: data.id, lote, armazem, posicao: posicao||null, quantidade: qtd
     });
     salvarSessaoLocal();
 
-    toast(`✓ Lançado! Lote ${lote} · ${qtd} un.`, 'ok');
+    toast(`✓ Lançado! Lote ${lote} · ${qtd} un.${posicao?' · '+posicao:''}`, 'ok');
 
     // Limpa quantidade e armazém para próximo lançamento; mantém lote
     document.getElementById('ms-armazem').value  = '';
+    document.getElementById('ms-posicao').value  = '';
     document.getElementById('ms-quantidade').value = '';
     renderListaSessao();
 
@@ -1174,15 +1231,17 @@ function av_buscarProduto(codigo) {
 async function _av_buscarProdutoNow(codigo) {
   const seq = ++_avBuscaSeq;
   const prev = document.getElementById('av-saldo-preview');
-  if (!codigo || codigo.length < 2) { prev.style.display = 'none'; renderAutocompleteProdutos([]); return; }
+  const cod  = codigo.trim();
+  if (!cod || cod.length < 2) { prev.style.display = 'none'; renderAutocompleteProdutos([]); return; }
 
-  const filDet = _filialCache[codigo.trim().toUpperCase()];
+  const filDet = _filialCache[cod.toUpperCase()];
   if (filDet) _filialAvulsa = filDet;
 
+  // 1) Tenta match EXATO no saldo_sistema (traz saldo/lote/armazém de referência)
   try {
     const { data } = await sb.from('saldo_sistema')
       .select('descricao, saldo, lote, armazem')
-      .ilike('codigo', codigo.trim())
+      .ilike('codigo', cod)
       .limit(1).maybeSingle();
     if (seq !== _avBuscaSeq) return; // resposta antiga — descarta
     if (data) {
@@ -1201,19 +1260,50 @@ async function _av_buscarProdutoNow(codigo) {
     }
   } catch { prev.style.display = 'none'; }
 
+  // 2) Tenta match EXATO no cadastro de produtos (código sem saldo importado no momento)
   try {
-    const { data: prods } = await sb.from('saldo_sistema')
-      .select('codigo, descricao, filial')
-      .or(`codigo.ilike.%${codigo.trim()}%,descricao.ilike.%${codigo.trim()}%`)
-      .limit(12);
+    const { data: prod } = await sb.from('produtos')
+      .select('nome, filial')
+      .eq('codigo', cod.toUpperCase())
+      .maybeSingle();
     if (seq !== _avBuscaSeq) return; // resposta antiga — descarta
-    // Dedupe por código (saldo_sistema tem várias linhas por produto — uma por lote)
+    if (prod) {
+      document.getElementById('av-produto').value = prod.nome || '';
+      if (prod.filial && !_filialCache[cod.toUpperCase()]) _filialAvulsa = prod.filial.toUpperCase();
+      renderAutocompleteProdutos([]);
+      return;
+    }
+  } catch { /* segue para o autocomplete abaixo se também falhar */ }
+
+  // 3) Sem match exato — a partir de 3 caracteres, busca por "contém" nas duas tabelas e junta
+  if (cod.length < 3) { renderAutocompleteProdutos([]); return; }
+
+  try {
+    const [{ data: doSaldo }, { data: doCadastro }] = await Promise.all([
+      sb.from('saldo_sistema')
+        .select('codigo, descricao, filial')
+        .or(`codigo.ilike.%${cod}%,descricao.ilike.%${cod}%`)
+        .limit(12),
+      sb.from('produtos')
+        .select('codigo, nome, filial')
+        .or(`codigo.ilike.%${cod}%,nome.ilike.%${cod}%`)
+        .limit(12),
+    ]);
+    if (seq !== _avBuscaSeq) return; // resposta antiga — descarta
+
+    const combinados = [
+      ...(doSaldo    || []).map(p => ({ codigo: p.codigo, nome: p.descricao, filial: p.filial })),
+      ...(doCadastro || []).map(p => ({ codigo: p.codigo, nome: p.nome,      filial: p.filial })),
+    ];
+
+    // Dedupe por código (pode vir repetido das duas tabelas, ou várias linhas por lote)
     const vistos = new Set();
-    const unicos = (prods || []).filter(p => {
+    const unicos = combinados.filter(p => {
       const k = (p.codigo||'').trim().toUpperCase();
-      if (vistos.has(k)) return false;
+      if (!k || vistos.has(k)) return false;
       vistos.add(k); return true;
-    }).slice(0, 6).map(p => ({ codigo: p.codigo, nome: p.descricao, filial: p.filial }));
+    }).slice(0, 10);
+
     renderAutocompleteProdutos(unicos);
   } catch { renderAutocompleteProdutos([]); }
 }
@@ -1224,11 +1314,15 @@ function renderAutocompleteProdutos(list) {
   if (!box) {
     box = document.createElement('div');
     box.id = 'av-autocomplete';
-    box.style.cssText = 'position:absolute;z-index:300;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:0 4px 16px rgba(0,0,0,.12);width:100%;max-height:220px;overflow-y:auto;margin-top:2px';
+    box.style.cssText = 'position:fixed;z-index:300;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:0 4px 16px rgba(0,0,0,.3);left:14px;right:14px;max-height:220px;overflow-y:auto;margin-top:2px';
     const wrap = document.getElementById('av-codigo').parentElement;
     wrap.style.position = 'relative';
-    wrap.appendChild(box);
+    document.body.appendChild(box);
   }
+  // Posiciona abaixo do input
+  const inp = document.getElementById('av-codigo');
+  const rect = inp.getBoundingClientRect();
+  box.style.top = (rect.bottom + 4) + 'px';
   box.style.display = 'block';
   box.innerHTML = list.map(p => `
     <div onclick="selecionarAutocompleteProduto('${p.codigo}','${(p.nome||'').replace(/'/g,"\\'")}','${(p.filial||'').replace(/'/g,"\\'")}')"
@@ -1257,11 +1351,9 @@ document.addEventListener('click', e => {
 
 async function lancarAvulso() {
   const codigo   = document.getElementById('av-codigo').value.trim().toUpperCase();
-  const produto  = document.getElementById('av-produto').value.trim();
   const lote     = document.getElementById('av-lote').value.trim().toUpperCase();
   const armazem  = document.getElementById('av-armazem').value.trim();
   const qtdStr   = document.getElementById('av-quantidade').value;
-  const filial   = _filialCache[codigo] || _filialAvulsa || null;
 
   if (!codigo)          { toast('Informe o código do produto.', 'warn'); return; }
   if (!lote)            { toast('Informe o lote.', 'warn'); return; }
@@ -1269,6 +1361,19 @@ async function lancarAvulso() {
   if (qtdStr === '')    { toast('Informe a quantidade (pode ser 0).', 'warn'); return; }
   const qtd = parseFloat(qtdStr);
   if (isNaN(qtd) || qtd < 0) { toast('Quantidade inválida.', 'warn'); return; }
+
+  await tentarLancar('avulso');
+}
+
+async function executarLancamentoAvulso() {
+  const codigo   = document.getElementById('av-codigo').value.trim().toUpperCase();
+  const produto  = document.getElementById('av-produto').value.trim();
+  const lote     = document.getElementById('av-lote').value.trim().toUpperCase();
+  const armazem  = document.getElementById('av-armazem').value.trim();
+  const posicao  = document.getElementById('av-posicao').value.trim().toUpperCase();
+  const qtdStr   = document.getElementById('av-quantidade').value;
+  const qtd      = parseFloat(qtdStr);
+  const filial   = _filialCache[codigo] || _filialAvulsa || null;
 
   const btn = document.getElementById('av-btn');
   btn.disabled = true;
@@ -1279,14 +1384,15 @@ async function lancarAvulso() {
       codigo, produto_nome: produto || codigo, lote, armazem,
       quantidade: qtd, usuario: OPERADOR, filial,
       status: 'pendente', recontagem: false,
+      posicao: posicao || null, ocupacao_ativa: true,
     }).select().single();
     if (error) throw error;
 
-    _avSessao.unshift({ id: data.id, codigo, produto_nome: produto||codigo, lote, armazem, quantidade: qtd });
+    _avSessao.unshift({ id: data.id, codigo, produto_nome: produto||codigo, lote, armazem, posicao: posicao||null, quantidade: qtd });
     renderSessaoAvulsa();
-    toast(`✓ ${codigo} — ${qtd} un. lançado!`, 'ok');
+    toast(`✓ ${codigo} — ${qtd} un. lançado!${posicao?' · '+posicao:''}`, 'ok');
 
-    ['av-codigo','av-produto','av-lote','av-armazem','av-quantidade'].forEach(id => {
+    ['av-codigo','av-produto','av-lote','av-armazem','av-posicao','av-quantidade'].forEach(id => {
       document.getElementById(id).value = '';
     });
     document.getElementById('av-saldo-preview').style.display = 'none';
@@ -1301,21 +1407,10 @@ async function lancarAvulso() {
 
 function renderSessaoAvulsa() {
   const wrap = document.getElementById('av-sessao-wrap');
-  const lista = document.getElementById('av-sessao-lista');
   const cnt   = document.getElementById('av-sessao-cnt');
   if (!_avSessao.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   cnt.textContent = _avSessao.length;
-  lista.innerHTML = _avSessao.map((r, i) => `
-    <div class="lanc-item">
-      <div class="lanc-info">
-        <div class="lanc-nome">${r.produto_nome || r.codigo}</div>
-        <div class="lanc-meta">${r.codigo} · Lote ${r.lote} · Arm. ${r.armazem}</div>
-      </div>
-      <div class="lanc-qtd">${r.quantidade}</div>
-      <button onclick="removerAvulso(${i},'${r.id}')"
-        style="background:none;border:none;font-size:1rem;color:var(--red);cursor:pointer;padding:4px;flex-shrink:0">✕</button>
-    </div>`).join('');
 }
 
 async function removerAvulso(idx, id) {
@@ -1329,7 +1424,7 @@ async function removerAvulso(idx, id) {
 }
 
 function limparAvulso() {
-  ['av-codigo','av-produto','av-lote','av-armazem','av-quantidade'].forEach(id => {
+  ['av-codigo','av-produto','av-lote','av-armazem','av-posicao','av-quantidade'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('av-saldo-preview').style.display = 'none';
@@ -1355,12 +1450,14 @@ async function carregarHistoricoOp() {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <div style="flex:1;min-width:0">
             <div style="font-size:.9rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.produto_nome||r.codigo}</div>
-            <div style="font-size:.72rem;color:var(--text3);margin-top:2px">${r.codigo} · Lote ${r.lote||'—'} · Arm. ${r.armazem||'—'}</div>
+            <div style="font-size:.72rem;color:var(--text3);margin-top:2px">${r.codigo} · Lote ${r.lote||'—'} · Arm. ${r.armazem||'—'}${r.posicao?' · <span style="color:var(--cyan)">'+r.posicao+'</span>':''}</div>
           </div>
           <div style="text-align:right;flex-shrink:0">
             <div style="font-size:1.2rem;font-weight:800;color:var(--green-txt)">${r.quantidade}</div>
             <div style="font-size:.62rem;color:var(--text3)">${r.status}</div>
           </div>
+          <button onclick="abrirEditarLancamento('${r.id}')"
+            style="background:none;border:none;font-size:.95rem;color:var(--text3);cursor:pointer;padding:2px 4px;flex-shrink:0">✏</button>
         </div>
         <div style="font-size:.68rem;color:var(--text3);margin-top:8px">${fmtTS(r.created_at)}</div>
       </div>`).join('');
@@ -1373,6 +1470,269 @@ async function carregarHistoricoOp() {
 document.getElementById('modal-sessao').addEventListener('click', e => {
   if (e.target === e.currentTarget) cancelarSessao();
 });
+
+// ── POSIÇÕES DRIVE-IN (estática, extraída do levantamento físico real) ──
+// Estrutura: { pavilhao: { driveIn: { linha: { andar: [lugares] } } } }
+const ESTRUTURA_POSICOES = {"bioma":{"A1":{"01":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"02":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"03":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"04":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"05":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"06":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"07":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"08":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"09":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"10":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"11":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"12":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"13":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"14":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"15":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"16":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"17":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"18":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"19":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"20":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"21":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"22":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"23":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"24":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"25":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"26":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"27":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"28":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"29":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"30":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"31":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"32":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"33":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"34":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"35":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"36":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]}},"A2":{"29":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"30":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"31":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"32":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"33":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"34":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"35":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"36":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]}}},"simbiose":{"B1":{"01":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"02":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"03":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"04":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"05":{"4":[1,2,3,4,5],"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"06":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"07":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"08":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"09":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"10":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"11":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"12":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"13":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"14":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"15":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"16":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"17":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"18":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"19":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"20":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"21":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"22":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"23":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"24":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"25":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"26":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"27":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"28":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"29":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"30":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"31":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"32":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"33":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"34":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"35":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"36":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]}},"B2":{"01":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"02":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"03":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"04":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"05":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"06":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"07":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"08":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"09":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"10":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"11":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"12":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"13":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"14":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"15":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"16":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"17":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"18":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"19":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"20":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"21":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"22":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"23":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"24":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"25":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"26":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"27":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"28":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"29":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"30":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"31":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"32":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"33":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"34":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"35":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"36":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]}}}};
+
+// Lista plana de todos os códigos completos (formato: DI-LINHA-ANDAR-LUGAR), para autocomplete
+const TODAS_POSICOES = (() => {
+  const out = [];
+  for (const pav of Object.values(ESTRUTURA_POSICOES)) {
+    for (const [di, linhas] of Object.entries(pav)) {
+      for (const [linha, andares] of Object.entries(linhas)) {
+        for (const [andar, lugares] of Object.entries(andares)) {
+          for (const lugar of lugares) {
+            out.push(`${di}-${linha}-${andar}-${lugar}`);
+          }
+        }
+      }
+    }
+  }
+  return out;
+})();
+
+function filtrarPosicoes(inputId, dropId) {
+  const val = document.getElementById(inputId).value.trim().toUpperCase();
+  let drop = document.getElementById(dropId);
+
+  // Cria o dropdown no body na primeira vez
+  if (!drop) {
+    drop = document.createElement('div');
+    drop.id = dropId;
+    drop.className = 'pos-dropdown';
+    drop.style.display = 'none';
+    document.body.appendChild(drop);
+  }
+
+  if (!val) { drop.style.display = 'none'; return; }
+  const comeca = TODAS_POSICOES.filter(p => p.startsWith(val));
+  const contem = TODAS_POSICOES.filter(p => !p.startsWith(val) && p.includes(val));
+  const matches = [...comeca, ...contem].slice(0, 12);
+  if (!matches.length) { drop.style.display = 'none'; return; }
+
+  drop.innerHTML = matches.map(p =>
+    `<div class="pos-opt" onclick="selecionarPosicao('${inputId}','${dropId}','${p}')">${p}</div>`
+  ).join('');
+
+  // Posiciona abaixo do input, dentro do viewport
+  const inp  = document.getElementById(inputId);
+  const rect = inp.getBoundingClientRect();
+  drop.style.top    = (rect.bottom + 2) + 'px';
+  drop.style.left   = rect.left + 'px';
+  drop.style.width  = rect.width + 'px';
+  drop.style.display = 'block';
+}
+
+function selecionarPosicao(inputId, dropId, pos) {
+  document.getElementById(inputId).value = pos;
+  document.getElementById(dropId).style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+  ['av-pos-drop','ms-pos-drop'].forEach(id => {
+    const drop = document.getElementById(id);
+    const inp  = document.getElementById(id.replace('-drop','').replace('pos','posicao'));
+    if (drop && inp && !drop.contains(e.target) && e.target !== inp) {
+      drop.style.display = 'none';
+    }
+  });
+});
+
+// ── CHECAGEM DE POSIÇÃO OCUPADA ──────────────────────────
+// Antes de lançar, verifica se a posição já tem produto(s) validado(s) e ativo(s).
+// Retorna array de itens ocupando a posição, ou [] se livre.
+async function checarPosicaoOcupada(posicao) {
+  if (!posicao) return [];
+  const { data, error } = await sb.from('historico')
+    .select('id, codigo, produto_nome, lote, armazem, quantidade')
+    .eq('posicao', posicao)
+    .eq('ocupacao_ativa', true);
+  if (error) { console.error(error); return []; }
+  return data || [];
+}
+
+// Estado temporário do fluxo de conflito (qual form chamou, dados pendentes)
+let _conflitoPosPendente = null;
+
+// origem: 'sessao' | 'avulso' — identifica qual função de lançamento chamar depois
+async function tentarLancar(origem) {
+  const posicao = origem === 'sessao'
+    ? document.getElementById('ms-posicao').value.trim().toUpperCase()
+    : document.getElementById('av-posicao').value.trim().toUpperCase();
+
+  if (!posicao) { // sem posição informada, não há o que checar
+    origem === 'sessao' ? await executarLancamentoSessao() : await executarLancamentoAvulso();
+    return;
+  }
+
+  const ocupantes = await checarPosicaoOcupada(posicao);
+  if (!ocupantes.length) {
+    origem === 'sessao' ? await executarLancamentoSessao() : await executarLancamentoAvulso();
+    return;
+  }
+
+  // Posição ocupada — abre modal de decisão
+  _conflitoPosPendente = { origem, posicao, ocupantes };
+  abrirModalConflitoPosicao();
+}
+
+function abrirModalConflitoPosicao() {
+  const { posicao, ocupantes } = _conflitoPosPendente;
+  const box = document.createElement('div');
+  box.className = 'pos-popup';
+  box.id = 'conflito-pos-popup';
+
+  const itensHtml = ocupantes.map((r, i) => `
+    <label class="conflito-item">
+      <input type="checkbox" class="conflito-chk" data-idx="${i}">
+      <div style="flex:1">
+        <div class="pos-popup-prod">${r.produto_nome||r.codigo}</div>
+        <div class="pos-popup-meta">${r.codigo} · Lote ${r.lote||'—'} · Arm. ${r.armazem||'—'}</div>
+      </div>
+      <div class="pos-popup-qtd">${r.quantidade}</div>
+    </label>`).join('');
+
+  box.innerHTML = `
+    <div class="pos-popup-box">
+      <div class="pos-popup-handle"></div>
+      <div class="pos-popup-cod">⚠️ Posição ${posicao} já ocupada</div>
+      <div class="pos-popup-info">Selecione abaixo o que está sendo substituído, ou apenas adicione o novo produto sem afetar o que já está lá.</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">${itensHtml}</div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" onclick="confirmarConflitoPosicao('adicionar')">+ Adicionar (mantém os existentes)</button>
+      <button class="btn" style="width:100%;margin-bottom:8px;background:var(--amber-bg);border-color:var(--amber-bd);color:var(--amber)" onclick="confirmarConflitoPosicao('substituir')">⇄ Substituir selecionado(s)</button>
+      <button class="btn btn-ghost" style="width:100%" onclick="fecharModalConflitoPosicao()">Cancelar</button>
+    </div>`;
+  document.body.appendChild(box);
+}
+
+function fecharModalConflitoPosicao() {
+  document.getElementById('conflito-pos-popup')?.remove();
+  _conflitoPosPendente = null;
+}
+
+async function confirmarConflitoPosicao(acao) {
+  const pendente = _conflitoPosPendente;
+  if (!pendente) return;
+
+  if (acao === 'substituir') {
+    const checks = document.querySelectorAll('.conflito-chk:checked');
+    if (!checks.length) { toast('Selecione ao menos um item para substituir.', 'warn'); return; }
+    const idsParaDesativar = Array.from(checks).map(c => pendente.ocupantes[+c.dataset.idx].id);
+    try {
+      const { error } = await sb.from('historico')
+        .update({ ocupacao_ativa: false })
+        .in('id', idsParaDesativar);
+      if (error) throw error;
+    } catch(e) {
+      toast('Erro ao substituir: ' + e.message, 'err');
+      return;
+    }
+  }
+
+  fecharModalConflitoPosicao();
+  pendente.origem === 'sessao' ? await executarLancamentoSessao() : await executarLancamentoAvulso();
+}
+
+// ── EDITAR LANÇAMENTO (qualquer operador pode editar qualquer registro) ──
+async function abrirEditarLancamento(id) {
+  try {
+    const { data: r, error } = await sb.from('lancamentos').select('*').eq('id', id).single();
+    if (error) throw error;
+    if (!r) { toast('Lançamento não encontrado.', 'err'); return; }
+
+    const box = document.createElement('div');
+    box.className = 'modal-bg open';
+    box.id = 'edit-lanc-modal';
+    box.onclick = e => { if (e.target === box) box.remove(); };
+
+    box.innerHTML = `
+      <div class="modal">
+        <div class="modal-handle"></div>
+        <div class="modal-title">✏ Editar Lançamento</div>
+        <div style="font-size:.78rem;color:var(--text3);margin-bottom:16px">${r.produto_nome||r.codigo} · lançado por ${r.usuario||'—'} em ${fmtTS(r.created_at)}</div>
+
+        <div class="field">
+          <label>Código do Produto</label>
+          <input type="text" id="el-codigo" value="${r.codigo||''}" style="text-transform:uppercase">
+        </div>
+        <div class="field">
+          <label>Nome do Produto</label>
+          <input type="text" id="el-produto" value="${(r.produto_nome||'').replace(/"/g,'&quot;')}">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field">
+            <label>Lote</label>
+            <input type="text" id="el-lote" value="${r.lote||''}" style="text-transform:uppercase">
+          </div>
+          <div class="field">
+            <label>Armazém</label>
+            <input type="text" id="el-armazem" value="${r.armazem||''}">
+          </div>
+        </div>
+        <div class="field">
+          <label>Posição</label>
+          <input type="text" id="el-posicao" value="${r.posicao||''}" placeholder="Ex: A1-04-1-2" style="text-transform:uppercase"
+            oninput="filtrarPosicoes('el-posicao','el-pos-drop')" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Quantidade</label>
+          <input type="number" id="el-quantidade" value="${r.quantidade}" min="0" step="1" style="font-weight:800;text-align:center">
+        </div>
+
+        <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="salvarEdicaoLancamento('${r.id}')">✓ Salvar Alterações</button>
+        <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="document.getElementById('edit-lanc-modal').remove()">Cancelar</button>
+      </div>`;
+    document.body.appendChild(box);
+  } catch(e) {
+    toast('Erro ao carregar lançamento: ' + e.message, 'err');
+  }
+}
+
+async function salvarEdicaoLancamento(id) {
+  const codigo    = document.getElementById('el-codigo').value.trim().toUpperCase();
+  const produto   = document.getElementById('el-produto').value.trim();
+  const lote      = document.getElementById('el-lote').value.trim().toUpperCase();
+  const armazem   = document.getElementById('el-armazem').value.trim();
+  const posicao   = document.getElementById('el-posicao').value.trim().toUpperCase();
+  const qtdStr    = document.getElementById('el-quantidade').value;
+
+  if (!codigo || !lote || !armazem || qtdStr === '') { toast('Preencha todos os campos obrigatórios.', 'warn'); return; }
+  const qtd = parseFloat(qtdStr);
+  if (isNaN(qtd) || qtd < 0) { toast('Quantidade inválida.', 'warn'); return; }
+
+  try {
+    const { error } = await sb.from('lancamentos').update({
+      codigo, produto_nome: produto || codigo, lote, armazem,
+      posicao: posicao || null, quantidade: qtd,
+    }).eq('id', id);
+    if (error) throw error;
+
+    toast('✓ Lançamento atualizado!', 'ok');
+    document.getElementById('edit-lanc-modal')?.remove();
+
+    // Atualiza listas locais se o item editado estiver na sessão atual ou na avulsa
+    if (_sessaoAtiva?.lancamentos) {
+      const idx = _sessaoAtiva.lancamentos.findIndex(it => it.id === id);
+      if (idx > -1) {
+        _sessaoAtiva.lancamentos[idx] = { ..._sessaoAtiva.lancamentos[idx], lote, armazem, posicao: posicao||null, quantidade: qtd };
+        salvarSessaoLocal();
+        renderListaSessao();
+      }
+    }
+    const idxAv = _avSessao.findIndex(it => it.id === id);
+    if (idxAv > -1) {
+      _avSessao[idxAv] = { ..._avSessao[idxAv], codigo, produto_nome: produto||codigo, lote, armazem, posicao: posicao||null, quantidade: qtd };
+      renderSessaoAvulsa();
+    }
+    // Atualiza histórico se a tela estiver visível
+    if (document.getElementById('screen-historico')?.classList.contains('active')) {
+      carregarHistoricoOp();
+    }
+  } catch(e) {
+    toast('Erro ao salvar: ' + e.message, 'err');
+  }
+}
 
 // ── START ─────────────────────────────────────────────────
 init();
