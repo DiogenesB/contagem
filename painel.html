@@ -1312,7 +1312,6 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <select class="filter-sel" id="filt-sv-arm" onchange="filtrarValidacao()">
               <option value="">Todos armazéns</option>
             </select>
-            <input type="text" class="filter-sel" id="filt-sv-pos" placeholder="Posição" oninput="filtrarValidacao()" style="width:100px" title="Filtrar por posição">
             <select class="filter-sel" id="filt-sv-status" onchange="filtrarValidacao()">
               <option value="">Todos</option>
               <option value="contado">Contados</option>
@@ -1337,7 +1336,6 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <col style="width:52px">
             <col style="width:42px">
             <col style="width:44px">
-            <col style="width:80px">
             <col style="width:78px">
             <col style="width:78px">
             <col style="width:96px">
@@ -1353,7 +1351,6 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <th style="white-space:nowrap">Saldo</th>
             <th style="white-space:nowrap">Emp.</th>
             <th style="white-space:nowrap">Arm.</th>
-            <th style="white-space:nowrap">Posição</th>
             <th style="white-space:nowrap">Fabric.</th>
             <th style="white-space:nowrap">Vencim.</th>
             <th style="white-space:nowrap">Saldo Contado</th>
@@ -1361,7 +1358,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <th style="text-align:right;white-space:nowrap">Ações</th>
           </tr></thead>
           <tbody id="tbody-sv">
-            <tr><td colspan="14" style="text-align:center;padding:36px;color:var(--text3);font-size:.8rem">
+            <tr><td colspan="13" style="text-align:center;padding:36px;color:var(--text3);font-size:.8rem">
               Importe o saldo sistêmico para começar.
             </td></tr>
           </tbody>
@@ -1435,16 +1432,16 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
           <colgroup>
             <col style="width:105px"><col><col style="width:105px">
             <col style="width:80px"><col style="width:75px"><col style="width:75px">
-            <col style="width:90px"><col style="width:65px"><col style="width:100px">
-            <col style="width:90px"><col style="width:130px"><col style="width:40px">
+            <col style="width:90px"><col style="width:65px"><col style="width:80px">
+            <col style="width:90px"><col style="width:90px"><col style="width:130px"><col style="width:40px">
           </colgroup>
           <thead><tr>
             <th>Filial</th><th>Código</th><th>Produto</th><th>Lote</th>
             <th>Qtd</th><th>Saldo</th><th>Diverg.</th>
-            <th>Tipo</th><th>Arm.</th><th>Operador</th>
+            <th>Tipo</th><th>Arm.</th><th>Posição</th><th>Operador</th>
             <th>Obs.</th><th>Data</th><th></th>
           </tr></thead>
-          <tbody id="tbody-hist"><tr><td colspan="13" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Selecione filtros e clique em Atualizar.</td></tr></tbody>
+          <tbody id="tbody-hist"><tr><td colspan="14" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Selecione filtros e clique em Atualizar.</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -2225,12 +2222,12 @@ function irParaHistorico() {
 
 async function carregarValidacao() {
   document.getElementById('tbody-sv').innerHTML =
-    '<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Carregando…</td></tr>';
+    '<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Carregando…</td></tr>';
   try {
     const { data: saldo } = await sb.from('saldo_sistema').select('*').order('codigo').order('lote');
     if (!saldo || !saldo.length) {
       document.getElementById('tbody-sv').innerHTML =
-        '<tr><td colspan="14" style="text-align:center;padding:32px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Importe o saldo sistêmico para começar.</td></tr>';
+        '<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Importe o saldo sistêmico para começar.</td></tr>';
       return;
     }
 
@@ -2242,7 +2239,7 @@ async function carregarValidacao() {
     const agg = {};
     todos.forEach(r => {
       const k = `${norm(r.codigo)}|${norm(r.lote)}|${norm(r.armazem)}`;
-      if (!agg[k]) agg[k] = { qtd:0, ops:new Set(), nlanc:0, recontagem:false, ids:[], tabelas:[], codigo:r.codigo, lote:r.lote, armazem:r.armazem, posicao:null };
+      if (!agg[k]) agg[k] = { qtd:0, ops:new Set(), nlanc:0, recontagem:false, ids:[], tabelas:[], codigo:r.codigo, lote:r.lote, armazem:r.armazem, posicao:null, lancamentos_individuais:[] };
       agg[k].qtd += parseFloat(r.quantidade)||0;
       agg[k].nlanc++;
       agg[k].ids.push(r.id);
@@ -2250,6 +2247,8 @@ async function carregarValidacao() {
       if (r.usuario) agg[k].ops.add(r.usuario);
       if (r.recontagem) agg[k].recontagem = true;
       if (r.posicao && !agg[k].posicao) agg[k].posicao = r.posicao;
+      // Guarda cada lançamento individual com posição e quantidade
+      agg[k].lancamentos_individuais.push({ id: r.id, posicao: r.posicao||null, quantidade: parseFloat(r.quantidade)||0, usuario: r.usuario||null });
     });
 
     // Set de chaves do saldo sistêmico
@@ -2267,7 +2266,7 @@ async function carregarValidacao() {
       const c = agg[k] || null;
       const qtdContada = c ? c.qtd : null;
       const div = qtdContada !== null ? (qtdContada - s.saldo) : null;
-      return { ...s, qtdContada, div, ops: c?[...c.ops].join(', '):null, nlanc:c?c.nlanc:0, recontagem:c?c.recontagem:false, _k:k, _tipo:'normal', _validado: false, posicao: c?.posicao || null };
+      return { ...s, qtdContada, div, ops: c?[...c.ops].join(', '):null, nlanc:c?c.nlanc:0, recontagem:c?c.recontagem:false, _k:k, _tipo:'normal', _validado: false, posicao: c?.posicao || null, lancamentos_individuais: c?.lancamentos_individuais || [] };
     });
 
     // Detecta: lançamentos cujo lote+codigo NÃO existe no saldo (lote errado/inexistente)
@@ -2351,15 +2350,13 @@ function atualizarStatsSV() {
 function filtrarValidacao() {
   const q      = (document.getElementById('search-sv').value||'').toLowerCase();
   const arm    = document.getElementById('filt-sv-arm').value;
-  const pos    = (document.getElementById('filt-sv-pos')?.value||'').trim().toUpperCase();
   const status = document.getElementById('filt-sv-status').value;
   const filial = getFiltroFilial();
 
   const data = svLinhas.filter(r => {
-    const txt = [r.codigo,r.descricao,r.lote,r.armazem,r.posicao||''].join(' ').toLowerCase();
+    const txt = [r.codigo,r.descricao,r.lote,r.armazem].join(' ').toLowerCase();
     if (q && !txt.includes(q)) return false;
     if (arm && r.armazem !== arm) return false;
-    if (pos && !(r.posicao||'').toUpperCase().includes(pos)) return false;
     if (filial && (r.filial||'').toUpperCase() !== filial) return false;
     if (status === 'contado'    && r.qtdContada === null) return false;
     if (status === 'pendente'   && r.qtdContada !== null) return false;
@@ -2442,7 +2439,6 @@ function filtrarValidacao() {
       <td style="font-family:var(--mono);font-weight:700">${r.saldo}</td>
       <td style="font-family:var(--mono);color:var(--amber)">${r.empenho||0}</td>
       <td style="font-family:var(--mono);font-weight:600">${r.armazem||'—'}</td>
-      <td style="font-family:var(--mono);font-size:.78rem;color:var(--blue)">${r.posicao||'—'}</td>
       <td class="cts" style="${vencStyle}">${dtFab}</td>
       <td class="cts" style="${vencStyle}">${dtVal}</td>
       <td>${qtdCell}</td>
@@ -2456,7 +2452,7 @@ function filtrarValidacao() {
   if (svArmErrado?.length > 0) {
     rowsArmErrado = `
       <tr style="background:var(--amber-bg)">
-        <td colspan="14" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--amber-bd)">
+        <td colspan="13" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--amber-bd)">
           ⚠ Armazém não identificado — lote existe no sistema, mas armazém informado é diferente (${svArmErrado.length})
         </td>
       </tr>` +
@@ -2470,7 +2466,6 @@ function filtrarValidacao() {
           <td style="color:var(--text3)">—</td>
           <td style="color:var(--text3)">—</td>
           <td><span style="font-weight:700;color:var(--amber)">${r.armazem||'—'}</span><span style="font-size:.65rem;color:var(--text3);margin-left:5px">← info</span></td>
-          <td style="font-family:var(--mono);font-size:.78rem;color:var(--blue)">${r.posicao||'—'}</td>
           <td class="cts">—</td>
           <td class="cts">—</td>
           <td><span class="qtd-contada" style="color:var(--amber)">${r.qtdContada}</span><span style="font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
@@ -2488,7 +2483,7 @@ function filtrarValidacao() {
   if (svLoteNaoExiste?.length > 0) {
     rowsNaoExiste = `
       <tr style="background:var(--red-bg)">
-        <td colspan="14" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--red-bd)">
+        <td colspan="13" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--red-bd)">
           ✕ Lote não existe no saldo sistêmico (${svLoteNaoExiste.length})
         </td>
       </tr>` +
@@ -2502,7 +2497,6 @@ function filtrarValidacao() {
           <td style="font-size:.72rem;color:var(--red)">Lote não encontrado</td>
           <td style="color:var(--text3)">—</td>
           <td style="font-weight:600">${r.armazem||'—'}</td>
-          <td style="font-family:var(--mono);font-size:.78rem;color:var(--blue)">${r.posicao||'—'}</td>
           <td class="cts">—</td>
           <td class="cts">—</td>
           <td><span class="qtd-contada" style="color:var(--red)">${r.qtdContada}</span><span style="font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
@@ -2516,7 +2510,7 @@ function filtrarValidacao() {
   }
 
   if (!rowsNormais && !rowsArmErrado && !rowsNaoExiste) {
-    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--text3);font-size:.75rem">Nenhum item.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--text3);font-size:.75rem">Nenhum item.</td></tr>';
     return;
   }
   tbody.innerHTML = rowsNormais + rowsArmErrado + rowsNaoExiste;
@@ -2616,7 +2610,37 @@ function abrirValidacao(item) {
   if (qmi) qmi.value = '';
   calcDiv();
 
+  // Limpa aviso de conflito anterior (se houver)
+  const confWrap = document.getElementById('mv-conflito-pos');
+  if (confWrap) confWrap.remove();
+
   document.getElementById('modal-val').classList.add('open');
+
+  // Busca assincronamente se há outros produtos nessa posição
+  if (item.posicao) {
+    sb.from('historico')
+      .select('codigo, produto_nome, lote, quantidade')
+      .eq('posicao', item.posicao)
+      .eq('ocupacao_ativa', true)
+      .then(({ data }) => {
+        if (!data?.length) return;
+        // Filtra registros que NÃO são o próprio item sendo validado
+        const outros = data.filter(r =>
+          !(r.codigo === item.codigo && r.lote === item.lote)
+        );
+        if (!outros.length) return;
+        // Injeta aviso no modal
+        const alvo = document.getElementById('btn-conf-val')?.parentElement;
+        if (!alvo) return;
+        const div = document.createElement('div');
+        div.id = 'mv-conflito-pos';
+        div.style.cssText = 'background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px;font-size:.78rem';
+        div.innerHTML = `<div style="font-weight:700;color:var(--amber);margin-bottom:6px">⚠️ Posição ${item.posicao} tem ${outros.length} produto${outros.length>1?'s':''} que será${outros.length>1?'ão':''} removido${outros.length>1?'s':''}:</div>` +
+          outros.map(r => `<div style="color:var(--text2);padding:2px 0">${r.produto_nome||r.codigo} · Lote ${r.lote||'—'} · <b>${r.quantidade}</b> un.</div>`).join('') +
+          `<div style="color:var(--text3);margin-top:6px;font-size:.72rem">Ao confirmar, esses registros serão marcados como inativos na posição.</div>`;
+        alvo.insertBefore(div, alvo.firstChild);
+      });
+  }
 }
 
 async function buscarPrimeiraContagem(codigo, lote, armazem) {
@@ -2715,23 +2739,70 @@ async function confirmarValidacao() {
   document.getElementById('val-spin').style.display = 'block';
 
   try {
-    await sb.from('historico').insert({
-      codigo:           itemAtual.codigo,
-      produto_nome:     itemAtual.descricao || itemAtual.codigo,
-      lote:             itemAtual.lote,
-      quantidade:       qtdFinal,
-      saldo_sistema:    saldo,
-      divergencia:      div,
-      tipo:             tipo || (div===0?'ok':div>0?'positivo':'negativo'),
-      observacao:       obs || (!isRecont && motivo ? motivo : null),
-      armazem:          itemAtual.armazem,
-      posicao:          itemAtual.posicao || null,
-      ocupacao_ativa:   true,
-      usuario:          itemAtual.ops || (isManual ? 'Gestor (manual)' : null),
-      is_recontagem:    isRecont || false,
-      motivo_recontagem: isRecont ? motivo : null,
-      filial:           itemAtual.filial || detectarFilialPorCodigo(itemAtual.codigo) || null,
-    });
+    // ── Limpa todas as posições dos lançamentos individuais antes de inserir ──
+    const posicoes = [...new Set(
+      (itemAtual.lancamentos_individuais||[])
+        .map(l => l.posicao).filter(Boolean)
+    )];
+    for (const pos of posicoes) {
+      await sb.from('historico')
+        .update({ ocupacao_ativa: false })
+        .eq('posicao', pos)
+        .eq('ocupacao_ativa', true);
+    }
+    // Fallback: se não tem individuais, limpa posição do agregado
+    if (!posicoes.length && itemAtual.posicao) {
+      await sb.from('historico')
+        .update({ ocupacao_ativa: false })
+        .eq('posicao', itemAtual.posicao)
+        .eq('ocupacao_ativa', true);
+    }
+
+    // ── Insere um registro no histórico por lançamento individual ──
+    const individuais = itemAtual.lancamentos_individuais||[];
+    const tipoFinal = tipo || (div===0?'ok':div>0?'positivo':'negativo');
+    const filialFinal = itemAtual.filial || detectarFilialPorCodigo(itemAtual.codigo) || null;
+
+    if (individuais.length > 0) {
+      // Insere um registro por palete/posição (preserva granularidade real)
+      const registros = individuais.map(l => ({
+        codigo:            itemAtual.codigo,
+        produto_nome:      itemAtual.descricao || itemAtual.codigo,
+        lote:              itemAtual.lote,
+        quantidade:        l.quantidade,
+        saldo_sistema:     saldo,
+        divergencia:       div,
+        tipo:              tipoFinal,
+        observacao:        obs || (!isRecont && motivo ? motivo : null),
+        armazem:           itemAtual.armazem,
+        posicao:           l.posicao || null,
+        ocupacao_ativa:    true,
+        usuario:           l.usuario || itemAtual.ops || (isManual ? 'Gestor (manual)' : null),
+        is_recontagem:     isRecont || false,
+        motivo_recontagem: isRecont ? motivo : null,
+        filial:            filialFinal,
+      }));
+      await sb.from('historico').insert(registros);
+    } else {
+      // Fallback: sem individuais (validação manual), insere registro único
+      await sb.from('historico').insert({
+        codigo:            itemAtual.codigo,
+        produto_nome:      itemAtual.descricao || itemAtual.codigo,
+        lote:              itemAtual.lote,
+        quantidade:        qtdFinal,
+        saldo_sistema:     saldo,
+        divergencia:       div,
+        tipo:              tipoFinal,
+        observacao:        obs || (!isRecont && motivo ? motivo : null),
+        armazem:           itemAtual.armazem,
+        posicao:           itemAtual.posicao || null,
+        ocupacao_ativa:    true,
+        usuario:           itemAtual.ops || (isManual ? 'Gestor (manual)' : null),
+        is_recontagem:     isRecont || false,
+        motivo_recontagem: isRecont ? motivo : null,
+        filial:            filialFinal,
+      });
+    }
 
     // Remove lançamentos pendentes deste codigo+lote+armazem
     const cod = (itemAtual.codigo||'').trim();
@@ -3248,7 +3319,7 @@ function renderLancamentos(data) {
       <td class="cm">${r.lote||'—'}</td>
       <td><span style="font-family:var(--mono);font-weight:700">${r.quantidade}</span></td>
       <td><span style="font-family:var(--mono);color:var(--amber)">${r.armazem||'—'}</span></td>
-      <td><span style="font-family:var(--mono);font-size:.78rem;color:var(--blue)">${r.posicao||'—'}</span></td>
+      <td><span style="font-family:var(--mono);font-size:.78rem;color:var(--blue);white-space:nowrap">${r.posicao||'—'}</span></td>
       <td class="cm">${r.usuario||'—'}</td>
       <td class="cts">${fmtTS(r.created_at)}</td>
       <td>${r.recontagem?'<span class="badge b-r">Recontagem</span>':'<span class="badge b-p">Normal</span>'}</td>
@@ -3399,7 +3470,7 @@ function filtrarHistorico() {
 
   document.getElementById('cnt-hist').textContent = `${data.length} registro${data.length!==1?'s':''}${todoHistorico.length>=500?' (limitado a 500 — use filtros de data)':''}`;
   const tbody = document.getElementById('tbody-hist');
-  if (!data.length) { tbody.innerHTML='<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Nenhum registro.</td></tr>'; return; }
+  if (!data.length) { tbody.innerHTML='<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Nenhum registro.</td></tr>'; return; }
 
   tbody.innerHTML = data.map(h => {
     const d  = h.divergencia ?? 0;
@@ -3430,6 +3501,7 @@ function filtrarHistorico() {
       <td><span class="${dc}" style="font-size:.8rem">${dl}</span></td>
       <td>${tipoBadge}${reconTag}</td>
       <td style="font-family:var(--mono);font-weight:700;color:var(--amber);font-size:.8rem">${h.armazem||'—'}</td>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--blue);white-space:nowrap">${h.posicao||'—'}</td>
       <td style="font-size:.82rem;color:var(--text2)">${h.usuario||'—'}</td>
       <td>${obsCell}</td>
       <td class="cts">${fmtTS(h.created_at)}</td>
@@ -4106,32 +4178,77 @@ async function validarTodos() {
   if (!confirm(`Validar ${semDiv.length} item${semDiv.length!==1?'ns':''} sem divergência?`)) return;
   const btn = document.getElementById('btn-validar-todos');
   btn.disabled = true; btn.textContent = '⏳ Validando…';
-  let ok=0, erros=0;
+  let ok=0, erros=0, pulados=0;
+  const pulados_detalhes = [];
+
   for (const item of semDiv) {
     try {
-      await sb.from('historico').insert({
-        codigo: item.codigo, produto_nome: item.descricao||item.codigo,
-        lote: item.lote, quantidade: item.qtdContada, saldo_sistema: item.saldo,
-        divergencia: 0, tipo: 'ok', observacao: null, armazem: item.armazem,
-        posicao: item.posicao || null, ocupacao_ativa: true,
-        usuario: item.ops||null, is_recontagem: false, motivo_recontagem: null,
-        filial: item.filial || detectarFilialPorCodigo(item.codigo) || null,
-      });
+      // Verifica conflito de posição — pula se tiver outro produto ativo nessa posição
+      if (item.posicao) {
+        const { data: ocupantes } = await sb.from('historico')
+          .select('codigo, produto_nome, lote')
+          .eq('posicao', item.posicao)
+          .eq('ocupacao_ativa', true);
+        const outros = (ocupantes||[]).filter(r =>
+          !(r.codigo === item.codigo && r.lote === item.lote)
+        );
+        if (outros.length) {
+          pulados++;
+          pulados_detalhes.push(`${item.codigo} (${item.posicao})`);
+          continue; // pula este item
+        }
+      }
+
+      // Limpa posições dos lançamentos individuais antes de inserir
+      const posicoes = [...new Set((item.lancamentos_individuais||[]).map(l=>l.posicao).filter(Boolean))];
+      for (const pos of posicoes) {
+        await sb.from('historico').update({ ocupacao_ativa: false }).eq('posicao', pos).eq('ocupacao_ativa', true);
+      }
+      if (!posicoes.length && item.posicao) {
+        await sb.from('historico').update({ ocupacao_ativa: false }).eq('posicao', item.posicao).eq('ocupacao_ativa', true);
+      }
+
+      // Insere um registro por lançamento individual (palete/posição)
+      const individuais = item.lancamentos_individuais||[];
+      const filialFinal = item.filial || detectarFilialPorCodigo(item.codigo) || null;
+      if (individuais.length > 0) {
+        await sb.from('historico').insert(individuais.map(l => ({
+          codigo: item.codigo, produto_nome: item.descricao||item.codigo,
+          lote: item.lote, quantidade: l.quantidade, saldo_sistema: item.saldo,
+          divergencia: 0, tipo: 'ok', observacao: null, armazem: item.armazem,
+          posicao: l.posicao || null, ocupacao_ativa: true,
+          usuario: l.usuario || item.ops || null, is_recontagem: false, motivo_recontagem: null,
+          filial: filialFinal,
+        })));
+      } else {
+        await sb.from('historico').insert({
+          codigo: item.codigo, produto_nome: item.descricao||item.codigo,
+          lote: item.lote, quantidade: item.qtdContada, saldo_sistema: item.saldo,
+          divergencia: 0, tipo: 'ok', observacao: null, armazem: item.armazem,
+          posicao: item.posicao || null, ocupacao_ativa: true,
+          usuario: item.ops||null, is_recontagem: false, motivo_recontagem: null,
+          filial: filialFinal,
+        });
+      }
       const cod=(item.codigo||'').trim(), lot=(item.lote||'').trim(), arm=(item.armazem||'').trim();
       await sb.from('lancamentos').delete().eq('status','pendente').eq('codigo',cod).eq('lote',lot).eq('armazem',arm);
       await sb.from('contagens').delete().eq('status','pendente').eq('codigo',cod).eq('lote',lot).eq('armazem',arm);
-      // Remove do saldo_sistema — os dados definitivos já estão no histórico
       if (item.id) {
         await sb.from('saldo_sistema').delete().eq('id', item.id);
       }
-      // Marca localmente
       const idx = svLinhas.findIndex(r => r._k === item._k);
       if (idx !== -1) svLinhas[idx]._validado = true;
       ok++;
     } catch { erros++; }
   }
   btn.disabled=false; btn.textContent='✓ Validar Tudo';
-  toast(`✓ ${ok} item${ok!==1?'ns':''} validado${ok!==1?'s':''}${erros?` · ${erros} erro${erros!==1?'s':''}`:''}.`,'ok',5000);
+  let msg = `✓ ${ok} item${ok!==1?'ns':''} validado${ok!==1?'s':''}`;
+  if (pulados) msg += ` · ${pulados} pulado${pulados!==1?'s':''} (conflito de posição)`;
+  if (erros) msg += ` · ${erros} erro${erros!==1?'s':''}`;
+  toast(msg, pulados||erros ? 'warn' : 'ok', 6000);
+  if (pulados) {
+    setTimeout(() => toast(`Pulados: ${pulados_detalhes.join(', ')}`, 'warn', 8000), 500);
+  }
   atualizarStatsSV();
   filtrarValidacao();
 }
