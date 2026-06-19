@@ -1515,7 +1515,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
         </div>
       </div>
 
-      <div class="stat-grid" id="mapa-kpi-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">
+      <div class="stat-grid" id="mapa-kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
         <div class="stat-card">
           <div class="sc-lbl">Total de Posições</div>
           <div class="sc-val" id="mk-total" style="color:var(--text)">—</div>
@@ -1535,10 +1535,6 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
           <div class="sc-lbl">Paletes Compartilhados</div>
           <div class="sc-val" id="mk-compartilhadas" style="color:var(--amber-lt)">—</div>
           <div style="font-size:.66rem;color:var(--text3);margin-top:2px">+ de 1 lote na mesma posição</div>
-        </div>
-        <div class="stat-card">
-          <div class="sc-lbl">Produtos Distintos</div>
-          <div class="sc-val" id="mk-produtos" style="color:var(--purple)">—</div>
         </div>
       </div>
 
@@ -5697,7 +5693,6 @@ async function carregarMapaPainel() {
 
 function atualizarKpisMapa() {
   let total = 0, ocup = 0, compartilhadas = 0;
-  const produtos = new Set();
   Object.values(POSICOES_MAPA).forEach(grupo => {
     Object.entries(grupo).forEach(([di, linhas]) => {
       Object.entries(linhas).forEach(([ln, andares]) => {
@@ -5709,7 +5704,6 @@ function atualizarKpisMapa() {
             if (items) {
               ocup++;
               if (items.length > 1) compartilhadas++;
-              items.forEach(it => produtos.add(it.codigo));
             }
           });
         });
@@ -5721,7 +5715,6 @@ function atualizarKpisMapa() {
   document.getElementById('mk-total').textContent    = total;
   document.getElementById('mk-ocup').textContent     = ocup;
   document.getElementById('mk-livre').textContent     = livre;
-  document.getElementById('mk-produtos').textContent  = produtos.size;
   document.getElementById('mk-ocup-bar').style.width  = pct + '%';
   const compEl = document.getElementById('mk-compartilhadas');
   if (compEl) compEl.textContent = compartilhadas;
@@ -5872,9 +5865,9 @@ function renderPavilhao(pv, busca, posQ, andarFiltro, status) {
                 if (c.oculta) return `<div style="width:32px;height:32px;flex-shrink:0"></div>`;
                 const items   = c.items;
                 const multi   = items && items.length > 1;
-                const bg      = items ? (multi ? 'var(--amber-bg)' : tema.bg) : 'var(--bg4)';
-                const bd      = items ? (multi ? 'var(--amber-bd)' : tema.bd) : 'var(--border2)';
-                const cor     = items ? (multi ? 'var(--amber-lt)' : tema.lt) : 'var(--text3)';
+                const bg      = items ? (multi ? '#c05e00' : '#16a34a') : 'var(--bg4)';
+                const bd      = items ? (multi ? '#9a4a00' : '#15803d') : 'var(--border2)';
+                const cor     = items ? '#ffffff' : 'var(--text3)';
                 const title   = items ? items.map(it=>`${it.codigo} (lote ${it.lote||'—'}) · ${it.quantidade}un`).join(' | ') : c.pos + ' — livre';
                 const badge   = multi ? `<span style="position:absolute;top:-4px;right:-4px;background:var(--amber-lt);color:#1a0f00;font-size:.46rem;font-weight:800;border-radius:50%;width:13px;height:13px;display:flex;align-items:center;justify-content:center;line-height:1;border:1.5px solid var(--bg2)">${items.length}</span>` : '';
                 return `<div onclick="abrirMapaPopup('${c.pos}')" title="${title}"
