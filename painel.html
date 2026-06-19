@@ -688,6 +688,9 @@ tbody tr:hover { background:#f5f7fa; }
 .cts { font-size:.74rem; color:var(--text3); white-space:nowrap; }
 .ca  { text-align:right; white-space:nowrap; }
 
+/* Mapa Drive-in — célula de posição */
+.mapa-cel-painel:hover { transform:scale(1.12); box-shadow:0 2px 10px rgba(0,0,0,.18); z-index:1; position:relative; }
+
 /* ══════════════════════
    BADGES
 ══════════════════════ */
@@ -1162,6 +1165,9 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
     <button class="nav-item" onclick="switchTab('performance',this)">
       <span class="ni">📊</span> Performance
     </button>
+    <button class="nav-item" onclick="switchTab('mapa',this)">
+      <span class="ni">🗺️</span> Mapa Drive-in
+    </button>
   </div>
 
   <div class="nav-divider"></div>
@@ -1306,6 +1312,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <select class="filter-sel" id="filt-sv-arm" onchange="filtrarValidacao()">
               <option value="">Todos armazéns</option>
             </select>
+            <input type="text" class="filter-sel" id="filt-sv-pos" placeholder="Posição" oninput="filtrarValidacao()" style="width:100px" title="Filtrar por posição">
             <select class="filter-sel" id="filt-sv-status" onchange="filtrarValidacao()">
               <option value="">Todos</option>
               <option value="contado">Contados</option>
@@ -1330,6 +1337,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <col style="width:52px">
             <col style="width:42px">
             <col style="width:44px">
+            <col style="width:80px">
             <col style="width:78px">
             <col style="width:78px">
             <col style="width:96px">
@@ -1345,6 +1353,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <th style="white-space:nowrap">Saldo</th>
             <th style="white-space:nowrap">Emp.</th>
             <th style="white-space:nowrap">Arm.</th>
+            <th style="white-space:nowrap">Posição</th>
             <th style="white-space:nowrap">Fabric.</th>
             <th style="white-space:nowrap">Vencim.</th>
             <th style="white-space:nowrap">Saldo Contado</th>
@@ -1352,7 +1361,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <th style="text-align:right;white-space:nowrap">Ações</th>
           </tr></thead>
           <tbody id="tbody-sv">
-            <tr><td colspan="13" style="text-align:center;padding:36px;color:var(--text3);font-size:.8rem">
+            <tr><td colspan="14" style="text-align:center;padding:36px;color:var(--text3);font-size:.8rem">
               Importe o saldo sistêmico para começar.
             </td></tr>
           </tbody>
@@ -1369,6 +1378,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
           <div class="th-right" style="flex-wrap:wrap;gap:6px">
             <input type="text" class="search-inp" id="search-lanc" placeholder="Produto / Código / Lote…" oninput="filtrarLancamentosD()" style="width:180px">
             <select class="filter-sel" id="filt-lanc-arm" onchange="filtrarLancamentos()"><option value="">Todos arm.</option></select>
+            <input type="text" class="filter-sel" id="filt-lanc-pos" placeholder="Posição" oninput="filtrarLancamentos()" style="width:90px" title="Filtrar por posição">
             <select class="filter-sel" id="filt-lanc-op" onchange="filtrarLancamentos()"><option value="">Todos operadores</option></select>
             <select class="filter-sel" id="filt-lanc-tipo" onchange="filtrarLancamentos()">
               <option value="">Todos os tipos</option>
@@ -1389,8 +1399,8 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
           </div>
         </div>
         <table>
-          <thead><tr><th>Filial</th><th>Código</th><th>Produto</th><th>Lote</th><th>Qtd</th><th>Armazém</th><th>Operador</th><th>Data</th><th>Tipo</th><th style="text-align:right">Ações</th></tr></thead>
-          <tbody id="tbody-lanc"><tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr></tbody>
+          <thead><tr><th>Filial</th><th>Código</th><th>Produto</th><th>Lote</th><th>Qtd</th><th>Armazém</th><th>Posição</th><th>Operador</th><th>Data</th><th>Tipo</th><th style="text-align:right">Ações</th></tr></thead>
+          <tbody id="tbody-lanc"><tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1492,6 +1502,77 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
           <thead><tr><th>Operador</th><th>Produto</th><th>Início</th><th>Fim</th><th>Duração</th><th>Lançamentos</th><th>Tipo</th></tr></thead>
           <tbody id="tbody-perf"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3);font-size:.8rem">Clique em Atualizar.</td></tr></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ══ TAB: MAPA DRIVE-IN ══ -->
+    <div class="tab-panel" id="tab-mapa">
+      <div class="page-header" style="margin-bottom:14px">
+        <div class="ph-icon green">🗺️</div>
+        <div>
+          <div class="ph-title">Mapa Drive-in</div>
+          <div style="font-size:.75rem;color:var(--text3)">Ocupação física das posições · lançamentos validados</div>
+        </div>
+        <div style="margin-left:auto">
+          <button class="btn btn-ghost btn-sm" onclick="carregarMapaPainel()">↺ Atualizar</button>
+        </div>
+      </div>
+
+      <div class="stat-grid" id="mapa-kpi-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">
+        <div class="stat-card">
+          <div class="sc-lbl">Total de Posições</div>
+          <div class="sc-val" id="mk-total" style="color:var(--text)">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-lbl">Ocupadas</div>
+          <div class="sc-val" id="mk-ocup" style="color:var(--blue)">—</div>
+          <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-top:2px">
+            <div id="mk-ocup-bar" style="width:0%;height:100%;background:var(--blue-lt);border-radius:3px;transition:width .5s"></div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-lbl">Livres</div>
+          <div class="sc-val" id="mk-livre" style="color:var(--green)">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-lbl">Paletes Compartilhados</div>
+          <div class="sc-val" id="mk-compartilhadas" style="color:var(--amber-lt)">—</div>
+          <div style="font-size:.66rem;color:var(--text3);margin-top:2px">+ de 1 lote na mesma posição</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-lbl">Produtos Distintos</div>
+          <div class="sc-val" id="mk-produtos" style="color:var(--purple)">—</div>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-bottom:14px">
+        <div class="table-hdr" style="flex-wrap:wrap;gap:8px">
+          <div class="th-left">
+            <span class="table-title">🔍 Filtros</span>
+          </div>
+          <div class="th-right">
+            <input type="text" class="search-inp" id="filt-mapa-busca" placeholder="Produto, código ou lote…" oninput="filtrarMapaPainel()" style="width:200px">
+            <input type="text" class="filter-sel" id="filt-mapa-pos" placeholder="Posição (ex: A1-04)" oninput="filtrarMapaPainel()" style="width:150px">
+            <select class="filter-sel" id="filt-mapa-pav" onchange="filtrarMapaPainel()">
+              <option value="">Todos pavilhões</option>
+              <option value="bioma">🔵 Bioma</option>
+              <option value="simbiose">🟢 Simbiose</option>
+            </select>
+            <select class="filter-sel" id="filt-mapa-andar" onchange="filtrarMapaPainel()">
+              <option value="">Todos andares</option>
+            </select>
+            <select class="filter-sel" id="filt-mapa-status" onchange="filtrarMapaPainel()">
+              <option value="">Ocupadas e livres</option>
+              <option value="ocupada">Só ocupadas</option>
+              <option value="livre">Só livres</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="limparFiltrosMapa()">✕ Limpar</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="mapa-painel-content">
+        <div style="text-align:center;padding:48px;color:var(--text3);font-size:.85rem">Clique em ↺ Atualizar para carregar o mapa.</div>
       </div>
     </div>
 
@@ -1995,7 +2076,8 @@ let svArmErrado = [];
 const NOMES_TABS = {
   validacao:'Saldo / Validação', registros:'Registros de Contagem',
   historico:'Histórico Validado', performance:'Performance de Operadores',
-  agendamentos:'Agendamentos', transferencias:'Transferências', acuracidade:'Acurácia de Estoque', 'hist-acuracia':'Histórico de Acurácia'
+  agendamentos:'Agendamentos', transferencias:'Transferências', acuracidade:'Acurácia de Estoque', 'hist-acuracia':'Histórico de Acurácia',
+  mapa:'Mapa Drive-in'
 };
 
 const COL_MAP = {
@@ -2129,6 +2211,7 @@ function switchTab(nome, el) {
   if (nome === 'performance')  carregarPerformance();
   if (nome === 'acuracidade')  carregarAcuracidade();
   if (nome === 'hist-acuracia') { carregarHistAcuracia(); verificarFechamentoMes(); }
+  if (nome === 'mapa')         carregarMapaPainel();
 }
 
 function irParaHistorico() {
@@ -2142,12 +2225,12 @@ function irParaHistorico() {
 
 async function carregarValidacao() {
   document.getElementById('tbody-sv').innerHTML =
-    '<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Carregando…</td></tr>';
+    '<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--text3);font-size:.8rem">Carregando…</td></tr>';
   try {
     const { data: saldo } = await sb.from('saldo_sistema').select('*').order('codigo').order('lote');
     if (!saldo || !saldo.length) {
       document.getElementById('tbody-sv').innerHTML =
-        '<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Importe o saldo sistêmico para começar.</td></tr>';
+        '<tr><td colspan="14" style="text-align:center;padding:32px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Importe o saldo sistêmico para começar.</td></tr>';
       return;
     }
 
@@ -2159,13 +2242,14 @@ async function carregarValidacao() {
     const agg = {};
     todos.forEach(r => {
       const k = `${norm(r.codigo)}|${norm(r.lote)}|${norm(r.armazem)}`;
-      if (!agg[k]) agg[k] = { qtd:0, ops:new Set(), nlanc:0, recontagem:false, ids:[], tabelas:[], codigo:r.codigo, lote:r.lote, armazem:r.armazem };
+      if (!agg[k]) agg[k] = { qtd:0, ops:new Set(), nlanc:0, recontagem:false, ids:[], tabelas:[], codigo:r.codigo, lote:r.lote, armazem:r.armazem, posicao:null };
       agg[k].qtd += parseFloat(r.quantidade)||0;
       agg[k].nlanc++;
       agg[k].ids.push(r.id);
       agg[k].tabelas.push(r.sessao_id !== undefined ? 'lancamentos' : 'contagens');
       if (r.usuario) agg[k].ops.add(r.usuario);
       if (r.recontagem) agg[k].recontagem = true;
+      if (r.posicao && !agg[k].posicao) agg[k].posicao = r.posicao;
     });
 
     // Set de chaves do saldo sistêmico
@@ -2183,7 +2267,7 @@ async function carregarValidacao() {
       const c = agg[k] || null;
       const qtdContada = c ? c.qtd : null;
       const div = qtdContada !== null ? (qtdContada - s.saldo) : null;
-      return { ...s, qtdContada, div, ops: c?[...c.ops].join(', '):null, nlanc:c?c.nlanc:0, recontagem:c?c.recontagem:false, _k:k, _tipo:'normal', _validado: false };
+      return { ...s, qtdContada, div, ops: c?[...c.ops].join(', '):null, nlanc:c?c.nlanc:0, recontagem:c?c.recontagem:false, _k:k, _tipo:'normal', _validado: false, posicao: c?.posicao || null };
     });
 
     // Detecta: lançamentos cujo lote+codigo NÃO existe no saldo (lote errado/inexistente)
@@ -2267,13 +2351,15 @@ function atualizarStatsSV() {
 function filtrarValidacao() {
   const q      = (document.getElementById('search-sv').value||'').toLowerCase();
   const arm    = document.getElementById('filt-sv-arm').value;
+  const pos    = (document.getElementById('filt-sv-pos')?.value||'').trim().toUpperCase();
   const status = document.getElementById('filt-sv-status').value;
   const filial = getFiltroFilial();
 
   const data = svLinhas.filter(r => {
-    const txt = [r.codigo,r.descricao,r.lote,r.armazem].join(' ').toLowerCase();
+    const txt = [r.codigo,r.descricao,r.lote,r.armazem,r.posicao||''].join(' ').toLowerCase();
     if (q && !txt.includes(q)) return false;
     if (arm && r.armazem !== arm) return false;
+    if (pos && !(r.posicao||'').toUpperCase().includes(pos)) return false;
     if (filial && (r.filial||'').toUpperCase() !== filial) return false;
     if (status === 'contado'    && r.qtdContada === null) return false;
     if (status === 'pendente'   && r.qtdContada !== null) return false;
@@ -2356,6 +2442,7 @@ function filtrarValidacao() {
       <td style="font-family:var(--mono);font-weight:700">${r.saldo}</td>
       <td style="font-family:var(--mono);color:var(--amber)">${r.empenho||0}</td>
       <td style="font-family:var(--mono);font-weight:600">${r.armazem||'—'}</td>
+      <td style="font-family:var(--mono);font-size:.78rem;color:var(--blue)">${r.posicao||'—'}</td>
       <td class="cts" style="${vencStyle}">${dtFab}</td>
       <td class="cts" style="${vencStyle}">${dtVal}</td>
       <td>${qtdCell}</td>
@@ -2369,7 +2456,7 @@ function filtrarValidacao() {
   if (svArmErrado?.length > 0) {
     rowsArmErrado = `
       <tr style="background:var(--amber-bg)">
-        <td colspan="13" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--amber-bd)">
+        <td colspan="14" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--amber-bd)">
           ⚠ Armazém não identificado — lote existe no sistema, mas armazém informado é diferente (${svArmErrado.length})
         </td>
       </tr>` +
@@ -2383,6 +2470,7 @@ function filtrarValidacao() {
           <td style="color:var(--text3)">—</td>
           <td style="color:var(--text3)">—</td>
           <td><span style="font-weight:700;color:var(--amber)">${r.armazem||'—'}</span><span style="font-size:.65rem;color:var(--text3);margin-left:5px">← info</span></td>
+          <td style="font-family:var(--mono);font-size:.78rem;color:var(--blue)">${r.posicao||'—'}</td>
           <td class="cts">—</td>
           <td class="cts">—</td>
           <td><span class="qtd-contada" style="color:var(--amber)">${r.qtdContada}</span><span style="font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
@@ -2400,7 +2488,7 @@ function filtrarValidacao() {
   if (svLoteNaoExiste?.length > 0) {
     rowsNaoExiste = `
       <tr style="background:var(--red-bg)">
-        <td colspan="13" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--red-bd)">
+        <td colspan="14" style="padding:9px 15px;font-size:.65rem;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;border-top:2px solid var(--red-bd)">
           ✕ Lote não existe no saldo sistêmico (${svLoteNaoExiste.length})
         </td>
       </tr>` +
@@ -2414,6 +2502,7 @@ function filtrarValidacao() {
           <td style="font-size:.72rem;color:var(--red)">Lote não encontrado</td>
           <td style="color:var(--text3)">—</td>
           <td style="font-weight:600">${r.armazem||'—'}</td>
+          <td style="font-family:var(--mono);font-size:.78rem;color:var(--blue)">${r.posicao||'—'}</td>
           <td class="cts">—</td>
           <td class="cts">—</td>
           <td><span class="qtd-contada" style="color:var(--red)">${r.qtdContada}</span><span style="font-size:.63rem;color:var(--text3);margin-left:4px">(${r.nlanc}x)</span></td>
@@ -2427,7 +2516,7 @@ function filtrarValidacao() {
   }
 
   if (!rowsNormais && !rowsArmErrado && !rowsNaoExiste) {
-    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:28px;color:var(--text3);font-size:.75rem">Nenhum item.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:28px;color:var(--text3);font-size:.75rem">Nenhum item.</td></tr>';
     return;
   }
   tbody.innerHTML = rowsNormais + rowsArmErrado + rowsNaoExiste;
@@ -2481,7 +2570,7 @@ function abrirValidacao(item) {
   const isRecont = item.recontagem;
 
   document.getElementById('mv-titulo').textContent = isRecont ? '↺ Validar Recontagem' : 'Validar Contagem';
-  document.getElementById('mv-sub').textContent    = `${item.descricao||item.codigo} — Lote ${item.lote} — Arm. ${item.armazem}`;
+  document.getElementById('mv-sub').textContent    = `${item.descricao||item.codigo} — Lote ${item.lote} — Arm. ${item.armazem}${item.posicao?' — Pos. '+item.posicao:''}`;
   document.getElementById('mv-cod').textContent    = item.codigo || '—';
   document.getElementById('mv-lote').textContent   = item.lote || '—';
   document.getElementById('mv-saldo-sis').textContent = item.saldo ?? '—';
@@ -2636,6 +2725,8 @@ async function confirmarValidacao() {
       tipo:             tipo || (div===0?'ok':div>0?'positivo':'negativo'),
       observacao:       obs || (!isRecont && motivo ? motivo : null),
       armazem:          itemAtual.armazem,
+      posicao:          itemAtual.posicao || null,
+      ocupacao_ativa:   true,
       usuario:          itemAtual.ops || (isManual ? 'Gestor (manual)' : null),
       is_recontagem:    isRecont || false,
       motivo_recontagem: isRecont ? motivo : null,
@@ -2652,17 +2743,8 @@ async function confirmarValidacao() {
         .eq('codigo', cod).eq('lote', lot).eq('armazem', arm),
       sb.from('contagens').delete().eq('status','pendente')
         .eq('codigo', cod).eq('lote', lot).eq('armazem', arm),
-      // Grava validado=true no saldo_sistema para persistir após reload
-      itemAtual.id ? sb.from('saldo_sistema').update({
-        validado:     true,
-        qtd_contada:  qtdFinal,
-        divergencia:  div,
-        tipo_div:     tipo || (div===0?'ok':div>0?'positivo':'negativo'),
-        operador:     itemAtual.ops || (isManual ? 'Gestor (manual)' : null),
-        observacao_val: obs || null,
-        motivo_val:   motivo || null,
-        validado_em:  new Date().toISOString(),
-      }).eq('id', itemAtual.id) : Promise.resolve(),
+      // Remove do saldo_sistema — os dados definitivos já estão no histórico
+      itemAtual.id ? sb.from('saldo_sistema').delete().eq('id', itemAtual.id) : Promise.resolve(),
     ]);
 
     fecharModal('modal-val');
@@ -2777,6 +2859,7 @@ async function carregarLancamentos() {
 function getFilteredLancamentos(incluirFiltroFilial = true) {
   const q      = (document.getElementById('search-lanc').value||'').toLowerCase();
   const arm    = document.getElementById('filt-lanc-arm').value;
+  const pos    = (document.getElementById('filt-lanc-pos')?.value||'').trim().toUpperCase();
   const op     = document.getElementById('filt-lanc-op').value;
   const tipo   = document.getElementById('filt-lanc-tipo').value;
   const status = document.getElementById('filt-lanc-status').value;
@@ -2784,8 +2867,9 @@ function getFilteredLancamentos(incluirFiltroFilial = true) {
   const ate    = document.getElementById('filt-lanc-ate').value;
   const filial = incluirFiltroFilial ? getFiltroFilial() : '';
   return todosLanc.filter(r => {
-    if (q && ![r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem].join(' ').toLowerCase().includes(q)) return false;
+    if (q && ![r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem,r.posicao||''].join(' ').toLowerCase().includes(q)) return false;
     if (arm    && r.armazem !== arm) return false;
+    if (pos    && !(r.posicao||'').toUpperCase().includes(pos)) return false;
     if (op     && r.usuario !== op)  return false;
     if (tipo === 'normal'     && r.recontagem)  return false;
     if (tipo === 'recontagem' && !r.recontagem) return false;
@@ -3155,7 +3239,7 @@ function renderLancamentos(data) {
   const tbody = document.getElementById('tbody-lanc');
   const btnExc = document.getElementById('btn-excluir-tudo-lanc');
   if (btnExc) btnExc.style.display = data.length > 0 ? 'inline-flex' : 'none';
-  if (!data.length) { tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum lançamento.</td></tr>'; return; }
+  if (!data.length) { tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--text3);font-family:var(--mono);font-size:.75rem">Nenhum lançamento.</td></tr>'; return; }
   tbody.innerHTML = data.map(r => `
     <tr>
       <td>${filialBadgeHtml(r.filial)}</td>
@@ -3164,6 +3248,7 @@ function renderLancamentos(data) {
       <td class="cm">${r.lote||'—'}</td>
       <td><span style="font-family:var(--mono);font-weight:700">${r.quantidade}</span></td>
       <td><span style="font-family:var(--mono);color:var(--amber)">${r.armazem||'—'}</span></td>
+      <td><span style="font-family:var(--mono);font-size:.78rem;color:var(--blue)">${r.posicao||'—'}</span></td>
       <td class="cm">${r.usuario||'—'}</td>
       <td class="cts">${fmtTS(r.created_at)}</td>
       <td>${r.recontagem?'<span class="badge b-r">Recontagem</span>':'<span class="badge b-p">Normal</span>'}</td>
@@ -4028,22 +4113,16 @@ async function validarTodos() {
         codigo: item.codigo, produto_nome: item.descricao||item.codigo,
         lote: item.lote, quantidade: item.qtdContada, saldo_sistema: item.saldo,
         divergencia: 0, tipo: 'ok', observacao: null, armazem: item.armazem,
+        posicao: item.posicao || null, ocupacao_ativa: true,
         usuario: item.ops||null, is_recontagem: false, motivo_recontagem: null,
         filial: item.filial || detectarFilialPorCodigo(item.codigo) || null,
       });
       const cod=(item.codigo||'').trim(), lot=(item.lote||'').trim(), arm=(item.armazem||'').trim();
       await sb.from('lancamentos').delete().eq('status','pendente').eq('codigo',cod).eq('lote',lot).eq('armazem',arm);
       await sb.from('contagens').delete().eq('status','pendente').eq('codigo',cod).eq('lote',lot).eq('armazem',arm);
-      // Persiste validado=true no saldo_sistema (senão após reload o item volta como "não contado")
+      // Remove do saldo_sistema — os dados definitivos já estão no histórico
       if (item.id) {
-        await sb.from('saldo_sistema').update({
-          validado:    true,
-          qtd_contada: item.qtdContada,
-          divergencia: 0,
-          tipo_div:    'ok',
-          operador:    item.ops || null,
-          validado_em: new Date().toISOString(),
-        }).eq('id', item.id);
+        await sb.from('saldo_sistema').delete().eq('id', item.id);
       }
       // Marca localmente
       const idx = svLinhas.findIndex(r => r._k === item._k);
@@ -5376,15 +5455,32 @@ async function excluirSelecionados() {
 async function excluirTudo() {
   const total = svLinhas.length;
   if (!total) { toast('Nenhum dado importado para excluir.', 'warn'); return; }
-  if (!confirm(`Isso irá excluir TODOS os ${total} itens do saldo sistêmico importado (incluindo não validados). Deseja continuar?`)) return;
-  if (!confirm('Tem certeza? Esta ação não pode ser desfeita.')) return;
+
+  // Conta quantos lançamentos pendentes existem, pra deixar claro o que será apagado
+  let totalPendentes = 0;
   try {
-    const { error } = await sb.from('saldo_sistema').delete().neq('id', 0);
-    if (error) throw error;
-    toast('✓ Todos os dados importados foram excluídos.', 'ok', 5000);
+    const { count } = await sb.from('lancamentos').select('id', { count:'exact', head:true }).eq('status','pendente');
+    totalPendentes = count || 0;
+  } catch(e) { /* segue mesmo se a contagem falhar */ }
+
+  const msg = totalPendentes > 0
+    ? `Isso irá excluir TODOS os ${total} itens do saldo sistêmico importado e os ${totalPendentes} lançamentos pendentes (ainda não validados). Itens já validados no Histórico NÃO serão afetados. Deseja continuar?`
+    : `Isso irá excluir TODOS os ${total} itens do saldo sistêmico importado. Deseja continuar?`;
+  if (!confirm(msg)) return;
+  if (!confirm('Tem certeza? Esta ação não pode ser desfeita.')) return;
+
+  try {
+    const { error: errSaldo } = await sb.from('saldo_sistema').delete().neq('id', 0);
+    if (errSaldo) throw errSaldo;
+
+    const { error: errLanc } = await sb.from('lancamentos').delete().eq('status','pendente');
+    if (errLanc) throw errLanc;
+
+    toast('✓ Saldo importado e lançamentos pendentes foram excluídos.', 'ok', 5000);
     document.getElementById('saldo-status-txt').textContent = 'Nenhum saldo importado';
     document.getElementById('btn-limpar-tudo').style.display = 'none';
     // total_estoque_litros persiste — valor fixo, não apaga com limpeza
+    // Histórico (lancamentos já validados) nunca é afetado por esta ação
     await carregarValidacao();
   } catch(e) { toast('Erro: ' + e.message, 'err'); }
 }
@@ -5444,6 +5540,326 @@ function toggleTheme() {
     if (btn) btn.textContent = "☀️";
   }
 })();
+
+// ══════════════════════════════════════════════════════════
+// MAPA DRIVE-IN
+// ══════════════════════════════════════════════════════════
+// Estrutura real extraída do levantamento físico (POSIÇÃO_DRIVE_IN.xlsx)
+// Formato: { pavilhao: { driveIn: { linha: { andar: [lugares] } } } }
+const POSICOES_MAPA = {"bioma":{"A1":{"01":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"02":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"03":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"04":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"05":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"06":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"07":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"08":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"09":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"10":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"11":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"12":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"13":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"14":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"15":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"16":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"17":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"18":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"19":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"20":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"21":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"22":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"23":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"24":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"25":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"26":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"27":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"28":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"29":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"30":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"31":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"32":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"33":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"34":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"35":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"36":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]}},"A2":{"29":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"30":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"31":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"32":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"33":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"34":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"35":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"36":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]}}},"simbiose":{"B1":{"01":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"02":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"03":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"04":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"05":{"4":[1,2,3,4,5],"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"06":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"07":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"08":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"09":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"10":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"11":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"12":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"13":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"14":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"15":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"16":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"17":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"18":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"19":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"20":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"21":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"22":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"23":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"24":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"25":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"26":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"27":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"28":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"29":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"30":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"31":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"32":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"33":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"34":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"35":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"36":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]}},"B2":{"01":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"02":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"03":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"04":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"05":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"06":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"07":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"08":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"09":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"10":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"11":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"12":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"13":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"14":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"15":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"16":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"17":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"18":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"19":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"20":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"21":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"22":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"23":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"24":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"25":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"26":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"27":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"28":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"29":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"30":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"31":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"32":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"33":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"34":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"35":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"36":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]}}}};
+
+// Cores por pavilhão — alinhadas aos badges de filial já usados no painel
+const MAPA_PAV_COR = {
+  bioma:    { cor:'var(--blue)',  lt:'var(--blue-lt)',  bg:'var(--blue-bg)',  bd:'var(--blue-bd)',  nome:'Pavilhão Bioma',    icone:'🔵' },
+  simbiose: { cor:'var(--green)', lt:'var(--green-lt)', bg:'var(--green-bg)', bd:'var(--green-bd)', nome:'Pavilhão Simbiose', icone:'🟢' },
+};
+
+let _mapaPainelCache = {};
+
+async function carregarMapaPainel() {
+  const el = document.getElementById('mapa-painel-content');
+  el.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)">Carregando…</div>';
+  try {
+    const { data, error } = await sb.from('historico')
+      .select('id, posicao, codigo, produto_nome, quantidade, armazem, lote')
+      .eq('ocupacao_ativa', true)
+      .not('posicao','is',null);
+    if (error) throw error;
+    _mapaPainelCache = {};
+    (data||[]).forEach(r => {
+      if (!r.posicao) return;
+      if (!_mapaPainelCache[r.posicao]) _mapaPainelCache[r.posicao] = [];
+      _mapaPainelCache[r.posicao].push(r);
+    });
+    atualizarKpisMapa();
+    filtrarMapaPainel();
+  } catch(e) {
+    el.innerHTML = `<div style="text-align:center;padding:48px;color:var(--red)">${e.message}</div>`;
+  }
+}
+
+function atualizarKpisMapa() {
+  let total = 0, ocup = 0, compartilhadas = 0;
+  const produtos = new Set();
+  Object.values(POSICOES_MAPA).forEach(grupo => {
+    Object.entries(grupo).forEach(([di, linhas]) => {
+      Object.entries(linhas).forEach(([ln, andares]) => {
+        Object.entries(andares).forEach(([an, lugares]) => {
+          lugares.forEach(j => {
+            total++;
+            const pos = `${di}-${ln}-${an}-${j}`;
+            const items = _mapaPainelCache[pos];
+            if (items) {
+              ocup++;
+              if (items.length > 1) compartilhadas++;
+              items.forEach(it => produtos.add(it.codigo));
+            }
+          });
+        });
+      });
+    });
+  });
+  const livre = total - ocup;
+  const pct   = total ? Math.round((ocup/total)*100) : 0;
+  document.getElementById('mk-total').textContent    = total;
+  document.getElementById('mk-ocup').textContent     = ocup;
+  document.getElementById('mk-livre').textContent     = livre;
+  document.getElementById('mk-produtos').textContent  = produtos.size;
+  document.getElementById('mk-ocup-bar').style.width  = pct + '%';
+  const compEl = document.getElementById('mk-compartilhadas');
+  if (compEl) compEl.textContent = compartilhadas;
+}
+
+// Popula o seletor de Andar dinamicamente (varia por drive-in: Bioma tem até 3, Simbiose até 4)
+function popularFiltroAndarMapa() {
+  const sel = document.getElementById('filt-mapa-andar');
+  if (!sel || sel.dataset.populado) return;
+  const andares = new Set();
+  Object.values(POSICOES_MAPA).forEach(grupo => {
+    Object.values(grupo).forEach(linhas => {
+      Object.values(linhas).forEach(andaresObj => {
+        Object.keys(andaresObj).forEach(an => andares.add(an));
+      });
+    });
+  });
+  const ordenados = Array.from(andares).sort((a,b)=>+a - +b);
+  sel.innerHTML = '<option value="">Todos andares</option>' +
+    ordenados.map(an => `<option value="${an}">Andar ${an}</option>`).join('');
+  sel.dataset.populado = '1';
+}
+
+function limparFiltrosMapa() {
+  document.getElementById('filt-mapa-busca').value  = '';
+  document.getElementById('filt-mapa-pos').value    = '';
+  document.getElementById('filt-mapa-pav').value    = '';
+  document.getElementById('filt-mapa-andar').value  = '';
+  document.getElementById('filt-mapa-status').value = '';
+  filtrarMapaPainel();
+}
+
+function filtrarMapaPainel() {
+  popularFiltroAndarMapa();
+  const busca  = (document.getElementById('filt-mapa-busca')?.value||'').trim().toUpperCase();
+  const posQ   = (document.getElementById('filt-mapa-pos')?.value||'').trim().toUpperCase();
+  const pav    = document.getElementById('filt-mapa-pav')?.value||'';
+  const andar  = document.getElementById('filt-mapa-andar')?.value||'';
+  const status = document.getElementById('filt-mapa-status')?.value||'';
+  renderMapaPainel(busca, posQ, pav, andar, status);
+}
+
+function renderMapaPainel(busca, posQ, pav, andarFiltro, status) {
+  const el = document.getElementById('mapa-painel-content');
+
+  const pavilhoes = pav ? [pav] : ['bioma','simbiose'];
+  const blocosHtml = pavilhoes
+    .map(pv => renderPavilhao(pv, busca, posQ, andarFiltro, status))
+    .filter(Boolean);
+
+  if (!blocosHtml.length) {
+    el.innerHTML = `<div style="text-align:center;padding:56px 20px;color:var(--text3)">
+      <div style="font-size:2rem;margin-bottom:8px">🔍</div>
+      <div style="font-size:.85rem;font-weight:600">Nenhuma posição encontrada</div>
+      <div style="font-size:.75rem;margin-top:4px">Ajuste os filtros ou clique em Limpar.</div>
+    </div>`;
+    return;
+  }
+
+  // Dois pavilhões visíveis → lado a lado (grid 2 colunas). Um só → largura total.
+  if (blocosHtml.length === 2) {
+    el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start">
+      ${blocosHtml.map(b => `<div>${b}</div>`).join('')}
+    </div>`;
+  } else {
+    el.innerHTML = blocosHtml[0];
+  }
+}
+
+function renderPavilhao(pv, busca, posQ, andarFiltro, status) {
+  const grupo = POSICOES_MAPA[pv];
+  const tema  = MAPA_PAV_COR[pv];
+
+  // Calcula ocupação total do pavilhão (respeitando filtro de andar) p/ barra de progresso no título
+  let pavTotal = 0, pavOcup = 0;
+  Object.entries(grupo).forEach(([di, linhas]) => Object.entries(linhas).forEach(([ln, andares]) => {
+    Object.entries(andares).forEach(([an, lug]) => {
+      if (andarFiltro && an !== andarFiltro) return;
+      lug.forEach(j => {
+        pavTotal++; if (_mapaPainelCache[`${di}-${ln}-${an}-${j}`]) pavOcup++;
+      });
+    });
+  }));
+  const pavPct = pavTotal ? Math.round((pavOcup/pavTotal)*100) : 0;
+
+  // Renderiza cada drive-in deste pavilhão como um bloco; depois agrupamos lado a lado
+  const blocosDriveIn = [];
+  Object.entries(grupo).forEach(([di, linhas]) => {
+    let totalPos = 0, countOcup = 0;
+    const linhasFiltradas = [];
+
+    Object.entries(linhas).sort().forEach(([ln, andares]) => {
+      const andaresVisiveis = andarFiltro ? [andarFiltro] : Object.keys(andares).sort((a,b)=>+a-+b);
+      let linhaTemResultado = false;
+      const celulasPorAndar = [];
+
+      andaresVisiveis.forEach(an => {
+        const lugares = andares[an];
+        if (!lugares) return; // este drive-in/linha não tem esse andar
+        const celulas = lugares.map(j => {
+          const pos   = `${di}-${ln}-${an}-${j}`;
+          const items = _mapaPainelCache[pos];
+          totalPos++;
+          if (items) countOcup++;
+
+          let visivel = true;
+          if (posQ && !pos.includes(posQ)) visivel = false;
+          if (busca && visivel) {
+            const matchBusca = items?.some(it =>
+              (it.codigo||'').toUpperCase().includes(busca) ||
+              (it.produto_nome||'').toUpperCase().includes(busca) ||
+              (it.lote||'').toUpperCase().includes(busca)
+            );
+            if (!matchBusca) visivel = false;
+          }
+          if (status === 'ocupada' && !items) visivel = false;
+          if (status === 'livre'   &&  items) visivel = false;
+
+          if (!visivel) return { pos, j, oculta:true };
+          linhaTemResultado = true;
+          return { pos, j, items, oculta:false };
+        });
+        celulasPorAndar.push({ andar: an, celulas });
+      });
+
+      if (linhaTemResultado || !(busca||posQ||status)) {
+        if (celulasPorAndar.length) linhasFiltradas.push({ ln, celulasPorAndar, temResultado: linhaTemResultado });
+      }
+    });
+
+    const temFiltroAtivo = busca || posQ || status;
+    const linhasParaRender = temFiltroAtivo ? linhasFiltradas.filter(l => l.temResultado) : linhasFiltradas;
+
+    // Se filtro ativo e nenhuma linha sobrou, pula este drive-in
+    if (temFiltroAtivo && !linhasParaRender.length) return;
+    if (!linhasParaRender.length) return; // drive-in não tem nada no andar filtrado
+
+    const pctDi = totalPos ? Math.round((countOcup/totalPos)*100) : 0;
+
+    const linhasHtml = linhasParaRender.map(({ln, celulasPorAndar}) => `
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">
+        <span style="font-size:.62rem;color:var(--text3);font-family:var(--mono);font-weight:700;width:22px;text-align:right;flex-shrink:0;padding-top:9px">${parseInt(ln)}</span>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          ${celulasPorAndar.map(({andar, celulas}) => `
+            <div style="display:flex;align-items:center;gap:5px">
+              ${!andarFiltro ? `<span style="font-size:.52rem;color:var(--text3);font-family:var(--mono);width:13px;flex-shrink:0">${andar}º</span>` : ''}
+              ${celulas.map(c => {
+                if (c.oculta) return `<div style="width:32px;height:32px;flex-shrink:0"></div>`;
+                const items   = c.items;
+                const multi   = items && items.length > 1;
+                const bg      = items ? (multi ? 'var(--amber-bg)' : tema.bg) : 'var(--bg4)';
+                const bd      = items ? (multi ? 'var(--amber-bd)' : tema.bd) : 'var(--border2)';
+                const cor     = items ? (multi ? 'var(--amber-lt)' : tema.lt) : 'var(--text3)';
+                const title   = items ? items.map(it=>`${it.codigo} (lote ${it.lote||'—'}) · ${it.quantidade}un`).join(' | ') : c.pos + ' — livre';
+                const badge   = multi ? `<span style="position:absolute;top:-4px;right:-4px;background:var(--amber-lt);color:#1a0f00;font-size:.46rem;font-weight:800;border-radius:50%;width:13px;height:13px;display:flex;align-items:center;justify-content:center;line-height:1;border:1.5px solid var(--bg2)">${items.length}</span>` : '';
+                return `<div onclick="abrirMapaPopup('${c.pos}')" title="${title}"
+                  class="mapa-cel-painel" style="position:relative;width:32px;height:32px;border-radius:6px;border:1.5px solid ${bd};background:${bg};
+                         display:flex;align-items:center;justify-content:center;font-size:.55rem;
+                         font-weight:700;color:${cor};font-family:var(--mono);cursor:pointer;
+                         flex-shrink:0;transition:transform .12s,box-shadow .12s;">${c.j}${badge}</div>`;
+              }).join('')}
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
+
+    blocosDriveIn.push(`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;box-shadow:var(--sh-sm)">
+      <div style="padding:9px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <span style="font-size:.82rem;font-weight:800;color:${tema.cor};font-family:var(--mono);min-width:80px">Drive-in ${di}</span>
+        <div style="flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden">
+          <div style="width:${pctDi}%;height:100%;background:${tema.lt};border-radius:3px;transition:width .4s"></div>
+        </div>
+        <span style="font-size:.66rem;color:var(--text3);font-weight:600;white-space:nowrap">${countOcup}/${totalPos}${andarFiltro?' · andar '+andarFiltro:''}</span>
+      </div>
+      <div style="padding:12px 14px;overflow-x:auto">${linhasHtml}</div>
+    </div>`);
+  });
+
+  if (!blocosDriveIn.length) return '';
+
+  // Drive-ins do mesmo pavilhão também ficam lado a lado quando houver 2 (ex: A1+A2, B1+B2)
+  const driveinsHtml = blocosDriveIn.length === 2
+    ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start">
+        ${blocosDriveIn.map(b => `<div>${b}</div>`).join('')}
+      </div>`
+    : blocosDriveIn.join('');
+
+  return `<div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <span style="font-size:.74rem;font-weight:800;color:${tema.cor};text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:6px">${tema.icone} ${tema.nome}</span>
+      <span style="flex:1;height:1px;background:var(--border)"></span>
+      <span style="font-size:.68rem;color:var(--text3);font-weight:600">${pavOcup}/${pavTotal} · ${pavPct}% ocupado</span>
+    </div>
+    ${driveinsHtml}
+  </div>`;
+}
+
+function abrirMapaPopup(pos) {
+  const items = _mapaPainelCache[pos];
+  let conteudo = '';
+  let totalQtd = 0;
+  if (items?.length) {
+    conteudo = items.map(r => {
+      totalQtd += parseFloat(r.quantidade)||0;
+      return `
+      <tr>
+        <td style="padding:9px 12px;font-family:var(--mono);font-size:.78rem;color:var(--blue-lt);font-weight:700">${r.codigo}</td>
+        <td style="padding:9px 12px;font-size:.82rem;color:var(--text)">${r.produto_nome||'—'}</td>
+        <td style="padding:9px 12px;font-family:var(--mono);font-size:.76rem;color:var(--text2)">${r.lote||'—'}</td>
+        <td style="padding:9px 12px;font-family:var(--mono);color:var(--amber);font-size:.78rem">${r.armazem||'—'}</td>
+        <td style="padding:9px 12px;font-family:var(--mono);font-weight:800;color:var(--green);font-size:.92rem;text-align:right">${r.quantidade}</td>
+      </tr>`;
+    }).join('');
+  }
+  const multi = items?.length > 1;
+
+  const html = `
+    <div class="modal-bg open" id="mapa-popup" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="max-width:600px">
+        <div class="modal-handle"></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <div style="font-size:1.25rem;font-weight:800;color:var(--blue);font-family:var(--mono)">${pos}</div>
+          ${items?.length
+            ? `<span class="badge" style="${multi ? 'background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)' : 'background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)'}">${items.length} ${multi?'lotes compartilhados':'produto'}</span>`
+            : `<span class="badge" style="background:var(--green-bg);color:var(--green-txt);border:1px solid var(--green-bd)">Livre</span>`}
+        </div>
+        <div style="font-size:.75rem;color:var(--text3);margin-bottom:14px">${
+          multi ? 'Posição com mais de um lote/produto — palete compartilhado'
+          : items?.length ? 'Lançamento validado nesta posição'
+          : 'Nenhum lançamento validado nesta posição'
+        }</div>
+        ${items?.length ? `
+        <div style="border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden">
+          <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+            <thead><tr style="background:var(--bg3)">
+              <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:var(--text3);font-weight:700;text-transform:uppercase">Código</th>
+              <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:var(--text3);font-weight:700;text-transform:uppercase">Produto</th>
+              <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:var(--text3);font-weight:700;text-transform:uppercase">Lote</th>
+              <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:var(--text3);font-weight:700;text-transform:uppercase">Arm.</th>
+              <th style="padding:8px 12px;text-align:right;font-size:.65rem;color:var(--text3);font-weight:700;text-transform:uppercase">Qtd</th>
+            </tr></thead>
+            <tbody>${conteudo}</tbody>
+            ${multi ? `<tfoot><tr style="background:var(--bg3);border-top:2px solid var(--border2)">
+              <td colspan="4" style="padding:9px 12px;font-size:.72rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Total na posição</td>
+              <td style="padding:9px 12px;text-align:right;font-family:var(--mono);font-weight:800;color:var(--text);font-size:.95rem">${totalQtd}</td>
+            </tr></tfoot>` : ''}
+          </table>
+        </div>` : `<div style="text-align:center;padding:32px;color:var(--text3);background:var(--bg3);border-radius:var(--r-sm)">
+          <div style="font-size:1.8rem;margin-bottom:6px">📭</div>
+          Posição disponível para uso.
+        </div>`}
+        <button class="btn btn-ghost" style="margin-top:16px" onclick="document.getElementById('mapa-popup').remove()">Fechar</button>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
 
 initSb();
 carregarValidacao();
