@@ -528,15 +528,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
         <input type="text" id="av-codigo" placeholder="Ex: 5001" style="text-transform:uppercase"
           oninput="av_buscarProduto(this.value)" autocomplete="off">
       </div>
-      <div id="av-saldo-preview" class="saldo-preview">
-        <div class="sp-lbl" style="margin-bottom:8px">📊 Encontrado no sistema</div>
-        <div class="sp-row">
-          <div><div class="sp-lbl">Saldo</div><div class="sp-val" id="av-prev-saldo">—</div></div>
-          <div><div class="sp-lbl">Lote</div><div class="sp-val" id="av-prev-lote">—</div></div>
-          <div><div class="sp-lbl">Armazém</div><div class="sp-val" id="av-prev-arm">—</div></div>
-        </div>
-      </div>
-      <div class="field">
+           <div class="field">
         <label>Nome do Produto</label>
         <input type="text" id="av-produto" placeholder="Preenchido automaticamente ou manual">
       </div>
@@ -658,10 +650,6 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
           <div>
             <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Lote ref.</div>
             <div id="ms-lote-ref" style="font-size:.82rem;font-weight:700;color:var(--amber);font-family:var(--mono)">—</div>
-          </div>
-          <div>
-            <div style="font-size:.58rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Saldo Sistema</div>
-            <div id="ms-saldo" style="font-size:.82rem;font-weight:700;color:var(--green);font-family:var(--mono)">—</div>
           </div>
         </div>
       </div>
@@ -1032,7 +1020,6 @@ function abrirModalSessao(sessao) {
   document.getElementById('ms-produto-nome').textContent = sessao.produtoNome;
   document.getElementById('ms-codigo').textContent       = sessao.codigo;
   document.getElementById('ms-lote-ref').textContent     = sessao.loteRef || '—';
-  document.getElementById('ms-saldo').textContent        = '—';
 
   // Campos ocultos
   document.getElementById('ms-ag-id').value      = sessao.agId;
@@ -1056,7 +1043,6 @@ function abrirModalSessao(sessao) {
   renderListaSessao();
 
   // Busca saldo no sistema
-  buscarSaldoModal(sessao.codigo, sessao.loteRef);
 
   document.getElementById('modal-sessao').classList.add('open');
 
@@ -1079,7 +1065,6 @@ async function buscarSaldoModal(codigo, lote) {
     if (lote) q = q.ilike('lote', `%${lote}%`);
     const { data } = await q.limit(1).maybeSingle();
     if (data) {
-      document.getElementById('ms-saldo').textContent = data.saldo ?? '—';
       // Pré-preenche lote se ainda vazio
       const loteInp = document.getElementById('ms-lote');
       if (!loteInp.value && data.lote) loteInp.value = data.lote;
@@ -1107,6 +1092,8 @@ async function lancarItemSessao() {
 
   if (!lote)         { toast('Informe o lote.', 'warn'); document.getElementById('ms-lote').focus(); return; }
   if (!armazem)      { toast('Informe o armazém.', 'warn'); document.getElementById('ms-armazem').focus(); return; }
+  const posicaoVal = document.getElementById('ms-posicao').value.trim();
+  if (!posicaoVal)  { toast('Informe a posição.', 'warn'); document.getElementById('ms-posicao').focus(); return; }
   if (qtdStr === '') { toast('Informe a quantidade (pode ser 0).', 'warn'); document.getElementById('ms-quantidade').focus(); return; }
 
   const qtd = parseFloat(qtdStr);
@@ -1132,11 +1119,15 @@ async function executarLancamentoSessao() {
     const filial  = document.getElementById('ms-filial-h').value || null;
     const isRecont= document.getElementById('ms-recont-h').value === '1';
 
+    const confAcao = _conflitoAcaoPendente?.acao || null;
+    const confProds = _conflitoAcaoPendente?.produtos || null;
+    _conflitoAcaoPendente = null;
     const { data, error } = await sb.from('lancamentos').insert({
       codigo, produto_nome: produto || codigo, lote, armazem,
       quantidade: qtd, usuario: OPERADOR, filial,
       status: 'pendente', recontagem: isRecont,
       posicao: posicao || null, ocupacao_ativa: true,
+      conflito_acao: confAcao, conflito_produtos: confProds,
     }).select().single();
     if (error) throw error;
 
@@ -1358,6 +1349,8 @@ async function lancarAvulso() {
   if (!codigo)          { toast('Informe o código do produto.', 'warn'); return; }
   if (!lote)            { toast('Informe o lote.', 'warn'); return; }
   if (!armazem)         { toast('Informe o armazém.', 'warn'); return; }
+  const posicaoAv = document.getElementById('av-posicao').value.trim();
+  if (!posicaoAv)        { toast('Informe a posição.', 'warn'); document.getElementById('av-posicao').focus(); return; }
   if (qtdStr === '')    { toast('Informe a quantidade (pode ser 0).', 'warn'); return; }
   const qtd = parseFloat(qtdStr);
   if (isNaN(qtd) || qtd < 0) { toast('Quantidade inválida.', 'warn'); return; }
@@ -1380,11 +1373,15 @@ async function executarLancamentoAvulso() {
   document.getElementById('av-spin').style.display = 'block';
 
   try {
+    const confAcaoAv = _conflitoAcaoPendente?.acao || null;
+    const confProdsAv = _conflitoAcaoPendente?.produtos || null;
+    _conflitoAcaoPendente = null;
     const { data, error } = await sb.from('lancamentos').insert({
       codigo, produto_nome: produto || codigo, lote, armazem,
       quantidade: qtd, usuario: OPERADOR, filial,
       status: 'pendente', recontagem: false,
       posicao: posicao || null, ocupacao_ativa: true,
+      conflito_acao: confAcaoAv, conflito_produtos: confProdsAv,
     }).select().single();
     if (error) throw error;
 
@@ -1395,7 +1392,6 @@ async function executarLancamentoAvulso() {
     ['av-codigo','av-produto','av-lote','av-armazem','av-posicao','av-quantidade'].forEach(id => {
       document.getElementById(id).value = '';
     });
-    document.getElementById('av-saldo-preview').style.display = 'none';
     document.getElementById('av-codigo').focus();
   } catch(e) {
     toast('Erro: ' + e.message, 'err');
@@ -1427,7 +1423,6 @@ function limparAvulso() {
   ['av-codigo','av-produto','av-lote','av-armazem','av-posicao','av-quantidade'].forEach(id => {
     document.getElementById(id).value = '';
   });
-  document.getElementById('av-saldo-preview').style.display = 'none';
 }
 
 // ── HISTÓRICO DO OPERADOR ─────────────────────────────────
@@ -1554,6 +1549,7 @@ async function checarPosicaoOcupada(posicao) {
 
 // Estado temporário do fluxo de conflito (qual form chamou, dados pendentes)
 let _conflitoPosPendente = null;
+let _conflitoAcaoPendente = null;
 
 // origem: 'sessao' | 'avulso' — identifica qual função de lançamento chamar depois
 async function tentarLancar(origem) {
@@ -1615,20 +1611,26 @@ async function confirmarConflitoPosicao(acao) {
   const pendente = _conflitoPosPendente;
   if (!pendente) return;
 
+  let produtosSelecionados = pendente.ocupantes;
   if (acao === 'substituir') {
     const checks = document.querySelectorAll('.conflito-chk:checked');
     if (!checks.length) { toast('Selecione ao menos um item para substituir.', 'warn'); return; }
-    const idsParaDesativar = Array.from(checks).map(c => pendente.ocupantes[+c.dataset.idx].id);
-    try {
-      const { error } = await sb.from('historico')
-        .update({ ocupacao_ativa: false })
-        .in('id', idsParaDesativar);
-      if (error) throw error;
-    } catch(e) {
-      toast('Erro ao substituir: ' + e.message, 'err');
-      return;
-    }
+    produtosSelecionados = Array.from(checks).map(c => pendente.ocupantes[+c.dataset.idx]);
   }
+
+  // Guarda intencao e dados dos produtos afetados
+  // historico sera atualizado somente na validacao pelo gestor
+  _conflitoAcaoPendente = {
+    acao,
+    produtos: produtosSelecionados.map(r => ({
+      id: r.id,
+      produto_nome: r.produto_nome || r.codigo,
+      codigo: r.codigo,
+      lote: r.lote || null,
+      armazem: r.armazem || null,
+      quantidade: r.quantidade,
+    })),
+  };
 
   fecharModalConflitoPosicao();
   pendente.origem === 'sessao' ? await executarLancamentoSessao() : await executarLancamentoAvulso();
