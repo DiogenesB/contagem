@@ -2735,11 +2735,32 @@ async function confirmarValidacao() {
   document.getElementById('val-spin').style.display = 'block';
 
   try {
-    // ── Limpa todas as posições dos lançamentos individuais antes de inserir ──
+    // ── Limpa posições antes de inserir ──
     const posicoes = [...new Set(
       (itemAtual.lancamentos_individuais||[])
         .map(l => l.posicao).filter(Boolean)
     )];
+
+    // 1. Busca todas as posições ativas do mesmo codigo+lote+armazem no histórico
+    const { data: histAtivos } = await sb.from('historico')
+      .select('id, posicao')
+      .eq('codigo', (itemAtual.codigo||'').trim())
+      .eq('lote',   (itemAtual.lote||'').trim())
+      .eq('armazem',(itemAtual.armazem||'').trim())
+      .eq('ocupacao_ativa', true);
+
+    // 2. Posições que estão no histórico mas NÃO vieram nos lançamentos novos = órfãs (produto saiu dali)
+    const posicoeNovas = new Set(posicoes);
+    const idsOrfaos = (histAtivos||[])
+      .filter(r => r.posicao && !posicoeNovas.has(r.posicao))
+      .map(r => r.id);
+    if (idsOrfaos.length) {
+      await sb.from('historico')
+        .update({ ocupacao_ativa: false })
+        .in('id', idsOrfaos);
+    }
+
+    // 3. Desativa as posições que vieram nos lançamentos novos (serão reinseridas abaixo)
     for (const pos of posicoes) {
       await sb.from('historico')
         .update({ ocupacao_ativa: false })
@@ -4195,8 +4216,27 @@ async function validarTodos() {
         }
       }
 
-      // Limpa posições dos lançamentos individuais antes de inserir
+      // Limpa posições antes de inserir
       const posicoes = [...new Set((item.lancamentos_individuais||[]).map(l=>l.posicao).filter(Boolean))];
+
+      // Busca posições ativas do mesmo codigo+lote+armazem no histórico
+      const { data: histAtivos } = await sb.from('historico')
+        .select('id, posicao')
+        .eq('codigo', (item.codigo||'').trim())
+        .eq('lote',   (item.lote||'').trim())
+        .eq('armazem',(item.armazem||'').trim())
+        .eq('ocupacao_ativa', true);
+
+      // Desativa posições órfãs (estavam no histórico mas não vieram nos lançamentos novos)
+      const posNovas = new Set(posicoes);
+      const idsOrfaos = (histAtivos||[])
+        .filter(r => r.posicao && !posNovas.has(r.posicao))
+        .map(r => r.id);
+      if (idsOrfaos.length) {
+        await sb.from('historico').update({ ocupacao_ativa: false }).in('id', idsOrfaos);
+      }
+
+      // Desativa as posições que vieram nos lançamentos novos (serão reinseridas abaixo)
       for (const pos of posicoes) {
         await sb.from('historico').update({ ocupacao_ativa: false }).eq('posicao', pos).eq('ocupacao_ativa', true);
       }
