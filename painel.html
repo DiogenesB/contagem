@@ -2244,7 +2244,7 @@ async function carregarValidacao() {
       if (r.recontagem) agg[k].recontagem = true;
       if (r.posicao && !agg[k].posicao) agg[k].posicao = r.posicao;
       // Guarda cada lançamento individual com posição e quantidade
-      agg[k].lancamentos_individuais.push({ id: r.id, posicao: r.posicao||null, quantidade: parseFloat(r.quantidade)||0, usuario: r.usuario||null });
+      agg[k].lancamentos_individuais.push({ id: r.id, posicao: r.posicao||null, quantidade: parseFloat(r.quantidade)||0, usuario: r.usuario||null, conflito_acao: r.conflito_acao||null, conflito_produtos: r.conflito_produtos||null });
     });
 
     // Set de chaves do saldo sistêmico
@@ -2612,31 +2612,49 @@ function abrirValidacao(item) {
 
   document.getElementById('modal-val').classList.add('open');
 
-  // Busca assincronamente se há outros produtos nessa posição
-  if (item.posicao) {
-    sb.from('historico')
-      .select('codigo, produto_nome, lote, quantidade')
-      .eq('posicao', item.posicao)
-      .eq('ocupacao_ativa', true)
-      .then(({ data }) => {
-        if (!data?.length) return;
-        // Filtra registros que NÃO são o próprio item sendo validado
-        const outros = data.filter(r =>
-          !(r.codigo === item.codigo && r.lote === item.lote)
-        );
-        if (!outros.length) return;
-        // Injeta aviso no modal
-        const alvo = document.getElementById('btn-conf-val')?.parentElement;
-        if (!alvo) return;
-        const div = document.createElement('div');
-        div.id = 'mv-conflito-pos';
-        div.style.cssText = 'background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px;font-size:.78rem';
-        div.innerHTML = `<div style="font-weight:700;color:var(--amber);margin-bottom:6px">⚠️ Posição ${item.posicao} tem ${outros.length} produto${outros.length>1?'s':''} que será${outros.length>1?'ão':''} removido${outros.length>1?'s':''}:</div>` +
-          outros.map(r => `<div style="color:var(--text2);padding:2px 0">${r.produto_nome||r.codigo} · Lote ${r.lote||'—'} · <b>${r.quantidade}</b> un.</div>`).join('') +
-          `<div style="color:var(--text3);margin-top:6px;font-size:.72rem">Ao confirmar, esses registros serão marcados como inativos na posição.</div>` +
-          `<button class="btn btn-sm" onclick="confirmarValidacao(true)" style="margin-top:10px;background:var(--blue-bg);border:1px solid var(--blue-bd);color:var(--blue);font-size:.74rem">+ Adicionar junto na posição</button>`;
-        alvo.insertBefore(div, alvo.firstChild);
-      });
+  // Exibe aviso de conflito de posicao com base na intencao do operador
+  const individuais = item.lancamentos_individuais || [];
+  const comConflito = individuais.filter(l => l.conflito_acao);
+  if (comConflito.length) {
+    const alvo = document.getElementById('btn-conf-val')?.parentElement;
+    if (alvo) {
+      // Agrupa por acao
+      const substituir = comConflito.filter(l => l.conflito_acao === 'substituir');
+      const adicionar  = comConflito.filter(l => l.conflito_acao === 'adicionar');
+
+      // Junta todos os conflito_produtos para exibir
+      const prodsSubs = substituir.flatMap(l => l.conflito_produtos || []);
+      const prodsAdc  = adicionar.flatMap(l => l.conflito_produtos || []);
+
+      const renderProds = prods => prods.map(r =>
+        `<div style="color:var(--text2);padding:3px 0;font-size:.78rem">`
+        + `<b>${r.produto_nome||r.codigo}</b> &middot; Lote ${r.lote||'&mdash;'} &middot; Arm. ${r.armazem||'&mdash;'} &middot; <b>${r.quantidade}</b> un.</div>`
+      ).join('');
+
+      const div = document.createElement('div');
+      div.id = 'mv-conflito-pos';
+      div.style.cssText = 'margin-bottom:12px;font-size:.78rem;display:flex;flex-direction:column;gap:8px';
+      let html = '';
+
+      if (substituir.length) {
+        html += `<div style="background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--r-sm);padding:10px 14px">`
+          + `<div style="font-weight:700;color:var(--amber);margin-bottom:6px">⚠️ Operador indicou substituir na posição ${item.posicao}</div>`
+          + renderProds(prodsSubs)
+          + `<div style="color:var(--text3);margin-top:6px;font-size:.72rem">Ao confirmar, esses registros serão removidos do mapa.</div>`
+          + `</div>`;
+      }
+
+      if (adicionar.length) {
+        html += `<div style="background:var(--blue-bg);border:1px solid var(--blue-bd);border-radius:var(--r-sm);padding:10px 14px">`
+          + `<div style="font-weight:700;color:var(--blue);margin-bottom:6px">ℹ️ Operador indicou adicionar junto na posição ${item.posicao}</div>`
+          + renderProds(prodsAdc)
+          + `<div style="color:var(--text3);margin-top:6px;font-size:.72rem">Esses produtos permanecerão no mapa junto com o novo.</div>`
+          + `</div>`;
+      }
+
+      div.innerHTML = html;
+      alvo.insertBefore(div, alvo.firstChild);
+    }
   }
 }
 
@@ -2701,7 +2719,7 @@ function calcDiv() {
   el.className = `dp-v ${tipo==='ok'?'div-ok':tipo==='positivo'?'div-pos':'div-neg'}`;
 }
 
-async function confirmarValidacao(adicionarJunto = false) {
+async function confirmarValidacao() {
   if (!itemAtual) return;
   const saldo  = parseFloat(document.getElementById('mv-saldo').value);
   const tipo   = document.getElementById('mv-tipo').value;
@@ -2750,7 +2768,9 @@ async function confirmarValidacao(adicionarJunto = false) {
       .eq('armazem',(itemAtual.armazem||'').trim())
       .eq('ocupacao_ativa', true);
 
-    if (!adicionarJunto) {
+    // Determina se algum lancamento indicou 'adicionar' (nao remove existentes na posicao)
+    const temAdicionar = (itemAtual.lancamentos_individuais||[]).some(l => l.conflito_acao === 'adicionar');
+    if (!temAdicionar) {
       // 2. Posições que estão no histórico mas NÃO vieram nos lançamentos novos = órfãs (produto saiu dali)
       const posicoeNovas = new Set(posicoes);
       const idsOrfaos = (histAtivos||[])
@@ -2775,6 +2795,17 @@ async function confirmarValidacao(adicionarJunto = false) {
           .update({ ocupacao_ativa: false })
           .eq('posicao', itemAtual.posicao)
           .eq('ocupacao_ativa', true);
+      }
+    }
+
+    // Substituir: desativa no historico os conflito_produtos indicados pelo operador
+    const subsProds = (itemAtual.lancamentos_individuais||[])
+      .filter(l => l.conflito_acao === 'substituir' && l.conflito_produtos?.length)
+      .flatMap(l => l.conflito_produtos);
+    if (subsProds.length) {
+      const idsSubst = subsProds.map(p => p.id).filter(Boolean);
+      if (idsSubst.length) {
+        await sb.from('historico').update({ ocupacao_ativa: false }).in('id', idsSubst);
       }
     }
 
