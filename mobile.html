@@ -579,6 +579,87 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
     </div>
   </div>
 
+  <!-- TELA POSICOES -->
+  <div id="screen-posicoes" class="screen">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:1rem;font-weight:800">🗺 Mapa Drive-in</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-primary btn-sm" onclick="abrirModalPosicao(null)">+ Adicionar</button>
+        <button class="btn btn-ghost btn-sm" onclick="carregarPosicoes()">↺</button>
+      </div>
+    </div>
+    <!-- Seletores -->
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <select id="pos-pav" onchange="popularSelectDI();renderMapaMobile()" style="flex:1;padding:8px;border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:.82rem">
+        <option value="bioma">Pavilhão Bioma</option>
+        <option value="simbiose">Pavilhão Simbiose</option>
+      </select>
+      <select id="pos-di" onchange="renderMapaMobile()" style="flex:1;padding:8px;border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:.82rem">
+      </select>
+    </div>
+    <!-- KPIs -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px;text-align:center">
+        <div style="font-size:.6rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Total</div>
+        <div style="font-size:1rem;font-weight:800" id="pos-kpi-total">-</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px;text-align:center">
+        <div style="font-size:.6rem;color:var(--green);text-transform:uppercase;letter-spacing:.06em">Ocupadas</div>
+        <div style="font-size:1rem;font-weight:800;color:var(--green)" id="pos-kpi-ocup">-</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px;text-align:center">
+        <div style="font-size:.6rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Livres</div>
+        <div style="font-size:1rem;font-weight:800" id="pos-kpi-livre">-</div>
+      </div>
+    </div>
+    <!-- Mapa -->
+    <div id="pos-mapa" style="overflow-x:auto;padding-bottom:8px">
+      <div class="empty"><div class="empty-icon">🗺</div><div class="empty-txt">Carregando…</div></div>
+    </div>
+  </div>
+
+  <!-- MODAL POSICAO (adicionar/editar) -->
+  <div class="modal-bg" id="modal-posicao">
+    <div class="modal">
+      <div style="font-size:1rem;font-weight:800;margin-bottom:14px" id="mp-titulo">Adicionar na Posição</div>
+      <div class="field"><label>Posição *</label>
+        <input type="text" id="mp-posicao" placeholder="Ex: B1-22-3-4" style="text-transform:uppercase"
+          oninput="filtrarPosicoes('mp-posicao','mp-pos-drop')" autocomplete="off">
+        <div id="mp-pos-drop" class="pos-drop" style="display:none"></div>
+      </div>
+      <div class="field"><label>Código *</label>
+        <input type="text" id="mp-codigo" placeholder="Ex: 01007100002" style="text-transform:uppercase" autocomplete="off">
+      </div>
+      <div class="field"><label>Nome do Produto</label>
+        <input type="text" id="mp-produto" placeholder="Preenchido automaticamente ou manual">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field"><label>Lote *</label>
+          <input type="text" id="mp-lote" placeholder="Ex: 011-25-5040" style="text-transform:uppercase">
+        </div>
+        <div class="field"><label>Armazém *</label>
+          <input type="text" id="mp-armazem" placeholder="Ex: 42">
+        </div>
+      </div>
+      <div class="field"><label>Quantidade *</label>
+        <input type="number" id="mp-quantidade" placeholder="0" min="0">
+      </div>
+      <input type="hidden" id="mp-id">
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-ghost" style="flex:1" onclick="fecharModalPosicao()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:2" id="mp-btn-salvar" onclick="salvarPosicao()">
+          <div class="spin" id="mp-spin" style="display:none"></div>Salvar
+        </button>
+      </div>
+      <button class="btn btn-danger" style="width:100%;margin-top:8px;display:none" id="mp-btn-expedir"
+        onclick="marcarExpedido(document.getElementById('mp-id').value, document.getElementById('mp-posicao').value, document.getElementById('mp-produto').value||document.getElementById('mp-codigo').value)">
+        🚚 Marcar como Expedido
+      </button>
+    </div>
+  </div>
+
+
 </div><!-- /main -->
 
 <!-- ══════════ BOTTOM NAV ══════════ -->
@@ -615,6 +696,15 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
       </svg>
     </div>
     <div class="bn-label">Histórico</div>
+  </button>
+  <button class="bn-item" id="bn-posicoes" onclick="switchScreen('posicoes')">
+    <div class="bn-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+    </div>
+    <div class="bn-label">Posições</div>
   </button>
 </nav>
 
@@ -785,6 +875,11 @@ function mostrarApp() {
   switchScreen('home');
   carregarFilialCache();
   carregarAgendamentos();
+
+  // Keep-alive: ping leve a cada 4 min para manter o Supabase acordado
+  setInterval(async () => {
+    try { await sb.from('historico').select('id').limit(1); } catch {}
+  }, 4 * 60 * 1000);
 }
 
 function trocarOperador() {
@@ -846,6 +941,7 @@ function switchScreen(nome) {
   if (nome === 'home')         carregarHome();
   if (nome === 'agendamentos') carregarAgendamentos();
   if (nome === 'historico')    carregarHistoricoOp();
+  if (nome === 'posicoes')     setTimeout(carregarPosicoes, 50);
 }
 
 function irParaAvulsa() { switchScreen('avulsa'); }
@@ -1742,6 +1838,204 @@ init();
 // Registra o Service Worker (PWA — instalável e com fallback offline)
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+
+// ==========================================
+// ABA POSICOES - mapa drive-in mobile
+// ==========================================
+
+const POSICOES_MAPA = {"bioma":{"A1":{"01":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"02":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"03":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"04":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"05":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"06":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"07":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"08":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"09":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"10":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"11":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"12":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"13":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"14":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"15":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"16":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"17":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"18":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"19":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"20":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"21":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"22":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"23":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"24":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"25":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"26":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"27":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"28":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"29":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"30":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"31":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"32":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"33":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"34":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"35":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"36":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]}},"A2":{"29":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"30":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"31":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"32":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"33":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"34":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"35":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]},"36":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4]}}},"simbiose":{"B1":{"01":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"02":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"03":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"04":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"05":{"4":[1,2,3,4,5],"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5]},"06":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"07":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"08":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"09":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"10":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"11":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"12":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"13":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"14":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"15":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"16":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"17":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"18":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"19":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"20":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"21":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"22":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"23":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"24":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"25":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"26":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"27":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"28":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"29":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"30":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"31":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"32":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"33":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"34":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"35":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]},"36":{"1":[1,2,3,4,5],"2":[1,2,3,4,5],"3":[1,2,3,4,5],"4":[1,2,3,4,5]}},"B2":{"01":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"02":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"03":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"04":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"05":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"06":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"07":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"08":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"09":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"10":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"11":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"12":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"13":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"14":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"15":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"16":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"17":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"18":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"19":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"20":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"21":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"22":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"23":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"24":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"25":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"26":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"27":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"28":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"29":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"30":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"31":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"32":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"33":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"34":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"35":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]},"36":{"1":[1,2,3,4],"2":[1,2,3,4],"3":[1,2,3,4],"4":[1,2,3,4]}}}};
+
+
+let _posicoesCache = [];
+let _posMapaCache = {}; // posicao -> [registros]
+
+async function carregarPosicoes() {
+  const el = document.getElementById('pos-mapa');
+  if (el) el.innerHTML = '<div class="empty"><div class="empty-icon">&#x1F5FA;</div><div class="empty-txt">Carregando&#x2026;</div></div>';
+  try {
+    const { data, error } = await sb.from('historico')
+      .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, origem')
+      .eq('ocupacao_ativa', true)
+      .not('posicao', 'is', null)
+      .order('posicao');
+    if (error) throw error;
+    _posicoesCache = data || [];
+    _posMapaCache = {};
+    _posicoesCache.forEach(r => {
+      if (!_posMapaCache[r.posicao]) _posMapaCache[r.posicao] = [];
+      _posMapaCache[r.posicao].push(r);
+    });
+    popularSelectDI();
+    renderMapaMobile();
+  } catch(e) {
+    if (el) el.innerHTML = `<div class="empty"><div class="empty-txt">Erro: ${e.message}</div></div>`;
+  }
+}
+
+function popularSelectDI() {
+  const pav = document.getElementById('pos-pav')?.value || 'simbiose';
+  const grupo = POSICOES_MAPA[pav] || {};
+  const sel = document.getElementById('pos-di');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = Object.keys(grupo).sort().map(di =>
+    `<option value="${di}"${di === cur ? ' selected' : ''}>Drive-in ${di}</option>`
+  ).join('');
+}
+
+function renderMapaMobile() {
+  const pav = document.getElementById('pos-pav')?.value || 'simbiose';
+  const di  = document.getElementById('pos-di')?.value;
+  const el  = document.getElementById('pos-mapa');
+  if (!el || !di) return;
+
+  const grupo = POSICOES_MAPA[pav] || {};
+  const linhas = grupo[di] || {};
+  const cor = pav === 'simbiose' ? 'var(--green)' : 'var(--blue)';
+
+  let total = 0, ocup = 0;
+  const linhasOrdenadas = Object.entries(linhas).sort(([a],[b]) => +a - +b);
+
+  const andares = [...new Set(linhasOrdenadas.flatMap(([,a]) => Object.keys(a)))].sort((a,b) => +a - +b);
+
+  const html = linhasOrdenadas.map(([ln, andObj]) => {
+    const celulasPorAndar = andares.map(an => {
+      const lugares = andObj[an];
+      if (!lugares) return '';
+      return `<div style="display:flex;gap:4px;align-items:center;margin-bottom:3px">
+        <span style="font-size:.5rem;color:var(--text3);font-family:var(--mono);width:12px;flex-shrink:0">${an}&#xBA;</span>
+        ${lugares.map(j => {
+          const pos = `${di}-${ln}-${an}-${j}`;
+          const items = _posMapaCache[pos];
+          total++;
+          if (items) ocup++;
+          const bg  = items ? (items.length > 1 ? '#c05e00' : cor) : 'var(--bg4)';
+          const bd  = items ? (items.length > 1 ? '#9a4a00' : 'transparent') : 'var(--border2)';
+          const txt = items ? '#fff' : 'var(--text3)';
+          const dataStr = items ? JSON.stringify(items[0]).replace(/"/g, '&quot;') : '';
+          return `<div onclick="${items ? `abrirModalPosicao(JSON.parse(this.dataset.r))` : `abrirModalPosicaoNova('${pos}')`}"
+            data-r="${dataStr}"
+            style="width:38px;height:38px;border-radius:6px;border:1.5px solid ${bd};background:${bg};
+                   display:flex;align-items:center;justify-content:center;font-size:.58rem;
+                   font-weight:700;color:${txt};font-family:var(--mono);cursor:pointer;
+                   flex-shrink:0;position:relative;-webkit-tap-highlight-color:transparent">
+            ${j}${items && items.length > 1 ? `<span style="position:absolute;top:-4px;right:-4px;background:var(--amber-lt);color:#1a0f00;font-size:.42rem;font-weight:800;border-radius:50%;width:13px;height:13px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--bg2)">${items.length}</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('');
+
+    return `<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:8px">
+      <span style="font-size:.62rem;color:var(--text3);font-family:var(--mono);font-weight:700;width:20px;text-align:right;flex-shrink:0;padding-top:10px">${+ln}</span>
+      <div>${celulasPorAndar}</div>
+    </div>`;
+  }).join('');
+
+  // Update KPIs
+  document.getElementById('pos-kpi-total').textContent = total;
+  document.getElementById('pos-kpi-ocup').textContent  = ocup;
+  document.getElementById('pos-kpi-livre').textContent = total - ocup;
+
+  el.innerHTML = `<div style="padding-bottom:4px">${html}</div>`;
+}
+
+function abrirModalPosicaoNova(posicao) {
+  abrirModalPosicao(null);
+  document.getElementById('mp-posicao').value = posicao;
+}
+
+function abrirModalPosicao(r) {
+  document.getElementById('mp-id').value         = r?.id || '';
+  document.getElementById('mp-posicao').value    = r?.posicao || '';
+  document.getElementById('mp-codigo').value     = r?.codigo || '';
+  document.getElementById('mp-produto').value    = r?.produto_nome || '';
+  document.getElementById('mp-lote').value       = r?.lote || '';
+  document.getElementById('mp-armazem').value    = r?.armazem || '';
+  document.getElementById('mp-quantidade').value = r?.quantidade != null ? r.quantidade : '';
+  document.getElementById('mp-titulo').textContent = r ? 'Editar Posicao' : 'Adicionar na Posicao';
+  // Show expedir button only when editing
+  const btnExp = document.getElementById('mp-btn-expedir');
+  if (btnExp) btnExp.style.display = r ? 'flex' : 'none';
+  document.getElementById('modal-posicao').classList.add('open');
+}
+
+function fecharModalPosicao() {
+  document.getElementById('modal-posicao').classList.remove('open');
+}
+
+async function salvarPosicao() {
+  const id      = document.getElementById('mp-id').value;
+  const posicao = document.getElementById('mp-posicao').value.trim().toUpperCase();
+  const codigo  = document.getElementById('mp-codigo').value.trim().toUpperCase();
+  const produto = document.getElementById('mp-produto').value.trim();
+  const lote    = document.getElementById('mp-lote').value.trim().toUpperCase();
+  const armazem = document.getElementById('mp-armazem').value.trim();
+  const qtdStr  = document.getElementById('mp-quantidade').value;
+
+  if (!posicao) { toast('Informe a posicao.', 'warn'); return; }
+  if (!codigo)  { toast('Informe o codigo.', 'warn'); return; }
+  if (!lote)    { toast('Informe o lote.', 'warn'); return; }
+  if (!armazem) { toast('Informe o armazem.', 'warn'); return; }
+  if (qtdStr === '') { toast('Informe a quantidade.', 'warn'); return; }
+  const qtd = parseFloat(qtdStr);
+  if (isNaN(qtd) || qtd < 0) { toast('Quantidade invalida.', 'warn'); return; }
+
+  const btn = document.getElementById('mp-btn-salvar');
+  btn.disabled = true;
+  document.getElementById('mp-spin').style.display = 'block';
+
+  try {
+    if (id) {
+      const antigo = _posicoesCache.find(r => String(r.id) === String(id));
+      const posicaoMudou = antigo && antigo.posicao !== posicao;
+      if (posicaoMudou) {
+        await sb.from('historico').update({ ocupacao_ativa: false, updated_at: new Date().toISOString() }).eq('id', parseInt(id));
+        const { error } = await sb.from('historico').insert({
+          posicao, codigo, produto_nome: produto||codigo, lote, armazem,
+          quantidade: qtd, ocupacao_ativa: true, origem: 'manual', usuario: OPERADOR,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await sb.from('historico').update({
+          codigo, produto_nome: produto||codigo, lote, armazem,
+          quantidade: qtd, updated_at: new Date().toISOString(),
+        }).eq('id', parseInt(id));
+        if (error) throw error;
+      }
+      toast('Posicao atualizada.', 'ok');
+    } else {
+      const { error } = await sb.from('historico').insert({
+        posicao, codigo, produto_nome: produto||codigo, lote, armazem,
+        quantidade: qtd, ocupacao_ativa: true, origem: 'manual', usuario: OPERADOR,
+      });
+      if (error) throw error;
+      toast('Posicao adicionada.', 'ok');
+    }
+    fecharModalPosicao();
+    await carregarPosicoes();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('mp-spin').style.display = 'none';
+  }
+}
+
+async function marcarExpedido(id, posicao, nome) {
+  if (!confirm(`Marcar "${nome}" na posicao ${posicao} como expedido?\nEssa posicao ficara livre no mapa.`)) return;
+  try {
+    const { error } = await sb.from('historico')
+      .update({ ocupacao_ativa: false, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+    toast(`${nome} expedido - posicao ${posicao} liberada.`, 'ok', 4000);
+    fecharModalPosicao();
+    await carregarPosicoes();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  }
 }
 </script>
 </body>
