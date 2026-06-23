@@ -2828,6 +2828,7 @@ async function confirmarValidacao() {
         armazem:           itemAtual.armazem,
         posicao:           l.posicao || null,
         ocupacao_ativa:    true,
+        origem:            'contagem',
         usuario:           l.usuario || itemAtual.ops || (isManual ? 'Gestor (manual)' : null),
         is_recontagem:     isRecont || false,
         motivo_recontagem: isRecont ? motivo : null,
@@ -2848,6 +2849,7 @@ async function confirmarValidacao() {
         armazem:           itemAtual.armazem,
         posicao:           itemAtual.posicao || null,
         ocupacao_ativa:    true,
+        origem:            'contagem',
         usuario:           itemAtual.ops || (isManual ? 'Gestor (manual)' : null),
         is_recontagem:     isRecont || false,
         motivo_recontagem: isRecont ? motivo : null,
@@ -4229,27 +4231,10 @@ async function validarTodos() {
   if (!confirm(`Validar ${semDiv.length} item${semDiv.length!==1?'ns':''} sem divergência?`)) return;
   const btn = document.getElementById('btn-validar-todos');
   btn.disabled = true; btn.textContent = '⏳ Validando…';
-  let ok=0, erros=0, pulados=0;
-  const pulados_detalhes = [];
+  let ok=0, erros=0;
 
   for (const item of semDiv) {
     try {
-      // Verifica conflito de posição — pula se tiver outro produto ativo nessa posição
-      if (item.posicao) {
-        const { data: ocupantes } = await sb.from('historico')
-          .select('codigo, produto_nome, lote')
-          .eq('posicao', item.posicao)
-          .eq('ocupacao_ativa', true);
-        const outros = (ocupantes||[]).filter(r =>
-          !(r.codigo === item.codigo && r.lote === item.lote)
-        );
-        if (outros.length) {
-          pulados++;
-          pulados_detalhes.push(`${item.codigo} (${item.posicao})`);
-          continue; // pula este item
-        }
-      }
-
       // Limpa posições antes de inserir
       const posicoes = [...new Set((item.lancamentos_individuais||[]).map(l=>l.posicao).filter(Boolean))];
 
@@ -4286,7 +4271,7 @@ async function validarTodos() {
           codigo: item.codigo, produto_nome: item.descricao||item.codigo,
           lote: item.lote, quantidade: l.quantidade, saldo_sistema: item.saldo,
           divergencia: 0, tipo: 'ok', observacao: null, armazem: item.armazem,
-          posicao: l.posicao || null, ocupacao_ativa: true,
+          posicao: l.posicao || null, ocupacao_ativa: true, origem: 'contagem',
           usuario: l.usuario || item.ops || null, is_recontagem: false, motivo_recontagem: null,
           filial: filialFinal,
         })));
@@ -4295,7 +4280,7 @@ async function validarTodos() {
           codigo: item.codigo, produto_nome: item.descricao||item.codigo,
           lote: item.lote, quantidade: item.qtdContada, saldo_sistema: item.saldo,
           divergencia: 0, tipo: 'ok', observacao: null, armazem: item.armazem,
-          posicao: item.posicao || null, ocupacao_ativa: true,
+          posicao: item.posicao || null, ocupacao_ativa: true, origem: 'contagem',
           usuario: item.ops||null, is_recontagem: false, motivo_recontagem: null,
           filial: filialFinal,
         });
@@ -4313,12 +4298,8 @@ async function validarTodos() {
   }
   btn.disabled=false; btn.textContent='✓ Validar Tudo';
   let msg = `✓ ${ok} item${ok!==1?'ns':''} validado${ok!==1?'s':''}`;
-  if (pulados) msg += ` · ${pulados} pulado${pulados!==1?'s':''} (conflito de posição)`;
   if (erros) msg += ` · ${erros} erro${erros!==1?'s':''}`;
-  toast(msg, pulados||erros ? 'warn' : 'ok', 6000);
-  if (pulados) {
-    setTimeout(() => toast(`Pulados: ${pulados_detalhes.join(', ')}`, 'warn', 8000), 500);
-  }
+  toast(msg, erros ? 'warn' : 'ok', 6000);
   atualizarStatsSV();
   filtrarValidacao();
 }
@@ -5193,7 +5174,8 @@ async function verificarFechamentoMes() {
   const { data: registros } = await sb.from('historico')
     .select('*')
     .gte('created_at', de)
-    .lte('created_at', ate);
+    .lte('created_at', ate)
+    .or('origem.eq.contagem,origem.is.null'); // exclui registros manuais da acuracia
 
   if (!registros || !registros.length) return; // sem dados, não fecha
 
@@ -5700,12 +5682,13 @@ function exportarHistorico() {
     if (filial && (r.filial||'').toUpperCase() !== filial) return false;
     return true;
   });
-  const cab = ['Data','Filial','Código','Produto','Lote','Qtd Contada','Saldo Sistema','Divergência','Tipo','Armazém','Operador','Recontagem','Observação'];
+  const cab = ['Data','Filial','Código','Produto','Lote','Qtd Contada','Saldo Sistema','Divergência','Tipo','Armazém','Operador','Recontagem','Observação','Origem'];
   const lin = data.map(r => [
     fmtTS(r.created_at), r.filial||'', r.codigo||'', r.produto_nome||'', r.lote||'',
     r.quantidade??'', r.saldo_sistema??'', r.divergencia??'',
     r.tipo||'', r.armazem||'', r.usuario||'',
-    r.is_recontagem?'Sim':'Não', r.observacao||r.motivo_recontagem||''
+    r.is_recontagem?'Sim':'Não', r.observacao||r.motivo_recontagem||'',
+    r.origem||'contagem'
   ]);
   exportarXlsx('historico_validado', cab, lin);
   toast('✓ Excel exportado!','ok');
