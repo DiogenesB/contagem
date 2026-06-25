@@ -1491,17 +1491,16 @@ async function _mp_buscarProdutoNow(codigo) {
 }
 
 function mp_renderAutocomplete(list) {
+  const inp = document.getElementById('mp-codigo');
   let box = document.getElementById('mp-autocomplete');
   if (!list.length) { if (box) box.style.display = 'none'; return; }
   if (!box) {
     box = document.createElement('div');
     box.id = 'mp-autocomplete';
-    box.style.cssText = 'position:fixed;z-index:400;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:0 4px 16px rgba(0,0,0,.4);left:14px;right:14px;max-height:220px;overflow-y:auto;margin-top:2px';
-    document.body.appendChild(box);
+    box.style.cssText = 'position:absolute;z-index:400;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:0 4px 16px rgba(0,0,0,.4);left:0;right:0;max-height:220px;overflow-y:auto;margin-top:2px;top:100%';
+    inp.parentElement.style.position = 'relative';
+    inp.parentElement.appendChild(box);
   }
-  const inp = document.getElementById('mp-codigo');
-  const rect = inp.getBoundingClientRect();
-  box.style.top = (rect.bottom + 4) + 'px';
   box.style.display = 'block';
   box.innerHTML = list.map(p => `
     <div onclick="mp_selecionarProduto('${p.codigo.replace(/'/g,"\'")}','${(p.nome||'').replace(/'/g,"\'")}')"
