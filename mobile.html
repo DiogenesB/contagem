@@ -629,7 +629,8 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
         <div id="mp-pos-drop" class="pos-drop" style="display:none"></div>
       </div>
       <div class="field"><label>Código *</label>
-        <input type="text" id="mp-codigo" placeholder="Ex: 01007100002" style="text-transform:uppercase" autocomplete="off">
+        <input type="text" id="mp-codigo" placeholder="Ex: 01007100002" style="text-transform:uppercase"
+          oninput="mp_buscarProduto(this.value)" autocomplete="off">
       </div>
       <div class="field"><label>Nome do Produto</label>
         <input type="text" id="mp-produto" placeholder="Preenchido automaticamente ou manual">
@@ -1429,10 +1430,96 @@ function selecionarAutocompleteProduto(codigo, nome, filial) {
   av_buscarProduto(codigo);
 }
 
-document.addEventListener('click', e => {
+document.addEventListener('click'
+let _mpBuscaTimer = null;
+let _mpBuscaSeq   = 0;
+
+function mp_buscarProduto(codigo) {
+  clearTimeout(_mpBuscaTimer);
+  _mpBuscaTimer = setTimeout(() => _mp_buscarProdutoNow(codigo), 250);
+}
+
+async function _mp_buscarProdutoNow(codigo) {
+  const seq = ++_mpBuscaSeq;
+  const cod = codigo.trim();
+  if (!cod || cod.length < 2) { mp_renderAutocomplete([]); return; }
+
+  // 1) Match exato no saldo_sistema
+  try {
+    const { data } = await sb.from('saldo_sistema')
+      .select('descricao, lote, armazem')
+      .ilike('codigo', cod)
+      .limit(1).maybeSingle();
+    if (seq !== _mpBuscaSeq) return;
+    if (data) {
+      document.getElementById('mp-produto').value = data.descricao || '';
+      if (!document.getElementById('mp-lote').value)    document.getElementById('mp-lote').value    = data.lote    || '';
+      if (!document.getElementById('mp-armazem').value) document.getElementById('mp-armazem').value = data.armazem || '';
+      mp_renderAutocomplete([]);
+      return;
+    }
+  } catch {}
+
+  // 2) Match exato no cadastro de produtos
+  try {
+    const { data: prod } = await sb.from('produtos').select('nome').eq('codigo', cod.toUpperCase()).maybeSingle();
+    if (seq !== _mpBuscaSeq) return;
+    if (prod) { document.getElementById('mp-produto').value = prod.nome || ''; mp_renderAutocomplete([]); return; }
+  } catch {}
+
+  // 3) Busca por contem
+  if (cod.length < 3) { mp_renderAutocomplete([]); return; }
+  try {
+    const [{ data: doSaldo }, { data: doCadastro }] = await Promise.all([
+      sb.from('saldo_sistema').select('codigo, descricao').or(`codigo.ilike.%${cod}%,descricao.ilike.%${cod}%`).limit(12),
+      sb.from('produtos').select('codigo, nome').or(`codigo.ilike.%${cod}%,nome.ilike.%${cod}%`).limit(12),
+    ]);
+    if (seq !== _mpBuscaSeq) return;
+    const vistos = new Set();
+    const unicos = [
+      ...(doSaldo    || []).map(p => ({ codigo: p.codigo, nome: p.descricao })),
+      ...(doCadastro || []).map(p => ({ codigo: p.codigo, nome: p.nome })),
+    ].filter(p => { const k = (p.codigo||'').trim().toUpperCase(); if (!k || vistos.has(k)) return false; vistos.add(k); return true; }).slice(0, 10);
+    mp_renderAutocomplete(unicos);
+  } catch { mp_renderAutocomplete([]); }
+}
+
+function mp_renderAutocomplete(list) {
+  let box = document.getElementById('mp-autocomplete');
+  if (!list.length) { if (box) box.style.display = 'none'; return; }
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'mp-autocomplete';
+    box.style.cssText = 'position:fixed;z-index:400;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:0 4px 16px rgba(0,0,0,.4);left:14px;right:14px;max-height:220px;overflow-y:auto;margin-top:2px';
+    document.body.appendChild(box);
+  }
+  const inp = document.getElementById('mp-codigo');
+  const rect = inp.getBoundingClientRect();
+  box.style.top = (rect.bottom + 4) + 'px';
+  box.style.display = 'block';
+  box.innerHTML = list.map(p => `
+    <div onclick="mp_selecionarProduto('${p.codigo.replace(/'/g,"\'")}','${(p.nome||'').replace(/'/g,"\'")}')"
+      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.85rem"
+      onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
+      <div style="font-weight:700;color:var(--text)">${p.nome||p.codigo}</div>
+      <div style="font-size:.7rem;color:var(--text3);margin-top:2px">${p.codigo}</div>
+    </div>`).join('');
+}
+
+function mp_selecionarProduto(codigo, nome) {
+  document.getElementById('mp-codigo').value  = codigo;
+  document.getElementById('mp-produto').value = nome;
+  const box = document.getElementById('mp-autocomplete');
+  if (box) box.style.display = 'none';
+  _mp_buscarProdutoNow(codigo);
+}
+, e => {
   const box = document.getElementById('av-autocomplete');
   if (box && !box.contains(e.target) && e.target.id !== 'av-codigo') {
     box.style.display = 'none';
+  const mpBox = document.getElementById('mp-autocomplete');
+  if (mpBox && !mpBox.contains(e.target) && e.target.id !== 'mp-codigo') {
+    mpBox.style.display = 'none';
   }
 });
 
@@ -1915,8 +2002,8 @@ function renderMapaMobile() {
           const bd  = items ? (items.length > 1 ? '#9a4a00' : 'transparent') : 'var(--border2)';
           const txt = items ? '#fff' : 'var(--text3)';
           const dataStr = items ? JSON.stringify(items[0]).replace(/"/g, '&quot;') : '';
-          return `<div onclick="${items ? `abrirModalPosicao(JSON.parse(this.dataset.r))` : `abrirModalPosicaoNova('${pos}')`}"
-            data-r="${dataStr}"
+          return `<div onclick="${items ? 'abrirModalPosicao(JSON.parse(this.dataset.r))' : 'abrirModalPosicaoNova(this.dataset.pos)'}"
+            data-r="${dataStr}" data-pos="${pos}"
             style="width:38px;height:38px;border-radius:6px;border:1.5px solid ${bd};background:${bg};
                    display:flex;align-items:center;justify-content:center;font-size:.58rem;
                    font-weight:700;color:${txt};font-family:var(--mono);cursor:pointer;
