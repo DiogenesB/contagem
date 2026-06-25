@@ -1318,9 +1318,8 @@ function av_buscarProduto(codigo) {
 
 async function _av_buscarProdutoNow(codigo) {
   const seq = ++_avBuscaSeq;
-  const prev = document.getElementById('av-saldo-preview');
   const cod  = codigo.trim();
-  if (!cod || cod.length < 2) { prev.style.display = 'none'; renderAutocompleteProdutos([]); return; }
+  if (!cod || cod.length < 2) { renderAutocompleteProdutos([]); return; }
 
   const filDet = _filialCache[cod.toUpperCase()];
   if (filDet) _filialAvulsa = filDet;
@@ -1334,19 +1333,13 @@ async function _av_buscarProdutoNow(codigo) {
     if (seq !== _avBuscaSeq) return; // resposta antiga — descarta
     if (data) {
       document.getElementById('av-produto').value   = data.descricao || '';
-      document.getElementById('av-prev-saldo').textContent = data.saldo ?? '—';
-      document.getElementById('av-prev-lote').textContent  = data.lote  || '—';
-      document.getElementById('av-prev-arm').textContent   = data.armazem || '—';
-      prev.style.display = 'block';
       // Preenche lote automaticamente (mas NÃO o armazém — operador deve digitar)
       if (!document.getElementById('av-lote').value)
         document.getElementById('av-lote').value = data.lote || '';
       renderAutocompleteProdutos([]);
       return;
-    } else {
-      prev.style.display = 'none';
     }
-  } catch { prev.style.display = 'none'; }
+  } catch {}
 
   // 2) Tenta match EXATO no cadastro de produtos (código sem saldo importado no momento)
   try {
