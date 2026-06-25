@@ -1430,7 +1430,13 @@ function selecionarAutocompleteProduto(codigo, nome, filial) {
   av_buscarProduto(codigo);
 }
 
-document.addEventListener('click'
+document.addEventListener('click', e => {
+  const box = document.getElementById('av-autocomplete');
+  if (box && !box.contains(e.target) && e.target.id !== 'av-codigo') box.style.display = 'none';
+  const mpBox = document.getElementById('mp-autocomplete');
+  if (mpBox && !mpBox.contains(e.target) && e.target.id !== 'mp-codigo') mpBox.style.display = 'none';
+});
+
 let _mpBuscaTimer = null;
 let _mpBuscaSeq   = 0;
 
@@ -1513,15 +1519,6 @@ function mp_selecionarProduto(codigo, nome) {
   if (box) box.style.display = 'none';
   _mp_buscarProdutoNow(codigo);
 }
-, e => {
-  const box = document.getElementById('av-autocomplete');
-  if (box && !box.contains(e.target) && e.target.id !== 'av-codigo') {
-    box.style.display = 'none';
-  const mpBox = document.getElementById('mp-autocomplete');
-  if (mpBox && !mpBox.contains(e.target) && e.target.id !== 'mp-codigo') {
-    mpBox.style.display = 'none';
-  }
-});
 
 async function lancarAvulso() {
   const codigo   = document.getElementById('av-codigo').value.trim().toUpperCase();
