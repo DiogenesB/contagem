@@ -543,7 +543,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
         </div>
       </div>
       <div class="field">
-        <label>Posição <span style="color:var(--text3);font-weight:400">(opcional)</span></label>
+        <label>Posição *</label>
         <input type="text" id="av-posicao" placeholder="Ex: A1-04-1-2" style="text-transform:uppercase"
           oninput="filtrarPosicoes('av-posicao','av-pos-drop')" autocomplete="off">
       </div>
@@ -774,7 +774,7 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
         </div>
       </div>
       <div class="field">
-        <label>Posição <span style="color:var(--text3);font-weight:400">(opcional)</span></label>
+        <label>Posição *</label>
         <input type="text" id="ms-posicao" placeholder="Ex: A1-04-1-2" style="text-transform:uppercase"
           oninput="filtrarPosicoes('ms-posicao','ms-pos-drop')"
           onkeydown="if(event.key==='Enter')document.getElementById('ms-quantidade').focus()"
@@ -1196,6 +1196,9 @@ async function lancarItemSessao() {
   const qtd = parseFloat(qtdStr);
   if (isNaN(qtd) || qtd < 0) { toast('Quantidade inválida.', 'warn'); return; }
 
+  const prodNomeSessao = document.getElementById('ms-produto-h').value || '';
+  if (!validarLimitePalete(prodNomeSessao, qtd)) return;
+
   await tentarLancar('sessao');
 }
 
@@ -1527,6 +1530,9 @@ async function lancarAvulso() {
   const qtd = parseFloat(qtdStr);
   if (isNaN(qtd) || qtd < 0) { toast('Quantidade inválida.', 'warn'); return; }
 
+  const prodNomeAv = document.getElementById('av-produto').value || '';
+  if (!validarLimitePalete(prodNomeAv, qtd)) return;
+
   await tentarLancar('avulso');
 }
 
@@ -1709,12 +1715,90 @@ document.addEventListener('click', e => {
 // ── CHECAGEM DE POSIÇÃO OCUPADA ──────────────────────────
 // Antes de lançar, verifica se a posição já tem produto(s) validado(s) e ativo(s).
 // Retorna array de itens ocupando a posição, ou [] se livre.
+
+// Limite de quantidade por palete
+const LIMITE_PALETE = {
+  'AEDESCONTROL - 10 L': 750, 'AEDESCONTROL - 10 L (2X5)': 720, 'AEDESCONTROL - 12 L (12X1)': 528,
+  'BIAGRO CRISTALLES - 10 L (1X10)': 750, 'BIAGRO CRISTALLES - 10 L (2X5)': 720, 'BIAGRO CRISTALLES - 12 L (12X1)': 528,
+  'BIAGRO ENERGIA - 10 L (2X5)': 720, 'BIAGRO ENERGIA - 12 L (6X2)': 768,
+  'BIAGRO IMPACTO - 10 L (2X5)': 720, 'BIAGRO IMPACTO - 12 L (6X2)': 768,
+  'BIAGRO PROTECAO - 10 L (2X5)': 720, 'BIAGRO PROTECAO - 12 L (6X2)': 768,
+  'BIAGRO RAIZ - 12 L (12X1)': 528, 'BIAGRO RAIZ - 12 L (6X2)': 768,
+  'BIAGRO SOLO - 10 L (2X5)': 720, 'BIAGRO SOLO - 12 L (6X2)': 768,
+  'BIO 10 - 12 L (12X1)': 528, 'BIO 12 - 10 L (2X5)': 720, 'BIO 12 - 12 L (12X1)': 528,
+  'BIO 15 + NI - 10 L (2X5)': 720, 'BIO APPLIC D - 12 L (12X1)': 528,
+  'BIO APPLIC F - 12 L (12X1)': 528, 'BIO APPLIC O - 10 L (2X5)': 720, 'BIO APPLIC O - 12 L (12X1)': 528,
+  'BIO ATIVO - 20 L (1X20)': 480,
+  'BIOMA BRADY SOJA LIQUIDO - 160 DS (4X40) ECO PACK': 13440, 'BIOMA BRADY SOJA TURFOSO - 250 DS (5X50)': 21000,
+  'BIOMA HYDRATUS - 10 L (2X5)': 640, 'BIOMA HYDRATUS - 12 L (6X2)': 768, 'BIOMA HYDRATUS - 2 L - DM': 768,
+  'BIOMA MAIS ENERGY LIQUIDO - 100 DS (2X50)': 8400, 'BIOMA MAIS LIQUIDO - 80 DS (4X20) ECO PACK': 6720,
+  'BIOMA PHOS - 1 L - DM': 528, 'BIOMA PHOS - 10 L (2X5)': 640, 'BIOMA PHOS - 12 L (12X1)': 528,
+  'BIOMA PHOS - 12 L (6X2)': 768, 'BIOMA PHOS - 2 L - DM': 768,
+  'BT PROTECTION - 10 L (1X10)': 750, 'BT PROTECTION - 10 L (2X5)': 720, 'BT PROTECTION - 5 L - DM': 720,
+  'BTCONTROL - 10 L (1X10)': 750, 'BTCONTROL - 10 L (2X5)': 720, 'BTCONTROL - 12 L (12X1)': 528, 'BTCONTROL - 5 L (1X5)': 720,
+  'EFICAZCONTROL - 12 L (6X2)': 768, 'EFICAZCONTROL - 2 L - DM': 768,
+  'FLYCONTROL - 1 L - DM': 528, 'FLYCONTROL - 10 L (2X5)': 720, 'FLYCONTROL - 12 L (12X1)': 528,
+  'FLYCONTROL - 12 L (6X2)': 768, 'FLYCONTROL - 2 L - DM': 768, 'FLYCONTROL - 5 L - DM': 720,
+  'FRONTIERCONTROL - 1 L - DM': 528, 'FRONTIERCONTROL - 10 L (2X5)': 640, 'FRONTIERCONTROL - 12 L (12X1)': 528,
+  'FRONTIERCONTROL - 12 L (6X2)': 768, 'FRONTIERCONTROL - 5 L - DM': 640,
+  'FX PROTECTION - 1 L - DM': 528, 'FX PROTECTION - 10 L (1X10)': 750, 'FX PROTECTION - 10 L (2X5)': 720,
+  'FX PROTECTION - 12 L (12X1)': 528, 'FX PROTECTION - 12 L (6X2)': 768, 'FX PROTECTION - 2 L - DM': 768,
+  'GREENCONTROL - 6 KG (6X1)': 456, 'HYDRATUS - 12 L (12X1) ARGENTINA': 528, 'INLAYON - 12 L (6X2)': 768,
+  'ISACONTROL - 10 L (2X5)': 720, 'LAPHY PROTECTION - 1 KG - DM': 456, 'LAPHY PROTECTION - 6 KG (6X1)': 456,
+  'LOOPER PROTECTION - 6 KG (6X1)': 456, 'METHACONTROL - 10 KG (2X5)': 750,
+  'METHACONTROL EVOLUTION - 10 L (2X5)': 720, 'METHACONTROL EVOLUTION - 5 L - DM': 720,
+  'NEMA PROTECTION - 1 L - DM': 528, 'NEMA PROTECTION - 12 L (12X1)': 528,
+  'NEMA PROTECTION - 12 L (6X2)': 768, 'NEMA PROTECTION - 2 L - DM': 768,
+  'NEMACONTROL - 12 L (12X1)': 528, 'NEMACONTROL - 12 L (6X2)': 768,
+  'NEMACONTROL - 12 L (6X2) PARAGUAY': 768, 'NEMACONTROL - 2 L - DM': 768,
+  'NEMACONTROL SUPER - 1 L - DM': 528, 'NEMACONTROL SUPER - 12 L (12X1)': 528,
+  'NEMACONTROL SUPER - 12 L (6X2)': 768, 'NEMACONTROL SUPER - 2 L - DM': 768, 'NEMACONTROL SUPER - 6 L (6X1)': 528,
+  'OMSUGО ECO - 12 L (6X2)': 768, 'PERC PROTECTION - 10 L (2X5)': 720,
+  'SIMBIOSE MAIZ LIQUIDO - 100 DS (2X50) ULTRA CASE': 8400, 'SIMBIOSE MAIZ LIQUIDO - 80 DS (4X20) ULTRA CASE': 64720,
+  'SIMBIOSENOD SOJA LIQUIDO - 160 DS (4X40) ULTRA CASE': 13440, 'SIMBIOSENOD SOJA LIQUIDO - 200 DS (2X100) ULTRA CASE': 16800,
+  'SIMBIOSENOD SOJA TURFOSO - 250 DS (5X50)': 2100,
+  'SOLUBPHOS - 1 L - DM': 528, 'SOLUBPHOS - 10 L (2X5)': 640, 'SOLUBPHOS - 12 L (12X1)': 528,
+  'SOLUBPHOS - 12 L (6X2)': 768, 'SOLUBPHOS - 2 L - DM': 768,
+  'STIMU SPRAY D - 10 L (1X10)': 750, 'STIMU SPRAY D - 10 L (2X5)': 720, 'STIMU SPRAY D - 12 L (12X1)': 528,
+  'STIMU SPRAY F - 10 L (2X5)': 720, 'STIMU SPRAY F - 12 L (12X1)': 528,
+  'STIMU SPRAY O - 10 L (1X10)': 750, 'STIMU SPRAY O - 10 L (2X5)': 720, 'STIMU SPRAY O - 12 L (12X1)': 528,
+  'STIMUCONTROL - 1 L - DM': 528, 'STIMUCONTROL - 10 L (2X5)': 720, 'STIMUCONTROL - 12 L (12X1)': 528,
+  'STIMUCONTROL - 12 L (6X2)': 768, 'STIMUCONTROL - 2 L': 768, 'STIMUCONTROL - 2 L - DM': 768,
+  'STIMUCONTROL EVOLUTION - 10 L (2X5)': 720, 'STIMUCONTROL EVOLUTION - 12 L (6X2)': 768,
+  'TRICH PROTECTION - 1 L - DM': 528, 'TRICH PROTECTION - 10 L (2X5)': 720,
+  'TRICH PROTECTION - 12 L (12X1)': 528, 'TRICH PROTECTION - 12 L (6X2)': 768, 'TRICH PROTECTION - 2 L - DM': 768,
+  'VECTOR PROTECTION - 10 L (2X5)': 720, 'VECTOR PROTECTION - 12 L (12X1)': 528,
+  'VECTOR PROTECTION - 12 L (6X2)': 768, 'VECTOR PROTECTION - 2 L - DM': 768,
+  'VIRCONTROL C.I - 6 KG (6X1)': 456, 'VIRCONTROL H.A - 6 KG (6X1)': 456,
+  'VIRCONTROL S.F - 6 KG (12X0.5)': 456, 'VIRCONTROL S.F - 6 KG (6X1)': 456, 'VIRCONTROL SF - 1 KG - DM': 456,
+};
+
+function getLimitePalete(nomeProduto) {
+  if (!nomeProduto) return null;
+  const nome = nomeProduto.trim().toUpperCase();
+  for (const [k, v] of Object.entries(LIMITE_PALETE)) {
+    if (nome === k.toUpperCase()) return v;
+  }
+  return null;
+}
+
+function validarLimitePalete(nomeProduto, qtd) {
+  const limite = getLimitePalete(nomeProduto);
+  if (!limite) return true;
+  if (qtd > limite) {
+    toast(`Qtd ${qtd} excede o limite do palete: ${limite} un.`, 'warn', 5000);
+    return false;
+  }
+  return true;
+}
+
 async function checarPosicaoOcupada(posicao) {
   if (!posicao) return [];
-  const { data, error } = await sb.from('historico')
+  // Checa lancamentos pendentes na posicao
+  const { data, error } = await sb.from('lancamentos')
     .select('id, codigo, produto_nome, lote, armazem, quantidade')
     .eq('posicao', posicao)
-    .eq('ocupacao_ativa', true);
+    .eq('status', 'pendente');
   if (error) { console.error(error); return []; }
   return data || [];
 }
@@ -2057,6 +2141,8 @@ async function salvarPosicao() {
   if (qtdStr === '') { toast('Informe a quantidade.', 'warn'); return; }
   const qtd = parseFloat(qtdStr);
   if (isNaN(qtd) || qtd < 0) { toast('Quantidade invalida.', 'warn'); return; }
+  const prodNomeMp = document.getElementById('mp-produto').value || produto || '';
+  if (!validarLimitePalete(prodNomeMp, qtd)) return;
 
   const btn = document.getElementById('mp-btn-salvar');
   btn.disabled = true;
