@@ -1123,6 +1123,15 @@ td.td-chk { width:32px; padding:10px 8px; text-align:center; }
 .sel-bar.show { display:flex; }
 .sel-bar-count { font-weight:800; }
 html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); color:var(--blue); }
+
+/* Tooltip mapa */
+#mapa-tooltip {
+  position:fixed;z-index:9999;pointer-events:none;
+  background:#1a1f2e;border:1px solid rgba(255,255,255,.12);
+  border-radius:8px;padding:10px 12px;min-width:180px;max-width:240px;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);
+  transition:opacity .12s;
+}
 </style>
 </head>
 <body>
@@ -1417,6 +1426,7 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
             <select class="filter-sel" id="filt-hist-op" onchange="filtrarHistorico()">
               <option value="">Todos operadores</option>
             </select>
+            <input type="text" class="filter-sel" id="filt-hist-pos" placeholder="Posição" oninput="filtrarHistoricoD()" style="width:110px" title="Filtrar por posição">
             <select class="filter-sel" id="filt-hist-tipo" onchange="filtrarHistorico()">
               <option value="">Todos</option>
               <option value="ok">Sem diverg.</option>
@@ -1849,6 +1859,14 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
     <div class="field" style="margin-bottom:0">
       <label>Observação</label>
       <textarea id="mv-obs" placeholder="Ex: Embalagem danificada, e etc"></textarea>
+    </div>
+
+    <!-- Ver posicoes expandido -->
+    <div id="mv-posicoes-wrap" style="margin-top:10px">
+      <button class="btn btn-ghost btn-sm" style="width:100%;font-size:.75rem" onclick="toggleVerPosicoes()">
+        <span id="mv-pos-chevron">▶</span> Ver posições lançadas
+      </button>
+      <div id="mv-posicoes-lista" style="display:none;margin-top:8px;font-size:.78rem;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden"></div>
     </div>
 
     <div class="modal-acts">
@@ -2610,6 +2628,12 @@ function abrirValidacao(item) {
   const confWrap = document.getElementById('mv-conflito-pos');
   if (confWrap) confWrap.remove();
 
+  // Reset ver posicoes
+  const posLista = document.getElementById('mv-posicoes-lista');
+  const posChev  = document.getElementById('mv-pos-chevron');
+  if (posLista) { posLista.style.display = 'none'; posLista.innerHTML = ''; }
+  if (posChev)  posChev.textContent = '▶';
+
   document.getElementById('modal-val').classList.add('open');
 
   // Exibe aviso de conflito de posicao com base na intencao do operador
@@ -2719,6 +2743,41 @@ function calcDiv() {
   el.className = `dp-v ${tipo==='ok'?'div-ok':tipo==='positivo'?'div-pos':'div-neg'}`;
 }
 
+function toggleVerPosicoes() {
+  const lista = document.getElementById('mv-posicoes-lista');
+  const chev  = document.getElementById('mv-pos-chevron');
+  if (!lista || !chev) return;
+  if (lista.style.display === 'none') {
+    // Monta a lista de posicoes dos lancamentos individuais
+    const individuais = itemAtual?.lancamentos_individuais || [];
+    if (!individuais.length) {
+      lista.innerHTML = '<div style="padding:10px 14px;color:var(--text3)">Nenhum lançamento individual com posição.</div>';
+    } else {
+      // Agrupa por posicao
+      const porPos = {};
+      individuais.forEach(l => {
+        const p = l.posicao || '— sem posição';
+        if (!porPos[p]) porPos[p] = { qtd: 0, usuarios: new Set() };
+        porPos[p].qtd += l.quantidade || 0;
+        if (l.usuario) porPos[p].usuarios.add(l.usuario);
+      });
+      lista.innerHTML = Object.entries(porPos).map(([pos, v], i, arr) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;${i < arr.length-1 ? 'border-bottom:1px solid var(--border)' : ''}">
+          <div>
+            <span style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--cyan)">${pos}</span>
+            <span style="font-size:.68rem;color:var(--text3);margin-left:8px">${[...v.usuarios].join(', ')}</span>
+          </div>
+          <span style="font-weight:800;color:var(--green);font-family:var(--mono)">${v.qtd} un.</span>
+        </div>`).join('');
+    }
+    lista.style.display = 'block';
+    chev.textContent = '▼';
+  } else {
+    lista.style.display = 'none';
+    chev.textContent = '▶';
+  }
+}
+
 async function confirmarValidacao() {
   if (!itemAtual) return;
   const saldo  = parseFloat(document.getElementById('mv-saldo').value);
@@ -2771,30 +2830,39 @@ async function confirmarValidacao() {
     // Determina se algum lancamento indicou 'adicionar' (nao remove existentes na posicao)
     const temAdicionar = (itemAtual.lancamentos_individuais||[]).some(l => l.conflito_acao === 'adicionar');
     if (!temAdicionar) {
-      // 2. Posições que estão no histórico mas NÃO vieram nos lançamentos novos = órfãs (produto saiu dali)
+      // Limpa TUDO nas posicoes novas (substitui completo)
       const posicoeNovas = new Set(posicoes);
+
+      // Posicoes orfas (estavam ativas mas nao vieram nos lancamentos novos)
       const idsOrfaos = (histAtivos||[])
         .filter(r => r.posicao && !posicoeNovas.has(r.posicao))
         .map(r => r.id);
       if (idsOrfaos.length) {
-        await sb.from('historico')
-          .update({ ocupacao_ativa: false })
-          .in('id', idsOrfaos);
+        await sb.from('historico').update({ ocupacao_ativa: false }).in('id', idsOrfaos);
       }
 
-      // 3. Desativa as posições que vieram nos lançamentos novos (serão reinseridas abaixo)
+      // Desativa TUDO nas posicoes que vieram nos lancamentos (nao filtra por codigo/lote)
       for (const pos of posicoes) {
         await sb.from('historico')
           .update({ ocupacao_ativa: false })
           .eq('posicao', pos)
           .eq('ocupacao_ativa', true);
       }
-      // Fallback: se não tem individuais, limpa posição do agregado
+      // Fallback: se nao tem individuais, limpa posicao do agregado
       if (!posicoes.length && itemAtual.posicao) {
         await sb.from('historico')
           .update({ ocupacao_ativa: false })
           .eq('posicao', itemAtual.posicao)
           .eq('ocupacao_ativa', true);
+      }
+    } else {
+      // Adicionar junto: so limpa posicoes orfas do mesmo produto
+      const posicoeNovas = new Set(posicoes);
+      const idsOrfaos = (histAtivos||[])
+        .filter(r => r.posicao && !posicoeNovas.has(r.posicao))
+        .map(r => r.id);
+      if (idsOrfaos.length) {
+        await sb.from('historico').update({ ocupacao_ativa: false }).in('id', idsOrfaos);
       }
     }
 
@@ -3506,12 +3574,14 @@ function filtrarHistorico() {
   const arm  = document.getElementById('filt-hist-arm').value;
   const op   = document.getElementById('filt-hist-op').value;
   const tipo = document.getElementById('filt-hist-tipo').value;
+  const pos  = (document.getElementById('filt-hist-pos')?.value||'').trim().toUpperCase();
 
   const filial = getFiltroFilial();
   const data = todoHistorico.filter(r => {
     const txt = [r.codigo,r.produto_nome,r.lote,r.usuario,r.armazem].join(' ').toLowerCase();
     if (q && !txt.includes(q)) return false;
     if (arm && r.armazem !== arm) return false;
+    if (pos && !(r.posicao||'').toUpperCase().includes(pos)) return false;
     if (op  && r.usuario !== op)  return false;
     if (tipo === 'ok'        && r.tipo !== 'ok') return false;
     if (tipo === 'positivo'  && r.tipo !== 'positivo') return false;
@@ -5920,6 +5990,10 @@ function renderPavilhao(pv, busca, posQ, andarFiltro, status) {
               ${!andarFiltro ? `<span style="font-size:.52rem;color:var(--text3);font-family:var(--mono);width:13px;flex-shrink:0">${andar}º</span>` : ''}
               ${celulas.map(c => {
                 if (c.oculta) return `<div style="width:32px;height:32px;flex-shrink:0"></div>`;
+                // Tooltip data
+                const tipLines = c.items ? c.items.map(it =>
+                  `${it.produto_nome||it.codigo}\nLote: ${it.lote||'—'}  Arm: ${it.armazem||'—'}  Qtd: ${it.quantidade||0}`
+                ).join('\n─────────────\n') : '';
                 const items   = c.items;
                 const multi   = items && items.length > 1;
                 const bg      = items ? (multi ? '#c05e00' : '#16a34a') : 'var(--bg4)';
@@ -5927,7 +6001,17 @@ function renderPavilhao(pv, busca, posQ, andarFiltro, status) {
                 const cor     = items ? '#ffffff' : 'var(--text3)';
                 const title   = items ? items.map(it=>`${it.codigo} (lote ${it.lote||'—'}) · ${it.quantidade}un`).join(' | ') : c.pos + ' — livre';
                 const badge   = multi ? `<span style="position:absolute;top:-4px;right:-4px;background:var(--amber-lt);color:#1a0f00;font-size:.46rem;font-weight:800;border-radius:50%;width:13px;height:13px;display:flex;align-items:center;justify-content:center;line-height:1;border:1.5px solid var(--bg2)">${items.length}</span>` : '';
-                return `<div onclick="abrirMapaPopup('${c.pos}')" title="${title}"
+                const tipHtml = items ? items.map(it =>
+                  `<div style="border-bottom:1px solid rgba(255,255,255,.08);padding:5px 0;margin-bottom:4px">` +
+                  `<div style="font-weight:700;font-size:.72rem;color:#fff;margin-bottom:2px">${it.produto_nome||it.codigo}</div>` +
+                  `<div style="font-size:.65rem;color:rgba(255,255,255,.6)">Lote: ${it.lote||'—'} &nbsp;|&nbsp; Arm: ${it.armazem||'—'}</div>` +
+                  `<div style="font-size:.72rem;color:#4ade80;font-weight:800;margin-top:2px">${it.quantidade||0} un.</div>` +
+                  `</div>`).join('') + `<div style="font-size:.62rem;color:rgba(255,255,255,.4);text-align:center;margin-top:2px">${c.pos}</div>`
+                : `<div style="font-size:.72rem;color:rgba(255,255,255,.5)">${c.pos} — livre</div>`;
+                return `<div onclick="abrirMapaPopup('${c.pos}')"
+                  onmouseenter="mostrarTooltipMapa(this, '${c.pos}')"
+                  onmouseleave="ocultarTooltipMapa()"
+                  data-tip="${encodeURIComponent(tipHtml)}"
                   class="mapa-cel-painel" style="position:relative;width:32px;height:32px;border-radius:6px;border:1.5px solid ${bd};background:${bg};
                          display:flex;align-items:center;justify-content:center;font-size:.55rem;
                          font-weight:700;color:${cor};font-family:var(--mono);cursor:pointer;
@@ -6032,6 +6116,37 @@ initSb();
 carregarValidacao();
 carregarLancamentos();
 carregarAgendamentos();
+
+let _tooltipTimeout = null;
+function mostrarTooltipMapa(el, pos) {
+  clearTimeout(_tooltipTimeout);
+  const tip = decodeURIComponent(el.dataset.tip || '');
+  if (!tip) return;
+  let box = document.getElementById('mapa-tooltip');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'mapa-tooltip';
+    document.body.appendChild(box);
+  }
+  box.innerHTML = tip;
+  box.style.opacity = '0';
+  box.style.display = 'block';
+  const rect = el.getBoundingClientRect();
+  const bw = box.offsetWidth || 200;
+  let left = rect.right + 8;
+  if (left + bw > window.innerWidth - 10) left = rect.left - bw - 8;
+  let top = rect.top - 10;
+  if (top + box.offsetHeight > window.innerHeight - 10) top = window.innerHeight - box.offsetHeight - 10;
+  box.style.left = left + 'px';
+  box.style.top  = top + 'px';
+  box.style.opacity = '1';
+}
+function ocultarTooltipMapa() {
+  _tooltipTimeout = setTimeout(() => {
+    const box = document.getElementById('mapa-tooltip');
+    if (box) box.style.display = 'none';
+  }, 80);
+}
 </script>
 
 
