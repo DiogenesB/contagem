@@ -1520,7 +1520,8 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
           <div class="ph-title">Mapa Drive-in</div>
           <div style="font-size:.75rem;color:var(--text3)">Ocupação física das posições · lançamentos validados</div>
         </div>
-        <div style="margin-left:auto">
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <button class="btn btn-primary btn-sm" onclick="abrirModalMapaManual()">+ Adicionar posição</button>
           <button class="btn btn-ghost btn-sm" onclick="carregarMapaPainel()">↺ Atualizar</button>
         </div>
       </div>
@@ -1576,6 +1577,67 @@ html.dark .sel-bar { background:var(--blue-bg); border-color:var(--blue-bd); col
 
       <div id="mapa-painel-content">
         <div style="text-align:center;padding:48px;color:var(--text3);font-size:.85rem">Clique em ↺ Atualizar para carregar o mapa.</div>
+      </div>
+
+      <!-- ══ Tabela de ocupação MANUAL (linha por linha) ══ -->
+      <div class="table-wrap" style="margin-top:16px">
+        <div class="table-hdr" style="gap:8px">
+          <div class="th-left">
+            <span class="table-title">📝 Ocupação manual</span>
+            <span class="badge" id="mm-count" style="background:var(--bg3);color:var(--text3);border:1px solid var(--border)">0</span>
+          </div>
+          <div class="th-right">
+            <input type="text" class="search-inp" id="mm-busca" placeholder="Posição, produto, código ou lote…" oninput="renderTabelaManual()" style="width:240px">
+            <button class="btn btn-primary btn-sm" onclick="abrirModalMapaManual()">+ Adicionar</button>
+          </div>
+        </div>
+        <div id="mm-tabela">
+          <div style="text-align:center;padding:36px;color:var(--text3);font-size:.82rem">Nenhuma posição ocupada. Use <b>+ Adicionar</b> para preencher manualmente.</div>
+        </div>
+      </div>
+
+      <!-- Modal Adicionar/Editar posição manual -->
+      <div class="modal-bg" id="mm-modal" onclick="if(event.target===this)fecharModalMapaManual()">
+        <div class="modal" style="max-width:520px">
+          <div class="modal-handle"></div>
+          <div style="font-size:1.05rem;font-weight:800;margin-bottom:4px" id="mm-titulo">Adicionar posição</div>
+          <div style="font-size:.74rem;color:var(--text3);margin-bottom:16px">Preenchimento manual da ocupação física do Drive-in.</div>
+          <div class="field">
+            <label>Posição *</label>
+            <input type="text" id="mm-posicao" list="mm-pos-list" placeholder="Ex: A1-04-1-2" style="text-transform:uppercase" autocomplete="off">
+            <datalist id="mm-pos-list"></datalist>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="field">
+              <label>Código *</label>
+              <input type="text" id="mm-codigo" placeholder="Ex: 5001" style="text-transform:uppercase" oninput="mm_buscarProduto(this.value)" autocomplete="off">
+            </div>
+            <div class="field">
+              <label>Lote *</label>
+              <input type="text" id="mm-lote" placeholder="Ex: 017-26-5004" style="text-transform:uppercase">
+            </div>
+          </div>
+          <div class="field">
+            <label>Produto</label>
+            <input type="text" id="mm-produto" placeholder="Preenchido automaticamente ou manual">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="field">
+              <label>Armazém *</label>
+              <input type="text" id="mm-armazem" placeholder="Ex: 42">
+            </div>
+            <div class="field">
+              <label>Quantidade *</label>
+              <input type="number" id="mm-quantidade" placeholder="0" min="0" step="1" style="font-weight:800;text-align:center">
+            </div>
+          </div>
+          <input type="hidden" id="mm-id">
+          <div style="display:flex;gap:8px;margin-top:16px">
+            <button class="btn btn-ghost" style="flex:1" onclick="fecharModalMapaManual()">Cancelar</button>
+            <button class="btn btn-primary" style="flex:2" id="mm-btn-salvar" onclick="salvarMapaManual()">Salvar</button>
+          </div>
+          <button class="btn btn-danger" style="width:100%;margin-top:8px;display:none" id="mm-btn-expedir" onclick="expedirMapaManualModal()">🚚 Marcar como Expedido</button>
+        </div>
       </div>
     </div>
 
@@ -2071,6 +2133,16 @@ const SUPABASE_URL = 'https://yuaboypybjqxxgntfyrq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_IbvCmbnbazxMGcQTF9-mRg_Tt2RkAng';
 
 let sb = null;
+
+/* ══════════════════════════════════════════════════════════════
+   RASTREAMENTO DE OCUPAÇÃO (Mapa Drive-in)
+   true  → a validação da contagem alimenta o mapa automaticamente.
+   false → a contagem NÃO mexe no mapa; a ocupação é 100% MANUAL.
+   Desligado a pedido. Código antigo mantido e apenas condicionado a
+   esta flag — para voltar a rastrear pela contagem, troque para true.
+   (mantenha o mesmo valor no mobile.html)
+   ══════════════════════════════════════════════════════════════ */
+const RASTREAR_OCUPACAO = false;
 let itemAtual = null;   // linha do saldo sendo validada
 let _acTotalEstoque = null;
 let todosLanc = [];
@@ -2813,6 +2885,7 @@ async function confirmarValidacao() {
   document.getElementById('val-spin').style.display = 'block';
 
   try {
+    if (RASTREAR_OCUPACAO) {
     // ── Limpa posições antes de inserir ──
     const posicoes = [...new Set(
       (itemAtual.lancamentos_individuais||[])
@@ -2876,6 +2949,7 @@ async function confirmarValidacao() {
         await sb.from('historico').update({ ocupacao_ativa: false }).in('id', idsSubst);
       }
     }
+    } // fim if(RASTREAR_OCUPACAO) — contagem não mexe no mapa quando desligado
 
     // ── Insere um registro no histórico por lançamento individual ──
     const individuais = itemAtual.lancamentos_individuais||[];
@@ -2895,7 +2969,7 @@ async function confirmarValidacao() {
         observacao:        obs || (!isRecont && motivo ? motivo : null),
         armazem:           itemAtual.armazem,
         posicao:           l.posicao || null,
-        ocupacao_ativa:    true,
+        ocupacao_ativa:    RASTREAR_OCUPACAO,
         origem:            'contagem',
         usuario:           l.usuario || itemAtual.ops || (isManual ? 'Gestor (manual)' : null),
         is_recontagem:     isRecont || false,
@@ -2916,7 +2990,7 @@ async function confirmarValidacao() {
         observacao:        obs || (!isRecont && motivo ? motivo : null),
         armazem:           itemAtual.armazem,
         posicao:           itemAtual.posicao || null,
-        ocupacao_ativa:    true,
+        ocupacao_ativa:    RASTREAR_OCUPACAO,
         origem:            'contagem',
         usuario:           itemAtual.ops || (isManual ? 'Gestor (manual)' : null),
         is_recontagem:     isRecont || false,
@@ -4305,6 +4379,7 @@ async function validarTodos() {
 
   for (const item of semDiv) {
     try {
+      if (RASTREAR_OCUPACAO) {
       // Limpa posições antes de inserir
       const posicoes = [...new Set((item.lancamentos_individuais||[]).map(l=>l.posicao).filter(Boolean))];
 
@@ -4332,6 +4407,7 @@ async function validarTodos() {
       if (!posicoes.length && item.posicao) {
         await sb.from('historico').update({ ocupacao_ativa: false }).eq('posicao', item.posicao).eq('ocupacao_ativa', true);
       }
+      } // fim if(RASTREAR_OCUPACAO)
 
       // Insere um registro por lançamento individual (palete/posição)
       const individuais = item.lancamentos_individuais||[];
@@ -4341,7 +4417,7 @@ async function validarTodos() {
           codigo: item.codigo, produto_nome: item.descricao||item.codigo,
           lote: item.lote, quantidade: l.quantidade, saldo_sistema: item.saldo,
           divergencia: 0, tipo: 'ok', observacao: null, armazem: item.armazem,
-          posicao: l.posicao || null, ocupacao_ativa: true, origem: 'contagem',
+          posicao: l.posicao || null, ocupacao_ativa: RASTREAR_OCUPACAO, origem: 'contagem',
           usuario: l.usuario || item.ops || null, is_recontagem: false, motivo_recontagem: null,
           filial: filialFinal,
         })));
@@ -4350,7 +4426,7 @@ async function validarTodos() {
           codigo: item.codigo, produto_nome: item.descricao||item.codigo,
           lote: item.lote, quantidade: item.qtdContada, saldo_sistema: item.saldo,
           divergencia: 0, tipo: 'ok', observacao: null, armazem: item.armazem,
-          posicao: item.posicao || null, ocupacao_ativa: true, origem: 'contagem',
+          posicao: item.posicao || null, ocupacao_ativa: RASTREAR_OCUPACAO, origem: 'contagem',
           usuario: item.ops||null, is_recontagem: false, motivo_recontagem: null,
           filial: filialFinal,
         });
@@ -5800,10 +5876,12 @@ async function carregarMapaPainel() {
   const el = document.getElementById('mapa-painel-content');
   el.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)">Carregando…</div>';
   try {
-    const { data, error } = await sb.from('historico')
-      .select('id, posicao, codigo, produto_nome, quantidade, armazem, lote')
+    let q = sb.from('historico')
+      .select('id, posicao, codigo, produto_nome, quantidade, armazem, lote, origem')
       .eq('ocupacao_ativa', true)
       .not('posicao','is',null);
+    if (!RASTREAR_OCUPACAO) q = q.eq('origem', 'manual');
+    const { data, error } = await q;
     if (error) throw error;
     _mapaPainelCache = {};
     (data||[]).forEach(r => {
@@ -5813,6 +5891,8 @@ async function carregarMapaPainel() {
     });
     atualizarKpisMapa();
     filtrarMapaPainel();
+    buildDatalistPosicoes();
+    renderTabelaManual();
   } catch(e) {
     el.innerHTML = `<div style="text-align:center;padding:48px;color:var(--red)">${e.message}</div>`;
   }
@@ -6106,7 +6186,13 @@ function abrirMapaPopup(pos) {
           <div style="font-size:1.8rem;margin-bottom:6px">📭</div>
           Posição disponível para uso.
         </div>`}
-        <button class="btn btn-ghost" style="margin-top:16px" onclick="document.getElementById('mapa-popup').remove()">Fechar</button>
+        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+          <button class="btn btn-ghost" style="flex:1;min-width:110px" onclick="document.getElementById('mapa-popup').remove()">Fechar</button>
+          <button class="btn btn-primary" style="flex:1;min-width:150px" onclick="document.getElementById('mapa-popup').remove();abrirModalMapaManual('${pos}')">＋ Adicionar aqui</button>
+          ${items?.length === 1 ? `
+          <button class="btn btn-ghost" style="flex:1;min-width:110px" onclick="document.getElementById('mapa-popup').remove();abrirModalMapaManual('', JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(items[0]))}')))">✏ Editar</button>
+          <button class="btn btn-danger" style="flex:1;min-width:110px" onclick="document.getElementById('mapa-popup').remove();expedirMapaManual('${items[0].id}','${pos}','${(items[0].produto_nome||items[0].codigo||'').replace(/'/g,"\\'")}')">🚚 Expedir</button>` : ''}
+        </div>
       </div>
     </div>`;
   document.body.insertAdjacentHTML('beforeend', html);
@@ -6146,6 +6232,211 @@ function ocultarTooltipMapa() {
     const box = document.getElementById('mapa-tooltip');
     if (box) box.style.display = 'none';
   }, 80);
+}
+
+/* ══════════════ OCUPAÇÃO MANUAL DO MAPA (painel) ══════════════
+   Preenchimento manual, linha por linha. Grava em historico com
+   origem='manual' e ocupacao_ativa=true. Independente da contagem. */
+const MM_USUARIO = 'Gestor (manual)';
+let _mmDatalistFeito = false;
+
+function buildDatalistPosicoes() {
+  if (_mmDatalistFeito) return;
+  const dl = document.getElementById('mm-pos-list');
+  if (!dl) return;
+  const posicoes = [];
+  Object.values(POSICOES_MAPA).forEach(grupo =>
+    Object.entries(grupo).forEach(([di, linhas]) =>
+      Object.entries(linhas).forEach(([ln, andares]) =>
+        Object.entries(andares).forEach(([an, lugares]) =>
+          lugares.forEach(j => posicoes.push(`${di}-${ln}-${an}-${j}`))
+        )
+      )
+    )
+  );
+  dl.innerHTML = posicoes.map(p => `<option value="${p}">`).join('');
+  _mmDatalistFeito = true;
+}
+
+function renderTabelaManual() {
+  const el = document.getElementById('mm-tabela');
+  const cntEl = document.getElementById('mm-count');
+  if (!el) return;
+  const q = (document.getElementById('mm-busca')?.value || '').trim().toUpperCase();
+
+  const linhas = [];
+  Object.entries(_mapaPainelCache).forEach(([pos, items]) => {
+    (items||[]).forEach(r => linhas.push({ ...r, posicao: pos }));
+  });
+  linhas.sort((a,b) => (a.posicao||'').localeCompare(b.posicao||''));
+  if (cntEl) cntEl.textContent = linhas.length;
+
+  const filtradas = q ? linhas.filter(r =>
+    [r.posicao, r.codigo, r.produto_nome, r.lote, r.armazem].join(' ').toUpperCase().includes(q)
+  ) : linhas;
+
+  if (!filtradas.length) {
+    el.innerHTML = `<div style="text-align:center;padding:36px;color:var(--text3);font-size:.82rem">${
+      linhas.length ? 'Nenhuma posição corresponde ao filtro.' : 'Nenhuma posição ocupada. Use <b>+ Adicionar</b> para preencher manualmente.'
+    }</div>`;
+    return;
+  }
+
+  const rows = filtradas.map(r => {
+    const rStr = encodeURIComponent(JSON.stringify(r));
+    const nome = (r.produto_nome || r.codigo || '').replace(/'/g, "\\'");
+    return `<tr>
+      <td style="padding:9px 12px;font-family:var(--mono);font-weight:800;color:var(--blue);font-size:.82rem;white-space:nowrap">${r.posicao}</td>
+      <td style="padding:9px 12px;font-family:var(--mono);font-size:.78rem;color:var(--blue-lt)">${r.codigo||'—'}</td>
+      <td style="padding:9px 12px;font-size:.82rem;color:var(--text)">${r.produto_nome||'—'}</td>
+      <td style="padding:9px 12px;font-family:var(--mono);font-size:.76rem;color:var(--text2)">${r.lote||'—'}</td>
+      <td style="padding:9px 12px;font-family:var(--mono);color:var(--amber);font-size:.78rem">${r.armazem||'—'}</td>
+      <td style="padding:9px 12px;font-family:var(--mono);font-weight:800;color:var(--green);text-align:right">${r.quantidade}</td>
+      <td style="padding:9px 12px;text-align:right;white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalMapaManual('', JSON.parse(decodeURIComponent('${rStr}')))">✏ Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="expedirMapaManual('${r.id}','${r.posicao}','${nome}')">🚚</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `<div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+      <thead><tr style="background:var(--bg3)">
+        <th style="padding:8px 12px;text-align:left;font-size:.64rem;color:var(--text3);font-weight:700;text-transform:uppercase">Posição</th>
+        <th style="padding:8px 12px;text-align:left;font-size:.64rem;color:var(--text3);font-weight:700;text-transform:uppercase">Código</th>
+        <th style="padding:8px 12px;text-align:left;font-size:.64rem;color:var(--text3);font-weight:700;text-transform:uppercase">Produto</th>
+        <th style="padding:8px 12px;text-align:left;font-size:.64rem;color:var(--text3);font-weight:700;text-transform:uppercase">Lote</th>
+        <th style="padding:8px 12px;text-align:left;font-size:.64rem;color:var(--text3);font-weight:700;text-transform:uppercase">Arm.</th>
+        <th style="padding:8px 12px;text-align:right;font-size:.64rem;color:var(--text3);font-weight:700;text-transform:uppercase">Qtd</th>
+        <th style="padding:8px 12px;text-align:right;font-size:.64rem;color:var(--text3);font-weight:700;text-transform:uppercase">Ações</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function abrirModalMapaManual(pos='', registro=null) {
+  buildDatalistPosicoes();
+  document.getElementById('mm-id').value         = registro?.id || '';
+  document.getElementById('mm-posicao').value    = registro?.posicao || pos || '';
+  document.getElementById('mm-codigo').value     = registro?.codigo || '';
+  document.getElementById('mm-produto').value    = registro?.produto_nome || '';
+  document.getElementById('mm-lote').value       = registro?.lote || '';
+  document.getElementById('mm-armazem').value    = registro?.armazem || '';
+  document.getElementById('mm-quantidade').value = registro?.quantidade != null ? registro.quantidade : '';
+  document.getElementById('mm-titulo').textContent = registro ? 'Editar posição' : 'Adicionar posição';
+  const btnExp = document.getElementById('mm-btn-expedir');
+  if (btnExp) btnExp.style.display = registro ? 'block' : 'none';
+  document.getElementById('mm-modal').classList.add('open');
+}
+
+function fecharModalMapaManual() {
+  document.getElementById('mm-modal').classList.remove('open');
+}
+
+let _mmBuscaTimer = null;
+function mm_buscarProduto(codigo) {
+  clearTimeout(_mmBuscaTimer);
+  _mmBuscaTimer = setTimeout(async () => {
+    const cod = (codigo||'').trim();
+    if (cod.length < 2) return;
+    try {
+      const { data } = await sb.from('saldo_sistema')
+        .select('descricao, lote, armazem').ilike('codigo', cod).limit(1).maybeSingle();
+      if (data) {
+        if (!document.getElementById('mm-produto').value) document.getElementById('mm-produto').value = data.descricao || '';
+        if (!document.getElementById('mm-lote').value)    document.getElementById('mm-lote').value    = data.lote    || '';
+        if (!document.getElementById('mm-armazem').value) document.getElementById('mm-armazem').value = data.armazem || '';
+        return;
+      }
+    } catch {}
+    try {
+      const { data: prod } = await sb.from('produtos').select('nome').eq('codigo', cod.toUpperCase()).maybeSingle();
+      if (prod && !document.getElementById('mm-produto').value) document.getElementById('mm-produto').value = prod.nome || '';
+    } catch {}
+  }, 250);
+}
+
+async function salvarMapaManual() {
+  const id      = document.getElementById('mm-id').value;
+  const posicao = document.getElementById('mm-posicao').value.trim().toUpperCase();
+  const codigo  = document.getElementById('mm-codigo').value.trim().toUpperCase();
+  const produto = document.getElementById('mm-produto').value.trim();
+  const lote    = document.getElementById('mm-lote').value.trim().toUpperCase();
+  const armazem = document.getElementById('mm-armazem').value.trim();
+  const qtdStr  = document.getElementById('mm-quantidade').value;
+
+  if (!posicao) { toast('Informe a posição.', 'warn'); return; }
+  if (!codigo)  { toast('Informe o código.', 'warn'); return; }
+  if (!lote)    { toast('Informe o lote.', 'warn'); return; }
+  if (!armazem) { toast('Informe o armazém.', 'warn'); return; }
+  if (qtdStr === '') { toast('Informe a quantidade.', 'warn'); return; }
+  const qtd = parseFloat(qtdStr);
+  if (isNaN(qtd) || qtd < 0) { toast('Quantidade inválida.', 'warn'); return; }
+
+  const btn = document.getElementById('mm-btn-salvar');
+  btn.disabled = true;
+  const filial = detectarFilialPorCodigo(codigo) || null;
+
+  try {
+    if (id) {
+      // Descobre a posição antiga; se mudou, desativa a antiga e cria uma nova
+      let posAntiga = null;
+      Object.entries(_mapaPainelCache).forEach(([p, items]) => {
+        if ((items||[]).some(r => String(r.id) === String(id))) posAntiga = p;
+      });
+      if (posAntiga && posAntiga !== posicao) {
+        await sb.from('historico').update({ ocupacao_ativa: false, updated_at: new Date().toISOString() }).eq('id', parseInt(id));
+        const { error } = await sb.from('historico').insert({
+          posicao, codigo, produto_nome: produto||codigo, lote, armazem,
+          quantidade: qtd, ocupacao_ativa: true, origem: 'manual', usuario: MM_USUARIO, filial,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await sb.from('historico').update({
+          posicao, codigo, produto_nome: produto||codigo, lote, armazem,
+          quantidade: qtd, updated_at: new Date().toISOString(),
+        }).eq('id', parseInt(id));
+        if (error) throw error;
+      }
+      toast('Posição atualizada.', 'ok');
+    } else {
+      const { error } = await sb.from('historico').insert({
+        posicao, codigo, produto_nome: produto||codigo, lote, armazem,
+        quantidade: qtd, ocupacao_ativa: true, origem: 'manual', usuario: MM_USUARIO, filial,
+      });
+      if (error) throw error;
+      toast('Posição adicionada.', 'ok');
+    }
+    fecharModalMapaManual();
+    await carregarMapaPainel();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function expedirMapaManualModal() {
+  const id = document.getElementById('mm-id').value;
+  const pos = document.getElementById('mm-posicao').value;
+  const nome = document.getElementById('mm-produto').value || document.getElementById('mm-codigo').value;
+  if (id) expedirMapaManual(id, pos, nome);
+}
+
+async function expedirMapaManual(id, posicao, nome) {
+  if (!confirm(`Marcar "${nome}" na posição ${posicao} como expedido?\nA posição ficará livre no mapa.`)) return;
+  try {
+    const { error } = await sb.from('historico')
+      .update({ ocupacao_ativa: false, updated_at: new Date().toISOString() })
+      .eq('id', parseInt(id));
+    if (error) throw error;
+    toast(`${nome} expedido — posição ${posicao} liberada.`, 'ok');
+    fecharModalMapaManual();
+    await carregarMapaPainel();
+  } catch(e) {
+    toast('Erro: ' + e.message, 'err');
+  }
 }
 </script>
 
