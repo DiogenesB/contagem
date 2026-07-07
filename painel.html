@@ -6137,8 +6137,10 @@ function abrirMapaPopup(pos) {
   let conteudo = '';
   let totalQtd = 0;
   if (items?.length) {
-    conteudo = items.map(r => {
+    conteudo = items.map((r, i) => {
       totalQtd += parseFloat(r.quantidade)||0;
+      const rStr = encodeURIComponent(JSON.stringify(r));
+      const nome = (r.produto_nome || r.codigo || '').replace(/'/g, "\\'");
       return `
       <tr>
         <td style="padding:9px 12px;font-family:var(--mono);font-size:.78rem;color:var(--blue-lt);font-weight:700">${r.codigo}</td>
@@ -6146,6 +6148,10 @@ function abrirMapaPopup(pos) {
         <td style="padding:9px 12px;font-family:var(--mono);font-size:.76rem;color:var(--text2)">${r.lote||'—'}</td>
         <td style="padding:9px 12px;font-family:var(--mono);color:var(--amber);font-size:.78rem">${r.armazem||'—'}</td>
         <td style="padding:9px 12px;font-family:var(--mono);font-weight:800;color:var(--green);font-size:.92rem;text-align:right">${r.quantidade}</td>
+        <td style="padding:9px 12px;text-align:right;white-space:nowrap">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('mapa-popup').remove();abrirModalMapaManual('', JSON.parse(decodeURIComponent('${rStr}')))">🔁 Substituir</button>
+          <button class="btn btn-danger btn-sm" onclick="document.getElementById('mapa-popup').remove();expedirMapaManual('${r.id}','${pos}','${nome}')">🚚</button>
+        </td>
       </tr>`;
     }).join('');
   }
@@ -6175,23 +6181,23 @@ function abrirMapaPopup(pos) {
               <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:var(--text3);font-weight:700;text-transform:uppercase">Lote</th>
               <th style="padding:8px 12px;text-align:left;font-size:.65rem;color:var(--text3);font-weight:700;text-transform:uppercase">Arm.</th>
               <th style="padding:8px 12px;text-align:right;font-size:.65rem;color:var(--text3);font-weight:700;text-transform:uppercase">Qtd</th>
+              <th style="padding:8px 12px;text-align:right;font-size:.65rem;color:var(--text3);font-weight:700;text-transform:uppercase">Ações</th>
             </tr></thead>
             <tbody>${conteudo}</tbody>
             ${multi ? `<tfoot><tr style="background:var(--bg3);border-top:2px solid var(--border2)">
               <td colspan="4" style="padding:9px 12px;font-size:.72rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Total na posição</td>
               <td style="padding:9px 12px;text-align:right;font-family:var(--mono);font-weight:800;color:var(--text);font-size:.95rem">${totalQtd}</td>
+              <td></td>
             </tr></tfoot>` : ''}
           </table>
-        </div>` : `<div style="text-align:center;padding:32px;color:var(--text3);background:var(--bg3);border-radius:var(--r-sm)">
+        </div>
+        <div style="font-size:.68rem;color:var(--text3);margin-top:8px">🔁 Substituir troca o lote/produto dessa linha · ＋ Adicionar cria uma linha nova mantendo as demais</div>` : `<div style="text-align:center;padding:32px;color:var(--text3);background:var(--bg3);border-radius:var(--r-sm)">
           <div style="font-size:1.8rem;margin-bottom:6px">📭</div>
           Posição disponível para uso.
         </div>`}
         <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
           <button class="btn btn-ghost" style="flex:1;min-width:110px" onclick="document.getElementById('mapa-popup').remove()">Fechar</button>
-          <button class="btn btn-primary" style="flex:1;min-width:150px" onclick="document.getElementById('mapa-popup').remove();abrirModalMapaManual('${pos}')">＋ Adicionar aqui</button>
-          ${items?.length === 1 ? `
-          <button class="btn btn-ghost" style="flex:1;min-width:110px" onclick="document.getElementById('mapa-popup').remove();abrirModalMapaManual('', JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(items[0]))}')))">✏ Editar</button>
-          <button class="btn btn-danger" style="flex:1;min-width:110px" onclick="document.getElementById('mapa-popup').remove();expedirMapaManual('${items[0].id}','${pos}','${(items[0].produto_nome||items[0].codigo||'').replace(/'/g,"\\'")}')">🚚 Expedir</button>` : ''}
+          <button class="btn btn-primary" style="flex:1;min-width:150px" onclick="document.getElementById('mapa-popup').remove();abrirModalMapaManual('${pos}')">＋ Adicionar produto</button>
         </div>
       </div>
     </div>`;
@@ -6293,7 +6299,7 @@ function renderTabelaManual() {
       <td style="padding:9px 12px;font-family:var(--mono);color:var(--amber);font-size:.78rem">${r.armazem||'—'}</td>
       <td style="padding:9px 12px;font-family:var(--mono);font-weight:800;color:var(--green);text-align:right">${r.quantidade}</td>
       <td style="padding:9px 12px;text-align:right;white-space:nowrap">
-        <button class="btn btn-ghost btn-sm" onclick="abrirModalMapaManual('', JSON.parse(decodeURIComponent('${rStr}')))">✏ Editar</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalMapaManual('', JSON.parse(decodeURIComponent('${rStr}')))">🔁 Substituir</button>
         <button class="btn btn-danger btn-sm" onclick="expedirMapaManual('${r.id}','${r.posicao}','${nome}')">🚚</button>
       </td>
     </tr>`;
