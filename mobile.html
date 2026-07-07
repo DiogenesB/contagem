@@ -625,6 +625,20 @@ html, body { height:100%; background:var(--bg); color:var(--text); font-family:v
   </div>
 
   <!-- MODAL POSICAO (adicionar/editar) -->
+  <!-- Modal de ações rápidas ao tocar posição ocupada -->
+  <div class="modal-bg" id="modal-acoes-pos">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-handle"></div>
+      <div style="font-size:1.05rem;font-weight:800;margin-bottom:2px" id="ap-titulo">Posição</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-bottom:14px">O que deseja fazer?</div>
+      <div id="ap-lista"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-ghost" style="flex:1" onclick="fecharModalAcoesPos()">Fechar</button>
+        <button class="btn btn-primary" style="flex:2" id="ap-btn-adicionar">＋ Adicionar produto</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-bg" id="modal-posicao">
     <div class="modal">
       <div style="font-size:1rem;font-weight:800;margin-bottom:14px" id="mp-titulo">Adicionar na Posição</div>
@@ -2108,7 +2122,7 @@ function renderMapaMobile() {
           const bd  = items ? (items.length > 1 ? '#9a4a00' : 'transparent') : 'var(--border2)';
           const txt = items ? '#fff' : 'var(--text3)';
           const dataStr = items ? JSON.stringify(items[0]).replace(/"/g, '&quot;') : '';
-          return `<div onclick="${items ? 'abrirModalPosicao(JSON.parse(this.dataset.r))' : 'abrirModalPosicaoNova(this.dataset.pos)'}"
+          return `<div onclick="abrirAcoesCelula('${pos}')"
             data-r="${dataStr}" data-pos="${pos}"
             style="width:38px;height:38px;border-radius:6px;border:1.5px solid ${bd};background:${bg};
                    display:flex;align-items:center;justify-content:center;font-size:.58rem;
@@ -2162,7 +2176,7 @@ function renderListaMobile(di) {
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:1.05rem;font-weight:800;color:var(--green-txt)">${r.quantidade}</div>
         </div>
-        <button onclick="abrirModalPosicao(JSON.parse(this.dataset.r))" data-r="${rStr}"
+        <button onclick="abrirAcoesCelula('${pos}')" data-r="${rStr}"
           style="background:none;border:1px solid var(--border2);border-radius:6px;font-size:.9rem;color:var(--text3);cursor:pointer;padding:4px 8px;flex-shrink:0">✏</button>
         <button onclick="marcarExpedido('${r.id}','${pos}','${(r.produto_nome||r.codigo||'').replace(/'/g,"\\'")}')"
           style="background:none;border:1px solid var(--border2);border-radius:6px;font-size:.9rem;cursor:pointer;padding:4px 8px;flex-shrink:0" title="Marcar como expedido">🚚</button>
@@ -2181,6 +2195,38 @@ function renderListaMobile(di) {
   box.innerHTML = `<div style="font-size:.72rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">
       Ocupadas no Drive-in ${di} (${ocupadas.length})
     </div>${linhas}`;
+}
+
+// Ao tocar numa célula do mapa: se estiver ocupada, oferece Substituir/Adicionar/Expedir por item.
+// Se estiver livre, vai direto para o formulário de adicionar.
+function abrirAcoesCelula(pos) {
+  const items = _posMapaCache[pos];
+  if (!items || !items.length) { abrirModalPosicaoNova(pos); return; }
+
+  document.getElementById('ap-titulo').textContent = pos;
+  const box = document.getElementById('ap-lista');
+  box.innerHTML = items.map((r, i) => {
+    const rStr = JSON.stringify(r).replace(/"/g, '&quot;');
+    return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px;margin-bottom:8px" data-item="${rStr}">
+      <div style="font-size:.82rem;font-weight:700;color:var(--text)">${r.produto_nome || r.codigo}</div>
+      <div style="font-size:.68rem;color:var(--text3);margin:2px 0 8px">${r.codigo} · Lote ${r.lote||'—'} · Arm. ${r.armazem||'—'} · Qtd ${r.quantidade}</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick='abrirAcoesSubstituir(${i}, "${pos}")'>🔁 Substituir</button>
+        <button class="btn btn-danger btn-sm" style="flex:1" onclick="fecharModalAcoesPos();marcarExpedido('${r.id}','${pos}','${(r.produto_nome||r.codigo||'').replace(/'/g,"\\'")}')">🚚 Expedir</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('ap-btn-adicionar').setAttribute('onclick', `fecharModalAcoesPos();abrirModalPosicaoNova('${pos}')`);
+  document.getElementById('modal-acoes-pos').classList.add('open');
+}
+function abrirAcoesSubstituir(idx, pos) {
+  const item = _posMapaCache[pos][idx];
+  fecharModalAcoesPos();
+  abrirModalPosicao(item);
+}
+function fecharModalAcoesPos() {
+  document.getElementById('modal-acoes-pos').classList.remove('open');
 }
 
 function abrirModalPosicaoNova(posicao) {
