@@ -424,6 +424,19 @@ td .sub { font-size:.75rem; color:var(--text-3); margin-top:2px; }
 
 .chips { display:flex; gap:5px; flex-wrap:wrap; }
 
+/* Opções de motivo */
+.mot-opt {
+  display:flex; align-items:center; gap:11px;
+  padding:10px 13px; margin-bottom:6px; cursor:pointer;
+  background:var(--surface-2); border:1px solid var(--line-2); border-radius:var(--r-sm);
+  transition:border-color .12s, background .12s;
+}
+.mot-opt:hover { border-color:var(--text-3); }
+.mot-opt.sel { border-color:var(--accent); background:var(--accent-sf); }
+.mot-opt input { accent-color:var(--accent); width:17px; height:17px; flex-shrink:0; }
+.mot-txt { flex:1; font-size:.875rem; font-weight:500; }
+textarea { resize:vertical; min-height:56px; font-family:var(--sans); }
+
 /* ═══════════ SEGMENTOS / ABAS INTERNAS ═══════════ */
 .seg {
   display:inline-flex; padding:3px; gap:2px;
@@ -1042,6 +1055,7 @@ td .sub { font-size:.75rem; color:var(--text-3); margin-top:2px; }
   </div>
 
   <div class="kpis" id="a-kpis"></div>
+  <div id="a-motivos"></div>
 
   <div class="panel">
     <div class="panel-head">
@@ -1054,16 +1068,22 @@ td .sub { font-size:.75rem; color:var(--text-3); margin-top:2px; }
           <input type="text" id="a-busca" placeholder="produto, código ou lote" oninput="renderAcuracia()"></div>
         <div class="field"><label for="a-tipo">Mostrar</label>
           <select id="a-tipo" onchange="renderAcuracia()">
-            <option value="">Todos</option><option value="ok">Sem divergência</option><option value="div">Com divergência</option>
+            <option value="">Todos</option>
+            <option value="ok">Sem divergência</option>
+            <option value="div">Com divergência</option>
+            <option value="conta">Só as que contam</option>
+            <option value="fora">Justificadas fora</option>
+            <option value="aberta">Divergência em aberto</option>
+            <option value="resolvida">Já resolvidas</option>
           </select></div>
       </div>
     </div>
     <div class="tbl-wrap">
       <table>
         <thead><tr>
-          <th>Produto</th><th>Código</th><th>Lote</th><th>Arm.</th>
+          <th>Produto</th><th>Lote</th><th>Arm.</th>
           <th class="num">Sistema</th><th class="num">Contado</th><th class="num">Diferença</th>
-          <th class="num">Acurácia</th><th>Quando</th>
+          <th>Motivo</th><th>Quando</th><th></th>
         </tr></thead>
         <tbody id="a-tbody"></tbody>
       </table>
@@ -1125,6 +1145,33 @@ td .sub { font-size:.75rem; color:var(--text-3); margin-top:2px; }
     <div class="modal-body flush" id="mrev-body"></div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="fecharModal('modal-revisao')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-justificar">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="mj-titulo">Justificar divergência</div>
+      <div class="modal-sub" id="mj-sub">—</div>
+    </div>
+    <div class="modal-body">
+      <div class="field" style="margin-bottom:14px">
+        <label>Motivo</label>
+        <div id="mj-lista"></div>
+      </div>
+      <div class="field">
+        <label for="mj-obs">Observação <span style="text-transform:none;font-weight:400;color:var(--text-3)">— opcional, exceto em "Outro"</span></label>
+        <textarea id="mj-obs" rows="2" placeholder="Detalhe que ajude a entender depois"></textarea>
+      </div>
+      <div id="mj-efeito" style="margin-top:14px"></div>
+      <input type="hidden" id="mj-ctx">
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-justificar')">Cancelar</button>
+      <button class="btn btn-primary" id="mj-btn" onclick="confirmarJustificativa()">
+        <span class="spin" id="mj-spin"></span>Confirmar
+      </button>
     </div>
   </div>
 </div>
@@ -1427,6 +1474,27 @@ function limitePalete(nomeOuCodigo, codigo) {
   const n = PRODUTOS_POR_NOME[String(nomeOuCodigo ?? '').trim().toUpperCase()];
   return n ? n[2] : null;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOTIVOS DE DIVERGÊNCIA
+   `conta:false` = o produto existe, só não está no drive. Não é
+   erro de estoque, então sai da acurácia.
+   `conta:true`  = ninguém sabe onde está, ou sobrou sem origem.
+   É erro de verdade e precisa aparecer no indicador.
+   ═══════════════════════════════════════════════════════════════ */
+const MOTIVOS = [
+  { id:'envase',        texto:'Produto no envase',                  conta:false },
+  { id:'qualidade',     texto:'Produto retido com a qualidade',     conta:false },
+  { id:'transferencia', texto:'Em transferência entre armazéns',    conta:false },
+  { id:'faturado',      texto:'Faturado, aguardando carregamento',  conta:false },
+  { id:'erp',           texto:'Apontamento do ERP atrasado',        conta:false },
+  { id:'nao_encontrado',texto:'Não encontrado no estoque',          conta:true  },
+  { id:'sobra',         texto:'Sobra sem origem identificada',      conta:true  },
+  { id:'erro_contagem', texto:'Erro de contagem',                   conta:true  },
+  { id:'outro',         texto:'Outro (descrever abaixo)',           conta:true  },
+];
+const motivoPorId = id => MOTIVOS.find(m => m.id === id) || null;
+const textoMotivo = id => motivoPorId(id)?.texto || (id || '—');
 
 /* ═══════════════════════════════════════════════════════════════
    HELPERS
@@ -2100,7 +2168,7 @@ function kpi(label, valor, foot, cls = '') {
 function pct(a, b) { return b ? num1(a / b * 100) + '%' : '—'; }
 
 /* ── A ÚNICA função de validação. "Validar tudo" é um laço nela. ── */
-async function aplicarValidacao(linha) {
+async function aplicarValidacao(linha, just = null) {
   if (linha.validado) return { pulado:true };
 
   const contado = linha.contado ?? 0;
@@ -2132,6 +2200,9 @@ async function aplicarValidacao(linha) {
     ocupacao_ativa: false,
     ciclo_id:      _ciclo?.id ?? null,
     created_at:    agora,
+    motivo:         just?.motivo || null,
+    justificativa:  just?.justificativa || null,
+    conta_acuracia: just ? just.conta_acuracia : true,
   });
   if (e1) throw e1;
 
@@ -2177,20 +2248,102 @@ async function aplicarValidacao(linha) {
   return { ok:true };
 }
 
+/* Abre o modal. `ctx` diz o que fazer quando confirmar:
+   {tipo:'validar', idx} · {tipo:'sobra', idx} · {tipo:'resolver', id} */
+let _jctx = null;
+
+function abrirJustificar(ctx, titulo, sub, motivoAtual = null) {
+  _jctx = ctx;
+  $('mj-titulo').textContent = titulo;
+  $('mj-sub').textContent = sub;
+  $('mj-obs').value = '';
+  $('mj-efeito').innerHTML = '';
+
+  $('mj-lista').innerHTML = MOTIVOS.map(m => `
+    <label class="mot-opt${m.id === motivoAtual ? ' sel' : ''}" onclick="escolherMotivo(this,'${m.id}')">
+      <input type="radio" name="mj-motivo" value="${m.id}"${m.id === motivoAtual ? ' checked' : ''}>
+      <span class="mot-txt">${esc(m.texto)}</span>
+      <span class="tag ${m.conta ? 't-neg' : 't-ok'}">${m.conta ? 'conta na acurácia' : 'fora da acurácia'}</span>
+    </label>`).join('');
+
+  if (motivoAtual) mostrarEfeitoMotivo(motivoAtual);
+  abrirModal('modal-justificar');
+}
+
+function escolherMotivo(el, id) {
+  el.parentElement.querySelectorAll('.mot-opt').forEach(o => o.classList.remove('sel'));
+  el.classList.add('sel');
+  el.querySelector('input').checked = true;
+  mostrarEfeitoMotivo(id);
+}
+
+function mostrarEfeitoMotivo(id) {
+  const m = motivoPorId(id);
+  if (!m) return;
+  $('mj-efeito').innerHTML = m.conta
+    ? `<div class="aviso a-neg"><span class="aviso-ico">!</span><div><b>Conta como erro</b>Esta divergência entra na acurácia — é perda ou sobra real de estoque.</div></div>`
+    : `<div class="aviso a-info"><span class="aviso-ico">✓</span><div><b>Fora da acurácia</b>O produto existe, só não está no drive. Continua visível no histórico com o motivo.</div></div>`;
+}
+
+async function confirmarJustificativa() {
+  const sel = document.querySelector('input[name="mj-motivo"]:checked');
+  if (!sel) { toast('Escolha um motivo.', 'warn'); return; }
+
+  const m = motivoPorId(sel.value);
+  const obs = $('mj-obs').value.trim();
+  if (m.id === 'outro' && !obs) { toast('Descreva o motivo no campo de observação.', 'warn'); $('mj-obs').focus(); return; }
+
+  const just = { motivo:m.id, justificativa:obs || m.texto, conta_acuracia:m.conta };
+
+  busy('mj-btn', 'mj-spin', true);
+  try {
+    if (_jctx.tipo === 'resolver') {
+      const { error } = await sb.from('historico').update({
+        ...just,
+        resolucao:     obs || m.texto,
+        resolvido_em:  new Date().toISOString(),
+        resolvido_por: 'painel',
+      }).eq('id', _jctx.id);
+      if (error) throw error;
+      fecharModal('modal-justificar');
+      toast('Divergência marcada como resolvida.', 'ok');
+      carregarAcuracia();
+    } else {
+      const linha = window._vVisiveis?.[_jctx.idx];
+      if (!linha) throw new Error('linha não encontrada');
+      await aplicarValidacao(linha, just);
+      fecharModal('modal-justificar');
+      toast(`${linha.produto} validado · ${m.texto}.`, 'ok', 4500);
+      carregarValidacao();
+    }
+  } catch (e) {
+    erro('Falha ao registrar', e);
+  } finally {
+    busy('mj-btn', 'mj-spin', false);
+  }
+}
+
 async function validarLinha(idx) {
   const linha = window._vVisiveis?.[idx];
   if (!linha) return;
 
-  if (linha.contado === null) {
-    if (!confirm(`${linha.produto}\nLote ${linha.lote} · ${linha.armazem}\n\nO sistema tem ${qtdUn(linha.sistema, linha.codigo, linha.produto)} e nada foi encontrado.\n\nRegistrar como falta total?`)) return;
-  } else if (linha.div !== 0 && linha.div !== null &&
-      !confirm(`${linha.produto}\nLote ${linha.lote} · ${linha.armazem}\n\nSistema: ${num(linha.sistema)}\nContado: ${num(linha.contado)}\nDiferença: ${linha.div > 0 ? '+' : ''}${num(linha.div)}\n\nValidar com essa divergência?`)) return;
+  // Sem divergência entra direto. Divergente exige motivo — é o
+  // que separa acurácia de verdade de número enfeitado.
+  if (linha.div === 0) {
+    try {
+      await aplicarValidacao(linha);
+      toast(`${linha.produto} validado.`, 'ok');
+      carregarValidacao();
+    } catch (e) { erro('Falha ao validar', e); }
+    return;
+  }
 
-  try {
-    await aplicarValidacao(linha);
-    toast(`${linha.produto} validado.`, 'ok');
-    carregarValidacao();
-  } catch (e) { erro('Falha ao validar', e); }
+  const sub = linha.contado === null
+    ? `${linha.produto} · lote ${linha.lote} — sistema tem ${qtdUn(linha.sistema, linha.codigo, linha.produto)} e nada foi encontrado`
+    : `${linha.produto} · lote ${linha.lote} — sistema ${num(linha.sistema)}, contado ${num(linha.contado)} (${linha.div > 0 ? '+' : ''}${num(linha.div)})`;
+
+  const sugerido = linha.contado === null ? 'nao_encontrado' : (linha.div > 0 ? 'sobra' : null);
+  abrirJustificar({ tipo:'validar', idx }, 'Por que essa divergência?', sub, sugerido);
 }
 
 async function validarSemDivergencia() {
@@ -2274,15 +2427,13 @@ async function reatribuir(idx, chaveDestino) {
   } catch (e) { erro('Falha ao reatribuir', e); }
 }
 
-async function aceitarSobra(idx) {
+function aceitarSobra(idx) {
   const l = window._vVisiveis?.[idx];
   if (!l) return;
-  if (!confirm(`Aceitar ${qtdUn(l.contado, l.codigo, l.produto)} de "${l.produto}" (lote ${l.lote}) como sobra?\n\nEntra no histórico como divergência positiva e conta na acurácia.`)) return;
-  try {
-    await aplicarValidacao(l);
-    toast('Sobra registrada.', 'ok');
-    carregarValidacao();
-  } catch (e) { erro('Falha ao aceitar', e); }
+  abrirJustificar({ tipo:'validar', idx },
+    'Por que esse item apareceu?',
+    `${l.produto} · lote ${l.lote} · ${qtdUn(l.contado, l.codigo, l.produto)} sem saldo no sistema`,
+    'sobra');
 }
 
 async function descartarExtra(idx) {
@@ -3040,24 +3191,55 @@ function renderAcuracia() {
   const totalLotes = unicos.length;
   const okLotes    = unicos.filter(r => (Number(r.divergencia) || 0) === 0).length;
   const sistemico  = unicos.reduce((s, r) => s + (Number(r.saldo_sistema) || 0), 0);
-  const contado    = unicos.reduce((s, r) => s + (Number(r.quantidade) || 0), 0);
   const desvio     = unicos.reduce((s, r) => s + Math.abs(Number(r.divergencia) || 0), 0);
 
+  // Ajustada: tira as divergências justificadas por motivo que não
+  // é erro de estoque (envase, qualidade, faturado...). O produto
+  // existe, só não está no drive.
+  const justificadas = unicos.filter(r => (Number(r.divergencia) || 0) !== 0 && r.conta_acuracia === false);
+  const considerados = unicos.filter(r => r.conta_acuracia !== false);
+  const okAjust      = considerados.filter(r => (Number(r.divergencia) || 0) === 0).length;
+  const resolvidas   = unicos.filter(r => r.resolvido_em).length;
+
+  const porMotivo = {};
+  for (const r of unicos) if (r.motivo) porMotivo[r.motivo] = (porMotivo[r.motivo] || 0) + 1;
+  const topMotivos = Object.entries(porMotivo).sort((a, b) => b[1] - a[1]).slice(0, 3)
+    .map(([m, n]) => `${textoMotivo(m)}: ${n}`).join(' · ');
+
   $('a-kpis').innerHTML = `
-    ${kpi('Acurácia por lote', pct(okLotes, totalLotes), `${num(okLotes)} de ${num(totalLotes)} lotes exatos`, okLotes === totalLotes ? 'is-pos' : (okLotes / totalLotes > .95 ? 'is-warn' : 'is-neg'))}
-    ${kpi('Acurácia por unidade', sistemico ? pct(sistemico - desvio, sistemico) : '—', `${num(desvio)} un. de desvio absoluto`, 'is-info')}
-    ${kpi('Lotes conferidos', num(totalLotes), 'sem repetir o mesmo lote')}
-    ${kpi('Sistema × contado', num(sistemico), `contado: ${num(contado)}`, 'is-alt')}`;
+    ${kpi('Acurácia ajustada', pct(okAjust, considerados.length),
+          `${num(okAjust)} de ${num(considerados.length)} lotes · sem as justificadas`,
+          okAjust === considerados.length ? 'is-pos' : (okAjust / considerados.length > .95 ? 'is-warn' : 'is-neg'))}
+    ${kpi('Acurácia bruta', pct(okLotes, totalLotes), `${num(okLotes)} de ${num(totalLotes)} lotes, sem exceção`)}
+    ${kpi('Justificadas fora', num(justificadas.length), justificadas.length ? 'produto existe, fora do drive' : 'nenhuma', justificadas.length ? 'is-info' : '')}
+    ${kpi('Já resolvidas', num(resolvidas), resolvidas ? 'revisadas depois' : 'nenhuma', 'is-alt')}
+    ${kpi('Desvio absoluto', num(desvio), `sobre ${num(sistemico)} do sistema`)}`;
+
+  $('a-motivos').innerHTML = topMotivos
+    ? `<div class="aviso a-info"><span class="aviso-ico">◇</span><div><b>Motivos mais frequentes</b>${esc(topMotivos)}</div></div>`
+    : '';
 
   const dados = unicos.filter(r => {
     const div = Number(r.divergencia) || 0;
-    if (t === 'ok'  && div !== 0) return false;
-    if (t === 'div' && div === 0) return false;
+    if (t === 'ok'        && div !== 0) return false;
+    if (t === 'div'       && div === 0) return false;
+    if (t === 'conta'     && (div === 0 || r.conta_acuracia === false)) return false;
+    if (t === 'fora'      && r.conta_acuracia !== false) return false;
+    if (t === 'aberta'    && (div === 0 || r.resolvido_em)) return false;
+    if (t === 'resolvida' && !r.resolvido_em) return false;
     if (q && ![r.produto_nome, r.codigo, r.lote].join(' ').toUpperCase().includes(q)) return false;
     return true;
-  }).sort((a, b) => Math.abs(Number(b.divergencia) || 0) - Math.abs(Number(a.divergencia) || 0));
+  }).sort((a, b) => {
+    // Em aberto e contando na acurácia primeiro: é o que precisa de você.
+    const pa = (Number(a.divergencia) || 0) !== 0 && !a.resolvido_em && a.conta_acuracia !== false ? 0 : 1;
+    const pb = (Number(b.divergencia) || 0) !== 0 && !b.resolvido_em && b.conta_acuracia !== false ? 0 : 1;
+    return pa - pb || Math.abs(Number(b.divergencia) || 0) - Math.abs(Number(a.divergencia) || 0);
+  });
 
-  $('a-cnt').textContent = `${num(dados.length)} lote(s)`;
+  const abertas = dados.filter(r => (Number(r.divergencia) || 0) !== 0 && !r.resolvido_em && r.conta_acuracia !== false).length;
+  $('a-cnt').textContent = abertas
+    ? `${num(dados.length)} lote(s) · ${num(abertas)} divergência(s) em aberto`
+    : `${num(dados.length)} lote(s)`;
   window._acVisiveis = dados;
 
   if (!dados.length) { $('a-tbody').innerHTML = vazio('Nada no período', 'Amplie as datas ou valide contagens.', 9); return; }
@@ -3065,20 +3247,49 @@ function renderAcuracia() {
   $('a-tbody').innerHTML = dados.slice(0, 500).map(r => {
     const div = Number(r.divergencia) || 0;
     const sis = Number(r.saldo_sistema) || 0;
-    const ac  = sis ? Math.max(0, 100 - Math.abs(div) / sis * 100) : (div === 0 ? 100 : 0);
-    return `<tr>
-      <td class="nome">${esc(r.produto_nome || r.codigo)}<div class="sub">${badgeFilial(r.filial)}</div></td>
-      <td class="mono">${esc(r.codigo)}</td>
+    const fora = r.conta_acuracia === false;
+
+    const est = div === 0 ? 'ok' : (fora ? 'fora' : (div > 0 ? 'sobra' : 'falta'));
+
+    const motivo = div === 0 ? '<span class="num-zero">—</span>'
+      : r.resolvido_em
+        ? `<span class="tag t-ok">Resolvida</span><div class="sub">${esc(r.resolucao || textoMotivo(r.motivo))}</div>`
+        : r.motivo
+          ? `<span class="tag ${fora ? 't-info' : 't-neg'}">${esc(textoMotivo(r.motivo))}</span>${
+              r.justificativa && r.justificativa !== textoMotivo(r.motivo)
+                ? `<div class="sub">${esc(r.justificativa)}</div>` : ''}`
+          : '<span class="tag t-mute">sem justificativa</span>';
+
+    const acao = div !== 0 && !r.resolvido_em
+      ? `<button class="btn btn-sm" onclick="abrirResolver('${esc(r.id)}')">Resolver</button>`
+      : (r.resolvido_em ? `<span class="section-note">${fmtDia(r.resolvido_em)}</span>` : '');
+
+    return `<tr class="st-${est}${r.resolvido_em ? ' st-done' : ''}">
+      <td class="nome">${esc(r.produto_nome || r.codigo)}<div class="sub">${esc(r.codigo)} · ${badgeFilial(r.filial)}</div></td>
       <td class="mono">${esc(r.lote || '—')}</td>
       <td class="mono">${esc(r.armazem || '—')}</td>
       <td class="num">${num(sis)}</td>
       <td class="num strong">${num(r.quantidade)}</td>
       <td class="num">${div === 0 ? '<span class="num-zero">0</span>'
         : `<span class="${div > 0 ? 'num-pos' : 'num-neg'} strong">${div > 0 ? '+' : ''}${num(div)}</span>`}</td>
-      <td class="num"><span class="${ac === 100 ? 'num-pos' : (ac >= 95 ? '' : 'num-neg')}">${num1(ac)}%</span></td>
+      <td>${motivo}</td>
       <td class="mono">${fmtDia(r.created_at)}</td>
+      <td class="acao">${acao}</td>
     </tr>`;
   }).join('');
+}
+
+/* Divergência não é sentença: o palete some numa semana e aparece
+   na outra. Aqui você revisa depois e registra o desfecho. */
+function abrirResolver(id) {
+  const r = (window._acVisiveis || []).find(x => String(x.id) === String(id));
+  if (!r) return;
+  const div = Number(r.divergencia) || 0;
+  abrirJustificar(
+    { tipo:'resolver', id },
+    'Resolver divergência',
+    `${r.produto_nome || r.codigo} · lote ${r.lote} — diferença de ${div > 0 ? '+' : ''}${num(div)}`,
+    r.motivo || null);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3090,8 +3301,11 @@ function exportarCSV(qual) {
       filtrarRegistros().map(r => [r.produto_nome, r.codigo, r.lote, r.armazem, r.posicao, r.quantidade, r.usuario, r.status, fmtTS(r.created_at)])],
     historico: () => [['Produto','Código','Lote','Armazém','Posição','Sistema','Contado','Diferença','Operador','Quando'],
       _historico.filter(r => daFilial(r.filial)).map(r => [r.produto_nome, r.codigo, r.lote, r.armazem, r.posicao, r.saldo_sistema, r.quantidade, r.divergencia, r.usuario, fmtTS(r.created_at)])],
-    acuracia: () => [['Produto','Código','Lote','Armazém','Sistema','Contado','Diferença','Quando'],
-      (window._acVisiveis || []).map(r => [r.produto_nome, r.codigo, r.lote, r.armazem, r.saldo_sistema, r.quantidade, r.divergencia, fmtDia(r.created_at)])],
+    acuracia: () => [['Produto','Código','Lote','Armazém','Sistema','Contado','Diferença','Motivo','Conta na acurácia','Resolvida em','Quando'],
+      (window._acVisiveis || []).map(r => [r.produto_nome, r.codigo, r.lote, r.armazem,
+        r.saldo_sistema, r.quantidade, r.divergencia,
+        r.motivo ? textoMotivo(r.motivo) : '', r.conta_acuracia === false ? 'não' : 'sim',
+        r.resolvido_em ? fmtDia(r.resolvido_em) : '', fmtDia(r.created_at)])],
   };
   const [cab, linhas] = mapas[qual]();
   if (!linhas.length) { toast('Nada para exportar no filtro atual.', 'warn'); return; }
