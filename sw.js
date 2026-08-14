@@ -1,7 +1,7 @@
 /* Service Worker — Simbiose Operador
    v3: network-first no HTML (deploy novo chega na hora),
        cache-first no resto, API nunca passa pelo cache. */
-const CACHE = 'simbiose-v10';
+const CACHE = 'simbiose-v13';
 const ESSENCIAIS = ['./mobile.html', './manifest.json'];
 
 self.addEventListener('install', e => {
