@@ -478,20 +478,33 @@ html[data-tema="claro"]  .ico-lua { display:none; }
 .prev-val { font-size:.8rem; font-weight:700; font-family:var(--mono); }
 
 /* ═══════════ MAPA DRIVE-IN ═══════════ */
-.mapa-scroll { overflow-x:auto; padding-bottom:8px; -webkit-overflow-scrolling:touch; }
-.mapa-linha { display:flex; align-items:center; gap:5px; margin-bottom:4px; }
-.mapa-lbl {
-  width:24px; flex-shrink:0; font-family:var(--mono);
-  font-size:.7rem; color:var(--text3); font-weight:700; text-align:right; padding-right:3px;
+/* Mesma ideia do painel: um bloco por linha do drive-in, com os
+   andares empilhados como são de verdade. */
+.mapa-scroll { padding-bottom:6px; }
+.mapa-grade { display:grid; gap:10px; grid-template-columns:repeat(auto-fill, minmax(148px, 1fr)); }
+
+.mlinha {
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:var(--r-sm); padding:8px 9px 9px;
 }
-.mapa-grupo { display:flex; gap:3px; }
+.mlinha.vazia   { opacity:.5; }
+.mlinha.tem-hit { border-color:var(--green); }
+
+.ml-head { display:flex; align-items:baseline; justify-content:space-between; gap:6px; margin-bottom:7px; }
+.ml-nome { font-family:var(--mono); font-size:.78rem; font-weight:800; color:var(--text); }
+.ml-ocup { font-family:var(--mono); font-size:.66rem; color:var(--text3); }
+
+.ml-and { display:flex; align-items:center; gap:3px; margin-bottom:3px; }
+.ml-and:last-child { margin-bottom:0; }
+.ml-and-n { width:10px; flex-shrink:0; text-align:right; font-family:var(--mono); font-size:.6rem; color:var(--text3); }
+
 .mapa-cel {
-  width:26px; height:26px; border-radius:5px; flex-shrink:0;
-  border:1px solid var(--border2); background:var(--bg3);
-  cursor:pointer; transition:transform .1s;
+  width:21px; height:21px; border-radius:4px; flex-shrink:0;
+  border:1px solid var(--border2); background:var(--bg2);
+  cursor:pointer; padding:0;
   display:flex; align-items:center; justify-content:center;
-  font-family:var(--mono); font-size:.6rem; font-weight:700; color:transparent;
-  padding:0;
+  font-family:var(--mono); font-size:.55rem; font-weight:700; color:transparent;
+  transition:transform .1s;
 }
 .mapa-cel.ocupada  { background:var(--ok);      border-color:var(--ok);      color:#04240F; }
 .mapa-cel.multi    { background:var(--amber);   border-color:var(--amber);   color:#2E1E00; }
@@ -500,8 +513,11 @@ html[data-tema="claro"]  .ico-lua { display:none; }
 html[data-tema="claro"] .mapa-cel.ocupada,
 html[data-tema="claro"] .mapa-cel.multi,
 html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
-.mapa-cel:active  { transform:scale(1.35); }
-.mapa-sep { width:11px; flex-shrink:0; }
+.mapa-cel:active { transform:scale(1.3); }
+
+.ml-bar { height:3px; background:var(--bg4); border-radius:100px; overflow:hidden; margin-top:7px; }
+.ml-bar > i { display:block; height:100%; background:var(--ok); border-radius:100px; }
+
 .mapa-legenda { display:flex; gap:14px; flex-wrap:wrap; font-size:.66rem; color:var(--text3); margin-top:10px; }
 .mapa-legenda span { display:flex; align-items:center; gap:5px; }
 .mapa-key { width:11px; height:11px; border-radius:3px; border:1px solid var(--border2); }
@@ -676,12 +692,12 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
       <div class="grid2">
         <div class="field">
           <label for="av-lote">Lote *</label>
-          <input type="text" id="av-lote" class="inp-up" placeholder="Ex: 003-22-470" enterkeyhint="next"
+          <input type="text" id="av-lote" class="inp-up" placeholder="Ex: 003-22-470" autocomplete="off" enterkeyhint="next"
                  >
         </div>
         <div class="field">
           <label for="av-armazem">Armazém *</label>
-          <input type="text" id="av-armazem" class="inp-up" placeholder="Ex: 42, D7" enterkeyhint="next">
+          <input type="text" id="av-armazem" class="inp-up" placeholder="Ex: 42, D7" autocomplete="off" enterkeyhint="next">
         </div>
       </div>
       <div class="field">
@@ -695,7 +711,7 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
 
       <div class="field">
         <label for="av-quantidade">Quantidade contada *</label>
-        <input type="number" id="av-quantidade" class="inp-qtd" placeholder="0" min="0" step="1"
+        <input type="number" id="av-quantidade" class="inp-qtd" placeholder="0" min="0" step="1" autocomplete="off"
                inputmode="numeric" enterkeyhint="done" onkeydown="if(event.key==='Enter')lancar()">
       </div>
 
@@ -838,7 +854,7 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
 
     <div class="field">
       <label for="tfm-qtd">Quantidade movida *</label>
-      <input type="number" id="tfm-qtd" class="inp-qtd" min="0" step="1" inputmode="numeric" oninput="avisarParcial()">
+      <input type="number" id="tfm-qtd" class="inp-qtd" min="0" step="1" inputmode="numeric" autocomplete="off" oninput="avisarParcial()">
       <div class="hint" id="tfm-qtd-hint"></div>
     </div>
 
@@ -865,8 +881,8 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
     <div class="field"><label for="ed-produto">Nome do produto</label>
       <input type="text" id="ed-produto"></div>
     <div class="grid2">
-      <div class="field"><label for="ed-lote">Lote</label><input type="text" id="ed-lote" class="inp-up"></div>
-      <div class="field"><label for="ed-armazem">Armazém</label><input type="text" id="ed-armazem" class="inp-up"></div>
+      <div class="field"><label for="ed-lote">Lote</label><input type="text" id="ed-lote" class="inp-up" autocomplete="off"></div>
+      <div class="field"><label for="ed-armazem">Armazém</label><input type="text" id="ed-armazem" class="inp-up" autocomplete="off"></div>
     </div>
     <div class="field">
       <label for="ed-posicao">Posição <span class="opt">— opcional</span></label>
@@ -874,7 +890,7 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
       <div class="ac-drop" id="ed-posicao-drop"></div>
     </div>
     <div class="field"><label for="ed-quantidade">Quantidade</label>
-      <input type="number" id="ed-quantidade" class="inp-qtd" min="0" step="1" inputmode="numeric"></div>
+      <input type="number" id="ed-quantidade" class="inp-qtd" min="0" step="1" inputmode="numeric" autocomplete="off"></div>
     <input type="hidden" id="ed-id">
 
     <div class="modal-foot">
@@ -916,11 +932,11 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
     <div class="field"><label for="mp-produto">Nome do produto</label>
       <input type="text" id="mp-produto" placeholder="Preenchido automaticamente"></div>
     <div class="grid2">
-      <div class="field"><label for="mp-lote">Lote *</label><input type="text" id="mp-lote" class="inp-up"></div>
-      <div class="field"><label for="mp-armazem">Armazém *</label><input type="text" id="mp-armazem" class="inp-up"></div>
+      <div class="field"><label for="mp-lote">Lote *</label><input type="text" id="mp-lote" class="inp-up" autocomplete="off"></div>
+      <div class="field"><label for="mp-armazem">Armazém *</label><input type="text" id="mp-armazem" class="inp-up" autocomplete="off"></div>
     </div>
     <div class="field"><label for="mp-quantidade">Quantidade *</label>
-      <input type="number" id="mp-quantidade" class="inp-qtd" min="0" step="1" inputmode="numeric"></div>
+      <input type="number" id="mp-quantidade" class="inp-qtd" min="0" step="1" inputmode="numeric" autocomplete="off"></div>
     <input type="hidden" id="mp-id">
 
     <button class="btn btn-danger" id="mp-btn-expedir" hidden style="margin-top:4px"
@@ -1500,42 +1516,49 @@ async function carregarCicloAtual() {
   } catch (e) { console.warn('[ciclo]', e); _ciclo = null; _cicloAtual = null; }
 }
 
+/* A decisão olha o ITEM, não a vaga inteira:
+     mesmo código+lote já ali            -> atualizar
+       (se veio de guardar produção/ajuste manual, a contagem
+        CONFIRMA aquele registro em vez de criar um lançamento
+        solto — o rastro da produção continua existindo)
+     código+lote diferente, mas contado  -> soma (outro produto
+       no mesmo palete)
+     nada parecido na vaga               -> insere
+
+   O que sobra do ciclo anterior SEM ter sido tocado por nenhuma
+   contagem é o único caso que vai para revisão — não a vaga
+   inteira só por ter sido "a primeira vez que alguém mexeu nela". */
 function planejarOcupacao(posicao, codigo, lote) {
   const itens = _posOcupadas[posicao] || [];
-  const ciclo = _cicloAtual ?? 0;
 
-  const doCiclo    = itens.filter(r => (r.ciclo_id ?? 0) === ciclo);
-  const anteriores = itens.filter(r => (r.ciclo_id ?? 0) !== ciclo);
-  const mesmoItem  = doCiclo.find(r => chave(r.codigo) === chave(codigo) &&
-                                       chave(r.lote)   === chave(lote));
+  const mesmoItem = itens.find(r => chave(r.codigo) === chave(codigo) &&
+                                     chave(r.lote)   === chave(lote));
+  const outros = itens.filter(r => r !== mesmoItem);
 
   return {
-    naoConfirmar: doCiclo.length === 0 ? anteriores : [],
-    atualizar:    mesmoItem || null,
-    acao: mesmoItem ? 'atualizar'
-        : (doCiclo.length ? 'somar'
-        : (anteriores.length ? 'substituir' : 'inserir')),
+    atualizar: mesmoItem || null,
+    // Confirma quem já era produção/ajuste manual em vez de recriar.
+    confirmarExistente: mesmoItem && mesmoItem._tab === 'historico' && mesmoItem.origem !== 'contagem',
+    acao: mesmoItem ? 'atualizar' : (outros.length ? 'somar' : 'inserir'),
   };
 }
 
-async function aplicarOcupacao(plano) {
-  for (const r of plano.naoConfirmar) {
-    const patch = r._tab === 'historico'
-      ? { ocupacao_ativa:false, confirmado:false, revisado_em:null }
-      : { ocupacao_ativa:false };
-    const { error } = await sb.from(r._tab).update(patch).eq('id', r.id);
-    if (error) throw error;
-  }
+/* Roda ao ENCERRAR a contagem (não a cada lançamento): tudo que
+   ficou do ciclo anterior e nenhuma contagem deste ciclo tocou
+   vira "não confirmado". É aqui, e só aqui, que a revisão nasce. */
+function itensParaRevisar(ocupacaoAtual, tocadosNesteCiclo) {
+  const ciclo = _cicloAtual ?? 0;
+  return Object.values(ocupacaoAtual).flat().filter(r =>
+    (r.ciclo_id ?? 0) !== ciclo && !tocadosNesteCiclo.has(String(r.id)));
 }
 
 function textoDoPlano(plano, posicao) {
-  const n = plano.naoConfirmar.length;
-  const extra = n ? ` · ${n} item(ns) do ciclo anterior foram para revisão` : '';
   switch (plano.acao) {
-    case 'atualizar':  return `Quantidade da vaga ${posicao} atualizada.`;
-    case 'somar':      return `Somado ao palete da vaga ${posicao}.`;
-    case 'substituir': return `Vaga ${posicao} atualizada${extra}.`;
-    default:           return `Vaga ${posicao} ocupada.`;
+    case 'atualizar': return plano.confirmarExistente
+      ? `Confirmado · a produção guardada nesta vaga bate com a contagem.`
+      : `Quantidade da vaga ${posicao} atualizada.`;
+    case 'somar':     return `Somado ao palete da vaga ${posicao}.`;
+    default:          return `Vaga ${posicao} ocupada.`;
   }
 }
 
@@ -1717,8 +1740,8 @@ async function lancar() {
   try {
     let idLancado;
 
-    if (plano?.acao === 'atualizar') {
-      // Recontagem do mesmo palete dentro do ciclo: corrige, não duplica.
+    if (plano?.acao === 'atualizar' && !plano.confirmarExistente) {
+      // Recontagem do mesmo palete DENTRO deste ciclo: corrige, não duplica.
       const alvo = plano.atualizar;
       const { error } = await sb.from(alvo._tab)
         .update({ quantidade:qtd, armazem, usuario:OPERADOR, updated_at:new Date().toISOString() })
@@ -1726,6 +1749,10 @@ async function lancar() {
       if (error) throw error;
       idLancado = alvo.id;
     } else {
+      // Produto novo na vaga, outro produto no mesmo palete, OU
+      // confirmação de algo que já estava lá como produção/ajuste
+      // manual — nesses três casos a contagem vira lançamento de
+      // verdade, para não desaparecer da Validação.
       const { data, error } = await sb.from('lancamentos').insert({
         codigo,
         produto_nome: produto || codigo,
@@ -1736,13 +1763,20 @@ async function lancar() {
         status:       'pendente',
         recontagem:   false,
         posicao:      posicao || null,
-        ocupacao_ativa: !!posicao,   // a contagem volta a alimentar o mapa
+        ocupacao_ativa: !!posicao,
         ciclo_id:     _cicloAtual,
       }).select().single();
       if (error) throw error;
       idLancado = data.id;
 
-      if (plano) await aplicarOcupacao(plano);
+      if (plano?.confirmarExistente) {
+        // Marca o registro de produção como confirmado por esta
+        // contagem, mas o mantém — é o rastro de quem guardou.
+        const { error:eC } = await sb.from('historico').update({
+          confirmado: true, revisado_em: new Date().toISOString(),
+        }).eq('id', plano.atualizar.id);
+        if (eC) throw eC;
+      }
     }
 
     const foraDoSaldo = _chavesSaldo.size && !_chavesSaldo.has(k);
@@ -2413,32 +2447,41 @@ function renderMapa() {
 
   let total = 0, ocupadas = 0, achados = 0;
 
-  const html = Object.keys(linhas).sort().map(ln => [ln, linhas[ln]]).map(([ln, andares]) => {
-    const grupos = Object.keys(andares).sort((a,b)=>a-b).map(an => [an, andares[an]]).map(([an, lugares]) => {
-      const cels = lugares.map(lg => {
+  const blocos = Object.keys(linhas).sort().map(ln => {
+    const andares = linhas[ln];
+    let daLinha = 0, ocupLinha = 0, hitLinha = false;
+
+    // Andar de cima primeiro, como se olha para o drive-in.
+    const corpo = Object.keys(andares).sort((a, b) => b - a).map(an => {
+      const cels = andares[an].map(lg => {
         const pos = `${di}-${ln}-${an}-${lg}`;
         const itens = _posOcupadas[pos] || [];
-        total++;
-        if (itens.length) ocupadas++;
+        total++; daLinha++;
+        if (itens.length) { ocupadas++; ocupLinha++; }
 
         let cls = '';
-        if (q && bateBusca(itens, q))          { cls = 'achado'; achados++; }
-        else if (itens.length > 1)              cls = 'ocupada multi';
-        else if (itens.some(r => r.pendente))   cls = 'pendente';
-        else if (itens.length)                  cls = 'ocupada';
+        if (q && bateBusca(itens, q))        { cls = 'achado'; achados++; hitLinha = true; }
+        else if (itens.length > 1)            cls = 'ocupada multi';
+        else if (itens.some(r => r.pendente)) cls = 'pendente';
+        else if (itens.length)                cls = 'ocupada';
 
         const titulo = itens.length
           ? `${pos} — ${itens.map(r => `${r.produto_nome || r.codigo} (${qtdUn(r.quantidade, r.codigo, r.produto_nome)})`).join(', ')}`
           : `${pos} — livre`;
         return `<button class="mapa-cel ${cls}" onclick="abrirAcoesVaga('${pos}')" title="${esc(titulo)}" aria-label="${esc(titulo)}">${lg}</button>`;
       }).join('');
-      return `<div class="mapa-grupo">${cels}</div>`;
-    }).join('<div class="mapa-sep"></div>');
+      return `<div class="ml-and"><span class="ml-and-n">${an}</span>${cels}</div>`;
+    }).join('');
 
-    return `<div class="mapa-linha"><span class="mapa-lbl">${ln}</span>${grupos}</div>`;
+    const cls = [ocupLinha ? '' : 'vazia', hitLinha ? 'tem-hit' : ''].filter(Boolean).join(' ');
+    return `<div class="mlinha ${cls}">
+      <div class="ml-head"><span class="ml-nome">${di}-${ln}</span><span class="ml-ocup">${ocupLinha}/${daLinha}</span></div>
+      ${corpo}
+      <div class="ml-bar"><i style="width:${daLinha ? Math.round(ocupLinha / daLinha * 100) : 0}%"></i></div>
+    </div>`;
   }).join('');
 
-  $('pos-mapa').innerHTML = html;
+  $('pos-mapa').innerHTML = `<div class="mapa-grade">${blocos}</div>`;
   $('pos-kpi-total').textContent = total;
   $('pos-kpi-ocup').textContent  = ocupadas;
   $('pos-kpi-livre').textContent = total - ocupadas;
@@ -2469,7 +2512,7 @@ function renderListaOcupadas(di, q = '') {
           <div class="li-qtd" style="font-size:1rem">${fmtQtd(r.quantidade)}</div>
           <div class="li-acts">
             <button class="icon-btn" onclick="abrirAcoesVaga('${pos}')" aria-label="Editar">✎</button>
-            <button class="icon-btn danger" onclick="expedir('${r.id}','${pos}')" aria-label="Expedir">🚚</button>
+            <button class="icon-btn danger" onclick="abrirExpedicao('${r.id}','${pos}')" aria-label="Expedir">🚚</button>
           </div>
         </div>`).join('');
       return `
@@ -2494,7 +2537,7 @@ function abrirAcoesVaga(pos) {
       <div class="li-meta">${esc(r.codigo)} · Lote ${esc(r.lote || '—')} · Arm. ${esc(r.armazem || '—')} · ${fmtQtd(r.quantidade)} un.</div>
       <div class="btn-row" style="margin-top:9px">
         <button class="btn btn-ghost btn-sm" onclick="substituirNaVaga('${pos}',${i})">Editar</button>
-        <button class="btn btn-danger btn-sm" onclick="expedir('${r.id}','${pos}')">Expedir</button>
+        <button class="btn btn-danger btn-sm" onclick="abrirExpedicao('${r.id}','${pos}')">Expedir</button>
       </div>
     </div>`).join('');
 
@@ -2564,7 +2607,26 @@ async function salvarPosicao() {
 
   busy('mp-btn-salvar', 'mp-spin', true);
   try {
-    if (id) {
+    // Se já existe o MESMO produto+lote nesta vaga, soma em vez de
+    // duplicar — mesma regra da transferência e da contagem.
+    const jaLa = (_posOcupadas[posicao] || []).find(r =>
+      String(r.id) !== String(id) &&
+      chave(r.codigo) === chave(codigo) && chave(r.lote) === chave(lote));
+
+    if (jaLa) {
+      const { error } = await sb.from(jaLa._tab || 'historico').update({
+        quantidade: (Number(jaLa.quantidade) || 0) + qtd,
+        armazem, updated_at: new Date().toISOString(),
+      }).eq('id', jaLa.id);
+      if (error) throw error;
+
+      if (id && String(id) !== String(jaLa.id)) {
+        const { error:eOld } = await sb.from('historico')
+          .update({ ocupacao_ativa:false, updated_at:new Date().toISOString() }).eq('id', id);
+        if (eOld) throw eOld;
+      }
+      toast(`Somado ao palete já existente em ${posicao}.`, 'ok');
+    } else if (id) {
       const antigo = Object.values(_posOcupadas).flat().find(r => String(r.id) === String(id));
       if (antigo && antigo.posicao !== posicao) {
         // Mudou de vaga: libera a antiga e cria na nova, preservando o rastro.
@@ -2595,20 +2657,48 @@ async function salvarPosicao() {
 }
 
 function expedirDoModal() {
-  expedir($('mp-id').value, $('mp-posicao').value.trim().toUpperCase());
+  abrirExpedicao($('mp-id').value, $('mp-posicao').value.trim().toUpperCase());
 }
 
-async function expedir(id, posicao) {
+/* Saldo quebrado é o normal aqui: pode sair 200 de uma vaga com
+   300 e sobrar 100. Pede a quantidade, já sugerindo o total —
+   sai tudo, libera a vaga; sai parte, o resto continua no mapa. */
+function abrirExpedicao(id, posicao) {
+  const r = Object.values(_posOcupadas).flat().find(x => String(x.id) === String(id));
+  if (!r) return;
+
+  const disp = Number(r.quantidade) || 0;
+  const nome = r.produto_nome || r.codigo;
+  const un   = unidadeDe(r.codigo, r.produto_nome) || 'un.';
+
+  const resp = prompt(`Expedir "${nome}" de ${posicao}.\n\nQuanto saiu? (disponível: ${fmtQtd(disp)} ${un})`, disp);
+  if (resp === null) return;
+
+  const qtd = Number(String(resp).replace(',', '.'));
+  if (!Number.isFinite(qtd) || qtd <= 0) { toast('Quantidade inválida.', 'warn'); return; }
+
+  confirmarExpedicao(id, posicao, Math.min(qtd, disp));
+}
+
+async function confirmarExpedicao(id, posicao, qtd) {
   const r = Object.values(_posOcupadas).flat().find(x => String(x.id) === String(id));
   const nome = r?.produto_nome || r?.codigo || 'este item';
-  if (!confirm(`Marcar "${nome}" na posição ${posicao} como expedido?\n\nA vaga fica livre no mapa.`)) return;
+  const disp = Number(r?.quantidade) || 0;
+  const restou = Math.max(0, disp - qtd);
+
   try {
-    const { error } = await sb.from(r?._tab || 'historico')
-      .update({ ocupacao_ativa:false, updated_at:new Date().toISOString() }).eq('id', id);
+    const patch = restou > 0
+      ? { quantidade: restou, updated_at:new Date().toISOString() }
+      : { ocupacao_ativa:false, updated_at:new Date().toISOString() };
+    const { error } = await sb.from(r?._tab || 'historico').update(patch).eq('id', id);
     if (error) throw error;
+
     fecharModal('modal-posicao');
     fecharModal('modal-acoes-pos');
-    toast(`${nome} expedido · ${posicao} liberada.`, 'ok', 4000);
+    toast(restou > 0
+      ? `${qtdUn(qtd, r?.codigo, nome)} expedido de ${posicao} · restam ${fmtQtd(restou)}.`
+      : `${nome} expedido · ${posicao} liberada.`,
+      'ok', 4500);
     await carregarPosicoes();
   } catch (e) { erro('Não foi possível expedir', e); }
 }
