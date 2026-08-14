@@ -517,6 +517,12 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
 .pos-row { display:flex; align-items:center; gap:9px; padding:9px 0 0; margin-top:9px; border-top:1px solid var(--border); }
 
 .seg { display:flex; gap:6px; }
+#mp-origem-seg { background:var(--bg3); border:1px solid var(--border2); border-radius:var(--r-sm); padding:3px; }
+#mp-origem-seg button {
+  flex:1; padding:8px 10px; background:none; border:none; border-radius:var(--r-xs);
+  color:var(--text2); font-family:var(--sans); font-size:.82rem; font-weight:600; cursor:pointer;
+}
+#mp-origem-seg button.active { background:var(--bg4); color:var(--text); }
 .seg select {
   flex:1; min-height:40px; padding:8px 10px;
   background:var(--bg2); color:var(--text);
@@ -739,7 +745,7 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
     <div class="screen-head">
       <div><div class="screen-title">Mapa drive-in</div><div class="screen-sub">Toque numa vaga para ver ou preencher</div></div>
       <div class="btn-row">
-        <button class="btn btn-primary btn-sm" onclick="abrirModalPosicao(null)">+ Adicionar</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalPosicao(null)">+ Guardar produto</button>
         <button class="btn btn-ghost btn-sm" onclick="carregarPosicoes()" aria-label="Recarregar">↺</button>
       </div>
     </div>
@@ -832,7 +838,7 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
 
     <div class="field">
       <label for="tfm-qtd">Quantidade movida *</label>
-      <input type="number" id="tfm-qtd" class="inp-qtd" min="0" step="1" inputmode="numeric">
+      <input type="number" id="tfm-qtd" class="inp-qtd" min="0" step="1" inputmode="numeric" oninput="avisarParcial()">
       <div class="hint" id="tfm-qtd-hint"></div>
     </div>
 
@@ -884,8 +890,16 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
 <div class="modal-bg" id="modal-posicao">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title" id="mp-titulo">Adicionar na posição</div>
-    <div class="modal-sub">Ocupação do mapa — controlada manualmente.</div>
+    <div class="modal-title" id="mp-titulo">Guardar produto na vaga</div>
+    <div class="modal-sub">Para produto que chegou agora — da produção ou de um ajuste. Não é contagem: entra direto no mapa, sem passar pela validação.</div>
+
+    <div class="field">
+      <label>Origem</label>
+      <div class="seg" id="mp-origem-seg">
+        <button type="button" class="active" onclick="setOrigemManual('producao', this)">Produção</button>
+        <button type="button" onclick="setOrigemManual('manual', this)">Ajuste manual</button>
+      </div>
+    </div>
 
     <div class="field">
       <label for="mp-posicao">Posição *</label>
@@ -1878,11 +1892,14 @@ function abrirModalTf(id) {
   $('tfm-posicao').value    = '';
   $('tfm-qtd-hint').textContent   = `Pedido: ${fmtQtd(t.quantidade)} un. Ajuste se você moveu outra quantidade.`;
 
-  // Posições que hoje contêm esse produto+lote — o operador só escolhe.
+  // Vagas com esse produto+lote NO ARMAZÉM DE ORIGEM do pedido.
+  // Filtrar só por produto+lote traria vagas de outros armazéns e o
+  // operador acabaria liberando no mapa um palete que não moveu.
   const candidatas = Object.entries(_posOcupadas)
     .flatMap(([pos, itens]) => itens.map(r => ({ ...r, pos })))
     .filter(r => chave(r.codigo) === chave(t.codigo) &&
-                 (!t.lote || chave(r.lote) === chave(t.lote)));
+                 (!t.lote || chave(r.lote) === chave(t.lote)) &&
+                 (!t.armazem_origem || chave(r.armazem) === chave(t.armazem_origem)));
 
   // Mais recente primeiro: a última contagem é a informação boa.
   candidatas.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
@@ -1902,17 +1919,53 @@ function abrirModalTf(id) {
       ? 'Marcado o mais recente. A vaga escolhida é liberada no mapa ao confirmar.'
       : 'A vaga escolhida é liberada no mapa ao confirmar.';
   } else {
-    pick.innerHTML = '';
-    $('tfm-origem-hint').textContent = 'Este produto não aparece em nenhuma vaga do mapa — nada será liberado. Se ele foi contado, confira a posição na contagem.';
+    pick.innerHTML = `<div class="prev alerta">
+      <div class="prev-nome">Não existe posição cadastrada</div>
+      <div class="prev-meta">${esc(t.produto_nome || t.codigo)}${t.lote ? ' · lote ' + esc(t.lote) : ''} · armazém ${esc(t.armazem_origem)}</div>
+    </div>`;
+    $('tfm-origem-hint').textContent = 'Nada será liberado no mapa. A transferência é registrada mesmo assim.';
   }
 
   abrirModal('modal-tf');
+  avisarParcial();
 }
 
 function marcarOrigem(el) {
   el.parentElement.querySelectorAll('.pos-pick-opt').forEach(o => o.classList.remove('sel'));
   el.classList.add('sel');
   el.querySelector('input').checked = true;
+  avisarParcial();
+}
+
+/* Mostra o efeito da quantidade digitada na vaga escolhida, antes
+   de confirmar: se sai tudo, a vaga é liberada; se sai parte, o
+   resto continua lá. */
+function avisarParcial() {
+  const sel = document.querySelector('input[name="tfm-origem"]:checked');
+  const hint = $('tfm-qtd-hint');
+  const t = _transferencias.find(x => String(x.id) === String($('tfm-id').value));
+  if (!hint || !t) return;
+
+  const qtd = Number($('tfm-qtd').value);
+  if (!sel || !Number.isFinite(qtd) || qtd <= 0) {
+    hint.className = 'hint';
+    hint.textContent = `Pedido: ${qtdUn(t.quantidade, t.codigo, t.produto_nome)}. Ajuste se você moveu outra quantidade.`;
+    return;
+  }
+
+  const naVaga = Number(sel.dataset.qtd) || 0;
+  const restou = naVaga - qtd;
+
+  if (restou > 0) {
+    hint.className = 'hint';
+    hint.innerHTML = `A vaga ${esc(sel.dataset.pos)} tem ${fmtQtd(naVaga)} — vão restar <b>${fmtQtd(restou)}</b> lá.`;
+  } else if (restou === 0) {
+    hint.className = 'hint ok';
+    hint.innerHTML = `Sai tudo da vaga ${esc(sel.dataset.pos)} — ela fica <b>livre</b> no mapa.`;
+  } else {
+    hint.className = 'hint';
+    hint.innerHTML = `Atenção: a vaga ${esc(sel.dataset.pos)} tem só <b>${fmtQtd(naVaga)}</b>. Confira a quantidade.`;
+  }
 }
 
 async function confirmarTransferencia() {
@@ -1971,7 +2024,10 @@ async function confirmarTransferencia() {
     if (e3) throw e3;
 
     fecharModal('modal-tf');
-    toast(`Transferência confirmada · ${fmtQtd(qtd)} un. em ${posDest}.`, 'ok', 4500);
+    toast(restou > 0
+      ? `Movido ${qtdUn(qtd, t.codigo, t.produto_nome)} para ${posDest} · restam ${fmtQtd(restou)} em ${origemSel.dataset.pos}.`
+      : `Transferência confirmada · ${qtdUn(qtd, t.codigo, t.produto_nome)} em ${posDest}.`,
+      'ok', 5000);
     await Promise.all([carregarTransferencias(), carregarPosicoes()]);
     carregarHome();
   } catch (e) {
@@ -2452,6 +2508,17 @@ function substituirNaVaga(pos, i) {
   abrirModalPosicao(r);
 }
 
+/* Produção que desce e é guardada no drive não é contagem: entra
+   direto no mapa, sem passar pela validação. A origem distingue
+   isso de um ajuste manual do mapa. */
+let _origemManual = 'producao';
+
+function setOrigemManual(v, btn) {
+  _origemManual = v;
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
 function abrirModalPosicao(r, posicaoPreset = '') {
   $('mp-id').value         = r?.id || '';
   $('mp-posicao').value    = r?.posicao || posicaoPreset || '';
@@ -2460,8 +2527,11 @@ function abrirModalPosicao(r, posicaoPreset = '') {
   $('mp-lote').value       = r?.lote || '';
   $('mp-armazem').value    = r?.armazem || '';
   $('mp-quantidade').value = r?.quantidade ?? '';
-  $('mp-titulo').textContent = r ? 'Editar posição' : 'Adicionar na posição';
+  $('mp-titulo').textContent = r ? 'Editar ocupação' : 'Guardar produto na vaga';
   $('mp-btn-expedir').hidden = !r;
+  _origemManual = (r?.origem === 'manual') ? 'manual' : 'producao';
+  $('mp-origem-seg')?.querySelectorAll('button')
+    .forEach((b, i) => b.classList.toggle('active', (i === 1) === (_origemManual === 'manual')));
   abrirModal('modal-posicao');
 }
 
@@ -2487,7 +2557,7 @@ async function salvarPosicao() {
 
   const registro = {
     posicao, codigo, produto_nome:produto || codigo, lote, armazem,
-    quantidade:qtd, ocupacao_ativa:true, origem:'manual', usuario:OPERADOR,
+    quantidade:qtd, ocupacao_ativa:true, origem:_origemManual, usuario:OPERADOR,
     filial: _filialPorCodigo[chave(codigo)] || null,
     ciclo_id: _cicloAtual,
   };
