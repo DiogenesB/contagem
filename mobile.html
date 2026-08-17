@@ -700,7 +700,7 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
           <input type="text" id="av-armazem" class="inp-up" placeholder="Ex: 42, D7" autocomplete="off" enterkeyhint="next">
         </div>
       </div>
-      <div class="field">
+      <div class="field" id="av-campo-posicao">
         <label for="av-posicao">Posição no drive-in <span class="opt">— opcional</span></label>
         <input type="text" id="av-posicao" class="inp-up" placeholder="Ex: A1-04-1-2" autocomplete="off"
                enterkeyhint="next" oninput="buscaPosicao.av(this.value);previewPosicao(this.value)">
@@ -999,6 +999,14 @@ const SUPABASE_URL = 'https://yuaboypybjqxxgntfyrq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_IbvCmbnbazxMGcQTF9-mRg_Tt2RkAng';
 
 const OPERADORES_RAPIDOS = ['Gabriel Farias', 'Roberto Neto'];
+
+/* ═══ POSIÇÃO NA CONTAGEM ═══
+   false = a contagem NÃO pede posição e NÃO mexe no mapa.
+   O mapa vira a única porta de entrada da ocupação (Posições →
+   "Guardar produto"). Use enquanto o pavilhão está sendo
+   organizado/mapeado. Troque para true quando quiser voltar a
+   alimentar o mapa pela contagem — nada mais precisa mudar. */
+const POSICAO_NA_CONTAGEM = false;
 
 let sb = null;
 let OPERADOR = '';
@@ -1440,6 +1448,8 @@ function mostrarApp() {
   $('op-av').textContent = OPERADOR.charAt(0).toUpperCase();
   $('home-nome').textContent = OPERADOR;
 
+  if (!POSICAO_NA_CONTAGEM) $('av-campo-posicao').hidden = true;
+
   switchScreen('home');
   carregarCicloAtual().then(carregarPosicoes);
   carregarReferencias();
@@ -1705,7 +1715,7 @@ async function lancar() {
   const produto = $('av-produto').value.trim();
   const lote    = $('av-lote').value.trim().toUpperCase();
   const armazem = $('av-armazem').value.trim().toUpperCase();
-  const posicao = $('av-posicao').value.trim().toUpperCase();
+  const posicao = POSICAO_NA_CONTAGEM ? $('av-posicao').value.trim().toUpperCase() : '';
   const qtdStr  = $('av-quantidade').value;
 
   if (!codigo)  { toast('Informe o código do produto.', 'warn'); $('av-codigo').focus();  return; }
