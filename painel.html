@@ -73,6 +73,10 @@
   --sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
+  /* cores geradas (mapa por produto / armazém) */
+  --sat: 62%;
+  --lum: 52%;
+
   --r:    10px;
   --r-sm: 7px;
   --r-xs: 5px;
@@ -130,6 +134,9 @@ html[data-tema="claro"] {
 
   --sh:    0 4px 6px rgba(20,22,26,.06), 0 12px 32px rgba(20,22,26,.10);
   --sh-sm: 0 1px 2px rgba(20,22,26,.07);
+
+  --sat: 58%;
+  --lum: 40%;
 }
 
 /* O atributo hidden precisa vencer as classes de layout abaixo. */
@@ -543,6 +550,140 @@ textarea { resize:vertical; min-height:56px; font-family:var(--sans); }
 html[data-tema="claro"] .mapa-cel.ok,
 html[data-tema="claro"] .mapa-cel.multi,
 html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
+.mapa-cel.tom     { border-color:transparent; color:#fff; }
+.mlinha.oculta    { display:none; }
+
+/* ═══════════ TRILHA DE ALTERAÇÕES ═══════════ */
+.hist { display:flex; flex-direction:column; }
+.hev { display:flex; gap:10px; padding:10px 0; border-top:1px solid var(--line); }
+.hist .hev:first-child { border-top:0; padding-top:0; }
+.hev-ini {
+  width:28px; height:28px; border-radius:50%; flex-shrink:0;
+  background:var(--surface-3); color:var(--text-2);
+  display:flex; align-items:center; justify-content:center; font-size:.6875rem; font-weight:700;
+}
+.hev-txt { flex:1; min-width:0; font-size:.8125rem; }
+.hev-tit { font-weight:600; }
+.hev-sub { color:var(--text-3); font-family:var(--mono); font-size:.6875rem; margin-top:2px; }
+.hev-delta { font-family:var(--mono); font-weight:600; }
+.hev-delta .de { color:var(--text-3); text-decoration:line-through; }
+.hev-delta .para { color:var(--text); }
+.hev.a-neg  .hev-ini { background:var(--neg-sf);  color:var(--neg);  }
+.hev.a-pos  .hev-ini { background:var(--pos-sf);  color:var(--pos);  }
+.hev.a-warn .hev-ini { background:var(--warn-sf); color:var(--warn); }
+.hev.a-alt  .hev-ini { background:var(--alt-sf);  color:var(--alt);  }
+
+/* ═══════════ SALDO MAPEADO × SISTEMA ═══════════ */
+table.saldo th { cursor:pointer; user-select:none; }
+table.saldo th.ord::after { content:' ↓'; color:var(--accent); }
+table.saldo th.ord.asc::after { content:' ↑'; }
+
+.linha-saldo { cursor:pointer; }
+.linha-saldo:hover > td { background:var(--surface-2); }
+.linha-saldo .seta { display:inline-block; width:13px; color:var(--text-3); }
+.linha-saldo.aberta .seta { color:var(--accent); }
+.linha-saldo.aberta > td { background:var(--surface-2); }
+
+/* A cor mora na coluna da diferença, não na linha inteira: linha
+   toda vermelha vira ruído quando metade da tela diverge. */
+.dif {
+  display:inline-block; min-width:62px; text-align:right;
+  font-family:var(--mono); font-weight:600;
+  padding:1px 7px; border-radius:5px; border:1px solid transparent;
+}
+.d-ok   { background:var(--pos-sf);  color:var(--pos);  border-color:var(--pos); }
+.d-ruim { background:var(--neg-sf);  color:var(--neg);  border-color:var(--neg); }
+.d-fora { background:var(--surface-3); color:var(--text-3); border-color:var(--line-2); }
+
+.est-rot {
+  margin-left:8px; font-size:.6875rem; font-weight:500; color:var(--text-3);
+  text-transform:none; letter-spacing:0;
+}
+.e-ok          .est-rot { color:var(--pos); }
+.e-diverge     .est-rot { color:var(--neg); }
+.e-fora        .est-rot,
+.e-nao-mapeado .est-rot { color:var(--warn); }
+
+.detalhe-saldo > td { background:var(--bg); padding:12px 16px 14px !important; }
+.det-cabeca {
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  margin-bottom:9px; font-size:.75rem; color:var(--text-3);
+}
+.det-cabeca button { margin-left:auto; }
+.det-vazio-s { font-size:.8125rem; color:var(--text-2); padding:4px 0; }
+table.mini { width:100%; border-collapse:collapse; font-size:.75rem; }
+table.mini th {
+  text-align:left; padding:6px 9px; border-bottom:1px solid var(--line);
+  font-size:.625rem; font-weight:600; color:var(--text-3);
+}
+table.mini td { padding:6px 9px; border-bottom:1px solid var(--line); }
+table.mini tr:last-child td { border-bottom:0; }
+table.mini .acao { text-align:right; }
+
+/* ═══════════ SUGESTÃO DE PRODUTO ═══════════ */
+.field.com-sug { position:relative; }
+.sug {
+  position:absolute; left:0; right:0; top:100%; z-index:30;
+  max-height:240px; overflow:auto; margin-top:3px;
+  background:var(--surface); border:1px solid var(--line-2);
+  border-radius:var(--r-sm); box-shadow:var(--sh);
+}
+.sug[hidden] { display:none; }
+.sug button {
+  display:block; width:100%; text-align:left; border:0; cursor:pointer;
+  background:transparent; color:var(--text); font:inherit;
+  padding:9px 11px; border-bottom:1px solid var(--line);
+}
+.sug button:last-child { border-bottom:0; }
+.sug button:hover, .sug button.marcado { background:var(--accent-sf); }
+.sug-nome { font-size:.8125rem; font-weight:600; line-height:1.25; }
+.sug-meta { font-family:var(--mono); font-size:.6875rem; color:var(--text-3); margin-top:2px; }
+.sug-vazio { padding:10px 11px; font-size:.75rem; color:var(--text-3); }
+
+/* ═══════════ TOTAL DA LINHA E AS TRÊS VISÕES ═══════════ */
+.ml-imp {
+  background:none; border:0; color:var(--text-3); cursor:pointer;
+  font-size:.8125rem; line-height:1; padding:2px 4px; border-radius:4px;
+}
+.ml-imp:hover { color:var(--accent); background:var(--accent-sf); }
+.ml-qtd {
+  margin-left:auto; font-family:var(--mono); font-size:.6875rem; font-weight:600;
+  color:var(--text); background:var(--surface-3); border-radius:4px; padding:0 5px;
+}
+.ml-qtd:empty { display:none; }
+.ml-qtd.varios { color:var(--warn); background:var(--warn-sf); }
+
+.corpo-detalhe, .corpo-3d { display:none; }
+#m-mapa[data-vista="detalhe"] .corpo-grade,
+#m-mapa[data-vista="3d"]      .corpo-grade { display:none; }
+#m-mapa[data-vista="detalhe"] .corpo-detalhe { display:block; }
+#m-mapa[data-vista="3d"]      .corpo-3d      { display:block; }
+#m-mapa[data-vista="detalhe"] .mapa-grade { grid-template-columns:repeat(auto-fill, minmax(266px, 1fr)); }
+#m-mapa[data-vista="3d"]      .mapa-grade { grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); }
+
+.det { display:flex; align-items:flex-start; gap:7px; padding:6px 0; border-top:1px solid var(--line); }
+.corpo-detalhe .det:first-child { border-top:0; padding-top:3px; }
+.det-cor { width:4px; align-self:stretch; border-radius:2px; flex-shrink:0; min-height:26px; }
+.det-txt { flex:1; min-width:0; }
+.det-nome { font-size:.75rem; font-weight:600; line-height:1.25; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.det-sub { display:flex; flex-wrap:wrap; gap:6px; margin-top:2px; font-family:var(--mono); font-size:.625rem; color:var(--text-3); }
+.det-lote { color:var(--text-2); font-weight:600; }
+.det-pend { color:var(--alt); }
+.det-qtd { font-family:var(--mono); font-size:.875rem; font-weight:600; letter-spacing:-.02em; text-align:right; white-space:nowrap; }
+.det-qtd small { display:block; font-size:.5625rem; font-weight:400; color:var(--text-3); }
+.det-vazio { font-size:.6875rem; color:var(--text-3); padding:8px 0 4px; }
+
+.corpo-3d svg { width:100%; height:auto; display:block; overflow:visible; }
+.corpo-3d .cx { cursor:pointer; }
+.cx.vazia path { fill:var(--surface-2); stroke:var(--line-2); stroke-width:.6; }
+.cx.vazia rect { fill:var(--surface); stroke:var(--line-2); stroke-width:.6; }
+.cx.cheia .f-frente { fill:var(--c); }
+.cx.cheia .f-topo   { fill:var(--c); filter:brightness(1.28); }
+.cx.cheia .f-lado   { fill:var(--c); filter:brightness(.68); }
+.cx.cheia .f-multi  { fill:#fff; stroke:rgba(0,0,0,.35); stroke-width:.6; }
+.cx:hover .f-frente, .cx:hover .f-topo, .cx:hover .f-lado { stroke:var(--accent); stroke-width:1.4; }
+.cx.achou .f-frente, .cx.achou .f-topo, .cx.achou .f-lado { stroke:var(--accent); stroke-width:1.6; }
+.cx.fora { opacity:.13; }
 .mapa-cel.apagada { opacity:.14; }
 
 .ml-bar { height:3px; background:var(--surface-3); border-radius:100px; overflow:hidden; margin-top:8px; }
@@ -668,6 +809,9 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
       <option value="bioma">Bioma Cruz Alta</option>
       <option value="biagro">Biagro Cruz Alta</option>
     </select>
+    <button class="btn btn-ghost btn-sm" onclick="definirGestor()" title="Nome que fica registrado nas validações">
+      ◔ <span id="gestor-nome">definir</span>
+    </button>
     <span class="conn" id="conn"><i></i><span id="conn-txt">conectando…</span></span>
   </div>
 </header>
@@ -695,6 +839,15 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
   <button class="nav-item" data-page="transferencias" onclick="irPara('transferencias')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3"/><path d="M20 16H7l3 3"/></svg>
     <span>Transferências</span><span class="nav-count" id="nc-transferencias">0</span>
+  </button>
+
+  <button class="nav-item" data-page="saldo" onclick="irPara('saldo')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h12"/></svg>
+    <span>Saldo mapeado</span>
+  </button>
+  <button class="nav-item" data-page="alteracoes" onclick="irPara('alteracoes')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.8"/></svg>
+    <span>Alterações</span>
   </button>
 
   <div class="side-label">Análise</div>
@@ -764,7 +917,7 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
       <div class="filters">
         <div class="field grow">
           <label for="v-busca">Buscar</label>
-          <input type="text" id="v-busca" placeholder="produto, código ou lote" oninput="renderValidacao()">
+          <input type="text" id="v-busca" placeholder="produto, código ou lote" oninput="dValidacao()">
         </div>
         <div class="field">
           <label for="v-armazem">Armazém</label>
@@ -810,7 +963,7 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
       <div class="filters">
         <div class="field grow">
           <label for="r-busca">Buscar</label>
-          <input type="text" id="r-busca" placeholder="produto, código, lote ou posição" oninput="renderRegistros()">
+          <input type="text" id="r-busca" placeholder="produto, código, lote ou posição" oninput="dRegistros()">
         </div>
         <div class="field">
           <label for="r-status">Situação</label>
@@ -822,8 +975,9 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
           <label for="r-operador">Operador</label>
           <select id="r-operador" onchange="renderRegistros()"><option value="">Todos</option></select>
         </div>
-        <div class="field"><label for="r-de">De</label><input type="date" id="r-de" onchange="renderRegistros()"></div>
-        <div class="field"><label for="r-ate">Até</label><input type="date" id="r-ate" onchange="renderRegistros()"></div>
+        <div class="field"><label for="r-de">De</label><input type="date" id="r-de" onchange="carregarRegistros(true)"></div>
+        <div class="field"><label for="r-ate">Até</label><input type="date" id="r-ate" onchange="carregarRegistros(true)"></div>
+        <div class="field"><label>Período carregado</label><div class="section-note" id="r-periodo" style="padding-top:7px">—</div></div>
       </div>
     </div>
     <div class="tbl-wrap">
@@ -859,7 +1013,7 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
       <div class="filters">
         <div class="field grow">
           <label for="h-busca">Buscar</label>
-          <input type="text" id="h-busca" placeholder="produto, código ou lote" oninput="renderHistorico()">
+          <input type="text" id="h-busca" placeholder="produto, código ou lote" oninput="dHistorico()">
         </div>
         <div class="field">
           <label for="h-diverg">Divergência</label>
@@ -911,15 +1065,31 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
           <button class="active" id="m-pav-simbiose" onclick="setPavilhao('simbiose', this)">Simbiose</button>
           <button id="m-pav-bioma" onclick="setPavilhao('bioma', this)">Bioma</button>
         </div>
-        <select id="m-di" onchange="renderMapa()" style="width:auto" aria-label="Drive-in"></select>
+        <select id="m-di" onchange="construirMapa()" style="width:auto" aria-label="Drive-in"></select>
+        <select id="m-cor" onchange="setModoCor(this.value)" style="width:auto" aria-label="Colorir por">
+          <option value="estado">Cor: estado</option>
+          <option value="produto">Cor: produto</option>
+          <option value="armazem">Cor: armazém</option>
+          <option value="idade">Cor: tempo parado</option>
+        </select>
       </div>
       <div class="btn-row">
+        <div class="seg" id="seg-vista" role="group" aria-label="Visualização">
+          <button class="active" data-vista="grade" onclick="setVistaMapa('grade')" title="Compacta">▦ Grade</button>
+          <button data-vista="detalhe" onclick="setVistaMapa('detalhe')" title="Produto, lote e quantidade à mostra">☰ Detalhe</button>
+          <button data-vista="3d" onclick="setVistaMapa('3d')" title="Drive-in em perspectiva">◱ 3D</button>
+        </div>
         <div class="seg" aria-label="Tamanho do mapa">
           <button onclick="setZoomMapa('compacto', this)">P</button>
           <button class="active" onclick="setZoomMapa('', this)">M</button>
           <button onclick="setZoomMapa('grande', this)">G</button>
         </div>
+        <button class="btn btn-ghost btn-sm" onclick="abrirDialogoImpressao()">⎙ Imprimir</button>
         <button class="btn btn-ghost btn-sm" onclick="carregarMapa()">Atualizar</button>
+        <button class="btn btn-ghost btn-sm active" id="m-so-result"
+                onclick="this.classList.toggle('active');this.textContent=(this.classList.contains('active')?'☑':'☐')+' Só a linha';renderMapa()"
+                title="Ao buscar, esconde as linhas que não têm o item">☑ Só a linha</button>
+        <a class="btn btn-ghost btn-sm" href="./mapa.html" target="_blank" rel="noopener" style="text-decoration:none">Tela cheia ↗</a>
         <button class="btn btn-sm" onclick="abrirModalVaga(null)">Ocupar vaga</button>
       </div>
     </div>
@@ -927,7 +1097,7 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
       <div class="filters" style="margin-bottom:16px">
         <div class="field grow">
           <label for="m-busca">Buscar no mapa</label>
-          <input type="text" id="m-busca" placeholder="produto, código, lote ou armazém" oninput="renderMapa()">
+          <input type="text" id="m-busca" placeholder="produto, código, lote ou armazém" oninput="dMapa()">
         </div>
         <div class="field">
           <label for="m-estado">Mostrar</label>
@@ -944,14 +1114,7 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
       </div>
 
       <div class="mapa-box" id="m-mapa"></div>
-      <div class="legenda">
-        <span><i style="background:var(--surface-2)"></i>Livre</span>
-        <span><i style="background:var(--pos);border-color:var(--pos)"></i>Ocupada</span>
-        <span><i style="background:var(--alt);border-color:var(--alt)"></i>Aguardando validação</span>
-        <span><i style="background:var(--warn);border-color:var(--warn)"></i>Mais de um lote</span>
-        <span><i style="background:var(--accent);border-color:var(--accent)"></i>Resultado da busca</span>
-        <span style="margin-left:auto;color:var(--text-3)">cada bloco é uma linha · andar de cima em cima · número = profundidade</span>
-      </div>
+      <div class="legenda" id="m-legenda"></div>
     </div>
   </div>
 
@@ -1073,6 +1236,69 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
   </div>
 </section>
 
+<!-- ══════════════════ SALDO MAPEADO ══════════════════ -->
+<section id="page-saldo" class="page">
+  <div class="page-head">
+    <div>
+      <h1>Saldo mapeado</h1>
+      <p class="page-sub">De um lado o que está nas vagas, do outro o saldo da planilha do ERP — a mesma da contagem. Clique numa linha para ver onde aquilo está.</p>
+    </div>
+  </div>
+
+  <div class="kpi-row" id="s-kpis"></div>
+  <div id="s-avisos"></div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="btn-row">
+        <input type="search" id="s-busca" placeholder="produto, código, lote ou armazém" style="max-width:280px" autocomplete="off">
+        <select id="s-situacao" style="width:auto" aria-label="Situação">
+          <option value="todas">Todas as situações</option>
+          <option value="divergentes">Só divergentes</option>
+          <option value="conferindo">Só conferindo</option>
+          <option value="fora">Fora do mapa ou da planilha</option>
+        </select>
+        <select id="s-agrupar" style="width:auto" aria-label="Agrupar por">
+          <option value="lote">Produto + lote + armazém</option>
+          <option value="produto">Só por produto</option>
+          <option value="armazem">Só por armazém</option>
+        </select>
+        <select id="s-escopo" style="width:auto" aria-label="Escopo">
+          <option value="tudo">Todo o mapa</option>
+          <option value="pavilhao">Só o pavilhão do mapa</option>
+          <option value="drivein">Só o drive-in do mapa</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="carregarSaldoMapa(true)">Atualizar</button>
+        <button class="btn btn-ghost btn-sm" onclick="baixarCSV()">Baixar CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="imprimirSaldo()">&#9113; Imprimir</button>
+      </div>
+    </div>
+    <div class="tbl-wrap" id="s-tabela"></div>
+  </div>
+</section>
+
+<!-- ══════════════════ ALTERAÇÕES ══════════════════ -->
+<section id="page-alteracoes" class="page">
+  <div class="page-head">
+    <div>
+      <h1>Alterações</h1>
+      <p class="page-sub">Quem mexeu em qual vaga, quando, e o que a quantidade era antes e virou depois.</p>
+    </div>
+  </div>
+
+  <div class="kpi-row" id="a-kpis"></div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="btn-row">
+        <input type="search" id="a-busca" placeholder="pessoa, vaga, produto ou lote" style="max-width:320px" autocomplete="off">
+        <button class="btn btn-ghost btn-sm" onclick="carregarAlteracoes(true)">Atualizar</button>
+      </div>
+    </div>
+    <div style="padding:14px 16px" id="a-lista"></div>
+  </div>
+</section>
+
 <!-- ══════════════════ ACURÁCIA ══════════════════ -->
 <section id="page-acuracia" class="page">
   <div class="page-head">
@@ -1106,7 +1332,7 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
     <div class="panel-body">
       <div class="filters">
         <div class="field grow"><label for="a-busca">Buscar</label>
-          <input type="text" id="a-busca" placeholder="produto, código ou lote" oninput="renderAcuracia()"></div>
+          <input type="text" id="a-busca" placeholder="produto, código ou lote" oninput="dAcuracia()"></div>
         <div class="field"><label for="a-tipo">Mostrar</label>
           <select id="a-tipo" onchange="renderAcuracia()">
             <option value="">Todos</option>
@@ -1145,9 +1371,12 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
       <div class="form-grid">
         <div class="field"><label for="mv-posicao">Vaga</label>
           <input type="text" id="mv-posicao" class="mono-in" placeholder="B1-22-3-4" oninput="avaliarVagaModal()"></div>
-        <div class="field"><label for="mv-codigo">Código</label>
-          <input type="text" id="mv-codigo" class="mono-in" oninput="buscarProdutoVaga()"></div>
-        <div class="field"><label for="mv-produto">Produto</label><input type="text" id="mv-produto"></div>
+        <div class="field com-sug"><label for="mv-codigo">Código</label>
+          <input type="text" id="mv-codigo" class="mono-in" autocomplete="off" placeholder="código ou nome do produto">
+          <div class="sug" id="sug-codigo" hidden></div></div>
+        <div class="field com-sug"><label for="mv-produto">Produto</label>
+          <input type="text" id="mv-produto" autocomplete="off" placeholder="comece a escrever o nome">
+          <div class="sug" id="sug-produto" hidden></div></div>
         <div class="field"><label for="mv-lote">Lote</label><input type="text" id="mv-lote" class="mono-in" autocomplete="off"></div>
         <div class="field"><label for="mv-armazem">Armazém</label><input type="text" id="mv-armazem" class="mono-in" autocomplete="off"></div>
         <div class="field"><label for="mv-qtd">Quantidade</label><input type="number" id="mv-qtd" min="0" step="1" autocomplete="off"></div>
@@ -1221,38 +1450,13 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="./comum.js?v=3"></script>
+<script src="./impressao.js?v=3"></script>
 <script>
 'use strict';
 
-/* ═══════════════════════════════════════════════════════════════
-   CONFIG
-   ═══════════════════════════════════════════════════════════════ */
-const SUPABASE_URL = 'https://yuaboypybjqxxgntfyrq.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_IbvCmbnbazxMGcQTF9-mRg_Tt2RkAng';
-
 let sb = null;
 
-/* ═══════════════════════════════════════════════════════════════
-   FILIAL — resolvedor tolerante
-   Idêntico ao do mobile. O banco tem 4 formatos convivendo:
-   código do ERP ('010001'), nome longo, nome curto e null.
-   ═══════════════════════════════════════════════════════════════ */
-const FILIAIS = [
-  { slug:'simbiose', nome:'Simbiose Cruz Alta', curto:'Simbiose', codigos:['010001'], termo:'SIMBIOSE' },
-  { slug:'bioma',    nome:'Bioma Cruz Alta',    curto:'Bioma',    codigos:['020006'], termo:'BIOMA'    },
-  { slug:'biagro',   nome:'Biagro Cruz Alta',   curto:'Biagro',   codigos:['090010'], termo:'BIAGRO'   },
-];
-function resolverFilial(valor) {
-  if (valor === null || valor === undefined || valor === '') return null;
-  const v = String(valor).trim().toUpperCase();
-  if (!v) return null;
-  for (const f of FILIAIS) {
-    if (f.codigos.includes(v)) return f;
-    if (v.includes(f.termo))   return f;
-  }
-  return null;
-}
-function filialCurta(v) { const f = resolverFilial(v); return f ? f.curto : (v ? String(v).trim() : '—'); }
 function badgeFilial(v) {
   const f = resolverFilial(v);
   return f ? `<span class="tag t-mute">${f.curto}</span>` : (v ? `<span class="tag t-mute">${esc(v)}</span>` : '');
@@ -1264,347 +1468,11 @@ function daFilial(v) {
   return resolverFilial(v)?.slug === alvo;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   POSIÇÕES DRIVE-IN  (1.932 vagas — mesma geração do mobile)
-   ═══════════════════════════════════════════════════════════════ */
-function montarDI(de, ate, nAndares, nLugares) {
-  const linhas = {};
-  for (let l = de; l <= ate; l++) {
-    const andares = {};
-    for (let a = 1; a <= nAndares; a++) andares[a] = Array.from({ length:nLugares }, (_, i) => i + 1);
-    linhas[String(l).padStart(2, '0')] = andares;
-  }
-  return linhas;
-}
-const MAPA_POSICOES = {
-  bioma:    { A1: montarDI(1, 36, 3, 5), A2: montarDI(29, 36, 3, 4) },
-  simbiose: { B1: montarDI(1, 36, 4, 5), B2: montarDI(1, 36, 4, 4) },
-};
-const TODAS_POSICOES = (() => {
-  const out = [];
-  for (const pav of Object.values(MAPA_POSICOES))
-    for (const [di, linhas] of Object.entries(pav))
-      for (const [ln, andares] of Object.entries(linhas))
-        for (const [an, lugares] of Object.entries(andares))
-          for (const lg of lugares) out.push(`${di}-${ln}-${an}-${lg}`);
-  return out;
-})();
-const linhaDaPosicao = p => String(p || '').split('-').slice(0, 2).join('-');
-
-/* ═══════════════════════════════════════════════════════════════
-   CATÁLOGO DE PRODUTOS
-   Fonte: planilha do ERP (B8_PRODUTO, B1_DESC, B1_UM, kg/l pl).
-   Indexado por CÓDIGO, não por nome: 10 produtos compartilham o
-   mesmo nome em códigos diferentes (versões Simbiose × Biagro),
-   então nome como chave é ambíguo.
-   Formato: 'codigo': [nome, unidade, maximo_por_palete]
-   maximo null = amostra, não tem limite definido.
-   ═══════════════════════════════════════════════════════════════ */
-const PRODUTOS = {
-  '01001000005': ['BIO 12 - 12 L (12X1)', 'L', 528],
-  '01001000007': ['BIO 12 - 10 L (2X5)', 'L', 640],
-  '01001000009': ['BIO 15 + NI - 10 L (2X5)', 'L', 640],
-  '01001000010': ['BIO ATIVO - 20 L (1X20)', 'L', 480],
-  '01001000021': ['BIO APPLIC O - 10 L (2X5)', 'L', 640],
-  '01001000030': ['BIO APPLIC D - 12 L (12X1)', 'L', 528],
-  '01001000031': ['BIO APPLIC F - 12 L (12X1)', 'L', 528],
-  '01001000032': ['BIO APPLIC O - 12 L (12X1)', 'L', 528],
-  '01002000032': ['BIOMA PHOS - 12 L (12X1)', 'L', 528],
-  '01002000033': ['BIOMA PHOS - 12 L (6X2)', 'L', 768],
-  '01002000034': ['BIOMA PHOS - 10 L (2X5)', 'L', 640],
-  '01002000052': ['BIOMA PHOS - 5 L (20X0.25)', 'L', 300],
-  '01002000053': ['BIOMA PHOS - 12 L (12X1)', 'L', 528],
-  '01002000054': ['BIOMA PHOS - 12 L (6X2)', 'L', 768],
-  '01002000055': ['BIOMA PHOS - 10 L (2X5)', 'L', 640],
-  '01002000063': ['BIAGRO ENERGIA - 10 L (2X5)', 'L', 640],
-  '01002000089': ['SOLUBPHOS - 12 L (12X1)', 'L', 528],
-  '01002000090': ['SOLUBPHOS - 10 L (2X5)', 'L', 640],
-  '01002000094': ['SOLUBPHOS - 12 L (12X1) ARGENTINA', 'L', 528],
-  '01002100023': ['AMOSTRA BIOMAPHOS', 'L', null],
-  '01002100026': ['BIAGRO ENERGIA - 12 L (6X2)', 'L', 768],
-  '01002100027': ['AMOSTRA SOLUBPHOS', 'L', null],
-  '01002100028': ['AMOSTRA OMSUGO P', 'L', null],
-  '01002100029': ['SOLUBPHOS - 12 L (6X2)', 'L', 768],
-  '01002100035': ['OMSUGO ECO - 12 L (6X2)', 'L', 768],
-  '01002100075': ['SOLUBPHOS - 12 L (12X1) INGLES', 'L', 528],
-  '01002100088': ['SOLUBPHOS - 2 L - DM', 'L', 768],
-  '01002100093': ['BIOMA PHOS - 2 L - DM', 'L', 768],
-  '01002100130': ['BIOMA BRADY SOJA LIQUIDO - 200 DS (2X100) ECO PACK', 'DS', 16800],
-  '01002100131': ['BIOMA BRADY SOJA LIQUIDO - 160 DS (4X40) ECO PACK', 'DS', 13440],
-  '01002100133': ['BIOMA MAIS LIQUIDO - 80 DS (4X20) ECO PACK', 'DS', 6720],
-  '01002100135': ['BIOMA RHYZO FEIJAO LIQUIDO - 60 DS (4X15) ECO PACK', 'DS', 5040],
-  '01002100144': ['BIOMA MAIS LIQUIDO - 100 DS (2X50) ECO PACK', 'DS', 8400],
-  '01002100145': ['SOLUBPHOS - 12 L (6X2) ARGENTINA', 'L', 768],
-  '01002100180': ['AMOSTRA BIOSTML 0060 - 0.5 L (1X0.5)', 'L', null],
-  '01002100193': ['SOLUBPHOS - 1 L - DM', 'L', 528],
-  '01002100202': ['BIOMA PHOS - 1 L - DM', 'L', 528],
-  '01002100230': ['BIOMA MAIS ENERGY LIQUIDO - 100 DS (2X50)', 'DS', 8400],
-  '01002100233': ['BIOMA HYDRATUS - 12 L (6X2)', 'L', 768],
-  '01002100281': ['AMOSTRA COGNY-008-MESP-0226-S - 2L', 'L', null],
-  '01002100282': ['AMOSTRA COGNY-008-MESP-0226-S - 0,250 L', 'L', null],
-  '01003000010': ['LAPHY PROTECTION - 6 KG (6X1)', 'KG', 456],
-  '01003100006': ['LOOPER PROTECTION - 6 KG (6X1)', 'KG', 456],
-  '01003100007': ['VECTOR PROTECTION - 10 L (2X5)', 'L', 640],
-  '01003100011': ['VECTOR PROTECTION - 12 L (6X2)', 'L', 768],
-  '01003100051': ['BIOMA BRADY SOJA TURFOSO - 250 DS (5X50)', 'DS', 21000],
-  '01004000010': ['BIOMA FIX SUPER - 6 L (6X1)', 'L', 360],
-  '01005000001': ['AEDESCONTROL - 12 L (12X1)', 'L', 528],
-  '01005000002': ['AEDESCONTROL - 10 L', 'L', 750],
-  '01005000004': ['AEDESCONTROL - 10 L (2X5)', 'L', 640],
-  '01006000001': ['INLAYON - 12 L (6X2)', 'L', 768],
-  '01006000006': ['NEMACONTROL SUPER - 12 L (12X1)', 'L', 528],
-  '01006000009': ['NEMACONTROL SUPER - 12 L (6X2)', 'L', 768],
-  '01006000010': ['AMOSTRA NEMACONTROL SUPER', 'L', null],
-  '01006000015': ['NEMA PROTECTION - 12 L (6X2)', 'L', 768],
-  '01006100002': ['BIAGRO RAIZ - 12 L (6X2)', 'L', 768],
-  '01006100003': ['BIAGRO RAIZ - 12 L (12X1)', 'L', 528],
-  '01006100018': ['NEMA PROTECTION - 1 L - DM', 'L', 528],
-  '01006100020': ['NEMACONTROL SUPER - 6 L (6X1)', 'L', 528],
-  '01006100022': ['NEMACONTROL SUPER - 1 L - DM', 'L', 528],
-  '01007000002': ['FX PROTECTION - 10 L (1X10)', 'L', 750],
-  '01007000004': ['BIAGRO PROTECAO - 12 L (6X2)', 'L', 768],
-  '01007000008': ['STIMUCONTROL - 10 L (2X5)', 'L', 640],
-  '01007000014': ['AMOSTRA GREENCONTROL', 'KG', null],
-  '01007000017': ['BIAGRO SOLO - 12 L (6X2)', 'L', 768],
-  '01007000018': ['BIAGRO SOLO - 10 L (2X5)', 'L', 640],
-  '01007000019': ['FX PROTECTION - 12 L (12X1)', 'L', 528],
-  '01007000021': ['FX PROTECTION - 10 L (2X5)', 'L', 640],
-  '01007000022': ['GREENCONTROL - 6 KG (6X1)', 'KG', 456],
-  '01007000023': ['STIMUCONTROL - 12 L (12X1)', 'L', 528],
-  '01007000024': ['STIMUCONTROL - 12 L (6X2)', 'L', 768],
-  '01007000027': ['STIMUCONTROL EVOLUTION - 12 L (6X2)', 'L', 768],
-  '01007000028': ['STIMUCONTROL EVOLUTION - 10 L (2X5)', 'L', 640],
-  '01007000083': ['STIMUCONTROL - 12 L (6X2) PARAGUAY', 'L', 768],
-  '01007000091': ['TRICH PROTECTION - 10 L (2X5)', 'L', 640],
-  '01007000099': ['STIMUCONTROL - 10 L (2X5) PARAGUAY', 'L', 640],
-  '01007100001': ['FX PROTECTION - 12 L (6X2)', 'L', 768],
-  '01007100002': ['BIAGRO PROTECAO - 10 L (2X5)', 'L', 640],
-  '01007100007': ['FRONTIERCONTROL - 12 L (6X2)', 'L', 768],
-  '01007100008': ['FRONTIERCONTROL - 10 L (2X5)', 'L', 640],
-  '01007100012': ['FRONTIERCONTROL - 12 L (12X1)', 'L', 528],
-  '01007100020': ['STIMUCONTROL - 2 L', 'L', 768],
-  '01007100023': ['FRONTIERCONTROL - 2 L - DM', 'L', 768],
-  '01007100029': ['FX PROTECTION - 2 L - DM', 'L', 768],
-  '01007100039': ['ESPORO DE TRICHODERMA HARZIANUM CCT2160', 'KG', 750],
-  '01007100050': ['FRONTIERCONTROL - 1 L - DM', 'L', 528],
-  '01007100051': ['STIMUCONTROL - 1 L - DM', 'L', 528],
-  '01007100054': ['TRICH PROTECTION - 1 L - DM', 'L', 528],
-  '01007100055': ['FX PROTECTION - 1 L - DM', 'L', 528],
-  '01007100058': ['EFICAZCONTROL - 12 L (6X2)', 'L', 768],
-  '01007100063': ['EFICAZCONTROL - 12 L (12X1)', 'L', 528],
-  '01007100064': ['FRONTIERCONTROL - 10 L (2X5) - PARAGUAY', 'L', 640],
-  '01007100066': ['STIMUCONTROL - 2 L - DM', 'L', 768],
-  '01007100071': ['AMOSTRA EFICAZCONTROL', 'L', null],
-  '01007100072': ['ESPORO BEAUVERIA BASSIANA CBMAI 2359', 'KG', 375],
-  '01009000026': ['STIMU SPRAY O - 10 L (2X5)', 'L', 640],
-  '01009000027': ['STIMU SPRAY D - 12 L (12X1)', 'L', 528],
-  '01009000031': ['STIMU SPRAY D - 10 L (2X5)', 'L', 640],
-  '01009000032': ['STIMU SPRAY D - 10 L (1X10)', 'L', 750],
-  '01009000034': ['STIMU SPRAY F - 12 L (12X1)', 'L', 528],
-  '01009000035': ['STIMU SPRAY O - 12 L (12X1)', 'L', 528],
-  '01009000036': ['STIMU SPRAY O - 10 L (1X10)', 'L', 750],
-  '01009000038': ['STIMU SPRAY F - 10 L (2X5)', 'L', 640],
-  '01012000040': ['BIAGRO CRISTALLES - 12 L (12X1)', 'L', 528],
-  '01012000041': ['BIAGRO CRISTALLES - 10 L (1X10)', 'L', 750],
-  '01012000042': ['BIAGRO CRISTALLES - 10 L (2X5)', 'L', 640],
-  '01012000043': ['BTCONTROL - 12 L (12X1)', 'L', 528],
-  '01012000044': ['BTCONTROL - 10 L (1X10)', 'L', 750],
-  '01012000047': ['BTCONTROL - 10 L (2X5)', 'L', 640],
-  '01012000051': ['AMOSTRA VIRCONTROL S.F', 'KG', 456],
-  '01012000061': ['FLYCONTROL - 12 L (12X1)', 'L', 528],
-  '01012000062': ['FLYCONTROL - 12 L (6X2)', 'L', 768],
-  '01012000063': ['FLYCONTROL - 10 L (2X5)', 'L', 640],
-  '01012000074': ['METHACONTROL EVOLUTION - 10 L (2X5)', 'L', 640],
-  '01012000077': ['VIRCONTROL C.I - 6 KG (6X1)', 'KG', 456],
-  '01012000078': ['VIRCONTROL S.F - 6 KG (12X0.5)', 'KG', 456],
-  '01012000079': ['VIRCONTROL S.F - 6 KG (6X1)', 'KG', 456],
-  '01012000089': ['VIRCONTROL H.A - 6 KG (6X1)', 'KG', 456],
-  '01012000112': ['FLYCONTROL 12 L - (6X2) PARAGUAY', 'L', 768],
-  '01012000116': ['AMOSTRA FLYCONTROL', 'L', null],
-  '01012000127': ['VIRCONTROL SF - 1 KG - DM', 'KG', 456],
-  '01012000141': ['METHACONTROL EVOLUTION - 5 L - DM', 'L', 640],
-  '01012000147': ['FLYCONTROL - 5 L - DM', 'L', 640],
-  '01012000148': ['FLYCONTROL - 2 L - DM', 'L', 768],
-  '01012000164': ['BIOISA - 5 KG (1X5)', 'KG', 375],
-  '01012000165': ['BTCONTROL - 5 L (1X5)', 'L', 720],
-  '01012000166': ['VECTOR PROTECTION - 12 L (12X1)', 'L', 528],
-  '01012000182': ['FLYCONTROL - 1 L - DM', 'L', 528],
-  '01012000183': ['BT PROTECTION - 5 L - DM', 'L', 640],
-  '01012000188': ['AMOSTRA ESPORO TRICHODERMA – EX', 'KG', null],
-  '01012000189': ['AMOSTRA SOLUBPHOS WP - ARGENTINA', 'KG', null],
-  '01014000001': ['FACIENS PROTECTION - 10 L (1X10)', 'L', 750],
-  '01014000002': ['NEMACONTROL - 12 L (12X1)', 'L', 528],
-  '01014000003': ['NEMACONTROL - 12 L (6X2)', 'L', 768],
-  '01014000029': ['TRANS F CONTROL - 10 L (2X5) PARAGUAY', 'L', 640],
-  '01014000031': ['NEMACONTROL - 12 L (6X2) PARAGUAY', 'L', 768],
-  '01014000037': ['NEMACONTROL - 2 L - DM', 'L', 768],
-  '01014000042': ['NEMACONTROL - 1 L - DM', 'L', 528],
-  '01014000044': ['AMOSTRA FACIENS PROTECTION', 'L', null],
-  '12001000002': ['STIMU LEG 12 - 12 L (12X1)', 'L', 528],
-  '12001000003': ['STIMU LEG 15 + NI - 10 L (2X5)', 'L', 640],
-  '12001000004': ['STIMU LEG 10 - 10 L (2X5)', 'L', 640],
-  '12001000005': ['STIMU LEG 12 - 10 L (2X5)', 'L', 640],
-  '12002000006': ['SIMBIOSENOD SOJA LIQUIDO - 200 DS (2X100)', 'DS', 16800],
-  '12002000198': ['SIMBIOSENOD SOJA LIQUIDO - 160 DS (4X40) ULTRA CASE', 'DS', 13440],
-  '12002000199': ['SIMBIOSE MAIZ LIQUIDO - 100 DS (2X50) ULTRA CASE', 'DS', 8400],
-  '12002000200': ['SIMBIOSENOD ULTRA TSI - 80 DS (2X40) ULTRA CASE', 'DS', 6720],
-  '12002000201': ['SIMBIOSENOD SOJA LIQUIDO - 200 DS (2X100) ULTRA CASE', 'DS', 16800],
-  '12002000202': ['SIMBIOSE MAIZ LIQUIDO - 80 DS (4X20) ULTRA CASE', 'DS', 6720],
-  '12002000205': ['SIMBIOSENOD FEIJAO LIQUIDO - 60 DS (4X15) ULTRA CASE', 'DS', 4620],
-  '12002000259': ['BIOMA HYDRATUS - 10 L (2X5)', 'L', 640],
-  '12002000260': ['BIOMA HYDRATUS - 12 L (6X2)', 'L', 768],
-  '12002000280': ['BIOMA HYDRATUS - 2 L - DM', 'L', 768],
-  '12003000029': ['BT PROTECTION - 10 L (1X10)', 'L', 750],
-  '12003000031': ['LAPHY PROTECTION - 6 KG (6X1)', 'KG', 456],
-  '12003000033': ['BT PROTECTION - 10 L (2X5)', 'L', 640],
-  '12003000036': ['LOOPER PROTECTION - 6 KG (6X1)', 'KG', 456],
-  '12003000045': ['LAPHY PROTECTION - 1 KG - DM', 'KG', 456],
-  '12004000017': ['BIO PRO - TSI - 6 L (6X1)', 'L', 384],
-  '12004000018': ['SIMBIOSE PRO SUPER - 6 L (6X1)', 'L', 384],
-  '12006000001': ['NEMA PROTECTION - 12 L (6X2)', 'L', 768],
-  '12006000017': ['NEMA PROTECTION - 12 L (12X1)', 'L', 528],
-  '12007000007': ['TRICH PROTECTION - 12 L (12X1)', 'L', 528],
-  '12007000091': ['TRICH PROTECTION - 10 L (2X5)', 'L', 640],
-  '12007000092': ['TRICH PROTECTION - 12 L (6X2)', 'L', 768],
-  '12007000114': ['TRICH PROTECTION - 2 L - DM', 'L', 768],
-  '12007000125': ['FX PROTECTION - 10 L (2X5)', 'L', 640],
-  '12007000126': ['FX PROTECTION - 12 L (12X1)', 'L', 528],
-  '12014000002': ['METHACONTROL - 10 KG (2X5)', 'KG', 640],
-  '12016000018': ['ISACONTROL - 10 L (2X5)', 'L', 640],
-  '12016000030': ['PERC PROTECTION - 10 L (2X5)', 'L', 640],
-  '12019000010': ['SIMBIOSENOD SOJA TURFOSO - 250 DS (5X50)', 'DS', 21000],
-};
-
-/* Índice por nome, para quando só o nome estiver disponível
-   (registros antigos, lançamentos digitados à mão). */
-const PRODUTOS_POR_NOME = (() => {
-  const idx = {};
-  for (const [cod, [nome, um, lim]] of Object.entries(PRODUTOS)) {
-    const k = String(nome).trim().toUpperCase();
-    if (!(k in idx)) idx[k] = [cod, um, lim];
-  }
-  return idx;
-})();
-
-function produtoPorCodigo(codigo) {
-  const c = String(codigo ?? '').trim();
-  const p = PRODUTOS[c] || PRODUTOS[c.padStart(11, '0')];
-  return p ? { codigo:c, nome:p[0], unidade:p[1], palete:p[2] } : null;
-}
-
-
-/* Unidade de medida vem do catálogo: L, KG ou DS conforme o
-   produto. "un." genérico não diz nada para quem está no galpão. */
-function unidadeDe(codigo, nome) {
-  const p = produtoPorCodigo(codigo);
-  if (p?.unidade) return p.unidade;
-  const n = PRODUTOS_POR_NOME[String(nome ?? '').trim().toUpperCase()];
-  return n ? n[1] : '';
-}
-
-/* "24 L" · "1.200 DS" · "56 KG" — cai para "un." só se o produto
-   não estiver no catálogo. */
-function qtdUn(qtd, codigo, nome) {
-  const u = unidadeDe(codigo, nome);
-  return `${num(qtd)} ${u || 'un.'}`;
-}
-
-function limitePalete(nomeOuCodigo, codigo) {
-  const p = codigo ? produtoPorCodigo(codigo) : produtoPorCodigo(nomeOuCodigo);
-  if (p) return p.palete;
-  const n = PRODUTOS_POR_NOME[String(nomeOuCodigo ?? '').trim().toUpperCase()];
-  return n ? n[2] : null;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   MOTIVOS DE DIVERGÊNCIA
-   `conta:false` = o produto existe, só não está no drive. Não é
-   erro de estoque, então sai da acurácia.
-   `conta:true`  = ninguém sabe onde está, ou sobrou sem origem.
-   É erro de verdade e precisa aparecer no indicador.
-   ═══════════════════════════════════════════════════════════════ */
-const MOTIVOS = [
-  { id:'envase',        texto:'Produto no envase',                  conta:false },
-  { id:'qualidade',     texto:'Produto retido com a qualidade',     conta:false },
-  { id:'transferencia', texto:'Em transferência entre armazéns',    conta:false },
-  { id:'faturado',      texto:'Faturado, aguardando carregamento',  conta:false },
-  { id:'erp',           texto:'Apontamento do ERP atrasado',        conta:false },
-  { id:'nao_encontrado',texto:'Não encontrado no estoque',          conta:true  },
-  { id:'sobra',         texto:'Sobra sem origem identificada',      conta:true  },
-  { id:'erro_contagem', texto:'Erro de contagem',                   conta:true  },
-  { id:'outro',         texto:'Outro (descrever abaixo)',           conta:true  },
-];
-const motivoPorId = id => MOTIVOS.find(m => m.id === id) || null;
-const textoMotivo = id => motivoPorId(id)?.texto || (id || '—');
-
-/* ═══════════════════════════════════════════════════════════════
-   HELPERS
-   ═══════════════════════════════════════════════════════════════ */
-const $ = id => document.getElementById(id);
-const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
-  ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-
-/* Chave de cruzamento — A MESMA do mobile. Divergir aqui gera órfão. */
-const chave = v => String(v ?? '').trim().toUpperCase().replace(/\s+/g, '');
-const chaveLote = (cod, lote, arm) => `${chave(cod)}|${chave(lote)}|${chave(arm)}`;
-
-const num = n => Number(n ?? 0).toLocaleString('pt-BR');
-const num1 = n => Number(n ?? 0).toLocaleString('pt-BR', { minimumFractionDigits:1, maximumFractionDigits:1 });
-
-function fmtTS(ts) {
-  if (!ts) return '—';
-  const d = new Date(ts);
-  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-}
-function fmtDia(ts) { return ts ? new Date(ts).toLocaleDateString('pt-BR') : '—'; }
-function mesLabel(ym) {
-  const [y, m] = ym.split('-');
-  return new Date(+y, +m - 1, 1).toLocaleDateString('pt-BR', { month:'long', year:'numeric' });
-}
-
-function toast(msg, tipo = 'ok', dur = 3800) {
-  const el = $('toast');
-  el.textContent = msg;
-  el.className = `toast ${tipo} show`;
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), dur);
-}
-function erro(prefixo, e) { console.error(prefixo, e); toast(`${prefixo}: ${e?.message || e}`, 'err', 7000); }
-
-function abrirModal(id)  { $(id).classList.add('open'); }
-function fecharModal(id) { $(id).classList.remove('open'); }
-function busy(b, s, on) { const x = $(b), y = $(s); if (x) x.disabled = on; if (y) y.style.display = on ? 'block' : 'none'; }
-
-function vazio(tit, sub, cols) {
-  return `<tr><td colspan="${cols}"><div class="empty"><div class="empty-ico">◻</div><div class="empty-tit">${esc(tit)}</div><div class="empty-sub">${sub || ''}</div></div></td></tr>`;
-}
-function carregando(cols) {
-  return `<tr><td colspan="${cols}"><div class="skeleton">carregando…</div></td></tr>`;
-}
 
 /* Insere tolerando coluna que não existe no banco.
    O PostgREST responde "Could not find the 'X' column"; a gente
    tira o X e reenvia, guardando o que caiu para avisar na tela.
    Sem isso, uma coluna a mais no código derruba o import inteiro. */
-const _colunasIgnoradas = {};
-
-async function inserirResiliente(tabela, linhas, opcoes = {}) {
-  let payload = Array.isArray(linhas) ? linhas : [linhas];
-  for (let tentativa = 0; tentativa < 8; tentativa++) {
-    const q = sb.from(tabela).insert(payload);
-    const { data, error } = opcoes.retornar ? await q.select() : await q;
-    if (!error) return data;
-
-    const m = String(error.message || '').match(/Could not find the '([^']+)' column/i);
-    if (!m) throw error;
-
-    const col = m[1];
-    (_colunasIgnoradas[tabela] ||= new Set()).add(col);
-    console.warn(`[${tabela}] coluna "${col}" não existe no banco — reenviando sem ela.`);
-    payload = payload.map(r => { const { [col]:_, ...resto } = r; return resto; });
-  }
-  throw new Error(`Não consegui inserir em ${tabela} depois de remover as colunas ausentes.`);
-}
 
 function avisoColunasIgnoradas(tabela) {
   const c = _colunasIgnoradas[tabela];
@@ -1612,18 +1480,6 @@ function avisoColunasIgnoradas(tabela) {
   return `<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Colunas ignoradas em ${esc(tabela)}</b>${[...c].map(esc).join(', ')} — não existem no banco. Os dados foram gravados sem elas.</div></div>`;
 }
 
-/* Paginação: o PostgREST corta em 1.000 linhas sem avisar. */
-async function buscarTudo(construir, tamanho = 1000) {
-  const out = [];
-  for (let de = 0; ; de += tamanho) {
-    const { data, error } = await construir().range(de, de + tamanho - 1);
-    if (error) throw error;
-    if (!data?.length) break;
-    out.push(...data);
-    if (data.length < tamanho) break;
-  }
-  return out;
-}
 
 function preencherSelect(id, valores, rotulo = 'Todos') {
   const sel = $(id); if (!sel) return;
@@ -1650,6 +1506,49 @@ let _tfFiltro   = 'pendente';
 let _pavilhao   = 'simbiose';
 let _acDados    = [];
 let _perfMeses  = [];
+let _mcels      = [];
+let _mblocos    = [];
+let _mcor       = 'estado';
+let _mvista     = 'grade';
+
+/* ═══════════════════════════════════════════════════════════════
+   BUSCAS COM DEBOUNCE
+   Cada tecla digitada disparava um render completo — em Registros
+   isso é remontar 500 linhas de tabela; no mapa, 720 botões.
+   Agora espera a pessoa parar de digitar.
+   ═══════════════════════════════════════════════════════════════ */
+const dValidacao = debounce(() => renderValidacao(), 120);
+const dRegistros = debounce(() => renderRegistros(), 120);
+const dHistorico = debounce(() => renderHistorico(), 120);
+const dAcuracia  = debounce(() => renderAcuracia(),  120);
+const dMapa      = debounce(() => renderMapa(),      110);
+
+/* ═══════════════════════════════════════════════════════════════
+   QUEM ESTÁ MEXENDO
+   Não é login — é só um nome para as colunas de auditoria, para
+   o histórico registrar quem validou e quem liberou vaga.
+   ═══════════════════════════════════════════════════════════════ */
+let GESTOR = '';
+function carregarGestor() {
+  try { GESTOR = localStorage.getItem('gestor') || ''; } catch (e) { GESTOR = ''; }
+  QUEM = GESTOR;
+  const el = $('gestor-nome');
+  if (el) el.textContent = GESTOR || 'definir';
+}
+function definirGestor() {
+  const v = prompt('Seu nome (aparece no histórico das validações):', GESTOR || '');
+  if (v === null) return;
+  GESTOR = v.trim();
+  QUEM = GESTOR;
+  try { localStorage.setItem('gestor', GESTOR); } catch (e) { /* modo privado */ }
+  carregarGestor();
+}
+/* Carimbo de auditoria. As colunas podem não existir ainda no
+   banco — quem grava é o atualizarResiliente, que descarta o que
+   o PostgREST não reconhecer. */
+function carimbo() {
+  return { feito_por: GESTOR || 'painel', feito_em: new Date().toISOString() };
+}
 
 /* ═══════════════════════════════════════════════════════════════
    BOOT
@@ -1686,16 +1585,50 @@ async function init() {
     }
   }
 
-  await carregarCiclo();
-  carregarValidacao();
-  carregarTransferencias();
-}
+  carregarGestor();
+  QUEM = GESTOR;
+  ligarSugestoes();   // a trilha de alterações usa o mesmo nome do topo
 
-function alternarTema() {
-  const atual = document.documentElement.getAttribute('data-tema');
-  const novo  = atual === 'claro' ? 'escuro' : 'claro';
-  document.documentElement.setAttribute('data-tema', novo);
-  try { localStorage.setItem('tema', novo); } catch (e) { /* modo privado */ }
+  $('s-escopo').addEventListener('change',   e => { _escopo = e.target.value; _abertas.clear(); renderSaldo(); });
+  $('s-agrupar').addEventListener('change',  e => { _agrupar = e.target.value; _abertas.clear(); renderSaldo(); });
+  $('s-situacao').addEventListener('change', e => { _situacao = e.target.value; renderSaldo(); });
+  $('s-busca').addEventListener('input', debounce(renderSaldo, 130));
+  $('a-busca').addEventListener('input', debounce(() => renderAlteracoes(_alteracoes), 140));
+
+  // As células do mapa são milhares: um ouvinte só no contêiner,
+  // em vez de um onclick por botão.
+  // De onde a impressão tira os dados do painel.
+  configurarImpressao({
+    ocupacaoDe: pos => itensDaVaga(pos),
+    contexto: () => ({
+      pav:_pavilhao, di:$('m-di').value, q:$('m-busca').value.trim().toUpperCase(),
+      visiveis:_mblocos.filter(b => !b.el.classList.contains('oculta')).map(b => {
+        const [di, ln] = b.cels[0].pos.split('-');
+        return { pav:_pavilhao, di, ln };
+      }),
+    }),
+  });
+
+  $('m-mapa').addEventListener('click', e => {
+    const c = e.target.closest('.mapa-cel, .cx');
+    if (c?.dataset.pos) abrirVaga(c.dataset.pos);
+  });
+  try {
+    const cor = localStorage.getItem('mapa-cor');
+    if (cor) { _mcor = cor; $('m-cor').value = cor; }
+    setVistaMapa(localStorage.getItem('mapa-vista') || 'grade');
+  } catch (e) { setVistaMapa('grade'); }
+
+  // A aba fica na URL: dá para mandar link e o F5 não volta ao início.
+  window.addEventListener('hashchange', () => {
+    const p = location.hash.replace('#', '');
+    if (p && $('page-' + p)) irPara(p);
+  });
+
+  await carregarCiclo();
+  const inicial = location.hash.replace('#', '');
+  if (inicial && $('page-' + inicial)) irPara(inicial); else carregarValidacao();
+  carregarTransferencias();
 }
 
 function setConn(ok, txt) {
@@ -1723,6 +1656,7 @@ function irPara(pagina) {
   $('page-' + pagina).classList.add('active');
   document.querySelector('.side').classList.remove('open');
   window.scrollTo({ top:0 });
+  if (location.hash.replace('#', '') !== pagina) history.replaceState(null, '', '#' + pagina);
 
   ({
     validacao:      carregarValidacao,
@@ -1732,6 +1666,8 @@ function irPara(pagina) {
     transferencias: carregarTransferencias,
     performance:    carregarPerformance,
     acuracia:       carregarAcuracia,
+    saldo:          carregarSaldoMapa,
+    alteracoes:     carregarAlteracoes,
   })[pagina]?.();
 }
 
@@ -1785,12 +1721,6 @@ function paraData(v) {
 
 /* Códigos do ERP têm 11 dígitos. O Excel come o zero à esquerda
    quando a célula vira número. Repõe. */
-function normalizarCodigo(v) {
-  const s = String(v ?? '').trim();
-  if (!s) return '';
-  return /^\d+$/.test(s) && s.length < 11 ? s.padStart(11, '0') : s.toUpperCase();
-}
-
 function configurarDrop() {
   const d = $('v-drop');
   ['dragenter','dragover'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('over'); }));
@@ -2137,7 +2067,7 @@ function filtrarValidacao() {
     if (!daFilial(l.filial)) return false;
     if (arm && l.armazem !== arm) return false;
     if (op && !l.operadores.includes(op)) return false;
-    if (q && ![l.produto, l.codigo, l.lote].join(' ').toUpperCase().includes(q)) return false;
+    if (q && !casa(l, q)) return false;
 
     switch (_vFiltro) {
       case 'contados':    return l.contado !== null && !l.validado;
@@ -2252,8 +2182,9 @@ async function aplicarValidacao(linha, just = null) {
 
   // 1) Um registro de contagem por LOTE (não por palete).
   //    É isso que conserta a matemática da acurácia.
-  const { error:e1 } = await sb.from('historico').insert({
-    codigo:        linha.codigo,
+  await inserirResiliente('historico', {
+    ...carimbo(),
+    codigo:        normalizarCodigo(linha.codigo),
     produto_nome:  linha.produto,
     lote:          linha.lote,
     armazem:       linha.armazem,
@@ -2272,7 +2203,6 @@ async function aplicarValidacao(linha, just = null) {
     justificativa:  just?.justificativa || null,
     conta_acuracia: just ? just.conta_acuracia : true,
   });
-  if (e1) throw e1;
 
   // 2) Cada palete com posição vira ocupação no mapa.
   const comPosicao = linha.itens.filter(it => it.posicao && it.ocupacao_ativa);
@@ -2299,10 +2229,9 @@ async function aplicarValidacao(linha, just = null) {
   // 3) Lançamentos ficam no banco como registro, marcados.
   //    A ocupação sai deles para não duplicar com o histórico.
   if (linha.itens.length) {
-    const { error:e3 } = await sb.from('lancamentos')
-      .update({ status:'validado', ocupacao_ativa:false, updated_at:agora })
-      .in('id', linha.itens.map(i => i.id));
-    if (e3) throw e3;
+    await atualizarResiliente('lancamentos',
+      { status:'validado', ocupacao_ativa:false, updated_at:agora, ...carimbo() },
+      q => q.in('id', linha.itens.map(i => i.id)));
   }
 
   // 4) A linha do saldo é MARCADA, não apagada. Os KPIs param de dançar.
@@ -2559,10 +2488,38 @@ async function resolverRevisao(idx, aindaEsta) {
 /* ═══════════════════════════════════════════════════════════════
    REGISTROS
    ═══════════════════════════════════════════════════════════════ */
-async function carregarRegistros() {
+/* O período é filtrado NO SERVIDOR. Antes isto puxava a tabela
+   `lancamentos` inteira, de mil em mil, e filtrava no navegador —
+   funciona com dois meses de contagem, não com dois anos.
+   Sem datas escolhidas, mostra os últimos 60 dias. */
+function periodoRegistros() {
+  const de  = $('r-de').value;
+  const ate = $('r-ate').value;
+  if (de || ate) return { de, ate };
+  const d = new Date(Date.now() - 60 * 86400000);
+  return { de:d.toISOString().slice(0, 10), ate:'', padrao:true };
+}
+
+async function carregarRegistros(forcar = false) {
+  const { de, ate, padrao } = periodoRegistros();
+  const chaveCache = `registros:${de}:${ate}`;
+  if (!forcar && cacheValido(chaveCache, 60)) { _registros = cacheLer(chaveCache); renderRegistros(); return; }
+
   $('r-tbody').innerHTML = carregando(10);
   try {
-    _registros = await buscarTudo(() => sb.from('lancamentos').select('*').order('created_at', { ascending:false }));
+    _registros = await buscarTudo(() => {
+      let q = sb.from('lancamentos')
+        .select('id, codigo, produto_nome, lote, armazem, posicao, quantidade, usuario, status, filial, ciclo_id, created_at')
+        .order('created_at', { ascending:false });
+      if (de)  q = q.gte('created_at', de + 'T00:00:00');
+      if (ate) q = q.lte('created_at', ate + 'T23:59:59');
+      return q;
+    });
+    for (const r of _registros) r._busca = chaveBusca(r);
+    cacheGravar(chaveCache, _registros);
+    $('r-periodo').textContent = padrao
+      ? 'últimos 60 dias — escolha as datas para ver mais'
+      : `${de ? 'de ' + de : ''} ${ate ? 'até ' + ate : ''}`.trim();
     preencherSelect('r-operador', _registros.map(r => r.usuario));
     renderRegistros();
   } catch (e) { $('r-tbody').innerHTML = vazio('Não foi possível carregar', esc(e.message), 10); }
@@ -2579,7 +2536,7 @@ function filtrarRegistros() {
     if (op && r.usuario !== op) return false;
     if (de  && r.created_at < de + 'T00:00:00') return false;
     if (ate && r.created_at > ate + 'T23:59:59') return false;
-    if (q && ![r.produto_nome, r.codigo, r.lote, r.posicao].join(' ').toUpperCase().includes(q)) return false;
+    if (q && !casa(r, q)) return false;
     return true;
   });
 }
@@ -2624,7 +2581,8 @@ async function excluirRegistro(id) {
     const { error } = await sb.from('lancamentos').delete().eq('id', id);
     if (error) throw error;
     toast('Lançamento excluído.', 'warn');
-    carregarRegistros();
+    cacheInvalidar('registros:');
+    carregarRegistros(true);
   } catch (e) { erro('Falha ao excluir', e); }
 }
 
@@ -2665,7 +2623,7 @@ function renderHistorico() {
     if (d === 'ok'    && div !== 0) return false;
     if (d === 'falta' && div >= 0)  return false;
     if (d === 'sobra' && div <= 0)  return false;
-    if (q && ![r.produto_nome, r.codigo, r.lote].join(' ').toUpperCase().includes(q)) return false;
+    if (q && !casa(r, q)) return false;
     return true;
   });
 
@@ -2711,9 +2669,533 @@ function chipsPosicao(valor) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   AS TRÊS VISÕES DE UMA LINHA
+   Grade   — compacta, para varrer o pavilhão inteiro de relance
+   Detalhe — produto, lote, armazém e quantidade à mostra, sem clicar
+   3D      — o drive-in em perspectiva, cada palete uma caixa
+   Todas partilham os mesmos dados e o mesmo bloco; o que muda é
+   qual corpo fica visível.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Agrupa o que está numa linha por produto+lote+armazém, já somado.
+   É o número que interessa a quem trabalha com o estoque: não
+   "quantas vagas", e sim "quanto tem deste lote nesta linha". */
+function resumoDaLinha(cels) {
+  const grupos = new Map();
+  let unidades = 0, ocupadas = 0;
+  for (const c of cels) {
+    const itens = _ocupacao[c.pos] || [];
+    if (itens.length) ocupadas++;
+    for (const r of itens) {
+      const k = chaveLote(r.codigo, r.lote, r.armazem);
+      let g = grupos.get(k);
+      if (!g) {
+        g = { k, codigo:r.codigo, produto:r.produto_nome || r.codigo,
+              lote:r.lote || '—', armazem:r.armazem || '—',
+              qtd:0, vagas:[], pend:false, dias:0 };
+        grupos.set(k, g);
+      }
+      g.qtd += Number(r.quantidade) || 0;
+      g.vagas.push(c.pos);
+      if (r.pend) g.pend = true;
+      g.dias = Math.max(g.dias, diasDesde(r.created_at));
+      unidades += Number(r.quantidade) || 0;
+    }
+  }
+  return {
+    grupos:[...grupos.values()].sort((a, b) => b.qtd - a.qtd),
+    unidades, ocupadas, total:cels.length,
+  };
+}
+
+function corpoDetalhe(cels) {
+  const { grupos } = resumoDaLinha(cels);
+  const d = document.createElement('div');
+  d.className = 'corpo-detalhe';
+  if (!grupos.length) {
+    d.innerHTML = '<div class="det-vazio">linha livre</div>';
+    return d;
+  }
+  d.innerHTML = grupos.map(g => `
+    <div class="det" title="${esc(g.produto)} · lote ${esc(g.lote)} · armazém ${esc(g.armazem)}">
+      <i class="det-cor" style="background:${corDe(g.codigo)}"></i>
+      <div class="det-txt">
+        <div class="det-nome">${esc(g.produto)}</div>
+        <div class="det-sub">
+          <span class="det-lote">${esc(g.lote)}</span>
+          <span>arm. ${esc(g.armazem)}</span>
+          <span>${g.vagas.length} vaga${g.vagas.length > 1 ? 's' : ''}</span>
+          ${g.pend ? '<span class="det-pend">aguardando</span>' : ''}
+        </div>
+      </div>
+      <div class="det-qtd">${num(g.qtd)}<small>${esc(unidadeDe(g.codigo, g.produto) || 'un')}</small></div>
+    </div>`).join('');
+  return d;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   3D
+   Projeção axonométrica em SVG: a profundidade recua para a
+   direita e para baixo, os andares empilham para cima. Cada palete
+   é uma caixa de três faces — topo claro, frente na cor do
+   produto, lateral escura. Sem biblioteca e sem WebGL: é SVG, então
+   escala, imprime e funciona em qualquer celular.
+   ═══════════════════════════════════════════════════════════════ */
+function corpo3D(cels, di, ln) {
+  const porAndar = {};
+  let maxLg = 0, maxAn = 0;
+  for (const c of cels) {
+    const [, , an, lg] = c.pos.split('-');
+    (porAndar[an] ||= {})[lg] = c.pos;
+    maxLg = Math.max(maxLg, Number(lg));
+    maxAn = Math.max(maxAn, Number(an));
+  }
+
+  const L = 20, ALT = 13, DX = 7, DY = 5, GAPX = 3, GAPY = 3;
+  const larg = maxLg * (L + GAPX) + DX + 8;
+  const alto = maxAn * (ALT + GAPY) + maxLg * DY + 10;
+  const base = alto - maxLg * DY - 5;
+
+  const caixas = [];
+  // Do fundo para a frente e de baixo para cima: assim as caixas da
+  // frente sobrepõem as de trás, que é o que dá a sensação de volume.
+  for (let lg = maxLg; lg >= 1; lg--) {
+    for (let an = 1; an <= maxAn; an++) {
+      const pos = porAndar[an]?.[lg];
+      if (!pos) continue;
+      const itens = _ocupacao[pos] || [];
+      const x = (lg - 1) * (L + GAPX);
+      const y = base - (an - 1) * (ALT + GAPY) + (lg - 1) * DY;
+
+      if (!itens.length) {
+        caixas.push(`<g class="cx vazia" data-pos="${pos}"><title>${pos} — livre</title>
+          <path d="M${x} ${y} l${DX} ${-DY} h${L} l${-DX} ${DY} Z"/>
+          <rect x="${x}" y="${y}" width="${L}" height="${ALT}"/></g>`);
+        continue;
+      }
+      const cor = corDe(itens[0].codigo);
+      const rot = itens.map(r => `${r.produto_nome || r.codigo} · lote ${r.lote || '—'} · ${qtdUn(r.quantidade, r.codigo, r.produto_nome)}`).join(' | ');
+      caixas.push(`<g class="cx cheia" data-pos="${pos}" style="--c:${cor}">
+        <title>${esc(pos)} — ${esc(rot)}</title>
+        <path class="f-topo"  d="M${x} ${y} l${DX} ${-DY} h${L} l${-DX} ${DY} Z"/>
+        <rect class="f-frente" x="${x}" y="${y}" width="${L}" height="${ALT}"/>
+        <path class="f-lado"  d="M${x + L} ${y} l${DX} ${-DY} v${ALT} l${-DX} ${DY} Z"/>
+        ${itens.length > 1 ? `<circle class="f-multi" cx="${x + L - 4}" cy="${y + 4}" r="2.6"/>` : ''}
+      </g>`);
+    }
+  }
+
+  const d = document.createElement('div');
+  d.className = 'corpo-3d';
+  d.innerHTML = `<svg viewBox="0 0 ${larg} ${alto}" preserveAspectRatio="xMidYMax meet" role="img"
+      aria-label="Linha ${di}-${ln} em perspectiva">${caixas.join('')}</svg>`;
+  return d;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SALDO MAPEADO × SISTEMA
+   De um lado o que está fisicamente nas vagas; do outro o saldo da
+   planilha do ERP — a mesma que alimenta a contagem, importada na
+   aba Validação. A diferença entre os dois é o que interessa.
+
+   A tabela abre resumida, uma linha por produto + lote + armazém.
+   Clicar na linha abre onde aquilo está.
+   ═══════════════════════════════════════════════════════════════ */
+let _escopo     = 'tudo';
+let _agrupar    = 'lote';        // lote | produto | armazem
+let _situacao   = 'todas';       // todas | divergentes | conferindo | fora
+let _ordem      = 'diferenca';
+let _ordemAsc   = false;
+let _saldoMapa  = [];
+let _abertas    = new Set();     // linhas expandidas
+
+async function carregarSaldoMapa(forcar = false) {
+  $('s-tabela').innerHTML = carregando(8);
+  try {
+    // A tela precisa dos dois lados. O mapa pode ainda não ter sido
+    // aberto nesta sessão, então garante ele aqui.
+    if (forcar || !Object.keys(_ocupacao).length) await carregarMapa();
+    if (forcar || !_saldo.length) {
+      _saldo = await buscarTudo(() => sb.from('saldo_sistema')
+        .select('codigo, descricao, lote, armazem, saldo, unidade, filial'));
+    }
+    renderSaldo();
+  } catch (e) {
+    $('s-tabela').innerHTML = vazio('Não foi possível carregar', esc(e.message), 8);
+  }
+}
+
+/* A chave do agrupamento decide como os dois lados se encontram.
+   Por lote é a comparação exata; por produto ou armazém, os dois
+   lados são somados do mesmo jeito, então continua batendo. */
+function chaveDoGrupo(r, campoCodigo = 'codigo') {
+  if (_agrupar === 'produto') return chave(r[campoCodigo]);
+  if (_agrupar === 'armazem') return chave(r.armazem || '—');
+  return chaveLote(r[campoCodigo], r.lote, r.armazem);
+}
+
+function calcularSaldo() {
+  const q = $('s-busca')?.value.trim().toUpperCase() || '';
+  const ts = termos(q);
+  const grupos = new Map();
+
+  // ── lado do mapa ──
+  for (const [pos, itens] of Object.entries(_ocupacao)) {
+    const di  = pos.split('-')[0];
+    const pav = Object.keys(MAPA_POSICOES).find(p => MAPA_POSICOES[p][di]);
+    if (_escopo === 'pavilhao' && pav !== _pavilhao) continue;
+    if (_escopo === 'drivein'  && di  !== $('m-di').value) continue;
+
+    for (const r of itens) {
+      if (!daFilial(r.filial)) continue;
+      const k = chaveDoGrupo(r);
+      let g = grupos.get(k);
+      if (!g) g = novoGrupo(k, r);
+      g.mapeado += Number(r.quantidade) || 0;
+      g.vagas.add(pos);
+      g.itens.push({ ...r, pos });
+      if (r.pend) g.pend++;
+      g.dias = Math.max(g.dias, diasDesde(r.created_at));
+      grupos.set(k, g);
+    }
+  }
+
+  // ── lado do sistema ──
+  for (const s of _saldo) {
+    if (!daFilial(s.filial)) continue;
+    const k = chaveDoGrupo(s);
+    let g = grupos.get(k);
+    if (!g) {
+      g = novoGrupo(k, { codigo:s.codigo, produto_nome:s.descricao, lote:s.lote, armazem:s.armazem });
+      grupos.set(k, g);
+    }
+    g.sistema = (g.sistema ?? 0) + (Number(s.saldo) || 0);
+    if (!g.produto || g.produto === g.codigo) g.produto = s.descricao || g.produto;
+  }
+
+  let lista = [...grupos.values()].map(g => {
+    g.diferenca = g.sistema === null ? null : g.mapeado - g.sistema;
+    g.estado = g.sistema === null ? 'fora'
+             : g.mapeado === 0    ? 'nao-mapeado'
+             : g.diferenca === 0  ? 'ok' : 'diverge';
+    return g;
+  });
+
+  if (ts.length) {
+    lista = lista.filter(g => ts.some(x =>
+      [g.produto, g.codigo, g.lote, g.armazem].filter(Boolean).join(' ').toUpperCase().includes(x)));
+  }
+  if (_situacao === 'divergentes') lista = lista.filter(g => g.estado === 'diverge');
+  if (_situacao === 'conferindo')  lista = lista.filter(g => g.estado === 'ok');
+  if (_situacao === 'fora')        lista = lista.filter(g => g.estado === 'fora' || g.estado === 'nao-mapeado');
+
+  const valor = g => ({
+    produto:g.produto, codigo:g.codigo, lote:g.lote, armazem:g.armazem,
+    vagas:g.vagas.size, mapeado:g.mapeado, sistema:g.sistema ?? -1,
+    diferenca:g.diferenca === null ? -Infinity : Math.abs(g.diferenca), dias:g.dias,
+  })[_ordem];
+
+  lista.sort((a, b) => {
+    const va = valor(a), vb = valor(b);
+    const r = (typeof va === 'number' && typeof vb === 'number')
+      ? va - vb : String(va ?? '').localeCompare(String(vb ?? ''), 'pt-BR');
+    return _ordemAsc ? r : -r;
+  });
+
+  _saldoMapa = lista;
+  return lista;
+}
+
+function novoGrupo(k, r) {
+  return {
+    chave:k,
+    codigo:  r.codigo || '—',
+    produto: r.produto_nome || r.codigo || '—',
+    lote:    _agrupar === 'produto' ? null : (r.lote || '—'),
+    armazem: _agrupar === 'produto' ? null : (r.armazem || '—'),
+    mapeado:0, sistema:null, vagas:new Set(), itens:[], pend:0, dias:0,
+  };
+}
+
+function ordenarSaldo(campo) {
+  if (_ordem === campo) _ordemAsc = !_ordemAsc;
+  else { _ordem = campo; _ordemAsc = false; }
+  renderSaldo();
+}
+
+function alternarLinhaSaldo(k) {
+  if (_abertas.has(k)) _abertas.delete(k); else _abertas.add(k);
+  renderSaldo();
+}
+
+function renderSaldo() {
+  const dados = calcularSaldo();
+
+  const totMap = dados.reduce((s, g) => s + g.mapeado, 0);
+  const totSis = dados.reduce((s, g) => s + (g.sistema || 0), 0);
+  const okN    = dados.filter(g => g.estado === 'ok').length;
+  const divN   = dados.filter(g => g.estado === 'diverge').length;
+
+  $('s-kpis').innerHTML = [
+    kpi('Mapeado', num(totMap), 'somando as vagas'),
+    kpi('Sistema', num(totSis), _saldo.length ? 'saldo importado' : 'nenhuma planilha importada', _saldo.length ? '' : 'is-warn'),
+    kpi('Conferindo', num(okN), 'mapa igual ao sistema', okN ? 'is-pos' : ''),
+    kpi('Divergentes', num(divN), divN ? 'precisam de olhada' : 'nada fora', divN ? 'is-neg' : ''),
+  ].join('');
+
+  const avisos = [];
+  if (!_saldo.length) {
+    avisos.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Sem saldo do sistema</b>
+      Importe a planilha do estoque na aba Validação — é a mesma da contagem. Sem ela, só dá para ver o lado do mapa.</div></div>`);
+  }
+  if (_escopo !== 'tudo') {
+    avisos.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>Comparação parcial</b>
+      Você limitou o escopo do mapa, mas o sistema não sabe de drive-in: a coluna Sistema continua sendo o total. A diferença aqui não é confiável.</div></div>`);
+  }
+  $('s-avisos').innerHTML = avisos.join('');
+
+  if (!dados.length) {
+    $('s-tabela').innerHTML = vazio('Nada aqui',
+      'Ajuste o filtro, o escopo ou a busca.', 8);
+    return;
+  }
+
+  const th = (campo, rot, cls = '') =>
+    `<th class="${cls}${_ordem === campo ? ' ord' + (_ordemAsc ? ' asc' : '') : ''}" onclick="ordenarSaldo('${campo}')">${rot}</th>`;
+
+  $('s-tabela').innerHTML = `
+    <table class="tbl saldo">
+      <thead><tr>
+        ${th('produto', 'Produto')}
+        ${th('codigo', 'Código', 'mono')}
+        ${_agrupar !== 'produto' ? th('lote', 'Lote', 'mono') : ''}
+        ${_agrupar !== 'produto' ? th('armazem', 'Arm.', 'mono') : ''}
+        ${th('vagas', 'Vagas', 'num')}
+        ${th('mapeado', 'Mapeado', 'num')}
+        ${th('sistema', 'Sistema', 'num')}
+        ${th('diferenca', 'Diferença', 'num')}
+      </tr></thead>
+      <tbody>${dados.map(g => linhaSaldo(g)).join('')}</tbody>
+    </table>`;
+}
+
+const COLS = () => _agrupar === 'produto' ? 6 : 8;
+
+function linhaSaldo(g) {
+  const aberta = _abertas.has(g.chave);
+  const dif = g.diferenca;
+  const rot = { ok:'confere', diverge:'diverge', fora:'fora da planilha', 'nao-mapeado':'não está no mapa' }[g.estado];
+
+  const cel = dif === null
+    ? `<td class="num"><span class="dif d-fora">—</span></td>`
+    : `<td class="num"><span class="dif ${dif === 0 ? 'd-ok' : 'd-ruim'}">${dif > 0 ? '+' : ''}${num(dif)}</span></td>`;
+
+  return `
+    <tr class="linha-saldo e-${g.estado}${aberta ? ' aberta' : ''}" onclick="alternarLinhaSaldo('${esc(g.chave)}')">
+      <td class="nome strong">
+        <span class="seta">${aberta ? '▾' : '▸'}</span>${esc(g.produto)}
+        ${g.pend ? '<span class="tag t-alt">pendente</span>' : ''}
+        <span class="est-rot">${rot}</span>
+      </td>
+      <td class="mono">${esc(g.codigo)}</td>
+      ${_agrupar !== 'produto' ? `<td class="mono">${esc(g.lote || '—')}</td>` : ''}
+      ${_agrupar !== 'produto' ? `<td class="mono">${esc(g.armazem || '—')}</td>` : ''}
+      <td class="num mono">${g.vagas.size || '—'}</td>
+      <td class="num mono strong">${num(g.mapeado)}</td>
+      <td class="num mono">${g.sistema === null ? '—' : num(g.sistema)}</td>
+      ${cel}
+    </tr>
+    ${aberta ? `<tr class="detalhe-saldo"><td colspan="${COLS()}">${detalheSaldo(g)}</td></tr>` : ''}`;
+}
+
+function detalheSaldo(g) {
+  if (!g.itens.length) {
+    return `<div class="det-vazio-s">Este lote está no saldo do sistema mas não tem nenhuma vaga no mapa.
+      Ou não foi guardado ainda, ou foi expedido sem baixar aqui.</div>`;
+  }
+  const un = unidadeDe(g.codigo, g.produto) || 'un';
+  return `
+    <div class="det-cabeca">
+      <span>${g.vagas.size} vaga(s) · ${num(g.mapeado)} ${esc(un)} · parado há até ${g.dias} dia(s)</span>
+      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();imprimirGrupo('${esc(g.chave)}')">⎙ Imprimir as linhas</button>
+    </div>
+    <table class="tbl mini">
+      <thead><tr><th>Vaga</th><th>Quantidade</th><th>Origem</th><th>Desde</th><th></th></tr></thead>
+      <tbody>${g.itens.sort((a, b) => a.pos.localeCompare(b.pos)).map(r => `
+        <tr>
+          <td class="mono strong">${esc(r.pos)}</td>
+          <td class="mono">${num(r.quantidade)}</td>
+          <td>${r.pend ? '<span class="tag t-alt">aguardando validação</span>'
+                       : `<span class="tag t-mute">${esc(r.origem || 'manual')}</span>`}</td>
+          <td class="mono">${fmtDia(r.created_at)}</td>
+          <td class="acao"><button class="btn btn-sm" onclick="event.stopPropagation();irParaVaga('${esc(r.pos)}')">Ver no mapa</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+/* Imprime as linhas onde este lote está — o caminho de quem vai
+   conferir no galpão o que a tela diz estar errado. */
+function imprimirGrupo(k) {
+  const g = _saldoMapa.find(x => x.chave === k);
+  if (!g?.itens.length) return;
+  const linhas = [...new Set(g.itens.map(r => r.pos.split('-').slice(0, 2).join('-')))].sort();
+  const alvos = linhas.map(id => {
+    const [di, ln] = id.split('-');
+    return alvoDaLinha(di, ln);
+  });
+  const n = paginarLinhas(caixaImpressao(), alvos, 'Espelho do drive-in',
+                          `${g.produto} · lote ${g.lote || '—'}`, 1);
+  dispararImpressao(n);
+}
+
+function baixarCSV() {
+  const dados = calcularSaldo();
+  if (!dados.length) { toast('Nada para exportar.', 'warn'); return; }
+  const cab = ['Produto', 'Codigo', 'Lote', 'Armazem', 'Vagas', 'Mapeado', 'Sistema', 'Diferenca', 'Situacao', 'Posicoes'];
+  const linhas = dados.map(g => [
+    g.produto, g.codigo, g.lote ?? '', g.armazem ?? '', g.vagas.size,
+    g.mapeado, g.sistema ?? '', g.diferenca ?? '', g.estado,
+    [...g.vagas].sort().join(' '),
+  ]);
+  const txt = [cab, ...linhas]
+    .map(l => l.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+  const url = URL.createObjectURL(new Blob(['\uFEFF' + txt], { type:'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `saldo-mapeado-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`${dados.length} linha(s) exportada(s).`);
+}
+
+function imprimirSaldo() {
+  const dados = calcularSaldo();
+  if (!dados.length) { toast('Nada para imprimir.', 'warn'); return; }
+  const totMap = dados.reduce((s, g) => s + g.mapeado, 0);
+  const totSis = dados.reduce((s, g) => s + (g.sistema || 0), 0);
+
+  const cab = `<tr><th>Produto</th><th>Código</th>${_agrupar !== 'produto' ? '<th>Lote</th><th>Arm.</th>' : ''}` +
+              `<th class="num">Vagas</th><th class="num">Mapeado</th><th class="num">Sistema</th><th class="num">Dif.</th></tr>`;
+  const blocos = [];
+  for (let i = 0; i < dados.length; i += 24) {
+    const t = document.createElement('table');
+    t.className = 'p-tab';
+    t.innerHTML = `<thead>${cab}</thead><tbody>` + dados.slice(i, i + 24).map(g => `
+      <tr>
+        <td>${esc(g.produto)}</td><td>${esc(g.codigo)}</td>
+        ${_agrupar !== 'produto' ? `<td>${esc(g.lote || '—')}</td><td>${esc(g.armazem || '—')}</td>` : ''}
+        <td class="num">${g.vagas.size || '—'}</td>
+        <td class="num">${num(g.mapeado)}</td>
+        <td class="num">${g.sistema === null ? '—' : num(g.sistema)}</td>
+        <td class="num">${g.diferenca === null ? '—' : (g.diferenca > 0 ? '+' : '') + num(g.diferenca)}</td>
+      </tr>`).join('') +
+      (i + 24 >= dados.length
+        ? `<tr class="tot"><td colspan="${_agrupar === 'produto' ? 3 : 5}">Total</td>
+             <td class="num">${num(totMap)}</td><td class="num">${num(totSis)}</td>
+             <td class="num">${(totMap - totSis > 0 ? '+' : '') + num(totMap - totSis)}</td></tr>` : '') +
+      '</tbody>';
+    blocos.push(t);
+  }
+  imprimirTabela(blocos, 'Saldo mapeado × sistema',
+    `${dados.length} linha(s) · mapeado ${num(totMap)} · sistema ${num(totSis)}`);
+}
+
+/* Clicou numa vaga: leva para o mapa com ela aberta. */
+function irParaVaga(pos) {
+  const di = pos.split('-')[0];
+  const pav = Object.keys(MAPA_POSICOES).find(p => MAPA_POSICOES[p][di]);
+  if (pav && pav !== _pavilhao) {
+    _pavilhao = pav;
+    document.querySelectorAll('[onclick^="setPavilhao"]').forEach(b =>
+      b.classList.toggle('active', b.textContent.trim().toLowerCase().startsWith(pav.slice(0, 4))));
+    popularDI();
+  }
+  $('m-di').value = di;
+  irPara('mapa');
+  construirMapa();
+  abrirVaga(pos);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   HISTÓRICO DE ALTERAÇÕES
+   ═══════════════════════════════════════════════════════════════ */
+function eventoHTML(a) {
+  const delta = (a.qtd_antes != null || a.qtd_depois != null)
+    ? `<span class="hev-delta"><span class="de">${num(a.qtd_antes)}</span> → <span class="para">${num(a.qtd_depois)}</span></span>`
+    : '';
+  return `<div class="hev a-${corAcao(a.acao)}">
+    <div class="hev-ini" title="${esc(a.quem)}">${esc(iniciais(a.quem))}</div>
+    <div class="hev-txt">
+      <div class="hev-tit">${esc(rotuloAcao(a.acao))} ${a.posicao ? `<b>${esc(a.posicao)}</b>` : ''} ${delta}</div>
+      <div class="hev-sub">${esc(a.quem)} · ${fmtTS(a.created_at)}${a.produto_nome ? ' · ' + esc(a.produto_nome) : ''}${a.lote ? ' · lote ' + esc(a.lote) : ''}</div>
+    </div>
+  </div>`;
+}
+
+const SEM_TABELA = `<div class="vazio">
+  <div class="vazio-t">Trilha ainda não ligada</div>
+  <div class="vazio-s">A tabela <code>alteracoes</code> não existe no banco. Rode o <code>migracao.sql</code> e o histórico começa a ser gravado a partir dali.</div></div>`;
+
+async function carregarAlteracoes(forcar = false) {
+  if (!forcar && cacheValido('alteracoes', 30)) { renderAlteracoes(cacheLer('alteracoes')); return; }
+  $('a-lista').innerHTML = '<div class="esqueleto" style="height:90px"></div>';
+  const dados = await lerAlteracoes({ limite:300 });
+  if (dados === null) { $('a-lista').innerHTML = SEM_TABELA; $('a-kpis').innerHTML = ''; return; }
+  cacheGravar('alteracoes', dados);
+  _alteracoes = dados;
+  renderAlteracoes(dados);
+}
+
+function renderAlteracoes(dados) {
+  const q = $('a-busca')?.value.trim().toUpperCase() || '';
+  const ts = termos(q);
+  const filtrado = ts.length
+    ? dados.filter(a => ts.some(x =>
+        [a.quem, a.posicao, a.codigo, a.produto_nome, a.lote, rotuloAcao(a.acao)]
+          .filter(Boolean).join(' ').toUpperCase().includes(x)))
+    : dados;
+
+  const hoje = new Date().toISOString().slice(0, 10);
+  const deHoje = dados.filter(a => String(a.created_at).slice(0, 10) === hoje);
+  const pessoas = new Set(dados.map(a => a.quem));
+
+  $('a-kpis').innerHTML = [
+    kpiCard('Alterações hoje', num(deHoje.length), 'em todo o mapa'),
+    kpiCard('No histórico', num(dados.length), 'últimas 300'),
+    kpiCard('Pessoas', num(pessoas.size), [...pessoas].slice(0, 3).join(', ') || '—'),
+    kpiCard('Última', dados[0] ? fmtTS(dados[0].created_at).slice(0, 5) : '—', dados[0] ? dados[0].quem : 'nada ainda'),
+  ].join('');
+
+  $('a-lista').innerHTML = filtrado.length
+    ? `<div class="hist">${filtrado.map(eventoHTML).join('')}</div>`
+    : `<div class="vazio"><div class="vazio-t">Nada aqui</div>
+       <div class="vazio-s">${q ? `Nenhuma alteração com “${esc(q)}”.` : 'Nenhuma alteração registrada ainda.'}</div></div>`;
+}
+
+/* O histórico daquela vaga, dentro da gaveta. */
+async function historicoDaVaga(pos) {
+  const cx = $('gv-hist');
+  if (!cx) return;
+  cx.innerHTML = '<div class="esqueleto" style="height:44px"></div>';
+  const dados = await lerAlteracoes({ posicao:pos, limite:30 });
+  if (dados === null) { cx.innerHTML = '<div class="vazio-s">Trilha não ligada — rode o migracao.sql.</div>'; return; }
+  cx.innerHTML = dados.length
+    ? `<div class="hist">${dados.map(eventoHTML).join('')}</div>`
+    : '<div class="vazio-s">Nenhuma alteração registrada nesta vaga.</div>';
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
    MAPA DRIVE-IN
+   O DOM das vagas é montado uma vez (construirMapa) e a partir daí
+   busca, filtro e modo de cor só trocam className (renderMapa).
+   Antes cada tecla digitada remontava 720 botões — era daí que
+   vinha o engasgo.
    ═══════════════════════════════════════════════════════════════ */
 async function carregarMapa() {
+  if (cacheValido('mapa', 45) && _mcels.length) { renderMapa(); return; }
   $('m-mapa').innerHTML = '<div class="skeleton">carregando o mapa…</div>';
   try {
     const [hist, pend, naoConf] = await Promise.all([
@@ -2723,117 +3205,196 @@ async function carregarMapa() {
       buscarTudo(() => sb.from('lancamentos')
         .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, ciclo_id, created_at, filial, usuario')
         .eq('status', 'pendente').eq('ocupacao_ativa', true).not('posicao', 'is', null)),
-      buscarTudo(() => sb.from('historico').select('*').eq('confirmado', false)),
+      buscarTudo(() => sb.from('historico')
+        .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, created_at, filial, ciclo_id')
+        .eq('confirmado', false)),
     ]);
 
     _ocupacao = {};
-    for (const r of hist) (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'historico',   pend:false });
-    for (const r of pend) (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'lancamentos', pend:true  });
+    for (const r of hist) (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'historico',   pend:false, _busca:chaveBusca(r) });
+    for (const r of pend) (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'lancamentos', pend:true,  _busca:chaveBusca(r) });
     _naoConf = naoConf;
+    cacheGravar('mapa', 1);
 
     preencherSelect('m-armazem', Object.values(_ocupacao).flat().map(r => r.armazem));
     popularDI();
-    renderMapa();
-  } catch (e) { $('m-mapa').innerHTML = `<div class="empty"><div class="empty-tit">Não foi possível carregar</div><div class="empty-sub">${esc(e.message)}</div></div>`; }
+    construirMapa();
+  } catch (e) {
+    $('m-mapa').innerHTML = `<div class="empty"><div class="empty-tit">Não foi possível carregar</div><div class="empty-sub">${esc(e.message)}</div></div>`;
+  }
 }
 
-function setZoomMapa(tam, btn) {
+function construirMapa() {
+  const di = $('m-di').value;
+  const linhas = MAPA_POSICOES[_pavilhao]?.[di];
+  if (!linhas) return;
+
+  const nomes    = Object.keys(linhas).sort();
+  const primeira = linhas[nomes[0]];
+  const nAndares = Object.keys(primeira).length;
+  const nVagas   = primeira[Object.keys(primeira)[0]].length;
+
+  _mcels = []; _mblocos = [];
+  const grade = document.createElement('div');
+  grade.className = 'mapa-grade';
+  grade.style.setProperty('--bloco-w', `calc(${nVagas} * var(--cel) + ${nVagas - 1} * var(--gap) + 40px)`);
+
+  for (const ln of nomes) {
+    const andares = linhas[ln];
+    const bloco = document.createElement('div');
+    bloco.className = 'mlinha';
+
+    const head = document.createElement('div');
+    head.className = 'ml-head';
+    head.innerHTML = `<span class="ml-nome">${di}-${ln}</span>
+      <span class="ml-qtd"></span><span class="ml-ocup"></span>
+      <button class="ml-imp" title="Imprimir só esta linha"
+              onclick="event.stopPropagation();imprimirLinha('${di}','${ln}','${_pavilhao}')">⎙</button>`;
+    bloco.appendChild(head);
+
+    const corpoGrade = document.createElement('div');
+    corpoGrade.className = 'corpo-grade';
+    bloco.appendChild(corpoGrade);
+
+    const doBloco = [];
+    // Andar de cima primeiro: é assim que se olha para o drive-in.
+    for (const an of Object.keys(andares).sort((a, b) => b - a)) {
+      const fila = document.createElement('div');
+      fila.className = 'ml-and';
+      fila.innerHTML = `<span class="ml-and-n">${an}</span>`;
+      for (const lg of andares[an]) {
+        const pos = `${di}-${ln}-${an}-${lg}`;
+        const b = document.createElement('button');
+        b.className = 'mapa-cel';
+        b.textContent = lg;
+        b.dataset.pos = pos;
+        fila.appendChild(b);
+        const ref = { el:b, pos };
+        _mcels.push(ref); doBloco.push(ref);
+      }
+      corpoGrade.appendChild(fila);
+    }
+
+    // Os três corpos ficam prontos de uma vez: trocar de visão é
+    // trocar uma classe, não remontar o drive-in.
+    bloco.appendChild(corpoDetalhe(doBloco));
+    const c3d = corpo3D(doBloco, di, ln);
+    bloco.appendChild(c3d);
+    for (const ref of doBloco) ref.cx = c3d.querySelector(`[data-pos="${ref.pos}"]`);
+
+    const barra = document.createElement('div');
+    barra.className = 'ml-bar';
+    barra.innerHTML = '<i style="width:0"></i>';
+    bloco.appendChild(barra);
+
+    grade.appendChild(bloco);
+    _mblocos.push({ el:bloco, qtdEl:head.querySelector('.ml-qtd'), ocupEl:head.lastElementChild,
+                    barraEl:barra.firstElementChild, cels:doBloco });
+  }
+
   const box = $('m-mapa');
-  box.className = 'mapa-box' + (tam ? ' ' + tam : '');
-  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  try { localStorage.setItem('mapa-zoom', tam); } catch (e) { /* modo privado */ }
-}
-
-function setPavilhao(p, btn) {
-  _pavilhao = p;
-  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  popularDI(); renderMapa();
-}
-
-function popularDI() {
-  const sel = $('m-di'), atual = sel.value;
-  const dis = Object.keys(MAPA_POSICOES[_pavilhao]).sort();
-  sel.innerHTML = dis.map(d => `<option value="${d}">Drive-in ${d}</option>`).join('');
-  sel.value = dis.includes(atual) ? atual : dis[0];
+  box.innerHTML = '';
+  box.appendChild(grade);
+  box.dataset.vista = _mvista;
+  $('m-di-nome').textContent = `${di} · ${nAndares} andares × ${nVagas} vagas`;
+  renderMapa();
 }
 
 function itensDaVaga(pos) { return (_ocupacao[pos] || []).filter(r => daFilial(r.filial)); }
 
-function bate(itens, q) {
-  return !!q && itens.some(r => [r.codigo, r.produto_nome, r.lote, r.armazem].join(' ').toUpperCase().includes(q));
+/* Acerta pelo conteúdo OU pela própria posição: assim "B1-22" e
+   "22" trazem a linha inteira, não só a vaga. */
+function bate(itens, q) { return !!q && itens.some(r => casa(r, q)); }
+function acertou(pos, itens, ts) {
+  if (!ts.length) return false;
+  return ts.some(x => pos.includes(x)) || itens.some(r => casa(r, ts));
+}
+
+/* Grade, Detalhe ou 3D. Os três corpos já estão montados: trocar
+   de visão é trocar um atributo, não reconstruir o drive-in. */
+function setVistaMapa(v) {
+  _mvista = v;
+  $('m-mapa').dataset.vista = v;
+  $('seg-vista').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.vista === v));
+  try { localStorage.setItem('mapa-vista', v); } catch (e) { /* modo privado */ }
+}
+
+function setModoCor(v) {
+  _mcor = v;
+  try { localStorage.setItem('mapa-cor', v); } catch (e) { /* modo privado */ }
+  renderMapa();
 }
 
 function renderMapa() {
-  const di = $('m-di').value;
-  const q  = $('m-busca').value.trim().toUpperCase();
+  if (!_mcels.length) return;
+  const di     = $('m-di').value;
+  const q      = $('m-busca').value.trim().toUpperCase();
   const estado = $('m-estado').value;
-  const arm = $('m-armazem').value;
-  const linhas = MAPA_POSICOES[_pavilhao]?.[di];
-  if (!linhas) return;
+  const arm    = $('m-armazem').value;
 
+  const ts = termos(q);
   let total = 0, ocup = 0, pend = 0, achados = 0;
 
-  const nomesLinhas = Object.keys(linhas).sort();
-  const primeira    = linhas[nomesLinhas[0]];
-  const nAndares    = Object.keys(primeira).length;
-  const nVagas      = primeira[Object.keys(primeira)[0]].length;
+  for (const c of _mcels) {
+    let itens = itensDaVaga(c.pos);
+    if (arm) itens = itens.filter(r => r.armazem === arm);
+    const el = c.el;
+    total++;
 
-  // Largura do bloco = as vagas + o rótulo do andar + respiro.
-  const blocoW = `calc(${nVagas} * var(--cel) + ${nVagas - 1} * var(--gap) + 40px)`;
+    let cls = 'mapa-cel', fundo = '';
+    const temPend = itens.some(r => r.pend);
+    if (itens.length) {
+      ocup++;
+      if (temPend) pend++;
+      if (_mcor === 'estado') {
+        cls += itens.length > 1 ? ' multi' : temPend ? ' pend' : ' ok';
+      } else if (_mcor === 'produto') {
+        cls += ' tom'; fundo = corDe(itens[0].codigo);
+      } else if (_mcor === 'armazem') {
+        cls += ' tom'; fundo = corDe(itens[0].armazem || 'sem');
+      } else if (_mcor === 'idade') {
+        const d = Math.max(...itens.map(r => diasDesde(r.created_at)));
+        cls += ' tom';
+        fundo = d < 15 ? 'var(--pos)' : d < 45 ? 'var(--warn)' : 'var(--neg)';
+      }
+    }
 
-  const blocos = nomesLinhas.map(ln => {
-    const andares = linhas[ln];
-    let daLinha = 0, ocupLinha = 0, hitLinha = false;
+    const achou = acertou(c.pos, itens, ts);
+    if (achou) { achados++; cls = cls.replace('mapa-cel', 'mapa-cel hit'); }
 
-    // Andar de cima primeiro: é assim que se olha para o drive-in.
-    const corpo = Object.keys(andares).sort((a, b) => b - a).map(an => {
-      const cels = andares[an].map(lg => {
-        const pos = `${di}-${ln}-${an}-${lg}`;
-        let itens = itensDaVaga(pos);
-        if (arm) itens = itens.filter(r => r.armazem === arm);
+    if (estado === 'pend'  && !temPend)         cls += ' apagada';
+    if (estado === 'multi' && itens.length < 2) cls += ' apagada';
+    if (q && !achou)                            cls += ' apagada';
 
-        total++; daLinha++;
-        if (itens.length) { ocup++; ocupLinha++; }
-        const temPend = itens.some(r => r.pend);
-        if (temPend) pend++;
+    el.title = itens.length
+      ? `${c.pos} — ${itens.map(r => `${r.produto_nome || r.codigo} (${qtdUn(r.quantidade, r.codigo, r.produto_nome)})`).join(' · ')}`
+      : `${c.pos} — livre`;
+    if (el.className !== cls) el.className = cls;
+    if (el.style.background !== fundo) el.style.background = fundo;
 
-        const achou = bate(itens, q);
-        if (achou) { achados++; hitLinha = true; }
+    if (c.cx) {
+      const base = itens.length ? 'cx cheia' : 'cx vazia';
+      const extra = (achou ? ' achou' : cls.includes(' apagada') ? ' fora' : '');
+      if (c.cx.getAttribute('class') !== base + extra) c.cx.setAttribute('class', base + extra);
+    }
+  }
 
-        let cls = '';
-        if (achou)                 cls = 'hit';
-        else if (itens.length > 1) cls = 'multi';
-        else if (temPend)          cls = 'pend';
-        else if (itens.length)     cls = 'ok';
-
-        if (estado === 'pend'  && !temPend)         cls += ' apagada';
-        if (estado === 'multi' && itens.length < 2) cls += ' apagada';
-
-        const t = itens.length
-          ? `${pos} — ${itens.map(r => `${r.produto_nome || r.codigo} (${qtdUn(r.quantidade, r.codigo, r.produto_nome)})`).join(' · ')}`
-          : `${pos} — livre`;
-        return `<button class="mapa-cel ${cls}" onclick="abrirVaga('${pos}')" title="${esc(t)}" aria-label="${esc(t)}">${lg}</button>`;
-      }).join('');
-      return `<div class="ml-and"><span class="ml-and-n">${an}</span>${cels}</div>`;
-    }).join('');
-
-    const cheia = ocupLinha === daLinha && daLinha > 0;
-    const cls = [ocupLinha ? '' : 'vazia', cheia ? 'cheia' : '', hitLinha ? 'tem-hit' : ''].filter(Boolean).join(' ');
-
-    return `<div class="mlinha ${cls}">
-      <div class="ml-head">
-        <span class="ml-nome">${di}-${ln}</span>
-        <span class="ml-ocup">${ocupLinha}/${daLinha}</span>
-      </div>
-      ${corpo}
-      <div class="ml-bar"><i style="width:${daLinha ? Math.round(ocupLinha / daLinha * 100) : 0}%"></i></div>
-    </div>`;
-  }).join('');
-
-  $('m-mapa').innerHTML = `<div class="mapa-grade" style="--bloco-w:${blocoW}">${blocos}</div>`;
-  $('m-di-nome').textContent = `${di} · ${nAndares} andares × ${nVagas} vagas`;
+  for (const b of _mblocos) {
+    let o = 0, hit = false;
+    for (const c of b.cels) {
+      if (itensDaVaga(c.pos).length) o++;
+      if (c.el.classList.contains('hit')) hit = true;
+    }
+    const n = b.cels.length;
+    const resumo = resumoDaLinha(b.cels);
+    b.qtdEl.textContent = resumo.unidades ? num(resumo.unidades) : '';
+    b.qtdEl.classList.toggle('varios', resumo.grupos.length > 1);
+    b.ocupEl.textContent = `${o}/${n}`;
+    b.barraEl.style.width = n ? Math.round(o / n * 100) + '%' : '0';
+    const esconder = q && $('m-so-result').classList.contains('active') && achados > 0 && !hit;
+    b.el.className = 'mlinha' + (o ? '' : ' vazia') + (o === n && n ? ' cheia' : '') +
+                     (hit ? ' tem-hit' : '') + (esconder ? ' oculta' : '');
+  }
 
   const geral = Object.values(_ocupacao).flat().filter(r => daFilial(r.filial));
   $('m-kpis').innerHTML = `
@@ -2841,13 +3402,52 @@ function renderMapa() {
     ${kpi('Taxa de ocupação', pct(ocup, total), 'do drive-in visível', 'is-info')}
     ${kpi('Aguardando validação', num(pend), 'contadas, não validadas', pend ? 'is-alt' : '')}
     ${kpi('Ocupações no total', num(geral.length), `em ${num(new Set(geral.map(r => r.posicao)).size)} vagas`)}
-    ${q ? kpi('Encontradas', num(achados), `para "${esc(q)}"`, 'is-info') : ''}`;
+    ${q ? kpi('Encontradas', num(achados),
+        achados ? `em ${document.querySelectorAll('#m-mapa .mlinha:not(.oculta)').length} linha(s)`
+                : `nada com "${esc(q)}" — confira o termo`,
+        achados ? 'is-info' : 'is-warn') : ''}`;
 
   $('m-alertas').innerHTML = _naoConf.length
     ? `<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>${_naoConf.length} vaga(s) não confirmada(s)</b>Saíram do mapa esperando sua decisão. <button class="btn btn-sm btn-info" style="margin-left:8px" onclick="abrirRevisao()">Revisar</button></div></div>`
     : '';
 
+  desenharLegendaMapa();
   renderListaMapa(di, q, arm);
+}
+
+/* A legenda acompanha o modo de cor — no modo produto ela vira a
+   lista dos produtos que mais ocupam vaga neste drive-in. */
+function desenharLegendaMapa() {
+  const el = $('m-legenda');
+  if (!el) return;
+  const item = (cor, txt, borda) =>
+    `<span><i style="background:${cor};${borda ? `border-color:${borda}` : 'border-color:transparent'}"></i>${txt}</span>`;
+
+  let html;
+  if (_mcor === 'estado') {
+    html = item('var(--surface-2)', 'Livre', 'var(--line-2)') +
+           item('var(--pos)', 'Ocupada', 'var(--pos)') +
+           item('var(--alt)', 'Aguardando validação', 'var(--alt)') +
+           item('var(--warn)', 'Mais de um lote', 'var(--warn)') +
+           item('var(--accent)', 'Resultado da busca', 'var(--accent)');
+  } else if (_mcor === 'idade') {
+    html = item('var(--pos)', 'Até 15 dias parada', 'var(--pos)') +
+           item('var(--warn)', '15 a 45 dias', 'var(--warn)') +
+           item('var(--neg)', 'Mais de 45 dias', 'var(--neg)');
+  } else {
+    const campo = _mcor === 'produto' ? 'codigo' : 'armazem';
+    const conta = {};
+    for (const c of _mcels) {
+      const it = itensDaVaga(c.pos)[0];
+      if (!it) continue;
+      const k = it[campo] || '—';
+      (conta[k] ||= { n:0, nome:_mcor === 'produto' ? (it.produto_nome || k) : `Armazém ${k}` }).n++;
+    }
+    const top = Object.entries(conta).sort((a, b) => b[1].n - a[1].n).slice(0, 7);
+    html = top.map(([k, v]) => item(corDe(k), `${esc(String(v.nome).slice(0, 26))} <b style="color:var(--text-2)">${v.n}</b>`))
+              .join('') || '<span>nenhuma vaga ocupada neste drive-in</span>';
+  }
+  el.innerHTML = html + '<span style="margin-left:auto;color:var(--text-3)">cada bloco é uma linha · andar de cima em cima · número = profundidade</span>';
 }
 
 function renderListaMapa(di, q, arm) {
@@ -2863,7 +3463,7 @@ function renderListaMapa(di, q, arm) {
   $('m-lista-cnt').textContent = `${num(linhas.length)} ocupação(ões)`;
   if (!linhas.length) { $('m-tbody').innerHTML = vazio('Nenhuma vaga ocupada aqui', 'Use “Ocupar vaga” ou aguarde a contagem.', 9); return; }
 
-  $('m-tbody').innerHTML = linhas.map(r => `
+  $('m-tbody').innerHTML = linhas.slice(0, 400).map(r => `
     <tr>
       <td class="mono strong">${esc(r.pos)}</td>
       <td class="nome">${esc(r.produto_nome || r.codigo)}</td>
@@ -2878,9 +3478,33 @@ function renderListaMapa(di, q, arm) {
         <button class="btn btn-sm" onclick="editarVaga('${esc(r.pos)}','${esc(r.id)}','${esc(r._tab)}')">Editar</button>
         <button class="btn btn-sm btn-danger" onclick="liberar('${esc(r.id)}','${esc(r._tab)}','${esc(r.pos)}')">Liberar</button>
       </td>
-    </tr>`).join('');
+    </tr>`).join('') +
+    (linhas.length > 400 ? `<tr><td colspan="9"><div class="skeleton">mostrando 400 de ${num(linhas.length)} — refine a busca</div></td></tr>` : '');
 }
 
+function setZoomMapa(tam, btn) {
+  const box = $('m-mapa');
+  box.className = 'mapa-box' + (tam ? ' ' + tam : '');
+  if (btn) {
+    btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  try { localStorage.setItem('mapa-zoom', tam); } catch (e) { /* modo privado */ }
+}
+
+function setPavilhao(p, btn) {
+  _pavilhao = p;
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  popularDI(); construirMapa();
+}
+
+function popularDI() {
+  const sel = $('m-di'), atual = sel.value;
+  const dis = Object.keys(MAPA_POSICOES[_pavilhao]).sort();
+  sel.innerHTML = dis.map(d => `<option value="${d}">Drive-in ${d}</option>`).join('');
+  sel.value = dis.includes(atual) ? atual : dis[0];
+}
 function abrirVaga(pos) {
   const itens = itensDaVaga(pos);
   if (!itens.length) { abrirModalVaga(null, pos); return; }
@@ -3045,10 +3669,9 @@ async function confirmarLiberacao(id, tab, pos, qtd) {
 
   try {
     const patch = restou > 0
-      ? { quantidade: restou, updated_at:new Date().toISOString() }
-      : { ocupacao_ativa:false, updated_at:new Date().toISOString() };
-    const { error } = await sb.from(tab || 'historico').update(patch).eq('id', id);
-    if (error) throw error;
+      ? { quantidade: restou, updated_at:new Date().toISOString(), ...carimbo() }
+      : { ocupacao_ativa:false, updated_at:new Date().toISOString(), ...carimbo() };
+    await atualizarResiliente(tab || 'historico', patch, q => q.eq('id', id));
     fecharModal('modal-vaga');
     toast(restou > 0
       ? `${qtdUn(qtd, r?.codigo, nome)} saiu de ${pos} · restam ${num(restou)}.`
@@ -3057,9 +3680,88 @@ async function confirmarLiberacao(id, tab, pos, qtd) {
   } catch (e) { erro('Falha ao liberar', e); }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   SUGESTÃO DE PRODUTO
+   Código ou nome: os dois campos procuram no mesmo catálogo.
+   ═══════════════════════════════════════════════════════════════ */
+let _sugAtiva = null;
+
+function mostrarSugestoes(idCaixa, termo) {
+  const caixa = $(idCaixa);
+  const itens = buscarProdutos(termo, 8);
+  if (!itens.length) {
+    caixa.innerHTML = termo.trim().length >= 2
+      ? '<div class="sug-vazio">Nada no catálogo com isso — dá para digitar mesmo assim.</div>' : '';
+    caixa.hidden = !caixa.innerHTML;
+    _sugAtiva = null;
+    return;
+  }
+  caixa.innerHTML = itens.map((p, i) => `
+    <button type="button" data-i="${i}">
+      <div class="sug-nome">${esc(p.nome)}</div>
+      <div class="sug-meta">${esc(p.codigo)} · ${esc(p.unidade || 'un')}${p.palete ? ` · palete ${num(p.palete)}` : ''}</div>
+    </button>`).join('');
+  caixa.hidden = false;
+  _sugAtiva = { caixa, itens, i:-1 };
+}
+
+function escolherProduto(p) {
+  $('mv-codigo').value = p.codigo;
+  $('mv-produto').value = p.nome;
+  fecharSugestoes();
+  $('mv-lote').focus();
+  buscarProdutoVaga();
+}
+
+function fecharSugestoes() {
+  $('sug-codigo').hidden = true;
+  $('sug-produto').hidden = true;
+  _sugAtiva = null;
+}
+
+function navegarSugestoes(e) {
+  if (!_sugAtiva) return;
+  const { caixa, itens } = _sugAtiva;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    _sugAtiva.i = (_sugAtiva.i + (e.key === 'ArrowDown' ? 1 : -1) + itens.length) % itens.length;
+    caixa.querySelectorAll('button').forEach((b, i) => b.classList.toggle('marcado', i === _sugAtiva.i));
+    // scrollIntoView não existe em todo contexto; a marcação já
+    // funciona sem ele.
+    const m = caixa.querySelector('.marcado');
+    if (m && typeof m.scrollIntoView === 'function') m.scrollIntoView({ block:'nearest' });
+  } else if (e.key === 'Enter' && _sugAtiva.i >= 0) {
+    e.preventDefault();
+    escolherProduto(itens[_sugAtiva.i]);
+  } else if (e.key === 'Escape') fecharSugestoes();
+}
+
+function ligarSugestoes() {
+  const sugCod  = debounce(v => mostrarSugestoes('sug-codigo', v), 120);
+  const sugNome = debounce(v => mostrarSugestoes('sug-produto', v), 120);
+  $('mv-codigo').addEventListener('input', e => sugCod(e.target.value));
+  $('mv-produto').addEventListener('input', e => sugNome(e.target.value));
+  $('mv-codigo').addEventListener('keydown', navegarSugestoes);
+  $('mv-produto').addEventListener('keydown', navegarSugestoes);
+  // O blur espera o clique na sugestão antes de fechar.
+  $('mv-codigo').addEventListener('blur', () => setTimeout(() => { buscarProdutoVaga(); $('sug-codigo').hidden = true; }, 160));
+  $('mv-produto').addEventListener('blur', () => setTimeout(() => { $('sug-produto').hidden = true; }, 160));
+  for (const id of ['sug-codigo', 'sug-produto']) {
+    $(id).addEventListener('mousedown', e => {
+      const b = e.target.closest('button'); if (!b || !_sugAtiva) return;
+      e.preventDefault();
+      escolherProduto(_sugAtiva.itens[Number(b.dataset.i)]);
+    });
+  }
+}
+
 async function buscarProdutoVaga() {
   const cod = $('mv-codigo').value.trim();
   if (cod.length < 4) return;
+
+  // O catálogo responde na hora; o saldo só completa lote e armazém.
+  const p = produtoPorCodigo(normalizarCodigo(cod));
+  if (p && !$('mv-produto').value.trim()) $('mv-produto').value = p.nome || '';
   const { data } = await sb.from('saldo_sistema')
     .select('descricao, lote, armazem').ilike('codigo', normalizarCodigo(cod)).limit(1).maybeSingle();
   if (data) {
@@ -3355,7 +4057,7 @@ function renderAcuracia() {
     if (t === 'fora'      && r.conta_acuracia !== false) return false;
     if (t === 'aberta'    && (div === 0 || r.resolvido_em)) return false;
     if (t === 'resolvida' && !r.resolvido_em) return false;
-    if (q && ![r.produto_nome, r.codigo, r.lote].join(' ').toUpperCase().includes(q)) return false;
+    if (q && !casa(r, q)) return false;
     return true;
   }).sort((a, b) => {
     // Em aberto e contando na acurácia primeiro: é o que precisa de você.
