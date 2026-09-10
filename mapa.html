@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Simbiose · Mapa do drive-in</title>
+<script>
+/* Tema antes da primeira pintura — mesma chave dos outros apps. */
+(function () {
+  try {
+    var t = localStorage.getItem('tema');
+    if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'escuro';
+    document.documentElement.setAttribute('data-tema', t);
+  } catch (e) { document.documentElement.setAttribute('data-tema', 'escuro'); }
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   SIMBIOSE · MAPA DO DRIVE-IN
+   Uma tela só: onde está cada coisa e o que fazer com ela.
+   Saldo, histórico e análise ficam no painel do gestor.
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg:#08090A; --surface:#101113; --surface-2:#17181B; --surface-3:#1F2023;
+  --line:#26272B; --line-2:#35363B;
+  --text:#F7F8F8; --text-2:#9B9CA6; --text-3:#67686F;
+  --accent:#4C8DF6; --accent-dk:#2563EB; --on-accent:#FFF;
+  --accent-sf:rgba(76,141,246,.13); --accent-ln:rgba(76,141,246,.34);
+  --pos:#4FBE7E; --pos-sf:rgba(79,190,126,.12);
+  --neg:#F0655F; --neg-sf:rgba(240,101,95,.12);
+  --warn:#E5A23C; --warn-sf:rgba(229,162,60,.12);
+  --alt:#22B8CF;  --alt-sf:rgba(34,184,207,.12);
+  --overlay:rgba(8,9,10,.74);
+  --toast-ok-bg:#123321; --toast-ok-fg:#8FE0AC;
+  --toast-er-bg:#3D1420; --toast-er-fg:#FFB3C0;
+  --cel-fg:#04240F;
+  --sans:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  --r:10px; --r-sm:7px; --r-xs:5px;
+  --sh:0 4px 6px rgba(0,0,0,.28), 0 12px 32px rgba(0,0,0,.34);
+  --cel:24px; --gap:3px;
+}
+html[data-tema="claro"] {
+  --bg:#F6F7F9; --surface:#FFF; --surface-2:#F2F4F7; --surface-3:#E6E9EE;
+  --line:#E1E4EA; --line-2:#CBD0D9;
+  --text:#14161A; --text-2:#545B67; --text-3:#838B98;
+  --accent:#2563EB; --accent-dk:#1D53C9;
+  --accent-sf:rgba(37,99,235,.09); --accent-ln:rgba(37,99,235,.28);
+  --pos:#15803D; --pos-sf:rgba(21,128,61,.09);
+  --neg:#C0342B; --neg-sf:rgba(192,52,43,.09);
+  --warn:#A66206; --warn-sf:rgba(166,98,6,.10);
+  --alt:#0E7490;  --alt-sf:rgba(14,116,144,.09);
+  --overlay:rgba(20,22,26,.42);
+  --toast-ok-bg:#E7F6EC; --toast-ok-fg:#14532D;
+  --toast-er-bg:#FCE9E8; --toast-er-fg:#8C221B;
+  --cel-fg:#FFF;
+  --sh:0 4px 6px rgba(20,22,26,.06), 0 12px 32px rgba(20,22,26,.10);
+}
+[hidden] { display:none !important; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body {
+  background:var(--bg); color:var(--text);
+  font-family:var(--sans); font-size:.9375rem; line-height:1.5;
+  -webkit-font-smoothing:antialiased; padding-bottom:40px;
+}
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
+
+/* ═══════════ TOPO ═══════════ */
+.bar {
+  position:sticky; top:0; z-index:20;
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  padding:11px 16px; background:var(--surface); border-bottom:1px solid var(--line);
+}
+.marca { display:flex; align-items:center; gap:9px; }
+.marca svg { width:21px; height:21px; color:var(--accent); }
+.marca b { font-size:.875rem; font-weight:700; }
+.direita { margin-left:auto; display:flex; align-items:center; gap:8px; }
+
+select, .bt {
+  background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-sm);
+  color:var(--text); font:inherit; font-size:.8125rem; padding:7px 11px; cursor:pointer;
+}
+select:hover, .bt:hover { border-color:var(--line-2); }
+.bt.destaque { background:var(--accent); border-color:var(--accent); color:var(--on-accent); font-weight:600; }
+.bt.destaque:hover { background:var(--accent-dk); }
+.bt:disabled { opacity:.45; cursor:not-allowed; }
+.quem-chip { display:flex; align-items:center; gap:7px; }
+.quem-ini {
+  width:22px; height:22px; border-radius:50%;
+  background:var(--accent-sf); border:1px solid var(--accent-ln); color:var(--accent);
+  display:flex; align-items:center; justify-content:center; font-size:.5625rem; font-weight:700;
+}
+
+.tela { max-width:1400px; margin:0 auto; padding:16px; }
+
+/* ═══════════ BUSCA E NÚMEROS ═══════════ */
+.busca { position:relative; }
+.busca input {
+  width:100%; padding:11px 14px 11px 34px;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm);
+  color:var(--text); font:inherit; font-size:.9375rem;
+}
+.busca input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-sf); }
+.busca .lupa { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-3); }
+.busca-cnt { font-size:.75rem; color:var(--text-3); margin:6px 0 12px; min-height:1.2em; }
+.busca-cnt.nada { color:var(--neg); }
+
+.stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+.stat {
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--r-sm); padding:10px 13px; text-align:center;
+}
+.stat-val { font-family:var(--mono); font-size:1.375rem; font-weight:600; letter-spacing:-.02em; }
+.stat-lbl { font-size:.6875rem; color:var(--text-3); margin-top:1px; }
+
+/* ═══════════ MAPA ═══════════ */
+/* Drive-ins lado a lado; dentro de cada um, as linhas descem.
+   B1 à esquerda e B2 à direita, A1 à esquerda e A2 à direita. */
+.colunas { display:grid; gap:18px; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); align-items:start; }
+.di-head {
+  display:flex; align-items:baseline; gap:9px; flex-wrap:wrap;
+  padding:6px 2px 7px; margin-bottom:9px; border-bottom:1px solid var(--line);
+}
+.di-nome { font-size:.9375rem; font-weight:700; }
+.di-meta { font-size:.6875rem; color:var(--text-3); font-family:var(--mono); }
+.grade { display:flex; flex-direction:column; gap:6px; }
+
+.linha {
+  display:flex; align-items:center; gap:11px;
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--r-sm); padding:7px 9px;
+}
+.linha.vazia { opacity:.45; }
+.linha.achou { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent-ln); opacity:1; }
+.linha.oculta { display:none; }
+.lh { flex-shrink:0; width:120px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.lh-nome { font-family:var(--mono); font-size:.75rem; font-weight:600; }
+.lh-qtd {
+  font-family:var(--mono); font-size:.6875rem; font-weight:600;
+  background:var(--surface-3); border-radius:4px; padding:0 5px;
+}
+.lh-qtd:empty { display:none; }
+.lh-qtd.varios { color:var(--warn); background:var(--warn-sf); }
+.lh-ocup { font-family:var(--mono); font-size:.625rem; color:var(--text-3); }
+.lh-imp {
+  margin-left:auto; background:none; border:0; color:var(--text-3); cursor:pointer;
+  font-size:.875rem; line-height:1; padding:3px 5px; border-radius:5px;
+}
+.lh-imp:hover { color:var(--accent); background:var(--accent-sf); }
+
+.corpo-grade { flex:1; display:flex; flex-direction:column; gap:var(--gap); }
+.and { display:flex; align-items:center; gap:var(--gap); }
+.and-n { width:12px; flex-shrink:0; text-align:center; font-family:var(--mono); font-size:.5625rem; color:var(--text-3); }
+.cel {
+  width:var(--cel); height:var(--cel); flex-shrink:0;
+  border:1px solid var(--line-2); border-radius:4px;
+  background:var(--surface-2); color:var(--text-3);
+  font-family:var(--mono); font-size:.625rem; line-height:1;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;
+}
+.cel:hover, .cel:focus-visible { box-shadow:0 0 0 2px var(--accent); z-index:2; position:relative; }
+.cel.ok    { background:var(--pos);  border-color:var(--pos);  color:var(--cel-fg); }
+.cel.multi { background:var(--warn); border-color:var(--warn); color:var(--cel-fg); }
+.cel.pend  { background:var(--alt);  border-color:var(--alt);  color:var(--cel-fg); }
+.cel.achou { box-shadow:0 0 0 2px var(--accent), 0 0 10px var(--accent-ln); z-index:2; position:relative; }
+.cel.fora  { opacity:.12; }
+
+.legenda {
+  display:flex; gap:14px; flex-wrap:wrap; margin:14px 0 20px;
+  font-size:.6875rem; color:var(--text-3);
+}
+.legenda span { display:flex; align-items:center; gap:5px; }
+.legenda i { width:11px; height:11px; border-radius:3px; border:1px solid var(--line-2); }
+
+/* ═══════════ LISTA DE OCUPADAS ═══════════ */
+.tit { font-size:.6875rem; font-weight:600; color:var(--text-3); margin:0 0 9px; }
+.item {
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm);
+  padding:11px 13px; margin-bottom:8px; cursor:pointer;
+}
+.item:hover { border-color:var(--line-2); }
+.item.pend { border-color:var(--alt); background:var(--alt-sf); }
+.item-topo { display:flex; align-items:baseline; gap:9px; }
+.item-pos { font-family:var(--mono); font-size:.8125rem; font-weight:700; }
+.item-qtd { margin-left:auto; font-family:var(--mono); font-size:.9375rem; font-weight:600; }
+.item-qtd small { font-size:.625rem; font-weight:400; color:var(--text-3); margin-left:3px; }
+.item-nome { font-size:.8125rem; font-weight:600; margin-top:3px; }
+.item-meta { font-family:var(--mono); font-size:.6875rem; color:var(--text-3); margin-top:2px; }
+
+.vazio { text-align:center; padding:26px 16px; color:var(--text-3); }
+.vazio-t { font-weight:600; color:var(--text-2); font-size:.875rem; margin-bottom:3px; }
+.vazio-s { font-size:.75rem; }
+.esqueleto {
+  height:170px; border-radius:var(--r-sm);
+  background:linear-gradient(90deg,var(--surface) 25%,var(--surface-2) 50%,var(--surface) 75%);
+  background-size:200% 100%; animation:desliza 1.3s linear infinite;
+}
+@keyframes desliza { to { background-position:-200% 0; } }
+
+/* ═══════════ DIÁLOGOS ═══════════ */
+.dlg {
+  position:fixed; inset:0; z-index:200; padding:18px;
+  background:var(--overlay); display:flex; align-items:center; justify-content:center;
+}
+.dlg[hidden] { display:none !important; }
+.dlg-cx {
+  width:min(430px,100%); max-height:88dvh; display:flex; flex-direction:column; overflow:hidden;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--sh);
+}
+.dlg-topo { display:flex; align-items:baseline; gap:9px; padding:14px 16px 12px; border-bottom:1px solid var(--line); }
+.dlg-topo b { font-size:1rem; font-family:var(--mono); }
+.dlg-topo span { font-size:.75rem; color:var(--text-3); }
+.dlg-x { margin-left:auto; background:none; border:0; color:var(--text-3); font-size:1.125rem; cursor:pointer; padding:2px 5px; }
+.dlg-x:hover { color:var(--text); }
+.dlg-corpo { padding:15px 16px; overflow:auto; }
+.dlg-pe { display:flex; gap:8px; justify-content:flex-end; padding:12px 16px; border-top:1px solid var(--line); background:var(--surface-2); }
+
+.ficha { background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-sm); padding:11px 12px; margin-bottom:9px; }
+.ficha.pend { border-color:var(--alt); background:var(--alt-sf); }
+.ficha-nome { font-weight:600; font-size:.875rem; line-height:1.3; }
+.ficha-meta { font-family:var(--mono); font-size:.6875rem; color:var(--text-3); margin-top:3px; }
+.ficha-qtd { font-family:var(--mono); font-size:1.25rem; font-weight:600; margin-top:7px; }
+.ficha-qtd small { font-size:.625rem; font-weight:400; color:var(--text-3); margin-left:4px; }
+.ficha-acoes { display:flex; gap:7px; margin-top:10px; }
+.ficha-acoes .bt { flex:1; text-align:center; }
+
+.cp { display:block; margin-bottom:13px; }
+.cp > span { display:block; font-size:.75rem; font-weight:600; color:var(--text-2); margin-bottom:5px; }
+.cp input {
+  width:100%; padding:10px 12px; font-size:.875rem; font-family:var(--mono);
+  background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-sm); color:var(--text);
+}
+.cp input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-sf); }
+.cp input[readonly] { color:var(--text-3); background:var(--surface-3); }
+.dupla { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.seg2 { display:flex; gap:3px; padding:3px; border-radius:var(--r-sm); background:var(--surface-2); border:1px solid var(--line); }
+.seg2 button { flex:1; border:0; background:transparent; color:var(--text-2); font:inherit; font-size:.8125rem; padding:8px; border-radius:5px; cursor:pointer; }
+.seg2 button.on { background:var(--surface-3); color:var(--text); font-weight:600; }
+/* Sugestões do catálogo. Ficam sobre o campo seguinte, então
+   precisam de posição relativa no rótulo e z-index acima dele. */
+.cp.com-sug { position:relative; }
+.sug {
+  position:absolute; left:0; right:0; top:100%; z-index:30;
+  max-height:240px; overflow:auto; margin-top:3px;
+  background:var(--surface); border:1px solid var(--line-2);
+  border-radius:var(--r-sm); box-shadow:var(--sh);
+}
+.sug[hidden] { display:none; }
+.sug button {
+  display:block; width:100%; text-align:left; border:0; cursor:pointer;
+  background:transparent; color:var(--text); font:inherit;
+  padding:9px 11px; border-bottom:1px solid var(--line);
+}
+.sug button:last-child { border-bottom:0; }
+.sug button:hover, .sug button.marcado { background:var(--accent-sf); }
+.sug-nome { font-size:.8125rem; font-weight:600; line-height:1.25; }
+.sug-meta { font-family:var(--mono); font-size:.6875rem; color:var(--text-3); margin-top:2px; }
+.sug-vazio { padding:10px 11px; font-size:.75rem; color:var(--text-3); }
+
+.aviso { font-size:.6875rem; margin:-8px 0 12px; min-height:1em; font-family:var(--mono); }
+.aviso.ok { color:var(--pos); }
+.aviso.alerta { color:var(--warn); }
+
+.ex-disp {
+  display:flex; justify-content:space-between; align-items:baseline;
+  padding:9px 12px; margin-bottom:13px; border-radius:var(--r-sm);
+  background:var(--surface-2); border:1px solid var(--line); font-size:.75rem; color:var(--text-3);
+}
+.ex-disp b { font-family:var(--mono); font-size:1.0625rem; color:var(--text); }
+.ex-restante { padding:9px 12px; border-radius:var(--r-sm); font-size:.8125rem; font-weight:500;
+  background:var(--surface-2); border:1px solid var(--line); color:var(--text-2); }
+.ex-restante.ok    { background:var(--pos-sf);  border-color:var(--pos);  color:var(--pos);  }
+.ex-restante.zera  { background:var(--warn-sf); border-color:var(--warn); color:var(--warn); }
+.ex-restante.alerta{ background:var(--neg-sf);  border-color:var(--neg);  color:var(--neg);  }
+
+/* ═══════════ PORTARIA ═══════════ */
+.portaria { position:fixed; inset:0; z-index:300; background:var(--bg);
+  display:flex; align-items:center; justify-content:center; padding:24px; }
+.port-cx { width:min(360px,100%); text-align:center; }
+.port-cx svg { width:38px; height:38px; color:var(--accent); margin-bottom:14px; }
+.port-cx h1 { font-size:1.1875rem; font-weight:700; margin-bottom:6px; }
+.port-cx p { font-size:.8125rem; color:var(--text-2); line-height:1.55; margin-bottom:18px; }
+.port-cx input { width:100%; padding:11px 13px; font-size:1rem; text-align:center;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm); color:var(--text); }
+.port-cx .bt { width:100%; margin-top:10px; padding:12px; font-size:.9375rem; }
+.port-recentes { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:14px; }
+.port-recentes button { background:var(--surface-2); border:1px solid var(--line); border-radius:20px;
+  color:var(--text-2); font:inherit; font-size:.75rem; padding:5px 11px; cursor:pointer; }
+.port-recentes button:hover { border-color:var(--accent); color:var(--accent); }
+
+.toast {
+  position:fixed; bottom:22px; left:50%; z-index:400;
+  padding:10px 16px; border-radius:var(--r-sm); font-size:.8125rem; font-weight:500;
+  background:var(--toast-ok-bg); color:var(--toast-ok-fg); box-shadow:var(--sh);
+  opacity:0; transform:translate(-50%,10px); pointer-events:none; transition:opacity .2s, transform .2s;
+}
+.toast.show { opacity:1; transform:translate(-50%,0); }
+.toast.err  { background:var(--toast-er-bg); color:var(--toast-er-fg); }
+
+@media (max-width:700px) {
+  :root { --cel:26px; }
+  .linha { flex-direction:column; align-items:stretch; gap:7px; }
+  .lh { width:100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="marca">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+      <path d="M12 3 3 8v8l9 5 9-5V8Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>
+    </svg>
+    <b>Mapa do drive-in</b>
+  </div>
+
+  <select id="sel-pav" aria-label="Pavilhão">
+    <option value="simbiose">Pavilhão Simbiose</option>
+    <option value="bioma">Pavilhão Bioma</option>
+  </select>
+  <select id="sel-di" aria-label="Drive-in"></select>
+
+  <div class="direita">
+    <button class="bt" id="bt-imprimir" title="Imprimir (P)">⎙ Imprimir</button>
+    <button class="bt" id="bt-atualizar" title="Atualizar (R)">↻</button>
+    <button class="bt quem-chip" id="bt-quem" title="Trocar de pessoa">
+      <span class="quem-ini" id="quem-ini">?</span><span id="quem-nome">—</span>
+    </button>
+    <button class="bt" id="bt-tema" title="Tema (T)">◐</button>
+  </div>
+</div>
+
+<main class="tela">
+  <div class="busca">
+    <span class="lupa" aria-hidden="true">⌕</span>
+    <input type="search" id="busca" placeholder="produto, código, lote, armazém ou linha (B1-22)" autocomplete="off">
+  </div>
+  <div class="busca-cnt" id="busca-cnt"></div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-val" id="k-total">—</div><div class="stat-lbl">Vagas</div></div>
+    <div class="stat"><div class="stat-val" id="k-ocup" style="color:var(--pos)">—</div><div class="stat-lbl">Ocupadas</div></div>
+    <div class="stat"><div class="stat-val" id="k-livre">—</div><div class="stat-lbl">Livres</div></div>
+  </div>
+
+  <div id="mapa"><div class="esqueleto"></div></div>
+
+  <div class="legenda">
+    <span><i style="background:var(--surface-2)"></i>Livre</span>
+    <span><i style="background:var(--pos);border-color:var(--pos)"></i>Ocupada</span>
+    <span><i style="background:var(--warn);border-color:var(--warn)"></i>Mais de um lote</span>
+    <span><i style="background:var(--alt);border-color:var(--alt)"></i>Aguardando validação</span>
+    <span><i style="background:var(--accent);border-color:var(--accent)"></i>Resultado da busca</span>
+  </div>
+
+  <div id="lista"></div>
+</main>
+
+<div class="dlg" id="dlg-vaga" hidden>
+  <div class="dlg-cx" role="dialog" aria-labelledby="dg-tit">
+    <div class="dlg-topo"><b id="dg-tit">—</b><span id="dg-sub"></span>
+      <button class="dlg-x" id="dg-x" aria-label="Fechar">✕</button></div>
+    <div class="dlg-corpo" id="dg-corpo"></div>
+    <div class="dlg-pe"><button class="bt destaque" id="dg-add">Guardar produto aqui</button></div>
+  </div>
+</div>
+
+<div class="dlg" id="dlg-form" hidden>
+  <div class="dlg-cx" role="dialog" aria-labelledby="df-tit">
+    <div class="dlg-topo"><b id="df-tit">Guardar produto</b>
+      <button class="dlg-x" id="df-x" aria-label="Fechar">✕</button></div>
+    <div class="dlg-corpo">
+      <label class="cp"><span>Posição</span><input type="text" id="df-pos" readonly></label>
+      <label class="cp com-sug"><span>Código do produto</span>
+        <input type="text" id="df-codigo" autocomplete="off" placeholder="código ou nome do produto">
+        <div class="sug" id="sug-codigo" hidden></div></label>
+      <div class="aviso" id="df-aviso"></div>
+      <label class="cp com-sug"><span>Produto</span>
+        <input type="text" id="df-produto" autocomplete="off" placeholder="comece a escrever o nome">
+        <div class="sug" id="sug-produto" hidden></div></label>
+      <div class="dupla">
+        <label class="cp"><span>Lote</span><input type="text" id="df-lote" autocomplete="off"></label>
+        <label class="cp"><span>Armazém</span><input type="text" id="df-armazem" autocomplete="off"></label>
+      </div>
+      <label class="cp"><span>Quantidade</span><input type="text" id="df-qtd" inputmode="decimal" autocomplete="off"></label>
+      <label class="cp"><span>Origem</span>
+        <div class="seg2" id="df-origem">
+          <button type="button" class="on" data-o="producao">Produção</button>
+          <button type="button" data-o="manual">Ajuste manual</button>
+        </div></label>
+    </div>
+    <div class="dlg-pe">
+      <button class="bt" id="df-cancelar">Cancelar</button>
+      <button class="bt destaque" id="df-salvar">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="dlg" id="dlg-exp" hidden>
+  <div class="dlg-cx" role="dialog" aria-labelledby="ex-nome">
+    <div class="dlg-topo"><b>Expedir</b>
+      <button class="dlg-x" id="ex-x" aria-label="Fechar">✕</button></div>
+    <div class="dlg-corpo">
+      <div class="ficha-nome" id="ex-nome"></div>
+      <div class="ficha-meta" id="ex-meta" style="margin-bottom:13px"></div>
+      <div class="ex-disp"><span>Nesta vaga</span><b id="ex-disp">—</b></div>
+      <label class="cp"><span>Quanto saiu</span>
+        <input type="text" id="ex-qtd" inputmode="decimal" autocomplete="off"></label>
+      <div class="ex-restante" id="ex-restante"></div>
+    </div>
+    <div class="dlg-pe">
+      <button class="bt" id="ex-tudo">Saiu tudo</button>
+      <button class="bt" id="ex-cancelar">Cancelar</button>
+      <button class="bt destaque" id="ex-confirmar">Expedir</button>
+    </div>
+  </div>
+</div>
+
+<div class="portaria" id="portaria" hidden>
+  <div class="port-cx">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+      <path d="M12 3 3 8v8l9 5 9-5V8Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>
+    </svg>
+    <h1>Mapa do drive-in</h1>
+    <p>Escreva seu nome antes de entrar. Não é senha — é para que cada alteração no mapa fique registrada com quem fez.</p>
+    <input type="text" id="port-nome" placeholder="seu nome" autocomplete="name" maxlength="40" enterkeyhint="go">
+    <button class="bt destaque" id="port-entrar">Entrar</button>
+    <div class="port-recentes" id="port-recentes"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="./comum.js?v=4"></script>
+<script src="./impressao.js?v=4"></script>
+<script>
+let sb = null;
+let _ocupacao = {};
+let _pav = 'simbiose';
+let _di  = '';
+let _q   = '';
+let _cels = [];
+let _blocos = [];
+let _posAberta = '';
+
+/* ═══════════════════════════════════════════════════════════════
+   CARGA
+   ═══════════════════════════════════════════════════════════════ */
+async function carregar(silencioso = false) {
+  if (!silencioso) $('mapa').innerHTML = '<div class="esqueleto"></div>';
+  try {
+    const [hist, pend] = await Promise.all([
+      buscarTudo(() => sb.from('historico')
+        .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, origem, created_at')
+        .eq('ocupacao_ativa', true).not('posicao', 'is', null)),
+      buscarTudo(() => sb.from('lancamentos')
+        .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, created_at, usuario')
+        .eq('status', 'pendente').eq('ocupacao_ativa', true).not('posicao', 'is', null)),
+    ]);
+
+    _ocupacao = {};
+    for (const r of hist) (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'historico',   pend:false, _busca:chaveBusca(r) });
+    for (const r of pend) (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'lancamentos', pend:true,  _busca:chaveBusca(r) });
+
+    construir();
+  } catch (e) {
+    $('mapa').innerHTML = `<div class="vazio"><div class="vazio-t">O mapa não carregou</div>
+      <div class="vazio-s">${esc(e.message)}</div></div>`;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MONTAGEM
+   O DOM nasce uma vez; busca e filtro só trocam classe.
+   ═══════════════════════════════════════════════════════════════ */
+function construir() {
+  const frag = document.createDocumentFragment();
+  _cels = []; _blocos = [];
+  const dis = Object.keys(MAPA_POSICOES[_pav]).sort().filter(d => !_di || d === _di);
+
+  for (const di of dis) {
+    const linhas = MAPA_POSICOES[_pav][di];
+    const nomes = Object.keys(linhas).sort();
+    const prim = linhas[nomes[0]];
+    const nAnd = Object.keys(prim).length;
+    const nVag = prim[Object.keys(prim)[0]].length;
+
+    const sec = document.createElement('section');
+    sec.innerHTML = `<div class="di-head">
+      <span class="di-nome">Drive-in ${di}</span>
+      <span class="di-meta">${nomes.length} linhas · ${nAnd} andares · ${nVag} de profundidade</span>
+      <span class="di-meta" data-ocup="${di}"></span></div>`;
+
+    const grade = document.createElement('div');
+    grade.className = 'grade';
+
+    for (const ln of nomes) {
+      const andares = linhas[ln];
+      const bloco = document.createElement('div');
+      bloco.className = 'linha';
+      bloco.innerHTML = `<div class="lh">
+        <span class="lh-nome">${di}-${ln}</span>
+        <span class="lh-qtd"></span><span class="lh-ocup"></span>
+        <button class="lh-imp" title="Imprimir esta linha"
+                onclick="event.stopPropagation();imprimirLinha('${di}','${ln}','${_pav}')">⎙</button>
+      </div>`;
+
+      const corpo = document.createElement('div');
+      corpo.className = 'corpo-grade';
+      const doBloco = [];
+      // Andar de cima primeiro: é assim que se olha o drive-in.
+      for (const an of Object.keys(andares).sort((a, b) => b - a)) {
+        const fila = document.createElement('div');
+        fila.className = 'and';
+        fila.innerHTML = `<span class="and-n">${an}</span>`;
+        for (const lg of andares[an]) {
+          const pos = `${di}-${ln}-${an}-${lg}`;
+          const b = document.createElement('button');
+          b.className = 'cel';
+          b.textContent = lg;
+          b.dataset.pos = pos;
+          fila.appendChild(b);
+          const ref = { el:b, pos };
+          _cels.push(ref); doBloco.push(ref);
+        }
+        corpo.appendChild(fila);
+      }
+      bloco.appendChild(corpo);
+      grade.appendChild(bloco);
+      _blocos.push({
+        el:bloco, cels:doBloco,
+        qtdEl:bloco.querySelector('.lh-qtd'), ocupEl:bloco.querySelector('.lh-ocup'),
+      });
+    }
+
+    sec.appendChild(grade);
+    frag.appendChild(sec);
+  }
+
+  const colunas = document.createElement('div');
+  colunas.className = 'colunas';
+  colunas.appendChild(frag);
+  $('mapa').innerHTML = '';
+  $('mapa').appendChild(colunas);
+  pintar();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PINTURA
+   ═══════════════════════════════════════════════════════════════ */
+function acertou(pos, itens, ts) {
+  if (!ts.length) return false;
+  return ts.some(x => pos.includes(x)) || itens.some(r => casa(r, ts));
+}
+
+function pintar() {
+  const ts = termos(_q);
+  let total = 0, ocup = 0, achados = 0;
+  const porDI = {};
+
+  for (const c of _cels) {
+    const itens = _ocupacao[c.pos] || [];
+    const di = c.pos.split('-')[0];
+    (porDI[di] ||= { t:0, o:0 });
+    porDI[di].t++; total++;
+
+    let cls = 'cel';
+    if (itens.length) {
+      ocup++; porDI[di].o++;
+      cls += itens.length > 1 ? ' multi' : itens.some(r => r.pend) ? ' pend' : ' ok';
+      c.el.title = `${c.pos} — ` + itens.map(r =>
+        `${r.produto_nome || r.codigo} · lote ${r.lote || '—'} · ${qtdUn(r.quantidade, r.codigo, r.produto_nome)}`).join(' | ');
+    } else {
+      c.el.title = `${c.pos} — livre`;
+    }
+    if (acertou(c.pos, itens, ts)) { cls += ' achou'; achados++; }
+    else if (_q) cls += ' fora';
+    if (c.el.className !== cls) c.el.className = cls;
+  }
+
+  for (const b of _blocos) {
+    let o = 0, un = 0, hit = false;
+    const lotes = new Set();
+    for (const c of b.cels) {
+      const itens = _ocupacao[c.pos] || [];
+      if (itens.length) o++;
+      for (const r of itens) { un += Number(r.quantidade) || 0; lotes.add(chaveLote(r.codigo, r.lote, r.armazem)); }
+      if (c.el.classList.contains('achou')) hit = true;
+    }
+    b.qtdEl.textContent = un ? num(un) : '';
+    b.qtdEl.classList.toggle('varios', lotes.size > 1);
+    b.ocupEl.textContent = `${o}/${b.cels.length}`;
+    // Busca sem nenhum resultado não esconde nada: tela em branco é
+    // o pior jeito de dizer "não achei".
+    const esconder = _q && achados > 0 && !hit;
+    b.el.className = 'linha' + (o ? '' : ' vazia') + (hit ? ' achou' : '') + (esconder ? ' oculta' : '');
+  }
+
+  for (const [di, v] of Object.entries(porDI)) {
+    const el = document.querySelector(`[data-ocup="${di}"]`);
+    if (el) el.textContent = `${num(v.o)}/${num(v.t)} ocupadas`;
+  }
+
+  $('k-total').textContent = num(total);
+  $('k-ocup').textContent  = num(ocup);
+  $('k-livre').textContent = num(total - ocup);
+
+  const cnt = $('busca-cnt');
+  cnt.textContent = !_q ? ''
+    : achados ? `${num(achados)} vaga(s) em ${document.querySelectorAll('.linha:not(.oculta)').length} linha(s)`
+              : `nada com "${_q}" — confira o termo`;
+  cnt.className = 'busca-cnt' + (_q && !achados ? ' nada' : '');
+
+  renderLista(ts);
+}
+
+function renderLista(ts) {
+  const dis = Object.keys(MAPA_POSICOES[_pav]).filter(d => !_di || d === _di);
+  const linhas = [];
+  for (const pos of Object.keys(_ocupacao).sort()) {
+    if (!dis.includes(pos.split('-')[0])) continue;
+    const itens = _ocupacao[pos];
+    if (ts.length && !acertou(pos, itens, ts)) continue;
+    for (const r of itens) linhas.push({ ...r, pos });
+  }
+
+  $('lista').innerHTML = linhas.length
+    ? `<div class="tit">${_q ? 'Resultados' : 'Ocupadas'} (${num(linhas.length)})</div>` +
+      linhas.slice(0, 300).map(r => `
+        <div class="item${r.pend ? ' pend' : ''}" onclick="abrirVaga('${esc(r.pos)}')">
+          <div class="item-topo">
+            <span class="item-pos">${esc(r.pos)}</span>
+            ${r.pend ? '<span class="item-meta" style="color:var(--alt)">aguardando validação</span>' : ''}
+            <span class="item-qtd">${num(r.quantidade)}<small>${esc(unidadeDe(r.codigo, r.produto_nome) || 'un')}</small></span>
+          </div>
+          <div class="item-nome">${esc(r.produto_nome || r.codigo)}</div>
+          <div class="item-meta">${esc(r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')}</div>
+        </div>`).join('') +
+      (linhas.length > 300 ? `<div class="vazio-s" style="text-align:center">mostrando 300 de ${num(linhas.length)} — refine a busca</div>` : '')
+    : `<div class="vazio"><div class="vazio-t">${_q ? 'Nada encontrado' : 'Nenhuma vaga ocupada'}</div>
+       <div class="vazio-s">${_q ? `Nada bate com “${esc(_q)}”.` : 'Toque numa vaga do mapa para guardar produto.'}</div></div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VAGA
+   ═══════════════════════════════════════════════════════════════ */
+function abrirVaga(pos) {
+  _posAberta = pos;
+  const itens = _ocupacao[pos] || [];
+  $('dg-tit').textContent = pos;
+  $('dg-sub').textContent = itens.length
+    ? `${itens.length} ${itens.length > 1 ? 'lotes' : 'lote'}` : 'vaga livre';
+
+  $('dg-corpo').innerHTML = itens.length
+    ? itens.map(r => `
+        <div class="ficha${r.pend ? ' pend' : ''}">
+          <div class="ficha-nome">${esc(r.produto_nome || r.codigo)}</div>
+          <div class="ficha-meta">${esc(r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')}${r.pend ? ' · aguardando validação' : ''}</div>
+          <div class="ficha-qtd">${num(r.quantidade)}<small>${esc(unidadeDe(r.codigo, r.produto_nome) || 'un')}</small></div>
+          <div class="ficha-acoes">
+            <button class="bt destaque" onclick="abrirExpedicao('${esc(pos)}','${esc(r.id)}')">Expedir</button>
+            <button class="bt" onclick="editarItem('${esc(pos)}','${esc(r.id)}')">Editar</button>
+          </div>
+        </div>`).join('')
+    : `<div class="vazio"><div class="vazio-t">Vaga livre</div>
+       <div class="vazio-s">Nada ocupando ${esc(pos)}.</div></div>`;
+
+  $('dg-add').textContent = itens.length ? 'Guardar outro produto aqui' : 'Guardar produto aqui';
+  $('dlg-vaga').hidden = false;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GUARDAR E EDITAR
+   ═══════════════════════════════════════════════════════════════ */
+let _dfItem = null, _dfPos = '', _dfOrigem = 'producao';
+
+function abrirForm(pos, item = null) {
+  _dfItem = item; _dfPos = pos;
+  _dfOrigem = item?.origem === 'manual' ? 'manual' : 'producao';
+  $('df-tit').textContent  = item ? 'Editar ocupação' : 'Guardar produto';
+  $('df-pos').value        = pos;
+  $('df-codigo').value     = item?.codigo || '';
+  $('df-produto').value    = item?.produto_nome || '';
+  $('df-lote').value       = item?.lote || '';
+  $('df-armazem').value    = item?.armazem || '';
+  $('df-qtd').value        = item?.quantidade ?? '';
+  $('df-salvar').textContent = item ? 'Salvar' : 'Guardar';
+  $('df-aviso').textContent = '';
+  $('df-origem').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.o === _dfOrigem));
+  fecharSugestoes();
+  $('dlg-vaga').hidden = true;
+  $('dlg-form').hidden = false;
+  setTimeout(() => $(item ? 'df-qtd' : 'df-codigo').focus(), 50);
+}
+
+function editarItem(pos, id) {
+  const r = (_ocupacao[pos] || []).find(x => String(x.id) === String(id));
+  if (r) abrirForm(pos, r);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SUGESTÕES
+   Os dois campos procuram no mesmo catálogo: dá para chegar no
+   produto pelo código ou pelo nome, tanto faz.
+   ═══════════════════════════════════════════════════════════════ */
+let _sugAtiva = null;   // { caixa, itens, i }
+
+function mostrarSugestoes(idCaixa, termo) {
+  const caixa = $(idCaixa);
+  const itens = buscarProdutos(termo, 8);
+
+  if (!itens.length) {
+    caixa.innerHTML = termo.trim().length >= 2
+      ? '<div class="sug-vazio">Nada no catálogo com isso — dá para digitar mesmo assim.</div>' : '';
+    caixa.hidden = !caixa.innerHTML;
+    _sugAtiva = null;
+    return;
+  }
+
+  caixa.innerHTML = itens.map((p, i) => `
+    <button type="button" data-i="${i}">
+      <div class="sug-nome">${esc(p.nome)}</div>
+      <div class="sug-meta">${esc(p.codigo)} · ${esc(p.unidade || 'un')}${p.palete ? ` · palete ${num(p.palete)}` : ''}</div>
+    </button>`).join('');
+  caixa.hidden = false;
+  _sugAtiva = { caixa, itens, i:-1 };
+}
+
+function escolherProduto(p) {
+  $('df-codigo').value  = p.codigo;
+  $('df-produto').value = p.nome;
+  $('df-aviso').textContent = `${p.nome} · ${p.unidade || 'un'}`;
+  $('df-aviso').className = 'aviso ok';
+  fecharSugestoes();
+  $('df-lote').focus();
+}
+
+function fecharSugestoes() {
+  $('sug-codigo').hidden = true;
+  $('sug-produto').hidden = true;
+  _sugAtiva = null;
+}
+
+/* Seta para cima e para baixo percorrem; Enter escolhe. Quem está
+   de luva usa o dedo, quem está no computador usa o teclado. */
+function navegarSugestoes(e) {
+  if (!_sugAtiva) return false;
+  const { caixa, itens } = _sugAtiva;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    _sugAtiva.i = (_sugAtiva.i + (e.key === 'ArrowDown' ? 1 : -1) + itens.length) % itens.length;
+    caixa.querySelectorAll('button').forEach((b, i) => b.classList.toggle('marcado', i === _sugAtiva.i));
+    // scrollIntoView não existe em todo contexto; a marcação já
+    // funciona sem ele.
+    const m = caixa.querySelector('.marcado');
+    if (m && typeof m.scrollIntoView === 'function') m.scrollIntoView({ block:'nearest' });
+    return true;
+  }
+  if (e.key === 'Enter' && _sugAtiva.i >= 0) {
+    e.preventDefault();
+    escolherProduto(itens[_sugAtiva.i]);
+    return true;
+  }
+  if (e.key === 'Escape') { fecharSugestoes(); return true; }
+  return false;
+}
+
+/* Digitou o código, o nome e a unidade vêm do catálogo. */
+function completarPeloCodigo() {
+  const bruto = $('df-codigo').value.trim();
+  if (!bruto) return;
+
+  // Escreveu o nome no campo do código? Se houver um único produto
+  // que bate, resolve sozinho em vez de reclamar.
+  if (!/^\d+$/.test(bruto)) {
+    const achados = buscarProdutos(bruto, 2);
+    if (achados.length === 1) { escolherProduto(achados[0]); return; }
+    $('df-aviso').textContent = achados.length
+      ? 'Escolha um produto da lista.' : 'Nada no catálogo com isso.';
+    $('df-aviso').className = 'aviso alerta';
+    return;
+  }
+
+  const cod = normalizarCodigo(bruto);
+  $('df-codigo').value = cod;
+  const p = produtoPorCodigo(cod);
+  if (p) {
+    if (!$('df-produto').value.trim()) $('df-produto').value = p.nome || '';
+    $('df-aviso').textContent = `${p.nome} · ${p.unidade || 'un'}`;
+    $('df-aviso').className = 'aviso ok';
+  } else {
+    $('df-aviso').textContent = 'Código fora do catálogo — dá para salvar, mas confira.';
+    $('df-aviso').className = 'aviso alerta';
+  }
+}
+
+async function salvarForm() {
+  const bruto = $('df-codigo').value.trim();
+  if (bruto && !/^\d+$/.test(bruto)) {
+    const achados = buscarProdutos(bruto, 2);
+    if (achados.length === 1) escolherProduto(achados[0]);
+    else { toast('Escolha o produto na lista de sugestões.', 'err'); $('df-codigo').focus(); return; }
+  }
+  const codigo  = normalizarCodigo($('df-codigo').value);
+  const produto = $('df-produto').value.trim();
+  const lote    = $('df-lote').value.trim().toUpperCase();
+  const armazem = $('df-armazem').value.trim().toUpperCase();
+  const qtd     = Number(String($('df-qtd').value).replace(/\./g, '').replace(',', '.'));
+
+  if (!codigo) { toast('Falta o código.', 'err'); return; }
+  if (!Number.isFinite(qtd) || qtd <= 0) { toast('Quantidade inválida.', 'err'); return; }
+
+  const nome = produto || produtoPorCodigo(codigo)?.nome || codigo;
+  $('df-salvar').disabled = true;
+  try {
+    if (_dfItem) {
+      await atualizarResiliente(_dfItem._tab || 'historico', {
+        codigo, produto_nome:nome, lote, armazem, quantidade:qtd,
+        origem:_dfOrigem, updated_at:new Date().toISOString(), feito_por:QUEM,
+      }, q => q.eq('id', _dfItem.id));
+      await registrarAlteracao({
+        acao:'ajustou', posicao:_dfPos, codigo, produto_nome:nome, lote, armazem,
+        qtd_antes:_dfItem.quantidade, qtd_depois:qtd,
+        tabela_ref:_dfItem._tab || 'historico', ref_id:_dfItem.id,
+      });
+      toast(`${_dfPos} atualizada.`);
+    } else {
+      await inserirResiliente('historico', {
+        codigo, produto_nome:nome, lote, armazem, quantidade:qtd,
+        posicao:_dfPos, ocupacao_ativa:true, confirmado:true,
+        origem:_dfOrigem, feito_por:QUEM, created_at:new Date().toISOString(),
+      });
+      await registrarAlteracao({
+        acao:'ocupou', posicao:_dfPos, codigo, produto_nome:nome, lote, armazem,
+        qtd_antes:0, qtd_depois:qtd, tabela_ref:'historico',
+      });
+      toast(`${nome} guardado em ${_dfPos}.`);
+    }
+    $('dlg-form').hidden = true;
+    await carregar(true);
+  } catch (e) {
+    toast('Não deu para salvar: ' + e.message, 'err', 6000);
+  } finally {
+    $('df-salvar').disabled = false;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EXPEDIR
+   Diz quanto saiu; o resto continua na vaga.
+   ═══════════════════════════════════════════════════════════════ */
+let _exItem = null;
+
+function abrirExpedicao(pos, id) {
+  const r = (_ocupacao[pos] || []).find(x => String(x.id) === String(id));
+  if (!r) return;
+  _exItem = { ...r, _pos:pos };
+  const un = unidadeDe(r.codigo, r.produto_nome) || 'un';
+  $('ex-nome').textContent = r.produto_nome || r.codigo;
+  $('ex-meta').textContent = `${pos} · lote ${r.lote || '—'} · arm. ${r.armazem || '—'}`;
+  $('ex-disp').textContent = `${num(r.quantidade)} ${un}`;
+  $('ex-qtd').value = r.quantidade;
+  atualizarRestante();
+  $('dlg-vaga').hidden = true;
+  $('dlg-exp').hidden = false;
+  setTimeout(() => { $('ex-qtd').focus(); $('ex-qtd').select(); }, 50);
+}
+
+/* O que fica depois de tirar. Aparece enquanto a pessoa digita —
+   é o número que ela confere antes de confirmar. */
+function atualizarRestante() {
+  if (!_exItem) return;
+  const disp = Number(_exItem.quantidade) || 0;
+  const saiu = Number(String($('ex-qtd').value).replace(/\./g, '').replace(',', '.'));
+  const un = unidadeDe(_exItem.codigo, _exItem.produto_nome) || 'un';
+  const el = $('ex-restante');
+
+  if (!Number.isFinite(saiu) || saiu <= 0) {
+    el.textContent = 'Informe quanto saiu.'; el.className = 'ex-restante alerta';
+    $('ex-confirmar').disabled = true; return;
+  }
+  if (saiu > disp) {
+    el.textContent = `Só há ${num(disp)} ${un} nesta vaga.`; el.className = 'ex-restante alerta';
+    $('ex-confirmar').disabled = true; return;
+  }
+  const restou = disp - saiu;
+  el.textContent = restou > 0
+    ? `Ficam ${num(restou)} ${un} em ${_exItem._pos}.`
+    : `Sai tudo — ${_exItem._pos} fica livre.`;
+  el.className = 'ex-restante' + (restou > 0 ? ' ok' : ' zera');
+  $('ex-confirmar').disabled = false;
+}
+
+async function confirmarExpedicao() {
+  if (!_exItem) return;
+  const disp = Number(_exItem.quantidade) || 0;
+  const saiu = Math.min(disp, Number(String($('ex-qtd').value).replace(/\./g, '').replace(',', '.')));
+  if (!Number.isFinite(saiu) || saiu <= 0) return;
+
+  const restou = disp - saiu, pos = _exItem._pos;
+  const tab = _exItem._tab || 'historico';
+  const un = unidadeDe(_exItem.codigo, _exItem.produto_nome) || 'un';
+  $('ex-confirmar').disabled = true;
+
+  try {
+    await atualizarResiliente(tab, restou > 0
+      ? { quantidade:restou, updated_at:new Date().toISOString(), feito_por:QUEM }
+      : { ocupacao_ativa:false, updated_at:new Date().toISOString(), feito_por:QUEM },
+      q => q.eq('id', _exItem.id));
+
+    await registrarAlteracao({
+      acao:'expediu', posicao:pos, codigo:_exItem.codigo, produto_nome:_exItem.produto_nome,
+      lote:_exItem.lote, armazem:_exItem.armazem, qtd_antes:disp, qtd_depois:restou,
+      tabela_ref:tab, ref_id:_exItem.id, obs:`saiu ${num(saiu)} ${un}`,
+    });
+
+    toast(restou > 0
+      ? `${num(saiu)} ${un} expedido de ${pos} · ficam ${num(restou)}.`
+      : `${_exItem.produto_nome || _exItem.codigo} expedido · ${pos} livre.`, 'ok', 4500);
+    $('dlg-exp').hidden = true;
+    await carregar(true);
+  } catch (e) {
+    toast('Não deu para expedir: ' + e.message, 'err', 6000);
+    $('ex-confirmar').disabled = false;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PORTARIA
+   Não é senha — é para cada alteração ter dono.
+   ═══════════════════════════════════════════════════════════════ */
+function nomesRecentes() {
+  try { return JSON.parse(localStorage.getItem('quem-recentes') || '[]'); } catch (e) { return []; }
+}
+
+function mostrarPortaria() {
+  $('port-recentes').innerHTML = nomesRecentes()
+    .map(n => `<button type="button" data-nome="${esc(n)}">${esc(n)}</button>`).join('');
+  $('port-nome').value = QUEM;
+  $('portaria').hidden = false;
+  setTimeout(() => $('port-nome').focus(), 60);
+}
+
+function entrar(nome) {
+  const n = String(nome || '').trim();
+  if (n.length < 2) { toast('Escreva seu nome para entrar.', 'err'); return; }
+  gravarQuem(n);
+  const lista = [QUEM, ...nomesRecentes().filter(x => x !== QUEM)].slice(0, 5);
+  try { localStorage.setItem('quem-recentes', JSON.stringify(lista)); } catch (e) { /* modo privado */ }
+  $('portaria').hidden = true;
+  pintarQuem();
+  carregar();
+}
+
+function pintarQuem() {
+  $('quem-ini').textContent = iniciais(QUEM);
+  $('quem-nome').textContent = QUEM || '—';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INÍCIO
+   ═══════════════════════════════════════════════════════════════ */
+function popularDI() {
+  const dis = Object.keys(MAPA_POSICOES[_pav]).sort();
+  $('sel-di').innerHTML = '<option value="">Pavilhão inteiro</option>' +
+    dis.map(d => `<option value="${d}">Drive-in ${d}</option>`).join('');
+  $('sel-di').value = dis.includes(_di) ? _di : '';
+  _di = $('sel-di').value;
+}
+
+const gravarURL = () => {
+  const p = new URLSearchParams();
+  p.set('pav', _pav);
+  if (_di) p.set('di', _di);
+  if (_q)  p.set('q', _q);
+  history.replaceState(null, '', '?' + p.toString());
+};
+
+function init() {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const p = new URLSearchParams(location.search);
+  if (MAPA_POSICOES[p.get('pav')]) _pav = p.get('pav');
+  _di = (p.get('di') || '').toUpperCase();
+  _q  = (p.get('q') || '').trim().toUpperCase();
+  $('sel-pav').value = _pav;
+  $('busca').value = _q;
+  popularDI();
+
+  lerQuem();
+  pintarQuem();
+
+  $('sel-pav').addEventListener('change', e => { _pav = e.target.value; _di = ''; popularDI(); construir(); gravarURL(); });
+  $('sel-di').addEventListener('change', e => { _di = e.target.value; construir(); gravarURL(); });
+
+  const buscar = debounce(v => { _q = v.trim().toUpperCase(); pintar(); gravarURL(); }, 110);
+  $('busca').addEventListener('input', e => buscar(e.target.value));
+
+  $('mapa').addEventListener('click', e => {
+    const c = e.target.closest('.cel');
+    if (c?.dataset.pos) abrirVaga(c.dataset.pos);
+  });
+
+  $('bt-atualizar').addEventListener('click', () => carregar(true));
+  $('bt-tema').addEventListener('click', alternarTema);
+  $('bt-quem').addEventListener('click', mostrarPortaria);
+  $('bt-imprimir').addEventListener('click', abrirDialogoImpressao);
+
+  $('dg-x').addEventListener('click', () => { $('dlg-vaga').hidden = true; });
+  $('dg-add').addEventListener('click', () => abrirForm(_posAberta));
+  $('df-x').addEventListener('click', () => { $('dlg-form').hidden = true; });
+  $('df-cancelar').addEventListener('click', () => { $('dlg-form').hidden = true; });
+  $('df-salvar').addEventListener('click', salvarForm);
+  const sugCod  = debounce(v => mostrarSugestoes('sug-codigo', v), 120);
+  const sugNome = debounce(v => mostrarSugestoes('sug-produto', v), 120);
+  $('df-codigo').addEventListener('input', e => sugCod(e.target.value));
+  $('df-produto').addEventListener('input', e => sugNome(e.target.value));
+  $('df-codigo').addEventListener('keydown', navegarSugestoes);
+  $('df-produto').addEventListener('keydown', navegarSugestoes);
+  // O blur espera o clique na sugestão acontecer antes de fechar.
+  $('df-codigo').addEventListener('blur', () => setTimeout(() => { completarPeloCodigo(); $('sug-codigo').hidden = true; }, 160));
+  $('df-produto').addEventListener('blur', () => setTimeout(() => { $('sug-produto').hidden = true; }, 160));
+  for (const id of ['sug-codigo', 'sug-produto']) {
+    $(id).addEventListener('mousedown', e => {
+      const b = e.target.closest('button'); if (!b || !_sugAtiva) return;
+      e.preventDefault();
+      escolherProduto(_sugAtiva.itens[Number(b.dataset.i)]);
+    });
+  }
+  $('df-origem').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    _dfOrigem = b.dataset.o;
+    $('df-origem').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  });
+  $('ex-x').addEventListener('click', () => { $('dlg-exp').hidden = true; });
+  $('ex-cancelar').addEventListener('click', () => { $('dlg-exp').hidden = true; });
+  $('ex-confirmar').addEventListener('click', confirmarExpedicao);
+  $('ex-qtd').addEventListener('input', atualizarRestante);
+  $('ex-tudo').addEventListener('click', () => {
+    if (_exItem) { $('ex-qtd').value = _exItem.quantidade; atualizarRestante(); }
+  });
+
+  for (const id of ['dlg-vaga', 'dlg-form', 'dlg-exp']) {
+    $(id).addEventListener('click', e => { if (e.target.id === id) $(id).hidden = true; });
+  }
+  $('port-entrar').addEventListener('click', () => entrar($('port-nome').value));
+  $('port-nome').addEventListener('keydown', e => { if (e.key === 'Enter') entrar(e.target.value); });
+  $('port-recentes').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (b) entrar(b.dataset.nome);
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.target.matches('input, select')) return;
+    if (e.key === '/') { e.preventDefault(); $('busca').focus(); }
+    if (e.key === 'Escape') {
+      const ab = ['dlg-exp', 'dlg-form', 'dlg-vaga', 'modal-imp']
+        .map(id => document.getElementById(id)).find(el => el && !el.hidden);
+      if (ab) ab.hidden = true;
+    }
+    if (e.key.toLowerCase() === 't') alternarTema();
+    if (e.key.toLowerCase() === 'r') carregar(true);
+    if (e.key.toLowerCase() === 'p') { e.preventDefault(); abrirDialogoImpressao(); }
+  });
+
+  // De onde a impressão tira os dados desta tela.
+  configurarImpressao({
+    ocupacaoDe: pos => _ocupacao[pos] || [],
+    contexto: () => ({
+      pav:_pav, di:_di, q:_q,
+      visiveis:_blocos.filter(b => !b.el.classList.contains('oculta')).map(b => {
+        const [di, ln] = b.cels[0].pos.split('-');
+        return { pav:_pav, di, ln };
+      }),
+    }),
+  });
+
+  // Sem nome, ninguém entra: é o que dá dono a cada alteração.
+  if (QUEM) carregar(); else mostrarPortaria();
+
+  setInterval(() => { if (!document.hidden) carregar(true); }, 90000);
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
