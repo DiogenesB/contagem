@@ -1245,6 +1245,27 @@ table.mini .acao { text-align:right; }
     </div>
   </div>
 
+  <div class="panel">
+    <div class="panel-head">
+      <div class="section-title">Planilha de referência <span class="section-note" id="s-ref-info">—</span></div>
+      <div class="btn-row">
+        <select id="s-fonte" style="width:auto" aria-label="De onde vem a coluna Sistema">
+          <option value="ref">Comparar com a planilha desta tela</option>
+          <option value="contagem">Comparar com o saldo da contagem</option>
+        </select>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="drop" id="s-drop" onclick="document.getElementById('s-file').click()">
+        <div class="drop-ico">▤</div>
+        <div class="drop-tit">Solte aqui a planilha do estoque, ou clique para escolher</div>
+        <div class="drop-sub">A mesma exportação do ERP usada na contagem · substitui só a foto desta tela, não abre ciclo</div>
+      </div>
+      <input type="file" id="s-file" accept=".xlsx,.xls" hidden onchange="aoEscolherPlanilhaRef(event)">
+      <div id="s-import-status"></div>
+    </div>
+  </div>
+
   <div class="kpi-row" id="s-kpis"></div>
   <div id="s-avisos"></div>
 
@@ -1593,6 +1614,10 @@ async function init() {
   $('s-agrupar').addEventListener('change',  e => { _agrupar = e.target.value; _abertas.clear(); renderSaldo(); });
   $('s-situacao').addEventListener('change', e => { _situacao = e.target.value; renderSaldo(); });
   $('s-busca').addEventListener('input', debounce(renderSaldo, 130));
+  $('s-fonte').addEventListener('change', e => {
+    _fonteRef = e.target.value; _fonteEscolhida = true; carregarSaldoMapa();
+  });
+  configurarDropRef();
   $('a-busca').addEventListener('input', debounce(() => renderAlteracoes(_alteracoes), 140));
 
   // As células do mapa são milhares: um ouvinte só no contêiner,
@@ -2792,6 +2817,131 @@ function corpo3D(cels, di, ln) {
   return d;
 }
 
+
+/* ═══════════════════════════════════════════════════════════════
+   PLANILHA DE REFERÊNCIA
+   A mesma planilha do ERP que alimenta a contagem, mas guardada em
+   outro lugar e com outra finalidade: aqui é só uma foto do estoque
+   para comparar contra o mapa. Importar de novo troca a foto
+   inteira e não abre ciclo nem mexe em nada da Validação.
+   ═══════════════════════════════════════════════════════════════ */
+let _fonteRef  = 'ref';     // ref | contagem
+let _fonteEscolhida = false;   // a pessoa mexeu no seletor ou importou
+let _refInfo   = null;      // { quando, quem, linhas }
+let _registrosRef = null;
+
+function configurarDropRef() {
+  const d = $('s-drop');
+  if (!d) return;
+  ['dragenter','dragover'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.remove('over'); }));
+  d.addEventListener('drop', e => { const f = e.dataTransfer.files?.[0]; if (f) lerPlanilhaRef(f); });
+}
+
+function aoEscolherPlanilhaRef(ev) {
+  const f = ev.target.files?.[0];
+  if (f) lerPlanilhaRef(f);
+  ev.target.value = '';
+}
+
+async function lerPlanilhaRef(file) {
+  const status = $('s-import-status');
+  status.innerHTML = '<div class="skeleton">lendo a planilha…</div>';
+  try {
+    const buf = await file.arrayBuffer();
+    const ws  = XLSX.read(buf, { cellDates:true }).Sheets[XLSX.read(buf, { cellDates:true }).SheetNames[0]];
+    const brutas = XLSX.utils.sheet_to_json(ws, { raw:true, defval:'' });
+    if (!brutas.length) throw new Error('a planilha está vazia');
+
+    // Mesmo mapa de colunas da Validação: é a mesma exportação.
+    const linhas = brutas.map(bruta => {
+      const o = {};
+      for (const [k, v] of Object.entries(bruta)) {
+        const destino = COL_MAP[String(k).trim().toLowerCase()];
+        if (destino) o[destino] = typeof v === 'string' ? v.trim() : v;
+      }
+      return o;
+    });
+
+    const faltando = ['codigo','lote','saldo','armazem'].filter(c => linhas.every(l => l[c] === undefined));
+    if (faltando.length) throw new Error(`colunas não encontradas: ${faltando.join(', ')}`);
+
+    _registrosRef = linhas.filter(l => l.codigo).map(l => ({
+      codigo:    normalizarCodigo(l.codigo),
+      descricao: String(l.descricao || '').trim(),
+      lote:      String(l.lote || '').trim().toUpperCase(),
+      armazem:   String(l.armazem || '').trim().toUpperCase(),
+      unidade:   String(l.unidade || '').trim(),
+      saldo:     paraNumero(l.saldo) ?? 0,
+      filial:    String(l.filial || '').trim(),
+      importado_por: GESTOR || 'painel',
+    }));
+
+    if (!_registrosRef.length) throw new Error('nenhuma linha com código');
+
+    const soma = _registrosRef.reduce((s, r) => s + r.saldo, 0);
+    const lotes = new Set(_registrosRef.map(r => chaveLote(r.codigo, r.lote, r.armazem))).size;
+    status.innerHTML = `
+      <div class="aviso a-info" style="margin-top:12px">
+        <span class="aviso-ico">▤</span>
+        <div><b>${esc(file.name)}</b>
+          ${num(_registrosRef.length)} linha(s) · ${num(lotes)} lote(s) · ${num(soma)} unidades no total.
+          Isto substitui a foto anterior desta tela. A Validação e os ciclos de contagem não são tocados.
+          <div style="margin-top:10px">
+            <button class="btn btn-primary btn-sm" id="s-btn-import" onclick="importarRef()">
+              <span class="spin" id="s-spin-import"></span>Usar esta planilha</button>
+            <button class="btn btn-ghost btn-sm" onclick="$('s-import-status').innerHTML=''">Cancelar</button>
+          </div>
+        </div>
+      </div>`;
+  } catch (e) {
+    status.innerHTML = `<div class="aviso a-warn"><span class="aviso-ico">!</span>
+      <div><b>Não deu para ler</b>${esc(e.message)}</div></div>`;
+  }
+}
+
+async function importarRef() {
+  if (!_registrosRef?.length) return;
+  busy('s-btn-import', 's-spin-import', true);
+  try {
+    // Foto nova substitui a anterior inteira: meia planilha antiga
+    // misturada com metade da nova geraria diferença fantasma.
+    const { error:eD } = await sb.from('estoque_ref').delete().neq('id', 0);
+    if (eD) throw eD;
+
+    for (let i = 0; i < _registrosRef.length; i += 500) {
+      await inserirResiliente('estoque_ref', _registrosRef.slice(i, i + 500));
+    }
+
+    toast(`${num(_registrosRef.length)} linhas importadas.`, 'ok', 4500);
+    _registrosRef = null;
+    $('s-import-status').innerHTML = '';
+    _fonteRef = 'ref';
+    _fonteEscolhida = true;
+    if ($('s-fonte')) $('s-fonte').value = 'ref';
+    await carregarSaldoMapa(true);
+  } catch (e) {
+    erro('Falha ao importar', e);
+  } finally {
+    busy('s-btn-import', 's-spin-import', false);
+  }
+}
+
+async function carregarRef() {
+  try {
+    const linhas = await buscarTudo(() => sb.from('estoque_ref')
+      .select('codigo, descricao, lote, armazem, saldo, unidade, filial, importado_por, importado_em'));
+    _refInfo = linhas.length
+      ? { quando:linhas[0].importado_em, quem:linhas[0].importado_por, linhas:linhas.length }
+      : null;
+    return linhas;
+  } catch (e) {
+    // Migração não rodada: a tela cai no saldo da contagem.
+    _refInfo = null;
+    return null;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    SALDO MAPEADO × SISTEMA
    De um lado o que está fisicamente nas vagas; do outro o saldo da
@@ -2808,6 +2958,14 @@ let _ordem      = 'diferenca';
 let _ordemAsc   = false;
 let _saldoMapa  = [];
 let _abertas    = new Set();     // linhas expandidas
+let _refLinhas  = null;          // planilha própria desta tela
+let _referencia = null;          // marca que a fonte já foi carregada
+
+/* De onde vem a coluna "Sistema": a planilha desta tela ou o saldo
+   que abriu o ciclo de contagem. São duas coisas diferentes. */
+function linhasDeReferencia() {
+  return _fonteRef === 'contagem' ? _saldo : (_refLinhas || []);
+}
 
 async function carregarSaldoMapa(forcar = false) {
   $('s-tabela').innerHTML = carregando(8);
@@ -2815,10 +2973,29 @@ async function carregarSaldoMapa(forcar = false) {
     // A tela precisa dos dois lados. O mapa pode ainda não ter sido
     // aberto nesta sessão, então garante ele aqui.
     if (forcar || !Object.keys(_ocupacao).length) await carregarMapa();
-    if (forcar || !_saldo.length) {
+
+    if (forcar || _referencia === null) {
+      const ref = await carregarRef();
+      // Primeira vez sem planilha própria: usa o saldo da contagem
+      // em vez de mostrar a tela vazia, mas deixa claro na tela.
+      if (ref === null || !ref.length) {
+        if (!_saldo.length) {
+          _saldo = await buscarTudo(() => sb.from('saldo_sistema')
+            .select('codigo, descricao, lote, armazem, saldo, unidade, filial'));
+        }
+        // Só troca sozinho enquanto ninguém escolheu. Depois de a
+        // pessoa importar ou escolher, trocar por baixo seria mentir
+        // sobre com o que ela está comparando.
+        if (!_fonteEscolhida && _fonteRef === 'ref' && _saldo.length) _fonteRef = 'contagem';
+      }
+      _refLinhas = ref || [];
+    }
+    if (_fonteRef === 'contagem' && !_saldo.length) {
       _saldo = await buscarTudo(() => sb.from('saldo_sistema')
         .select('codigo, descricao, lote, armazem, saldo, unidade, filial'));
     }
+    _referencia = true;
+    if ($('s-fonte')) $('s-fonte').value = _fonteRef;
     renderSaldo();
   } catch (e) {
     $('s-tabela').innerHTML = vazio('Não foi possível carregar', esc(e.message), 8);
@@ -2861,7 +3038,7 @@ function calcularSaldo() {
   }
 
   // ── lado do sistema ──
-  for (const s of _saldo) {
+  for (const s of linhasDeReferencia()) {
     if (!daFilial(s.filial)) continue;
     const k = chaveDoGrupo(s);
     let g = grupos.get(k);
@@ -2938,21 +3115,35 @@ function renderSaldo() {
 
   $('s-kpis').innerHTML = [
     kpi('Mapeado', num(totMap), 'somando as vagas'),
-    kpi('Sistema', num(totSis), _saldo.length ? 'saldo importado' : 'nenhuma planilha importada', _saldo.length ? '' : 'is-warn'),
+    kpi('Sistema', num(totSis),
+        _fonteRef === 'contagem' ? 'saldo da contagem' : 'planilha desta tela',
+        linhasDeReferencia().length ? '' : 'is-warn'),
     kpi('Conferindo', num(okN), 'mapa igual ao sistema', okN ? 'is-pos' : ''),
     kpi('Divergentes', num(divN), divN ? 'precisam de olhada' : 'nada fora', divN ? 'is-neg' : ''),
   ].join('');
 
   const avisos = [];
-  if (!_saldo.length) {
-    avisos.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Sem saldo do sistema</b>
-      Importe a planilha do estoque na aba Validação — é a mesma da contagem. Sem ela, só dá para ver o lado do mapa.</div></div>`);
+  if (!linhasDeReferencia().length) {
+    avisos.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Sem estoque para comparar</b>
+      Solte a planilha aqui em cima. Sem ela, só dá para ver o lado do mapa.</div></div>`);
+  } else if (_fonteRef === 'contagem') {
+    avisos.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>Comparando com o saldo da contagem</b>
+      Esta tela ainda não tem planilha própria, então está usando a que abriu o ciclo. Ela vai ficando desatualizada conforme as linhas são validadas — importe uma foto nova aqui em cima quando quiser o número do dia.</div></div>`);
   }
   if (_escopo !== 'tudo') {
     avisos.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>Comparação parcial</b>
       Você limitou o escopo do mapa, mas o sistema não sabe de drive-in: a coluna Sistema continua sendo o total. A diferença aqui não é confiável.</div></div>`);
   }
   $('s-avisos').innerHTML = avisos.join('');
+
+  const info = $('s-ref-info');
+  if (info) {
+    info.textContent = _fonteRef === 'contagem'
+      ? `usando o saldo da contagem · ${num(_saldo.length)} linha(s)`
+      : _refInfo
+        ? `${num(_refInfo.linhas)} linha(s) · importada ${fmtTS(_refInfo.quando)}${_refInfo.quem ? ' por ' + _refInfo.quem : ''}`
+        : 'nenhuma planilha importada aqui ainda';
+  }
 
   if (!dados.length) {
     $('s-tabela').innerHTML = vazio('Nada aqui',
