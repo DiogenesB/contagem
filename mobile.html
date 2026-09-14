@@ -201,6 +201,9 @@ html[data-tema="claro"]  .ico-lua { display:none; }
   font:inherit; font-size:.72rem; font-weight:700;
   padding:6px 11px; min-height:34px; cursor:pointer; white-space:nowrap;
 }
+.fila-chip.chip-err {
+  background:var(--toast-er-bg); color:var(--toast-er-fg); border-color:var(--red-bd);
+}
 .op-badge {
   display:flex; align-items:center; gap:7px;
   background:var(--bg3); border:1px solid var(--border2);
@@ -404,6 +407,8 @@ html[data-tema="claro"]  .ico-lua { display:none; }
 .banner-ciano .banner-title { color:var(--blue-lt); }
 .banner-verde  { background:rgba(79,190,126,.12); border:1px solid rgba(79,190,126,.34); }
 .banner-verde .banner-title { color:var(--ok); }
+.banner-vermelho { background:var(--toast-er-bg); border:1px solid var(--red-bd); }
+.banner-vermelho .banner-title { color:var(--toast-er-fg); }
 
 /* Cartão do ciclo na home */
 .ciclo-card {
@@ -1001,6 +1006,22 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
 </div>
 
 <!-- ══════════ MODAL: LOTE FORA DO SALDO ══════════ -->
+<!-- Lançamentos que o banco recusou. Antes eram apagados do
+     aparelho depois de 5 tentativas e a contagem sumia. -->
+<div class="modal-bg" id="modal-parados">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="banner banner-vermelho">
+      <div class="banner-title">Lançamentos recusados pelo banco</div>
+      <div>Estão guardados aqui no aparelho. Nada foi perdido.</div>
+    </div>
+    <div id="par-lista" style="margin-top:12px"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost narrow" onclick="fecharModal('modal-parados')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="modal-novo-lote">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -1144,15 +1165,24 @@ function alternarTema() {
    ═══════════════════════════════════════════════════════════════ */
 async function atualizarBadgeFila() {
   const n = await filaQuantos();
+  const p = (await filaParados()).length;
   const el = $('fila-chip');
   if (!el) return;
-  el.hidden = !n;
-  el.textContent = n === 1 ? '1 lançamento por enviar' : `${n} lançamentos por enviar`;
+  el.hidden = !n && !p;
+  if (p) {
+    el.textContent = p === 1 ? '1 lançamento recusado — ver' : `${p} lançamentos recusados — ver`;
+    el.classList.add('chip-err');
+    el.onclick = mostrarParados;
+  } else {
+    el.textContent = n === 1 ? '1 lançamento por enviar' : `${n} lançamentos por enviar`;
+    el.classList.remove('chip-err');
+    el.onclick = () => sincronizarFila(true);
+  }
 }
 
 async function sincronizarFila(avisar = false) {
   if (!navigator.onLine) { if (avisar) toast('Ainda sem rede. Está tudo guardado.', 'warn'); return; }
-  const { enviados, restantes, descartados } = await filaEnviar();
+  const { enviados, restantes, parados } = await filaEnviar();
   await atualizarBadgeFila();
   if (enviados) {
     toast(enviados === 1 ? '1 lançamento enviado.' : `${enviados} lançamentos enviados.`, 'ok');
@@ -1161,9 +1191,36 @@ async function sincronizarFila(avisar = false) {
   } else if (avisar && !restantes) {
     toast('Nada pendente para enviar.', 'ok');
   }
-  if (descartados) {
-    toast(`${descartados} lançamento(s) o banco recusou. Refaça pelo app.`, 'err', 7000);
+  if (parados) {
+    toast(`${parados} lançamento(s) o banco recusou — estão guardados no aparelho.`, 'err', 7000);
+    vibrar('err');
   }
+}
+
+/* O recusado não some mais: fica no aparelho, aparece aqui com o
+   erro do banco, e dá para mandar de novo depois de arrumar. */
+async function mostrarParados() {
+  const itens = await filaParados();
+  if (!itens.length) { toast('Nada recusado — a fila está limpa.', 'ok'); return; }
+  const linhas = itens.map(i => {
+    const l = i.linha || {};
+    return `<div class="li">
+      <div class="li-txt">
+        <div class="li-tit">${esc(l.produto_nome || l.codigo || 'lançamento')}</div>
+        <div class="li-meta">lote ${esc(l.lote || '—')} · ${fmtQtd(l.quantidade)} · ${esc(l.posicao || 'sem vaga')}</div>
+        <div class="li-meta" style="color:var(--neg)">${esc(i.ultimo_erro || 'recusado pelo banco')}</div>
+      </div>
+      <button class="btn btn-sm" onclick="tentarDeNovo(${i.id})">Tentar de novo</button>
+    </div>`;
+  }).join('');
+  $('par-lista').innerHTML = linhas;
+  abrirModal('modal-parados');
+}
+
+async function tentarDeNovo(id) {
+  await filaReviver(id);
+  fecharModal('modal-parados');
+  await sincronizarFila(true);
 }
 
 /* Toast com um caminho de volta. Cinco segundos é o tempo em que a
@@ -1304,11 +1361,23 @@ function planejarOcupacao(posicao, codigo, lote) {
                                      chave(r.lote)   === chave(lote));
   const outros = itens.filter(r => r !== mesmoItem);
 
+  // De qual ciclo veio o que já está na vaga. Sem isso, a contagem
+  // de hoje encostava num registro do ciclo passado, atualizava a
+  // quantidade dele e nunca virava lançamento — a contagem não
+  // aparecia na Validação e a vaga ainda ia para revisão no fim.
+  const doCicloAtual = mesmoItem &&
+    String(mesmoItem.ciclo_id ?? '') === String(_cicloAtual ?? '');
+
   return {
     atualizar: mesmoItem || null,
-    // Confirma quem já era produção/ajuste manual em vez de recriar.
-    confirmarExistente: mesmoItem && mesmoItem._tab === 'historico' && mesmoItem.origem !== 'contagem',
-    acao: mesmoItem ? 'atualizar' : (outros.length ? 'somar' : 'inserir'),
+    doCicloAtual: !!doCicloAtual,
+    // Já estava na vaga mas é de antes desta contagem: confirma o
+    // registro antigo e lança a contagem por cima. Vale tanto para
+    // produção/ajuste manual quanto para ocupação de ciclo anterior.
+    confirmarExistente: !!mesmoItem && !doCicloAtual,
+    acao: mesmoItem
+      ? (doCicloAtual ? 'atualizar' : 'recontar')
+      : (outros.length ? 'somar' : 'inserir'),
   };
 }
 
@@ -1323,9 +1392,8 @@ function itensParaRevisar(ocupacaoAtual, tocadosNesteCiclo) {
 
 function textoDoPlano(plano, posicao) {
   switch (plano.acao) {
-    case 'atualizar': return plano.confirmarExistente
-      ? `Confirmado · a produção guardada nesta vaga bate com a contagem.`
-      : `Quantidade da vaga ${posicao} atualizada.`;
+    case 'atualizar': return `Quantidade da vaga ${posicao} atualizada.`;
+    case 'recontar':  return `Recontado · o que estava em ${posicao} foi confirmado por esta contagem.`;
     case 'somar':     return `Somado ao palete da vaga ${posicao}.`;
     default:          return `Vaga ${posicao} ocupada.`;
   }
@@ -1509,7 +1577,7 @@ async function lancar() {
   try {
     let idLancado;
 
-    if (plano?.acao === 'atualizar' && !plano.confirmarExistente) {
+    if (plano?.acao === 'atualizar') {
       // Recontagem do mesmo palete DENTRO deste ciclo: corrige, não duplica.
       const alvo = plano.atualizar;
       const { error } = await sb.from(alvo._tab)
@@ -1555,11 +1623,21 @@ async function lancar() {
       if (naFila) atualizarBadgeFila();
 
       if (plano?.confirmarExistente && !naFila) {
-        // Marca o registro de produção como confirmado por esta
-        // contagem, mas o mantém — é o rastro de quem guardou.
-        const { error:eC } = await sb.from('historico').update({
-          confirmado: true, revisado_em: new Date().toISOString(),
-        }).eq('id', plano.atualizar.id);
+        // O registro que já estava na vaga fica, como rastro de quem
+        // guardou — mas sai do mapa, senão a mesma mercadoria conta
+        // duas vezes (a ocupação velha + o lançamento de agora).
+        // `revisado_em` e `ciclo_id` marcam que ESTA contagem passou
+        // aqui: é o que impede a varredura do fim do ciclo de mandar
+        // a vaga recém-contada para revisão.
+        const alvo = plano.atualizar;
+        const patch = {
+          confirmado: true,
+          revisado_em: new Date().toISOString(),
+          ciclo_id: _cicloAtual,
+        };
+        if (alvo._tab === 'historico') patch.ocupacao_ativa = false;
+        const { error:eC } = await sb.from(alvo._tab || 'historico')
+          .update(patch).eq('id', alvo.id);
         if (eC) throw eC;
       }
     }
@@ -1741,7 +1819,7 @@ function abrirModalTf(id) {
   if (candidatas.length) {
     pick.innerHTML = candidatas.map((r, i) => `
       <label class="pos-pick-opt" onclick="marcarOrigem(this)">
-        <input type="radio" name="tfm-origem" value="${esc(r.id)}" data-pos="${esc(r.pos)}" data-tab="${esc(r._tab)}"${i === 0 ? ' checked' : ''}>
+        <input type="radio" name="tfm-origem" value="${esc(r.id)}" data-pos="${esc(r.pos)}" data-tab="${esc(r._tab)}" data-qtd="${Number(r.quantidade) || 0}"${i === 0 ? ' checked' : ''}>
         <div>
           <div class="pos-cod">${esc(r.pos)}${r.pendente ? ' <span class="pill pill-recont">aguardando validação</span>' : ''}</div>
           <div class="li-meta">Lote ${esc(r.lote || '—')} · ${fmtQtd(r.quantidade)} un. · contado ${fmtTS(r.created_at)}</div>
@@ -1749,8 +1827,8 @@ function abrirModalTf(id) {
       </label>`).join('');
     pick.querySelector('.pos-pick-opt')?.classList.add('sel');
     $('tfm-origem-hint').textContent = candidatas.length > 1
-      ? 'Marcado o mais recente. A vaga escolhida é liberada no mapa ao confirmar.'
-      : 'A vaga escolhida é liberada no mapa ao confirmar.';
+      ? 'Marcado o mais recente. Sai da vaga só a quantidade que você informar.'
+      : 'Sai da vaga só a quantidade que você informar.';
   } else {
     pick.innerHTML = `<div class="prev alerta">
       <div class="prev-nome">Não existe posição cadastrada</div>
@@ -1818,13 +1896,23 @@ async function confirmarTransferencia() {
   if (!passaLimitePalete(t.produto_nome, qtd, t.codigo)) return;
 
   const origemSel = document.querySelector('input[name="tfm-origem"]:checked');
+  // Isto vivia só dentro de atualizarRestante(), mas o toast lá
+  // embaixo usava. Dava ReferenceError DEPOIS das três gravações:
+  // a transferência ia inteira para o banco e o operador lia
+  // "não foi possível confirmar".
+  const naVaga = Number(origemSel?.dataset.qtd) || 0;
+  const restou = Math.max(0, naVaga - qtd);
 
   busy('tfm-btn', 'tfm-spin', true);
   try {
-    // 1) Libera a vaga de origem, na tabela de onde ela veio.
+    // 1) Tira da vaga de origem SÓ o que saiu. Mover 200 de uma vaga
+    //    com 300 deixa 100 lá — antes a vaga inteira era liberada e
+    //    o resto sumia do mapa.
     if (origemSel) {
-      const { error } = await sb.from(origemSel.dataset.tab || 'historico')
-        .update({ ocupacao_ativa:false, updated_at:new Date().toISOString() })
+      const tabOrig = origemSel.dataset.tab || 'historico';
+      const { error } = await sb.from(tabOrig).update(restou > 0
+        ? { quantidade:restou, updated_at:new Date().toISOString() }
+        : { ocupacao_ativa:false, updated_at:new Date().toISOString() })
         .eq('id', origemSel.value);
       if (error) throw error;
     }
