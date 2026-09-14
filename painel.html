@@ -267,7 +267,7 @@ html[data-tema="claro"]  .ico-lua { display:none; }
 .panel-body.flush { padding:0; }
 
 /* ═══════════ KPIs ═══════════ */
-.kpis { display:grid; gap:12px; margin-bottom:20px; grid-template-columns:repeat(auto-fit, minmax(178px, 1fr)); }
+.kpis, .kpi-row { display:grid; gap:12px; margin-bottom:20px; grid-template-columns:repeat(auto-fit, minmax(178px, 1fr)); }
 .kpi {
   background:var(--surface); border:1px solid var(--line);
   border-radius:var(--r); padding:15px 17px;
@@ -620,6 +620,70 @@ table.mini td { padding:6px 9px; border-bottom:1px solid var(--line); }
 table.mini tr:last-child td { border-bottom:0; }
 table.mini .acao { text-align:right; }
 
+/* ═══════════ PAGINAÇÃO ═══════════ */
+/* Rolar 4.000 linhas para achar uma era o problema. A barra fica
+   colada embaixo da tabela, com o total sempre à vista. */
+.pag {
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:10px 16px; border-top:1px solid var(--line);
+  background:var(--surface); border-radius:0 0 var(--r) var(--r);
+}
+.pag-info { font-family:var(--mono); font-size:.75rem; color:var(--text-2); }
+.pag select { width:auto; min-height:30px; padding:3px 9px; font-size:.8125rem; }
+.pag-nav { margin-left:auto; display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.pag-btn {
+  min-width:32px; height:30px; padding:0 8px;
+  background:var(--surface-2); color:var(--text-2);
+  border:1px solid var(--line-2); border-radius:var(--r-sm);
+  font-family:var(--sans); font-size:.8125rem; font-weight:600;
+  cursor:pointer; transition:background .12s, color .12s;
+}
+.pag-btn:hover:not(:disabled) { background:var(--surface-3); color:var(--text); }
+.pag-btn:disabled { opacity:.35; cursor:not-allowed; }
+.pag-btn.atual { background:var(--accent-dk); border-color:var(--accent-dk); color:var(--on-accent); }
+.pag-gap { color:var(--text-3); padding:0 2px; }
+.pag-ir { display:flex; align-items:center; gap:6px; font-size:.75rem; color:var(--text-3); }
+.pag-ir input { width:62px; min-height:30px; padding:3px 8px; font-family:var(--mono); font-size:.8125rem; }
+@media (max-width:820px) {
+  .pag-nav { margin-left:0; width:100%; }
+  .pag-ir { display:none; }
+}
+
+/* ═══════════ CHIPS DE FILTRO ATIVO ═══════════ */
+.fchips { display:flex; gap:6px; flex-wrap:wrap; margin-top:11px; }
+.fchip {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:3px 6px 3px 10px; border-radius:100px;
+  background:var(--accent-sf); border:1px solid var(--accent-ln, var(--line-2));
+  color:var(--text-2); font-size:.75rem;
+}
+.fchip b { color:var(--text); font-weight:600; }
+.fchip button {
+  border:0; background:transparent; color:var(--text-3);
+  cursor:pointer; font-size:.875rem; line-height:1; padding:0 3px;
+}
+.fchip button:hover { color:var(--neg); }
+
+/* ═══════════ SALDO: DENSIDADE ═══════════ */
+/* A tabela tinha linha de 44px e coluna de produto espremida.
+   Aqui o nome ganha espaço e o resto encolhe para o mínimo. */
+table.saldo tbody td { padding:8px 13px; }
+table.saldo td.nome { min-width:280px; }
+table.saldo td.mono, table.saldo th.mono { white-space:nowrap; }
+table.saldo .num { width:1%; white-space:nowrap; }
+.linha-saldo.e-diverge     > td:first-child { box-shadow:inset 3px 0 0 var(--neg); }
+.linha-saldo.e-ok          > td:first-child { box-shadow:inset 3px 0 0 var(--pos); }
+.linha-saldo.e-fora        > td:first-child { box-shadow:inset 3px 0 0 var(--warn); }
+.linha-saldo.e-nao-mapeado > td:first-child { box-shadow:inset 3px 0 0 var(--alt); }
+.est-rot {
+  display:inline-block; padding:1px 7px; border-radius:100px;
+  background:var(--surface-3); border:1px solid var(--line-2);
+}
+.e-ok .est-rot          { background:var(--pos-sf);  border-color:var(--pos-ln, var(--line-2)); }
+.e-diverge .est-rot     { background:var(--neg-sf);  border-color:var(--neg-ln, var(--line-2)); }
+.e-fora .est-rot        { background:var(--warn-sf); border-color:var(--warn-ln, var(--line-2)); }
+.e-nao-mapeado .est-rot { background:var(--alt-sf);  border-color:var(--alt-ln, var(--line-2)); }
+
 /* ═══════════ SUGESTÃO DE PRODUTO ═══════════ */
 .field.com-sug { position:relative; }
 .sug {
@@ -765,7 +829,7 @@ table.mini .acao { text-align:right; }
 @media (max-width:640px) {
   html { font-size:15px; }
   .main { padding-left:12px; padding-right:12px; }
-  .kpis { grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); }
+  .kpis, .kpi-row { grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); }
   .op-card { grid-template-columns:1fr 1fr; }
   .toast { left:12px; right:12px; max-width:none; }
 }
@@ -939,6 +1003,7 @@ table.mini .acao { text-align:right; }
         <tbody id="v-tbody"></tbody>
       </table>
     </div>
+    <div id="v-pag"></div>
   </div>
 </section>
 
@@ -989,6 +1054,7 @@ table.mini .acao { text-align:right; }
         <tbody id="r-tbody"></tbody>
       </table>
     </div>
+    <div id="r-pag"></div>
   </div>
 </section>
 
@@ -1045,6 +1111,7 @@ table.mini .acao { text-align:right; }
         <tbody id="h-tbody"></tbody>
       </table>
     </div>
+    <div id="h-pag"></div>
   </div>
 </section>
 
@@ -1132,6 +1199,7 @@ table.mini .acao { text-align:right; }
         <tbody id="m-tbody"></tbody>
       </table>
     </div>
+    <div id="m-pag"></div>
   </div>
 </section>
 
@@ -1187,6 +1255,7 @@ table.mini .acao { text-align:right; }
         <tbody id="t-tbody"></tbody>
       </table>
     </div>
+    <div id="t-pag"></div>
   </div>
 </section>
 
@@ -1271,30 +1340,80 @@ table.mini .acao { text-align:right; }
 
   <div class="panel">
     <div class="panel-head">
+      <div>
+        <div class="section-title">Linhas do saldo</div>
+        <div class="section-note" id="s-cnt">—</div>
+      </div>
       <div class="btn-row">
-        <input type="search" id="s-busca" placeholder="produto, código, lote ou armazém" style="max-width:280px" autocomplete="off">
-        <select id="s-situacao" style="width:auto" aria-label="Situação">
-          <option value="todas">Todas as situações</option>
-          <option value="divergentes">Só divergentes</option>
-          <option value="conferindo">Só conferindo</option>
-          <option value="fora">Fora do mapa ou da planilha</option>
-        </select>
-        <select id="s-agrupar" style="width:auto" aria-label="Agrupar por">
-          <option value="lote">Produto + lote + armazém</option>
-          <option value="produto">Só por produto</option>
-          <option value="armazem">Só por armazém</option>
-        </select>
-        <select id="s-escopo" style="width:auto" aria-label="Escopo">
-          <option value="tudo">Todo o mapa</option>
-          <option value="pavilhao">Só o pavilhão do mapa</option>
-          <option value="drivein">Só o drive-in do mapa</option>
-        </select>
+        <button class="btn btn-ghost btn-sm" onclick="limparFiltrosSaldo()">Limpar filtros</button>
         <button class="btn btn-ghost btn-sm" onclick="carregarSaldoMapa(true)">Atualizar</button>
         <button class="btn btn-ghost btn-sm" onclick="baixarCSV()">Baixar CSV</button>
         <button class="btn btn-ghost btn-sm" onclick="imprimirSaldo()">&#9113; Imprimir</button>
       </div>
     </div>
+    <div class="panel-body">
+      <div class="filters">
+        <div class="field grow">
+          <label for="s-busca">Buscar</label>
+          <input type="search" id="s-busca" placeholder="produto, código, lote ou armazém · separe por vírgula" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="s-situacao">Situação</label>
+          <select id="s-situacao">
+            <option value="todas">Todas</option>
+            <option value="divergentes">Só divergentes</option>
+            <option value="conferindo">Batendo certo</option>
+            <option value="fora-planilha">No mapa, fora da planilha</option>
+            <option value="nao-mapeado">Na planilha, fora do mapa</option>
+            <option value="fora">Fora de um dos dois</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="s-armazem">Armazém</label>
+          <select id="s-armazem"><option value="">Todos</option></select>
+        </div>
+        <div class="field">
+          <label for="s-agrupar">Agrupar por</label>
+          <select id="s-agrupar">
+            <option value="lote">Produto + lote + armazém</option>
+            <option value="produto">Só por produto</option>
+            <option value="armazem">Só por armazém</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="s-escopo">Escopo do mapa</label>
+          <select id="s-escopo">
+            <option value="tudo">Todo o mapa</option>
+            <option value="pavilhao">Só o pavilhão do mapa</option>
+            <option value="drivein">Só o drive-in do mapa</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="s-ordem">Ordenar por</label>
+          <select id="s-ordem">
+            <option value="diferenca">Diferença</option>
+            <option value="produto">Produto</option>
+            <option value="codigo">Código</option>
+            <option value="lote">Lote</option>
+            <option value="armazem">Armazém</option>
+            <option value="vagas">Vagas</option>
+            <option value="mapeado">Mapeado</option>
+            <option value="sistema">Sistema</option>
+            <option value="dias">Tempo parado</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="s-dir">Sentido</label>
+          <select id="s-dir">
+            <option value="desc">Maior primeiro</option>
+            <option value="asc">Menor primeiro</option>
+          </select>
+        </div>
+      </div>
+      <div class="fchips" id="s-chips"></div>
+    </div>
     <div class="tbl-wrap" id="s-tabela"></div>
+    <div id="s-pag"></div>
   </div>
 </section>
 
@@ -1307,16 +1426,20 @@ table.mini .acao { text-align:right; }
     </div>
   </div>
 
-  <div class="kpi-row" id="a-kpis"></div>
+  <div class="kpi-row" id="alt-kpis"></div>
 
   <div class="panel">
     <div class="panel-head">
+      <div class="section-title">Trilha de alterações</div>
       <div class="btn-row">
-        <input type="search" id="a-busca" placeholder="pessoa, vaga, produto ou lote" style="max-width:320px" autocomplete="off">
+        <input type="search" id="alt-busca" placeholder="pessoa, vaga, produto ou lote" style="max-width:320px" autocomplete="off">
+        <select id="alt-acao" style="width:auto" aria-label="Tipo de alteração"><option value="">Todas as ações</option></select>
+        <select id="alt-quem" style="width:auto" aria-label="Pessoa"><option value="">Todas as pessoas</option></select>
         <button class="btn btn-ghost btn-sm" onclick="carregarAlteracoes(true)">Atualizar</button>
       </div>
     </div>
-    <div style="padding:14px 16px" id="a-lista"></div>
+    <div style="padding:14px 16px" id="alt-lista"></div>
+    <div id="alt-pag"></div>
   </div>
 </section>
 
@@ -1376,6 +1499,7 @@ table.mini .acao { text-align:right; }
         <tbody id="a-tbody"></tbody>
       </table>
     </div>
+    <div id="a-pag"></div>
   </div>
 </section>
 
@@ -1527,6 +1651,7 @@ let _tfFiltro   = 'pendente';
 let _pavilhao   = 'simbiose';
 let _acDados    = [];
 let _perfMeses  = [];
+let _alteracoes = [];   // trilha de alterações já carregada
 let _mcels      = [];
 let _mblocos    = [];
 let _mcor       = 'estado';
@@ -1543,6 +1668,125 @@ const dRegistros = debounce(() => renderRegistros(), 120);
 const dHistorico = debounce(() => renderHistorico(), 120);
 const dAcuracia  = debounce(() => renderAcuracia(),  120);
 const dMapa      = debounce(() => renderMapa(),      110);
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGINAÇÃO
+   Toda tabela grande do painel passa por aqui. O estado é por
+   tabela (página atual e tamanho) e fica na memória da sessão —
+   trocar de aba e voltar não perde o lugar.
+   `assin` é a foto dos filtros: quando ela muda, quem mexeu foi a
+   pessoa, e a página volta para a primeira em vez de mostrar
+   "página 7 de 2".
+   ═══════════════════════════════════════════════════════════════ */
+const PAG_PADRAO = 25;
+const _pag = {};
+
+/* Quem redesenha cada tabela depois de trocar de página. */
+const PAG_RENDER = {
+  validacao:  () => renderValidacao(),
+  registros:  () => renderRegistros(),
+  historico:  () => renderHistorico(),
+  acuracia:   () => renderAcuracia(),
+  saldo:      () => renderSaldo(),
+  alteracoes: () => renderAlteracoes(_alteracoes),
+  mapa:       () => renderMapa(),
+  transfer:   () => renderTransferencias(),
+};
+/* De quem é a rolagem que precisa voltar ao topo ao virar a página. */
+const PAG_ALVO = {
+  validacao:'v-tbody', registros:'r-tbody', historico:'h-tbody', acuracia:'a-tbody',
+  saldo:'s-tabela', alteracoes:'alt-lista', mapa:'m-tbody', transfer:'t-tbody',
+};
+
+function pagEstado(k) {
+  if (!_pag[k]) _pag[k] = { pg:1, tam:PAG_PADRAO, assin:null };
+  return _pag[k];
+}
+
+function fatiar(k, lista, assin = '') {
+  const e = pagEstado(k);
+  if (e.assin !== assin) { e.assin = assin; e.pg = 1; }
+  const tam = e.tam > 0 ? e.tam : Math.max(lista.length, 1);
+  const pgs = Math.max(1, Math.ceil(lista.length / tam));
+  if (e.pg > pgs) e.pg = pgs;
+  if (e.pg < 1)   e.pg = 1;
+  const ini = (e.pg - 1) * tam;
+  return {
+    itens: lista.slice(ini, ini + tam),
+    ini, fim: Math.min(ini + tam, lista.length),
+    total: lista.length, pg: e.pg, pgs, tam,
+  };
+}
+
+function irPagina(k, pg) {
+  const e = pagEstado(k);
+  e.pg = Math.max(1, Number(pg) || 1);
+  PAG_RENDER[k]?.();
+  const alvo = $(PAG_ALVO[k]);
+  const cx = alvo?.closest('.tbl-wrap') || alvo;
+  if (!cx) return;
+  cx.scrollTop = 0;
+  // A tabela pode estar abaixo da dobra depois de trocar de página.
+  cx.scrollIntoView?.({ block:'nearest' });
+}
+
+function tamPagina(k, tam) {
+  const e = pagEstado(k);
+  e.tam = Number(tam) || 0;   // 0 = mostrar tudo
+  e.pg = 1;
+  PAG_RENDER[k]?.();
+}
+
+function irPaginaCampo(k, el, pgs) {
+  const v = Math.min(Math.max(1, Number(el.value) || 1), pgs);
+  el.value = '';
+  irPagina(k, v);
+}
+
+/* 1 … 4 5 [6] 7 8 … 42 — nunca mais de 7 botões de número. */
+function paginasVisiveis(pg, pgs) {
+  if (pgs <= 7) return Array.from({ length:pgs }, (_, i) => i + 1);
+  const s = new Set([1, pgs, pg, pg - 1, pg + 1]);
+  if (pg <= 3)       [2, 3, 4].forEach(n => s.add(n));
+  if (pg >= pgs - 2) [pgs - 1, pgs - 2, pgs - 3].forEach(n => s.add(n));
+  const l = [...s].filter(n => n >= 1 && n <= pgs).sort((a, b) => a - b);
+  const out = [];
+  l.forEach((n, i) => { if (i && n - l[i - 1] > 1) out.push('…'); out.push(n); });
+  return out;
+}
+
+function barraPag(k, p, rotulo = 'linha(s)') {
+  const e = pagEstado(k);
+  const bt = (pg, txt, dis, atual = false, titulo = '') =>
+    `<button class="pag-btn${atual ? ' atual' : ''}" ${dis ? 'disabled' : ''}` +
+    ` title="${titulo}" onclick="irPagina('${k}',${pg})">${txt}</button>`;
+
+  const nums = paginasVisiveis(p.pg, p.pgs)
+    .map(n => n === '…' ? '<span class="pag-gap">…</span>' : bt(n, n, false, n === p.pg))
+    .join('');
+
+  const opcoes = [25, 50, 100, 200]
+    .map(n => `<option value="${n}" ${e.tam === n ? 'selected' : ''}>${n} por página</option>`).join('') +
+    `<option value="0" ${e.tam === 0 ? 'selected' : ''}>Mostrar tudo</option>`;
+
+  return `<div class="pag">
+    <span class="pag-info">${p.total
+      ? `${num(p.ini + 1)}–${num(p.fim)} de ${num(p.total)} ${rotulo}`
+      : `nenhuma ${rotulo.replace('(s)', '')}`}</span>
+    <select onchange="tamPagina('${k}', this.value)" aria-label="Itens por página">${opcoes}</select>
+    ${p.pgs > 1 ? `<div class="pag-nav">
+      ${bt(1, '«', p.pg === 1, false, 'Primeira')}
+      ${bt(p.pg - 1, '‹', p.pg === 1, false, 'Anterior')}
+      ${nums}
+      ${bt(p.pg + 1, '›', p.pg >= p.pgs, false, 'Próxima')}
+      ${bt(p.pgs, '»', p.pg >= p.pgs, false, 'Última')}
+      ${p.pgs > 7 ? `<span class="pag-ir">ir para
+        <input type="number" min="1" max="${p.pgs}" placeholder="${p.pg}"
+               onkeydown="if(event.key==='Enter')irPaginaCampo('${k}',this,${p.pgs})"
+               onchange="irPaginaCampo('${k}',this,${p.pgs})"></span>` : ''}
+    </div>` : ''}
+  </div>`;
+}
 
 /* ═══════════════════════════════════════════════════════════════
    QUEM ESTÁ MEXENDO
@@ -1613,12 +1857,17 @@ async function init() {
   $('s-escopo').addEventListener('change',   e => { _escopo = e.target.value; _abertas.clear(); renderSaldo(); });
   $('s-agrupar').addEventListener('change',  e => { _agrupar = e.target.value; _abertas.clear(); renderSaldo(); });
   $('s-situacao').addEventListener('change', e => { _situacao = e.target.value; renderSaldo(); });
+  $('s-armazem').addEventListener('change', () => renderSaldo());
+  $('s-ordem').addEventListener('change', ordemSaldoSelect);
+  $('s-dir').addEventListener('change', ordemSaldoSelect);
   $('s-busca').addEventListener('input', debounce(renderSaldo, 130));
   $('s-fonte').addEventListener('change', e => {
     _fonteRef = e.target.value; _fonteEscolhida = true; carregarSaldoMapa();
   });
   configurarDropRef();
-  $('a-busca').addEventListener('input', debounce(() => renderAlteracoes(_alteracoes), 140));
+  $('alt-busca').addEventListener('input', debounce(() => renderAlteracoes(_alteracoes), 140));
+  $('alt-acao').addEventListener('change', () => renderAlteracoes(_alteracoes));
+  $('alt-quem').addEventListener('change', () => renderAlteracoes(_alteracoes));
 
   // As células do mapa são milhares: um ouvinte só no contêiner,
   // em vez de um onclick por botão.
@@ -1699,6 +1948,7 @@ function irPara(pagina) {
 function aoTrocarFilial() {
   renderValidacao(); renderRegistros(); renderHistorico(); renderAcuracia();
   if ($('page-mapa').classList.contains('active')) renderMapa();
+  if ($('page-saldo').classList.contains('active') && _referencia) renderSaldo();
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2141,9 +2391,20 @@ function renderValidacao() {
   $('nc-validacao').textContent = divs;
   $('nc-validacao').className = 'nav-count' + (divs ? ' alerta' : '');
 
+  window._vVisiveis = dados;
+
+  // A assinatura junta tudo que filtra esta tabela: mexeu em
+  // qualquer um, a paginação recomeça do começo.
+  const p = fatiar('validacao', dados,
+    [_vFiltro, $('v-busca').value, $('v-armazem').value, $('v-operador').value, $('filtro-filial').value].join('|'));
+  $('v-pag').innerHTML = barraPag('validacao', p, 'linha(s)');
+
   if (!dados.length) { $('v-tbody').innerHTML = vazio('Nada nesse filtro', 'Troque o filtro ou importe o saldo.', 9); return; }
 
-  $('v-tbody').innerHTML = dados.map((l, i) => {
+  // O índice tem que ser o da lista inteira, não o da página:
+  // é ele que validarLinha() e abrirReatribuir() usam.
+  $('v-tbody').innerHTML = p.itens.map((l, j) => {
+    const i = p.ini + j;
     const est = estadoDaLinha(l);
     const sit = tagEstado(l);
 
@@ -2181,8 +2442,6 @@ function renderValidacao() {
       <td class="acao">${acoes}</td>
     </tr>`;
   }).join('');
-
-  window._vVisiveis = dados;
 }
 
 function kpi(label, valor, foot, cls = '') {
@@ -2581,9 +2840,14 @@ function renderRegistros() {
   $('nc-registros').textContent = pend;
   $('nc-registros').className = 'nav-count' + (pend ? ' alerta' : '');
 
+  const p = fatiar('registros', dados,
+    [$('r-busca').value, $('r-status').value, $('r-operador').value,
+     $('r-de').value, $('r-ate').value, $('filtro-filial').value].join('|'));
+  $('r-pag').innerHTML = barraPag('registros', p, 'lançamento(s)');
+
   if (!dados.length) { $('r-tbody').innerHTML = vazio('Nenhum registro', 'Ajuste os filtros.', 10); return; }
 
-  $('r-tbody').innerHTML = dados.slice(0, 500).map(r => `
+  $('r-tbody').innerHTML = p.itens.map(r => `
     <tr>
       <td class="nome">${esc(r.produto_nome || r.codigo)}</td>
       <td class="mono">${esc(r.codigo)}</td>
@@ -2596,8 +2860,7 @@ function renderRegistros() {
       <td class="mono">${fmtTS(r.created_at)}</td>
       <td class="acao">${r.status === 'pendente'
         ? `<button class="btn btn-sm btn-danger" onclick="excluirRegistro('${esc(r.id)}')">Excluir</button>` : ''}</td>
-    </tr>`).join('') +
-    (dados.length > 500 ? `<tr><td colspan="10"><div class="skeleton">mostrando 500 de ${num(dados.length)} — refine os filtros</div></td></tr>` : '');
+    </tr>`).join('');
 }
 
 async function excluirRegistro(id) {
@@ -2663,9 +2926,13 @@ function renderHistorico() {
     ${kpi('Com posição', num(comPos), pct(comPos, dados.length) + ' rastreados', 'is-info')}
     ${kpi('Unidades contadas', num(un), 'somadas')}`;
 
+  const p = fatiar('historico', dados,
+    [q, d, op, pos, $('h-mes').value, $('filtro-filial').value].join('|'));
+  $('h-pag').innerHTML = barraPag('historico', p, 'lote(s)');
+
   if (!dados.length) { $('h-tbody').innerHTML = vazio('Nada no histórico', 'Valide contagens para popular esta tela.', 10); return; }
 
-  $('h-tbody').innerHTML = dados.slice(0, 500).map(r => {
+  $('h-tbody').innerHTML = p.itens.map(r => {
     const div = Number(r.divergencia) || 0;
     return `<tr>
       <td class="nome">${esc(r.produto_nome || r.codigo)}<div class="sub">${badgeFilial(r.filial)}</div></td>
@@ -3062,9 +3329,17 @@ function calcularSaldo() {
     lista = lista.filter(g => ts.some(x =>
       [g.produto, g.codigo, g.lote, g.armazem].filter(Boolean).join(' ').toUpperCase().includes(x)));
   }
-  if (_situacao === 'divergentes') lista = lista.filter(g => g.estado === 'diverge');
-  if (_situacao === 'conferindo')  lista = lista.filter(g => g.estado === 'ok');
-  if (_situacao === 'fora')        lista = lista.filter(g => g.estado === 'fora' || g.estado === 'nao-mapeado');
+  // O armazém entra aqui e não lá em cima porque o grupo pode ter
+  // vindo dos dois lados; filtrar o grupo pronto mantém os dois
+  // lados coerentes.
+  const armF = $('s-armazem')?.value || '';
+  if (armF && _agrupar !== 'produto') lista = lista.filter(g => (g.armazem || '—') === armF);
+
+  if (_situacao === 'divergentes')   lista = lista.filter(g => g.estado === 'diverge');
+  if (_situacao === 'conferindo')    lista = lista.filter(g => g.estado === 'ok');
+  if (_situacao === 'fora-planilha') lista = lista.filter(g => g.estado === 'fora');
+  if (_situacao === 'nao-mapeado')   lista = lista.filter(g => g.estado === 'nao-mapeado');
+  if (_situacao === 'fora')          lista = lista.filter(g => g.estado === 'fora' || g.estado === 'nao-mapeado');
 
   const valor = g => ({
     produto:g.produto, codigo:g.codigo, lote:g.lote, armazem:g.armazem,
@@ -3098,6 +3373,67 @@ function ordenarSaldo(campo) {
   if (_ordem === campo) _ordemAsc = !_ordemAsc;
   else { _ordem = campo; _ordemAsc = false; }
   renderSaldo();
+}
+
+/* Os selects de ordem e o clique no cabeçalho mexem na mesma coisa;
+   este é o lado do select. */
+function ordemSaldoSelect() {
+  _ordem    = $('s-ordem').value;
+  _ordemAsc = $('s-dir').value === 'asc';
+  renderSaldo();
+}
+
+/* Quantos armazéns existem nos dois lados — alimenta o select. */
+function armazensDoSaldo() {
+  const s = new Set();
+  for (const itens of Object.values(_ocupacao))
+    for (const r of itens) if (daFilial(r.filial) && r.armazem) s.add(r.armazem);
+  for (const r of linhasDeReferencia()) if (daFilial(r.filial) && r.armazem) s.add(r.armazem);
+  return [...s];
+}
+
+function limparFiltrosSaldo() {
+  $('s-busca').value = '';
+  $('s-situacao').value = 'todas';  _situacao = 'todas';
+  $('s-armazem').value = '';
+  $('s-escopo').value = 'tudo';     _escopo = 'tudo';
+  $('s-agrupar').value = 'lote';    _agrupar = 'lote';
+  $('s-ordem').value = 'diferenca'; _ordem = 'diferenca';
+  $('s-dir').value = 'desc';        _ordemAsc = false;
+  _abertas.clear();
+  renderSaldo();
+}
+
+/* Um chip por filtro ligado, com o X para desligar só aquele.
+   Sem isso, a tela mostra "nada aqui" e ninguém lembra por quê. */
+function chipsSaldo() {
+  const c = [];
+  const chip = (rot, val, limpar) =>
+    `<span class="fchip">${rot}: <b>${esc(val)}</b>` +
+    `<button title="Tirar este filtro" onclick="${limpar}">×</button></span>`;
+
+  const q = $('s-busca').value.trim();
+  if (q) c.push(chip('busca', q, `$('s-busca').value='';renderSaldo()`));
+
+  const sit = $('s-situacao');
+  if (_situacao !== 'todas')
+    c.push(chip('situação', sit.options[sit.selectedIndex].text,
+      `$('s-situacao').value='todas';_situacao='todas';renderSaldo()`));
+
+  const arm = $('s-armazem').value;
+  if (arm) c.push(chip('armazém', arm, `$('s-armazem').value='';renderSaldo()`));
+
+  if (_escopo !== 'tudo') {
+    const e = $('s-escopo');
+    c.push(chip('escopo', e.options[e.selectedIndex].text,
+      `$('s-escopo').value='tudo';_escopo='tudo';renderSaldo()`));
+  }
+  if (_agrupar !== 'lote') {
+    const a = $('s-agrupar');
+    c.push(chip('agrupado', a.options[a.selectedIndex].text,
+      `$('s-agrupar').value='lote';_agrupar='lote';_abertas.clear();renderSaldo()`));
+  }
+  $('s-chips').innerHTML = c.join('');
 }
 
 function alternarLinhaSaldo(k) {
@@ -3145,6 +3481,21 @@ function renderSaldo() {
         : 'nenhuma planilha importada aqui ainda';
   }
 
+  preencherSelect('s-armazem', armazensDoSaldo());
+  chipsSaldo();
+  if ($('s-ordem')) $('s-ordem').value = _ordem;
+  if ($('s-dir'))   $('s-dir').value   = _ordemAsc ? 'asc' : 'desc';
+
+  const p = fatiar('saldo', dados, [
+    $('s-busca').value, _situacao, $('s-armazem').value, _escopo, _agrupar,
+    $('filtro-filial').value, _fonteRef,
+  ].join('|'));
+
+  $('s-cnt').textContent = dados.length
+    ? `${num(dados.length)} linha(s) no filtro · mostrando ${num(p.ini + 1)}–${num(p.fim)}`
+    : 'nenhuma linha no filtro atual';
+  $('s-pag').innerHTML = barraPag('saldo', p, 'linha(s)');
+
   if (!dados.length) {
     $('s-tabela').innerHTML = vazio('Nada aqui',
       'Ajuste o filtro, o escopo ou a busca.', 8);
@@ -3166,7 +3517,7 @@ function renderSaldo() {
         ${th('sistema', 'Sistema', 'num')}
         ${th('diferenca', 'Diferença', 'num')}
       </tr></thead>
-      <tbody>${dados.map(g => linhaSaldo(g)).join('')}</tbody>
+      <tbody>${p.itens.map(g => linhaSaldo(g)).join('')}</tbody>
     </table>`;
 }
 
@@ -3175,7 +3526,7 @@ const COLS = () => _agrupar === 'produto' ? 6 : 8;
 function linhaSaldo(g) {
   const aberta = _abertas.has(g.chave);
   const dif = g.diferenca;
-  const rot = { ok:'confere', diverge:'diverge', fora:'fora da planilha', 'nao-mapeado':'não está no mapa' }[g.estado];
+  const rot = { ok:'confere', diverge:'diverge', fora:'fora da planilha', 'nao-mapeado':'só na planilha' }[g.estado];
 
   const cel = dif === null
     ? `<td class="num"><span class="dif d-fora">—</span></td>`
@@ -3331,38 +3682,53 @@ const SEM_TABELA = `<div class="vazio">
 
 async function carregarAlteracoes(forcar = false) {
   if (!forcar && cacheValido('alteracoes', 30)) { renderAlteracoes(cacheLer('alteracoes')); return; }
-  $('a-lista').innerHTML = '<div class="esqueleto" style="height:90px"></div>';
+  $('alt-lista').innerHTML = '<div class="esqueleto" style="height:90px"></div>';
   const dados = await lerAlteracoes({ limite:300 });
-  if (dados === null) { $('a-lista').innerHTML = SEM_TABELA; $('a-kpis').innerHTML = ''; return; }
+  if (dados === null) { $('alt-lista').innerHTML = SEM_TABELA; $('alt-kpis').innerHTML = ''; return; }
   cacheGravar('alteracoes', dados);
   _alteracoes = dados;
   renderAlteracoes(dados);
 }
 
 function renderAlteracoes(dados) {
-  const q = $('a-busca')?.value.trim().toUpperCase() || '';
+  dados = dados || [];
+  const q  = $('alt-busca')?.value.trim().toUpperCase() || '';
   const ts = termos(q);
-  const filtrado = ts.length
-    ? dados.filter(a => ts.some(x =>
-        [a.quem, a.posicao, a.codigo, a.produto_nome, a.lote, rotuloAcao(a.acao)]
-          .filter(Boolean).join(' ').toUpperCase().includes(x)))
-    : dados;
+  const ac = $('alt-acao')?.value || '';
+  const qm = $('alt-quem')?.value || '';
+
+  preencherSelect('alt-quem', dados.map(a => a.quem), 'Todas as pessoas');
+  preencherSelect('alt-acao', [...new Set(dados.map(a => a.acao))], 'Todas as ações');
+  // O select guarda a ação crua; o rótulo bonito é só na tela.
+  [...($('alt-acao')?.options || [])].forEach(o => { if (o.value) o.textContent = rotuloAcao(o.value); });
+
+  const filtrado = dados.filter(a => {
+    if (ac && a.acao !== ac) return false;
+    if (qm && a.quem !== qm) return false;
+    if (!ts.length) return true;
+    const txt = [a.quem, a.posicao, a.codigo, a.produto_nome, a.lote, rotuloAcao(a.acao)]
+      .filter(Boolean).join(' ').toUpperCase();
+    return ts.some(x => txt.includes(x));
+  });
 
   const hoje = new Date().toISOString().slice(0, 10);
   const deHoje = dados.filter(a => String(a.created_at).slice(0, 10) === hoje);
   const pessoas = new Set(dados.map(a => a.quem));
 
-  $('a-kpis').innerHTML = [
-    kpiCard('Alterações hoje', num(deHoje.length), 'em todo o mapa'),
-    kpiCard('No histórico', num(dados.length), 'últimas 300'),
-    kpiCard('Pessoas', num(pessoas.size), [...pessoas].slice(0, 3).join(', ') || '—'),
-    kpiCard('Última', dados[0] ? fmtTS(dados[0].created_at).slice(0, 5) : '—', dados[0] ? dados[0].quem : 'nada ainda'),
+  $('alt-kpis').innerHTML = [
+    kpi('Alterações hoje', num(deHoje.length), 'em todo o mapa'),
+    kpi('No histórico', num(dados.length), 'últimas 300'),
+    kpi('Pessoas', num(pessoas.size), [...pessoas].slice(0, 3).join(', ') || '—'),
+    kpi('Última', dados[0] ? fmtTS(dados[0].created_at).slice(0, 5) : '—', dados[0] ? dados[0].quem : 'nada ainda'),
   ].join('');
 
-  $('a-lista').innerHTML = filtrado.length
-    ? `<div class="hist">${filtrado.map(eventoHTML).join('')}</div>`
+  const p = fatiar('alteracoes', filtrado, [q, ac, qm].join('|'));
+  $('alt-pag').innerHTML = barraPag('alteracoes', p, 'alteração(ões)');
+
+  $('alt-lista').innerHTML = p.itens.length
+    ? `<div class="hist">${p.itens.map(eventoHTML).join('')}</div>`
     : `<div class="vazio"><div class="vazio-t">Nada aqui</div>
-       <div class="vazio-s">${q ? `Nenhuma alteração com “${esc(q)}”.` : 'Nenhuma alteração registrada ainda.'}</div></div>`;
+       <div class="vazio-s">${q || ac || qm ? 'Nenhuma alteração com esses filtros.' : 'Nenhuma alteração registrada ainda.'}</div></div>`;
 }
 
 /* O histórico daquela vaga, dentro da gaveta. */
@@ -3652,9 +4018,13 @@ function renderListaMapa(di, q, arm) {
   }
 
   $('m-lista-cnt').textContent = `${num(linhas.length)} ocupação(ões)`;
+
+  const p = fatiar('mapa', linhas, [di, q, arm, $('filtro-filial').value].join('|'));
+  $('m-pag').innerHTML = barraPag('mapa', p, 'ocupação(ões)');
+
   if (!linhas.length) { $('m-tbody').innerHTML = vazio('Nenhuma vaga ocupada aqui', 'Use “Ocupar vaga” ou aguarde a contagem.', 9); return; }
 
-  $('m-tbody').innerHTML = linhas.slice(0, 400).map(r => `
+  $('m-tbody').innerHTML = p.itens.map(r => `
     <tr>
       <td class="mono strong">${esc(r.pos)}</td>
       <td class="nome">${esc(r.produto_nome || r.codigo)}</td>
@@ -3669,8 +4039,7 @@ function renderListaMapa(di, q, arm) {
         <button class="btn btn-sm" onclick="editarVaga('${esc(r.pos)}','${esc(r.id)}','${esc(r._tab)}')">Editar</button>
         <button class="btn btn-sm btn-danger" onclick="liberar('${esc(r.id)}','${esc(r._tab)}','${esc(r.pos)}')">Liberar</button>
       </td>
-    </tr>`).join('') +
-    (linhas.length > 400 ? `<tr><td colspan="9"><div class="skeleton">mostrando 400 de ${num(linhas.length)} — refine a busca</div></td></tr>` : '');
+    </tr>`).join('');
 }
 
 function setZoomMapa(tam, btn) {
@@ -3986,9 +4355,13 @@ function setFiltroTf(f, btn) {
 
 function renderTransferencias() {
   const dados = _transfers.filter(t => !_tfFiltro || t.status === _tfFiltro);
+
+  const p = fatiar('transfer', dados, String(_tfFiltro));
+  $('t-pag').innerHTML = barraPag('transfer', p, 'transferência(s)');
+
   if (!dados.length) { $('t-tbody').innerHTML = vazio('Nenhuma transferência', 'Crie uma acima.', 9); return; }
 
-  $('t-tbody').innerHTML = dados.map(t => {
+  $('t-tbody').innerHTML = p.itens.map(t => {
     const feita = t.status !== 'pendente';
     const dif = feita && t.quantidade_movida != null && Number(t.quantidade_movida) !== Number(t.quantidade);
     return `<tr>
@@ -4263,9 +4636,13 @@ function renderAcuracia() {
     : `${num(dados.length)} lote(s)`;
   window._acVisiveis = dados;
 
+  const p = fatiar('acuracia', dados,
+    [q, t, $('a-de').value, $('a-ate').value, $('filtro-filial').value].join('|'));
+  $('a-pag').innerHTML = barraPag('acuracia', p, 'lote(s)');
+
   if (!dados.length) { $('a-tbody').innerHTML = vazio('Nada no período', 'Amplie as datas ou valide contagens.', 9); return; }
 
-  $('a-tbody').innerHTML = dados.slice(0, 500).map(r => {
+  $('a-tbody').innerHTML = p.itens.map(r => {
     const div = Number(r.divergencia) || 0;
     const sis = Number(r.saldo_sistema) || 0;
     const fora = r.conta_acuracia === false;
