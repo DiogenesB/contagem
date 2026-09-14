@@ -760,12 +760,9 @@ table.saldo .num { width:1%; white-space:nowrap; }
 .ml-qtd.varios { color:var(--warn); background:var(--warn-sf); }
 
 .corpo-detalhe, .corpo-3d { display:none; }
-#m-mapa[data-vista="detalhe"] .corpo-grade,
-#m-mapa[data-vista="3d"]      .corpo-grade { display:none; }
+#m-mapa[data-vista="detalhe"] .corpo-grade { display:none; }
 #m-mapa[data-vista="detalhe"] .corpo-detalhe { display:block; }
-#m-mapa[data-vista="3d"]      .corpo-3d      { display:block; }
 #m-mapa[data-vista="detalhe"] .mapa-grade { grid-template-columns:repeat(auto-fill, minmax(266px, 1fr)); }
-#m-mapa[data-vista="3d"]      .mapa-grade { grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); }
 
 .det { display:flex; align-items:flex-start; gap:7px; padding:6px 0; border-top:1px solid var(--line); }
 .corpo-detalhe .det:first-child { border-top:0; padding-top:3px; }
@@ -778,6 +775,70 @@ table.saldo .num { width:1%; white-space:nowrap; }
 .det-qtd { font-family:var(--mono); font-size:.875rem; font-weight:600; letter-spacing:-.02em; text-align:right; white-space:nowrap; }
 .det-qtd small { display:block; font-size:.5625rem; font-weight:400; color:var(--text-3); }
 .det-vazio { font-size:.6875rem; color:var(--text-3); padding:8px 0 4px; }
+.det { cursor:pointer; border-radius:4px; }
+.det:hover { background:var(--surface-2); }
+.det-fora  { opacity:.16; }
+.det-achou { background:var(--accent-sf); box-shadow:inset 2px 0 0 var(--accent); }
+/* Linha cujas fichas sumiram todas na busca não precisa ocupar espaço. */
+#m-mapa[data-vista="detalhe"] .mlinha.oculta { display:none; }
+
+/* ═══════════ CORREDOR ═══════════ */
+/* A vista 3D antiga era um desenho miúdo por linha — 36 rabiscos de
+   200px que não diziam nada. Esta é uma só: você fica na boca do
+   drive-in e olha o corredor inteiro indo embora, com as duas
+   paredes de porta-palete. */
+.corr-topo {
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;
+}
+.corr-topo select { width:auto; }
+.corr-prof { display:flex; align-items:center; gap:6px; margin-left:auto; }
+.corr-prof span { font-size:.75rem; color:var(--text-3); }
+.corr-prof button {
+  min-width:31px; height:30px; border-radius:var(--r-sm); cursor:pointer;
+  background:var(--surface-2); border:1px solid var(--line-2); color:var(--text-2);
+  font:600 .8125rem/1 var(--mono);
+}
+.corr-prof button.on { background:var(--accent-dk); border-color:var(--accent-dk); color:var(--on-accent); }
+
+.corr-palco {
+  position:relative; border-radius:var(--r); overflow:hidden;
+  border:1px solid var(--line);
+  background:linear-gradient(180deg, var(--surface-3) 0%, var(--surface-2) 52%, var(--surface) 100%);
+}
+.corr-palco svg { width:100%; height:auto; display:block; }
+
+.corr-piso   { fill:var(--surface-2); }
+.corr-fundo  { fill:var(--surface-3); }
+.corr-viga   { stroke:var(--line-2); stroke-width:1; fill:none; }
+.corr-poste  { fill:var(--text-3); opacity:.28; }
+
+.pal { cursor:pointer; }
+.pal .p-face { stroke:rgba(0,0,0,.28); stroke-width:.5; }
+.pal .p-topo { opacity:.42; }
+.pal.livre .p-face { fill:var(--surface); stroke:var(--line-2); stroke-width:.7; }
+.pal.livre .p-topo { display:none; }
+.pal:hover .p-face { stroke:var(--accent); stroke-width:1.6; }
+.pal.achou .p-face { stroke:var(--accent); stroke-width:2; }
+.pal.fora  { opacity:.12; }
+.corr-rot  { font-family:var(--mono); fill:var(--text-3); text-anchor:middle; }
+.corr-nada { padding:38px 16px; text-align:center; color:var(--text-3); font-size:.8125rem; }
+
+/* O quadro de números, como no painel de um sistema de armazém. */
+.corr-hud {
+  position:absolute; right:12px; bottom:12px; z-index:2;
+  background:color-mix(in srgb, var(--surface) 88%, transparent);
+  border:1px solid var(--line-2); border-radius:var(--r-sm);
+  padding:9px 12px; font-family:var(--mono); font-size:.6875rem;
+  color:var(--text-2); line-height:1.7; backdrop-filter:blur(3px);
+}
+.corr-hud b { color:var(--text); }
+.corr-hud .h-tit {
+  font-family:var(--sans); font-size:.75rem; font-weight:650;
+  color:var(--text); margin-bottom:3px;
+}
+@media (max-width:700px) { .corr-hud { position:static; margin-top:10px; } }
+
+#m-mapa[data-vista="corredor"] { display:none; }
 
 .corpo-3d svg { width:100%; height:auto; display:block; overflow:visible; }
 .corpo-3d .cx { cursor:pointer; }
@@ -1194,7 +1255,7 @@ table.saldo .num { width:1%; white-space:nowrap; }
         <div class="seg" id="seg-vista" role="group" aria-label="Visualização">
           <button class="active" data-vista="grade" onclick="setVistaMapa('grade')" title="Compacta">▦ Grade</button>
           <button data-vista="detalhe" onclick="setVistaMapa('detalhe')" title="Produto, lote e quantidade à mostra">☰ Detalhe</button>
-          <button data-vista="3d" onclick="setVistaMapa('3d')" title="Drive-in em perspectiva">◱ 3D</button>
+          <button data-vista="corredor" onclick="setVistaMapa('corredor')" title="Vista de dentro do corredor">⬔ Corredor</button>
         </div>
         <div class="seg" aria-label="Tamanho do mapa">
           <button onclick="setZoomMapa('compacto', this)">P</button>
@@ -1232,6 +1293,7 @@ table.saldo .num { width:1%; white-space:nowrap; }
 
       <div class="achados" id="m-achados"></div>
       <div class="mapa-box" id="m-mapa"></div>
+      <div id="m-corredor" hidden></div>
       <div class="legenda" id="m-legenda"></div>
     </div>
   </div>
@@ -1951,7 +2013,7 @@ async function init() {
   });
 
   $('m-mapa').addEventListener('click', e => {
-    const c = e.target.closest('.mapa-cel, .cx');
+    const c = e.target.closest('.mapa-cel, .cx, .det');
     if (c?.dataset.pos) abrirVaga(c.dataset.pos);
   });
   try {
@@ -3095,8 +3157,16 @@ function corpoDetalhe(cels) {
     d.innerHTML = '<div class="det-vazio">linha livre</div>';
     return d;
   }
+  // data-busca e data-pos: sem isso a busca só mexia na grade e o
+  // Detalhe continuava mostrando a linha inteira, como se nada
+  // tivesse sido procurado.
   d.innerHTML = grupos.map(g => `
-    <div class="det" title="${esc(g.produto)} · lote ${esc(g.lote)} · armazém ${esc(g.armazem)}">
+    <div class="det" data-pos="${esc(g.vagas[0] || '')}"
+         data-arm="${esc(g.armazem || '')}"
+         data-pend="${g.pend ? '1' : ''}"
+         data-vagas="${g.vagas.length}"
+         data-busca="${esc([g.produto, g.codigo, g.lote, g.armazem, ...(g.vagas || [])].filter(Boolean).join(' ').toUpperCase())}"
+         title="${esc(g.produto)} · lote ${esc(g.lote)} · armazém ${esc(g.armazem)}">
       <i class="det-cor" style="background:${corDe(g.codigo)}"></i>
       <div class="det-txt">
         <div class="det-nome">${esc(g.produto)}</div>
@@ -3120,56 +3190,8 @@ function corpoDetalhe(cels) {
    produto, lateral escura. Sem biblioteca e sem WebGL: é SVG, então
    escala, imprime e funciona em qualquer celular.
    ═══════════════════════════════════════════════════════════════ */
-function corpo3D(cels, di, ln) {
-  const porAndar = {};
-  let maxLg = 0, maxAn = 0;
-  for (const c of cels) {
-    const [, , an, lg] = c.pos.split('-');
-    (porAndar[an] ||= {})[lg] = c.pos;
-    maxLg = Math.max(maxLg, Number(lg));
-    maxAn = Math.max(maxAn, Number(an));
-  }
-
-  const L = 20, ALT = 13, DX = 7, DY = 5, GAPX = 3, GAPY = 3;
-  const larg = maxLg * (L + GAPX) + DX + 8;
-  const alto = maxAn * (ALT + GAPY) + maxLg * DY + 10;
-  const base = alto - maxLg * DY - 5;
-
-  const caixas = [];
-  // Do fundo para a frente e de baixo para cima: assim as caixas da
-  // frente sobrepõem as de trás, que é o que dá a sensação de volume.
-  for (let lg = maxLg; lg >= 1; lg--) {
-    for (let an = 1; an <= maxAn; an++) {
-      const pos = porAndar[an]?.[lg];
-      if (!pos) continue;
-      const itens = _ocupacao[pos] || [];
-      const x = (lg - 1) * (L + GAPX);
-      const y = base - (an - 1) * (ALT + GAPY) + (lg - 1) * DY;
-
-      if (!itens.length) {
-        caixas.push(`<g class="cx vazia" data-pos="${pos}"><title>${pos} — livre</title>
-          <path d="M${x} ${y} l${DX} ${-DY} h${L} l${-DX} ${DY} Z"/>
-          <rect x="${x}" y="${y}" width="${L}" height="${ALT}"/></g>`);
-        continue;
-      }
-      const cor = corDe(itens[0].codigo);
-      const rot = itens.map(r => `${r.produto_nome || r.codigo} · lote ${r.lote || '—'} · ${qtdUn(r.quantidade, r.codigo, r.produto_nome)}`).join(' | ');
-      caixas.push(`<g class="cx cheia" data-pos="${pos}" style="--c:${cor}">
-        <title>${esc(pos)} — ${esc(rot)}</title>
-        <path class="f-topo"  d="M${x} ${y} l${DX} ${-DY} h${L} l${-DX} ${DY} Z"/>
-        <rect class="f-frente" x="${x}" y="${y}" width="${L}" height="${ALT}"/>
-        <path class="f-lado"  d="M${x + L} ${y} l${DX} ${-DY} v${ALT} l${-DX} ${DY} Z"/>
-        ${itens.length > 1 ? `<circle class="f-multi" cx="${x + L - 4}" cy="${y + 4}" r="2.6"/>` : ''}
-      </g>`);
-    }
-  }
-
-  const d = document.createElement('div');
-  d.className = 'corpo-3d';
-  d.innerHTML = `<svg viewBox="0 0 ${larg} ${alto}" preserveAspectRatio="xMidYMax meet" role="img"
-      aria-label="Linha ${di}-${ln} em perspectiva">${caixas.join('')}</svg>`;
-  return d;
-}
+/* corpo3D saiu: a vista em perspectiva virou o Corredor, desenhado
+   uma vez para o pavilhão inteiro em desenharCorredor(). */
 
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3971,12 +3993,10 @@ function montarDrivein(pav, di, alvo) {
       corpoGrade.appendChild(fila);
     }
 
-    // Os três corpos ficam prontos de uma vez: trocar de visão é
-    // trocar uma classe, não remontar o drive-in.
-    bloco.appendChild(corpoDetalhe(doBloco));
-    const c3d = corpo3D(doBloco, di, ln);
-    bloco.appendChild(c3d);
-    for (const ref of doBloco) ref.cx = c3d.querySelector(`[data-pos="${ref.pos}"]`);
+    // Grade e Detalhe ficam prontos juntos: trocar de visão é trocar
+    // uma classe. O Corredor é desenhado à parte, uma vez só.
+    const det = corpoDetalhe(doBloco);
+    bloco.appendChild(det);
 
     const barra = document.createElement('div');
     barra.className = 'ml-bar';
@@ -3986,7 +4006,8 @@ function montarDrivein(pav, di, alvo) {
     grade.appendChild(bloco);
     const reg = { el:bloco, di, pav, qtdEl:head.querySelector('.ml-qtd'),
                   ocupEl:head.querySelector('.ml-ocup'),
-                  barraEl:barra.firstElementChild, cels:doBloco };
+                  barraEl:barra.firstElementChild, cels:doBloco,
+                  dets:[...det.querySelectorAll('.det')] };
     _mblocos.push(reg); daqui.push(reg);
   }
 
@@ -4047,10 +4068,188 @@ function acertou(pos, itens, ts) {
 /* Grade, Detalhe ou 3D. Os três corpos já estão montados: trocar
    de visão é trocar um atributo, não reconstruir o drive-in. */
 function setVistaMapa(v) {
+  if (v === '3d') v = 'corredor';           // nome antigo guardado no navegador
   _mvista = v;
   $('m-mapa').dataset.vista = v;
+  $('m-corredor').hidden = v !== 'corredor';
   $('seg-vista').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.vista === v));
   try { localStorage.setItem('mapa-vista', v); } catch (e) { /* modo privado */ }
+  if (v === 'corredor') desenharCorredor();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CORREDOR — você na boca do drive-in, olhando para dentro
+
+   A geometria é a real: as linhas ficam lado a lado e vão se
+   afastando, então o corredor tem 36 vãos de cada lado. O que se vê
+   de frente é a boca de cada linha; a profundidade (lugar 1 a 5)
+   está atrás e por isso vira um seletor, não mais um desenho.
+
+   Projeção de um ponto só: tudo converge para (VPX, VPY).
+     x = VPX + f · X / Z      (X é a distância lateral até a parede)
+     y = VPY − f · (Y − OLHO) / Z
+   ═══════════════════════════════════════════════════════════════ */
+const CORR = {
+  W:1000, H:470, VPX:500, VPY:212,
+  f:430,          // distância focal — quanto maior, mais "teleobjetiva"
+  olho:1.55,      // altura dos olhos, em metros
+  meia:2.55,      // metade da largura do corredor
+  alt:1.30,       // altura de cada andar
+  z0:2.9,         // onde começa o primeiro vão
+  passo:1.28,     // distância entre uma linha e a seguinte
+  folga:0.22,     // vão entre paletes (é onde aparece o montante)
+};
+
+let _corrPav  = 'simbiose';
+let _corrProf = 1;
+
+const corrX = (lado, z) => CORR.VPX + lado * CORR.f * CORR.meia / z;
+const corrY = (alturaM, z) => CORR.VPY - CORR.f * (alturaM - CORR.olho) / z;
+
+function setCorrPav(p) { _corrPav = p; desenharCorredor(); }
+function setCorrProf(n) { _corrProf = Number(n) || 1; desenharCorredor(); }
+
+function desenharCorredor() {
+  const el = $('m-corredor');
+  if (!el || _mvista !== 'corredor') return;
+
+  const dis = Object.keys(MAPA_POSICOES[_corrPav] || {}).sort();
+  if (!dis.length) { el.innerHTML = '<div class="corr-nada">Pavilhão sem drive-in.</div>'; return; }
+
+  // Uma parede de cada lado. Com um drive-in só, o outro lado fica
+  // sendo a parede cega do galpão.
+  const paredes = [
+    { lado:-1, di:dis[0] },
+    { lado: 1, di:dis[1] || null },
+  ];
+
+  const q   = $('m-busca').value.trim().toUpperCase();
+  const ts  = termos(q);
+  const arm = $('m-armazem').value;
+  const est = $('m-estado').value;
+
+  const maxProf = Math.max(...paredes.filter(p => p.di).map(p => {
+    const l = MAPA_POSICOES[_corrPav][p.di];
+    const primeira = l[Object.keys(l)[0]];
+    return primeira[Object.keys(primeira)[0]].length;
+  }));
+
+  let svg = '', hud = { vagas:0, ocup:0, un:0, achados:0 };
+
+  // Piso e fundo primeiro: é o que fica atrás de tudo.
+  const zFim = CORR.z0 + 40 * CORR.passo;
+  svg += `<polygon class="corr-piso" points="
+    ${corrX(-1, CORR.z0)},${corrY(0, CORR.z0)}
+    ${corrX(1, CORR.z0)},${corrY(0, CORR.z0)}
+    ${corrX(1, zFim)},${corrY(0, zFim)}
+    ${corrX(-1, zFim)},${corrY(0, zFim)}"/>`;
+  svg += `<rect class="corr-fundo" x="${corrX(-1, zFim)}" y="${corrY(4 * CORR.alt, zFim)}"
+    width="${corrX(1, zFim) - corrX(-1, zFim)}" height="${corrY(0, zFim) - corrY(4 * CORR.alt, zFim)}"/>`;
+
+  for (const par of paredes) {
+    if (!par.di) continue;
+    const linhas = MAPA_POSICOES[_corrPav][par.di];
+    const nomes  = Object.keys(linhas).sort();
+
+    // Do fundo para a frente: assim o palete da frente cobre o de trás.
+    for (let i = nomes.length - 1; i >= 0; i--) {
+      const ln = nomes[i];
+      const andares = linhas[ln];
+      const zA = CORR.z0 + i * CORR.passo;
+      const zB = zA + CORR.passo - CORR.folga;
+      const xA = corrX(par.lado, zA), xB = corrX(par.lado, zB);
+
+      for (const an of Object.keys(andares)) {
+        const prof = Math.min(_corrProf, andares[an].length);
+        const pos = `${par.di}-${ln}-${an}-${prof}`;
+        const yTopA = corrY(an * CORR.alt, zA), yTopB = corrY(an * CORR.alt, zB);
+        const yBaseA = corrY((an - 1) * CORR.alt, zA), yBaseB = corrY((an - 1) * CORR.alt, zB);
+
+        let itens = itensDaVaga(pos);
+        if (arm) itens = itens.filter(r => r.armazem === arm);
+        hud.vagas++;
+
+        const face = `${xA},${yTopA} ${xB},${yTopB} ${xB},${yBaseB} ${xA},${yBaseA}`;
+        if (!itens.length) {
+          const foraF = (q && ts.length) || est === 'pend' || est === 'multi';
+          svg += `<g class="pal livre${foraF ? ' fora' : ''}" data-pos="${pos}">
+            <title>${pos} — livre</title><polygon class="p-face" points="${face}"/></g>`;
+          continue;
+        }
+
+        hud.ocup++;
+        hud.un += itens.reduce((s, r) => s + (Number(r.quantidade) || 0), 0);
+        const temPend = itens.some(r => r.pend);
+        const cor = _mcor === 'produto' ? corDe(itens[0].codigo)
+                  : _mcor === 'armazem' ? corDe(itens[0].armazem || 'sem')
+                  : _mcor === 'idade'
+                    ? (() => { const dd = Math.max(...itens.map(r => diasDesde(r.created_at)));
+                               return dd < 15 ? 'var(--pos)' : dd < 45 ? 'var(--warn)' : 'var(--neg)'; })()
+                  : itens.length > 1 ? 'var(--warn)' : temPend ? 'var(--alt)' : 'var(--pos)';
+
+        const achou = acertou(pos, itens, ts);
+        if (achou) hud.achados++;
+        let fora = false;
+        if (q && !achou) fora = true;
+        if (est === 'pend'  && !temPend) fora = true;
+        if (est === 'multi' && itens.length < 2) fora = true;
+
+        const rot = itens.map(r =>
+          `${r.produto_nome || r.codigo} · lote ${r.lote || '—'} · ${qtdUn(r.quantidade, r.codigo, r.produto_nome)}`).join(' | ');
+
+        svg += `<g class="pal${achou ? ' achou' : ''}${fora ? ' fora' : ''}" data-pos="${pos}" style="--c:${cor}">
+          <title>${esc(pos)} — ${esc(rot)}</title>
+          <polygon class="p-face" points="${face}" fill="${cor}"/>
+          <polygon class="p-topo" points="${xA},${yTopA} ${xB},${yTopB} ${xB},${yTopB - 3} ${xA},${yTopA - 4}" fill="#fff"/>
+        </g>`;
+      }
+
+      // Montante entre um vão e o outro, e a etiqueta da linha nos
+      // primeiros — depois disso não cabe mais texto legível.
+      const xC = corrX(par.lado, zB);
+      svg += `<rect class="corr-poste" x="${xC - 1.6}" y="${corrY(4 * CORR.alt, zB)}"
+        width="3.2" height="${corrY(0, zB) - corrY(4 * CORR.alt, zB)}"/>`;
+      if (i < 9) {
+        const tam = Math.max(6.5, 15 - i * 1.1);
+        svg += `<text class="corr-rot" x="${(xA + xB) / 2}" y="${corrY(0, zA) + tam + 2}"
+          font-size="${tam}">${par.di}-${ln}</text>`;
+      }
+    }
+
+    // Viga do teto, acompanhando a fuga.
+    const zUlt = CORR.z0 + (nomes.length - 1) * CORR.passo;
+    svg += `<path class="corr-viga" d="M${corrX(par.lado, CORR.z0)},${corrY(4 * CORR.alt, CORR.z0)}
+      L${corrX(par.lado, zUlt)},${corrY(4 * CORR.alt, zUlt)}"/>`;
+  }
+
+  const rotProf = Array.from({ length:maxProf }, (_, i) => i + 1).map(n =>
+    `<button class="${n === _corrProf ? 'on' : ''}" onclick="setCorrProf(${n})" title="Profundidade ${n}">${n}</button>`).join('');
+
+  el.innerHTML = `
+    <div class="corr-topo">
+      <select onchange="setCorrPav(this.value)" aria-label="Pavilhão do corredor">
+        ${Object.keys(MAPA_POSICOES).map(p =>
+          `<option value="${p}" ${p === _corrPav ? 'selected' : ''}>${esc(NOME_PAVILHAO[p] || p)} · ${Object.keys(MAPA_POSICOES[p]).sort().join(' × ')}</option>`).join('')}
+      </select>
+      <span class="section-note">Você está na boca do corredor. A busca e os filtros do mapa valem aqui também.</span>
+      <div class="corr-prof"><span>Profundidade</span>${rotProf}</div>
+    </div>
+    <div class="corr-palco">
+      <svg viewBox="0 0 ${CORR.W} ${CORR.H}" preserveAspectRatio="xMidYMid meet" role="img"
+           aria-label="Corredor do pavilhão ${esc(NOME_PAVILHAO[_corrPav] || _corrPav)} em perspectiva">${svg}</svg>
+      <div class="corr-hud">
+        <div class="h-tit">${esc(NOME_PAVILHAO[_corrPav] || _corrPav)} · profundidade ${_corrProf}</div>
+        Posições nesta camada: <b>${num(hud.vagas)}</b><br>
+        Ocupadas: <b>${num(hud.ocup)}</b> (${pct(hud.ocup, hud.vagas)})<br>
+        Unidades à vista: <b>${num(hud.un)}</b>
+        ${q ? `<br>Encontradas aqui: <b>${num(hud.achados)}</b>` : ''}
+      </div>
+    </div>`;
+
+  el.querySelector('.corr-palco svg').addEventListener('click', e => {
+    const g = e.target.closest('.pal');
+    if (g?.dataset.pos) abrirVaga(g.dataset.pos);
+  });
 }
 
 function setModoCor(v) {
@@ -4117,11 +4316,6 @@ function renderMapa() {
     if (el.className !== cls) el.className = cls;
     if (el.style.background !== fundo) el.style.background = fundo;
 
-    if (c.cx) {
-      const base = itens.length ? 'cx cheia' : 'cx vazia';
-      const extra = (achou ? ' achou' : cls.includes(' apagada') ? ' fora' : '');
-      if (c.cx.getAttribute('class') !== base + extra) c.cx.setAttribute('class', base + extra);
-    }
   }
 
   const soLinha = $('m-so-result').classList.contains('active');
@@ -4144,6 +4338,19 @@ function renderMapa() {
     const esconder = q && soLinha && achadosGerais.length > 0 && !hit;
     b.el.className = 'mlinha' + (o ? '' : ' vazia') + (o === n && n ? ' cheia' : '') +
                      (hit ? ' tem-hit' : '') + (esconder ? ' oculta' : '');
+
+    // Mesma regra da grade, aplicada nas fichas do Detalhe.
+    for (const dt of (b.dets || [])) {
+      const txt = dt.dataset.busca || '';
+      const achou = ts.length && ts.some(x => txt.includes(x));
+      let fora = false;
+      if (q && !achou) fora = true;
+      if (arm && dt.dataset.arm !== arm) fora = true;
+      if (estado === 'pend'  && !dt.dataset.pend) fora = true;
+      if (estado === 'multi' && Number(dt.dataset.vagas || 0) < 2) fora = true;
+      dt.classList.toggle('det-achou', !!achou);
+      dt.classList.toggle('det-fora', fora);
+    }
 
     const p = (porPav[b.pav] ||= { vagas:0, ocup:0, un:0, hits:0 });
     p.vagas += n; p.ocup += o; p.un += resumo.unidades || 0;
@@ -4186,6 +4393,7 @@ function renderMapa() {
     : '');
 
   desenharLegendaMapa();
+  if (_mvista === 'corredor') desenharCorredor();
   renderListaMapa(q, arm);
 }
 
