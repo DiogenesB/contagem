@@ -34,10 +34,25 @@ function _transacao(modo) {
   return abrirBanco().then(db => db.transaction(FILA_LOJA, modo).objectStore(FILA_LOJA));
 }
 
+/* Um id gerado no aparelho. Vai junto na linha como `id_local`.
+   Se o insert chega no banco e a resposta se perde no caminho, o
+   item continua na fila e sobe de novo — com o mesmo id_local, o
+   banco recusa a segunda cópia em vez de duplicar a contagem.
+   Precisa de índice único em id_local:
+     alter table lancamentos add column if not exists id_local text;
+     create unique index if not exists lancamentos_id_local
+       on lancamentos (id_local);
+   Sem a coluna, o inserirResiliente/insert ignora e nada quebra. */
+function idLocal() {
+  try { return crypto.randomUUID(); }
+  catch (e) { return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+}
+
 async function filaGravar(item) {
   const loja = await _transacao('readwrite');
+  const linha = { id_local: item.linha?.id_local || idLocal(), ...item.linha };
   return new Promise((ok, falha) => {
-    const req = loja.add({ ...item, criado_em:new Date().toISOString(), tentativas:0 });
+    const req = loja.add({ ...item, linha, criado_em:new Date().toISOString(), tentativas:0 });
     req.onsuccess = () => ok(req.result);
     req.onerror   = () => falha(req.error);
   });
@@ -71,7 +86,7 @@ async function filaAtualizar(item) {
 }
 
 async function filaQuantos() {
-  try { return (await filaListar()).length; } catch (e) { return 0; }
+  try { return (await filaListar()).filter(i => !i.parado).length; } catch (e) { return 0; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -83,30 +98,45 @@ async function filaQuantos() {
 let _enviando = false;
 
 function pareceRede(e) {
+  if (!navigator.onLine) return true;
   const m = String(e?.message || e || '').toLowerCase();
-  return !navigator.onLine || m.includes('fetch') || m.includes('network') ||
-         m.includes('failed') || m.includes('timeout') || m.includes('load');
+  // 'load' sozinho casava com "payload" e transformava erro do banco
+  // em erro de rede — o item ficava tentando para sempre.
+  return /failed to fetch|network|networkerror|timeout|timed out|load failed|connection|aborted|offline/.test(m);
+}
+
+/* Item que já subiu uma vez e voltou com erro de chave duplicada
+   não é problema: é a resposta que se perdeu, não a contagem. */
+function eDuplicado(e) {
+  const m = String(e?.message || e || '').toLowerCase();
+  return m.includes('duplicate key') || m.includes('already exists') ||
+         String(e?.code || '') === '23505';
 }
 
 async function filaEnviar(aoMudar) {
   if (_enviando) return { enviados:0, restantes:await filaQuantos() };
   _enviando = true;
-  let enviados = 0, descartados = 0;
+  let enviados = 0, parados = 0;
 
   try {
     const itens = await filaListar();
     for (const item of itens) {
+      if (item.parado) continue;               // o banco já recusou: não insiste
       try {
         const { error } = await sb.from(item.tabela).insert(item.linha);
         if (error) throw error;
         await filaRemover(item.id);
         enviados++;
       } catch (e) {
+        if (eDuplicado(e)) { await filaRemover(item.id); enviados++; continue; }
         if (pareceRede(e)) break;               // rede caiu de novo: para aqui
         item.tentativas = (item.tentativas || 0) + 1;
         item.ultimo_erro = String(e.message || e);
-        if (item.tentativas >= 5) { await filaRemover(item.id); descartados++; }
-        else await filaAtualizar(item);
+        // Antes isto apagava o lançamento depois de 5 tentativas e a
+        // contagem do operador sumia sem volta. Agora fica guardado,
+        // marcado, e aparece na tela para ser corrigido ou refeito.
+        if (item.tentativas >= 5) { item.parado = true; parados++; }
+        await filaAtualizar(item);
       }
     }
   } finally {
@@ -114,8 +144,21 @@ async function filaEnviar(aoMudar) {
   }
 
   const restantes = await filaQuantos();
-  aoMudar?.({ enviados, restantes, descartados });
-  return { enviados, restantes, descartados };
+  aoMudar?.({ enviados, restantes, parados });
+  return { enviados, restantes, parados };
+}
+
+/* O que o banco recusou — some da fila de envio, não do aparelho. */
+async function filaParados() {
+  try { return (await filaListar()).filter(i => i.parado); } catch (e) { return []; }
+}
+async function filaReviver(id) {
+  const itens = await filaListar();
+  const it = itens.find(i => i.id === id);
+  if (!it) return false;
+  it.parado = false; it.tentativas = 0;
+  await filaAtualizar(it);
+  return true;
 }
 
 /* Tenta usar Background Sync (o navegador reenvia mesmo com o app
