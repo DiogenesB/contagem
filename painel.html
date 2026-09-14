@@ -620,6 +620,48 @@ table.mini td { padding:6px 9px; border-bottom:1px solid var(--line); }
 table.mini tr:last-child td { border-bottom:0; }
 table.mini .acao { text-align:right; }
 
+/* ═══════════ MAPA: PAVILHÕES EMPILHADOS ═══════════ */
+/* Os quatro drive-ins ficam montados de uma vez, um debaixo do
+   outro. A busca varre todos sempre; o escopo só esconde. Antes
+   era preciso trocar de aba para descobrir se o saldo estava lá. */
+.pav-sec { margin-bottom:26px; }
+.pav-sec[hidden] { display:none; }
+.pav-cab {
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:8px 0 10px; margin-bottom:12px;
+  border-bottom:1px solid var(--line);
+  position:sticky; top:0; z-index:3; background:var(--bg);
+}
+.pav-nome { font-size:.9375rem; font-weight:650; color:var(--text); }
+.pav-di {
+  font-family:var(--mono); font-size:.75rem; color:var(--text-2);
+  background:var(--surface-2); border:1px solid var(--line-2);
+  border-radius:100px; padding:2px 9px;
+}
+.pav-meta { font-size:.75rem; color:var(--text-3); }
+.pav-hits {
+  margin-left:auto; font-size:.75rem; font-weight:650;
+  color:var(--on-accent); background:var(--accent-dk);
+  border-radius:100px; padding:2px 10px;
+}
+.pav-sec.sem-hit .pav-cab { opacity:.45; }
+.di-sec { margin-bottom:18px; }
+.di-sec[hidden] { display:none; }
+
+/* Onde a busca achou — o atalho que evita abrir drive-in por drive-in. */
+.achados { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px; }
+.achados:empty { display:none; }
+.ach {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:5px 11px; border-radius:100px; cursor:pointer;
+  background:var(--surface-2); border:1px solid var(--line-2);
+  color:var(--text-2); font-size:.8125rem; font-family:var(--sans);
+}
+.ach:hover { background:var(--surface-3); color:var(--text); }
+.ach b { color:var(--text); font-family:var(--mono); }
+.ach.nada { background:var(--warn-sf); border-color:var(--line-2); cursor:default; }
+.ach-tot { background:var(--accent-sf); border-color:var(--accent-dk); color:var(--text); }
+
 /* ═══════════ PAGINAÇÃO ═══════════ */
 /* Rolar 4.000 linhas para achar uma era o problema. A barra fica
    colada embaixo da tabela, com o total sempre à vista. */
@@ -1128,11 +1170,19 @@ table.saldo .num { width:1%; white-space:nowrap; }
   <div class="panel">
     <div class="panel-head">
       <div class="btn-row">
-        <div class="seg">
-          <button class="active" id="m-pav-simbiose" onclick="setPavilhao('simbiose', this)">Simbiose</button>
-          <button id="m-pav-bioma" onclick="setPavilhao('bioma', this)">Bioma</button>
-        </div>
-        <select id="m-di" onchange="construirMapa()" style="width:auto" aria-label="Drive-in"></select>
+        <select id="m-escopo" onchange="setEscopoMapa(this.value)" style="width:auto" aria-label="O que mostrar">
+          <option value="tudo">Tudo — Bioma e Simbiose</option>
+          <optgroup label="Pavilhão">
+            <option value="pav:bioma">Só Bioma (A1, A2)</option>
+            <option value="pav:simbiose">Só Simbiose (B1, B2)</option>
+          </optgroup>
+          <optgroup label="Drive-in">
+            <option value="di:A1">Só A1</option>
+            <option value="di:A2">Só A2</option>
+            <option value="di:B1">Só B1</option>
+            <option value="di:B2">Só B2</option>
+          </optgroup>
+        </select>
         <select id="m-cor" onchange="setModoCor(this.value)" style="width:auto" aria-label="Colorir por">
           <option value="estado">Cor: estado</option>
           <option value="produto">Cor: produto</option>
@@ -1180,6 +1230,7 @@ table.saldo .num { width:1%; white-space:nowrap; }
         </div>
       </div>
 
+      <div class="achados" id="m-achados"></div>
       <div class="mapa-box" id="m-mapa"></div>
       <div class="legenda" id="m-legenda"></div>
     </div>
@@ -1187,7 +1238,7 @@ table.saldo .num { width:1%; white-space:nowrap; }
 
   <div class="panel" id="m-painel-lista">
     <div class="panel-head">
-      <div class="section-title">Ocupação do drive-in <span id="m-di-nome" class="section-note"></span></div>
+      <div class="section-title">Ocupação <span id="m-di-nome" class="section-note"></span></div>
       <div class="section-note" id="m-lista-cnt"></div>
     </div>
     <div class="tbl-wrap">
@@ -1384,8 +1435,7 @@ table.saldo .num { width:1%; white-space:nowrap; }
           <label for="s-escopo">Escopo do mapa</label>
           <select id="s-escopo">
             <option value="tudo">Todo o mapa</option>
-            <option value="pavilhao">Só o pavilhão do mapa</option>
-            <option value="drivein">Só o drive-in do mapa</option>
+            <option value="mapa">Só o escopo da aba Mapa</option>
           </select>
         </div>
         <div class="field">
@@ -1648,10 +1698,22 @@ let _ocupacao   = {};
 let _naoConf    = [];
 let _transfers  = [];
 let _tfFiltro   = 'pendente';
-let _pavilhao   = 'simbiose';
+let _pavilhao   = 'simbiose';   // usado só pela impressão de linha
+let _mescopo    = 'tudo';       // tudo | pav:<slug> | di:<sigla>
+let _msecs      = [];           // uma entrada por pavilhão montado
+const ORDEM_PAVILHOES = ['bioma', 'simbiose'];   // Bioma em cima
+const NOME_PAVILHAO = { bioma:'Bioma', simbiose:'Simbiose' };
+const PAV_DO_DI = (() => {
+  const m = {};
+  for (const [pav, dis] of Object.entries(MAPA_POSICOES))
+    for (const di of Object.keys(dis)) m[di] = pav;
+  return m;
+})();
 let _acDados    = [];
 let _perfMeses  = [];
 let _alteracoes = [];   // trilha de alterações já carregada
+let _atrasados  = [];   // lançamentos pendentes de ciclos anteriores
+let _mapaSubstituidas = 0;   // ocupações antigas que a contagem nova cobriu
 let _mcels      = [];
 let _mblocos    = [];
 let _mcor       = 'estado';
@@ -1875,10 +1937,15 @@ async function init() {
   configurarImpressao({
     ocupacaoDe: pos => itensDaVaga(pos),
     contexto: () => ({
-      pav:_pavilhao, di:$('m-di').value, q:$('m-busca').value.trim().toUpperCase(),
-      visiveis:_mblocos.filter(b => !b.el.classList.contains('oculta')).map(b => {
+      pav:_pavilhao, di:(_mescopo.startsWith('di:') ? _mescopo.slice(3) : ''),
+      q:$('m-busca').value.trim().toUpperCase(),
+      // Só o que está de fato na tela: fora do escopo ou recolhido
+      // pelo "só a linha" não vai para o papel.
+      visiveis:_mblocos.filter(b =>
+        !b.el.classList.contains('oculta') && !b.el.closest('.di-sec')?.hidden
+      ).map(b => {
         const [di, ln] = b.cels[0].pos.split('-');
-        return { pav:_pavilhao, di, ln };
+        return { pav:b.pav, di, ln };
       }),
     }),
   });
@@ -1891,6 +1958,9 @@ async function init() {
     const cor = localStorage.getItem('mapa-cor');
     if (cor) { _mcor = cor; $('m-cor').value = cor; }
     setVistaMapa(localStorage.getItem('mapa-vista') || 'grade');
+    // O escopo é lembrado, mas só é aplicado no primeiro construirMapa.
+    const esc0 = localStorage.getItem('mapa-escopo');
+    if (esc0) { _mescopo = esc0; $('m-escopo').value = esc0; }
   } catch (e) { setVistaMapa('grade'); }
 
   // A aba fica na URL: dá para mandar link e o F5 não volta ao início.
@@ -1912,8 +1982,10 @@ function setConn(ok, txt) {
 
 async function carregarCiclo() {
   try {
+    // Por data de início, não por id: se um dia a chave virar uuid,
+    // ordenar por id pega um ciclo qualquer.
     const { data } = await sb.from('ciclos_contagem')
-      .select('*').order('id', { ascending:false }).limit(1).maybeSingle();
+      .select('*').order('iniciado_em', { ascending:false }).limit(1).maybeSingle();
     _ciclo = data || null;
     $('ciclo-chip').textContent = _ciclo
       ? `ciclo ${_ciclo.id} · ${fmtDia(_ciclo.iniciado_em)}`
@@ -2101,7 +2173,12 @@ async function importarSaldo() {
     const ciclo = criado?.[0];
     if (!ciclo) throw new Error('não consegui abrir o ciclo');
 
-    const { error:eD } = await sb.from('saldo_sistema').delete().eq('validado', false);
+    // Só as filiais que vieram na planilha. Importando a exportação
+    // da Simbiose sozinha, o saldo não validado da Bioma sumia junto.
+    const filiaisDaPlanilha = [...new Set(registros.map(r => r.filial).filter(Boolean))];
+    let apagar = sb.from('saldo_sistema').delete().eq('validado', false);
+    if (filiaisDaPlanilha.length) apagar = apagar.in('filial', filiaisDaPlanilha);
+    const { error:eD } = await apagar;
     if (eD) throw eD;
 
     for (let i = 0; i < registros.length; i += 500) {
@@ -2127,11 +2204,19 @@ async function importarSaldo() {
 async function carregarValidacao() {
   $('v-tbody').innerHTML = carregando(9);
   try {
-    const [saldo, pend, naoConf] = await Promise.all([
+    let [saldo, pend, naoConf] = await Promise.all([
       buscarTudo(() => sb.from('saldo_sistema').select('*')),
       buscarTudo(() => sb.from('lancamentos').select('*').eq('status', 'pendente')),
       buscarTudo(() => sb.from('historico').select('*').eq('confirmado', false)),
     ]);
+
+    // Pendente de ciclo anterior não é contagem deste ciclo. Antes
+    // entrava tudo junto e o saldo novo era conferido com contagem
+    // velha. Fica de fora do cruzamento, mas aparece num aviso.
+    const cid = _ciclo?.id ?? null;
+    const doCiclo = l => cid === null || l.ciclo_id == null || String(l.ciclo_id) === String(cid);
+    _atrasados = pend.filter(l => !doCiclo(l));
+    pend = pend.filter(doCiclo);
 
     _saldo = saldo; _pendentes = pend; _naoConf = naoConf;
     setConn(true, 'conectado');
@@ -2280,7 +2365,7 @@ async function varrerOcupacaoNaoTocada() {
 }
 
 async function encerrarContagem() {
-  const naoContadas = _vLinhas.filter(l => !l.extra && l.contado === null && !l.validado).length;
+  const naoContadas = _vLinhas.filter(l => daFilial(l.filial) && !l.extra && l.contado === null && !l.validado).length;
   if (!confirm(`Encerrar a contagem #${_ciclo.id}?\n\n${num(naoContadas)} linha(s) do saldo não foram lançadas e passarão a contar como NÃO ENCONTRADAS (falta física).\nVagas de ciclos anteriores que ninguém recontou vão para revisão.\n\nVocê pode reabrir depois se precisar.`)) return;
 
   try {
@@ -2320,6 +2405,8 @@ function renderAlertasValidacao() {
 
   const extras = _vLinhas.filter(l => l.extra).length;
   if (extras) partes.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>${extras} contagem(ns) sem par no saldo</b>Produto, lote ou armazém não batem com nenhuma linha do ERP. Aparecem no fim da lista marcados como “fora do saldo”.</div></div>`);
+
+  if (_atrasados.length) partes.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>${_atrasados.length} lançamento(s) de contagem anterior</b>Ficaram pendentes em ciclos passados e estão fora deste cruzamento. Aparecem na aba Registros com o ciclo de origem.</div></div>`);
 
   if (_naoConf.length) partes.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>${_naoConf.length} vaga(s) não confirmada(s)</b>A contagem passou pela vaga mas não confirmou estes itens. <button class="btn btn-sm btn-info" style="margin-left:8px" onclick="abrirRevisao()">Revisar agora</button></div></div>`);
 
@@ -3286,9 +3373,10 @@ function calcularSaldo() {
   // ── lado do mapa ──
   for (const [pos, itens] of Object.entries(_ocupacao)) {
     const di  = pos.split('-')[0];
-    const pav = Object.keys(MAPA_POSICOES).find(p => MAPA_POSICOES[p][di]);
-    if (_escopo === 'pavilhao' && pav !== _pavilhao) continue;
-    if (_escopo === 'drivein'  && di  !== $('m-di').value) continue;
+    const pav = PAV_DO_DI[di];
+    // "Só o que está no escopo do mapa" usa o mesmo seletor da aba
+    // Mapa, então os dois números sempre falam do mesmo pedaço.
+    if (_escopo === 'mapa' && !noEscopo(pav, di)) continue;
 
     for (const r of itens) {
       if (!daFilial(r.filial)) continue;
@@ -3646,16 +3734,13 @@ function imprimirSaldo() {
 /* Clicou numa vaga: leva para o mapa com ela aberta. */
 function irParaVaga(pos) {
   const di = pos.split('-')[0];
-  const pav = Object.keys(MAPA_POSICOES).find(p => MAPA_POSICOES[p][di]);
-  if (pav && pav !== _pavilhao) {
-    _pavilhao = pav;
-    document.querySelectorAll('[onclick^="setPavilhao"]').forEach(b =>
-      b.classList.toggle('active', b.textContent.trim().toLowerCase().startsWith(pav.slice(0, 4))));
-    popularDI();
-  }
-  $('m-di').value = di;
+  _pavilhao = PAV_DO_DI[di] || _pavilhao;
   irPara('mapa');
-  construirMapa();
+  // O mapa inteiro já está montado: é só apontar o escopo e rolar
+  // até a vaga, sem reconstruir nada.
+  setEscopoMapa('di:' + di);
+  const cel = _mcels.find(c => c.pos === pos);
+  cel?.el.scrollIntoView?.({ block:'center', behavior:'smooth' });
   abrirVaga(pos);
 }
 
@@ -3767,35 +3852,89 @@ async function carregarMapa() {
         .eq('confirmado', false)),
     ]);
 
+    // O lançamento pendente é a contagem de agora; a linha de
+    // histórico na mesma vaga com o mesmo produto+lote é a ocupação
+    // do ciclo passado, que ainda não foi desativada. Somar as duas
+    // dobrava a mercadoria no mapa e no "Mapeado" do Saldo mapeado.
+    const chavesPend = new Set(pend.map(r =>
+      `${r.posicao}|${chave(r.codigo)}|${chave(r.lote)}`));
+
     _ocupacao = {};
-    for (const r of hist) (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'historico',   pend:false, _busca:chaveBusca(r) });
-    for (const r of pend) (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'lancamentos', pend:true,  _busca:chaveBusca(r) });
+    let _substituidas = 0;
+    for (const r of hist) {
+      if (chavesPend.has(`${r.posicao}|${chave(r.codigo)}|${chave(r.lote)}`)) { _substituidas++; continue; }
+      (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'historico', pend:false, _busca:chaveBusca(r) });
+    }
+    for (const r of pend) (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'lancamentos', pend:true, _busca:chaveBusca(r) });
+    _mapaSubstituidas = _substituidas;
     _naoConf = naoConf;
     cacheGravar('mapa', 1);
 
     preencherSelect('m-armazem', Object.values(_ocupacao).flat().map(r => r.armazem));
-    popularDI();
     construirMapa();
   } catch (e) {
     $('m-mapa').innerHTML = `<div class="empty"><div class="empty-tit">Não foi possível carregar</div><div class="empty-sub">${esc(e.message)}</div></div>`;
   }
 }
 
+/* Monta o galpão inteiro: Bioma em cima (A1, A2), Simbiose embaixo
+   (B1, B2). Roda uma vez por carga de dados, não a cada filtro.
+   Trocar o escopo é esconder seção — a busca continua varrendo
+   tudo que está montado. */
 function construirMapa() {
-  const di = $('m-di').value;
-  const linhas = MAPA_POSICOES[_pavilhao]?.[di];
-  if (!linhas) return;
+  _mcels = []; _mblocos = []; _msecs = [];
+  const box = $('m-mapa');
+  box.innerHTML = '';
+
+  for (const pav of ORDEM_PAVILHOES) {
+    const dis = Object.keys(MAPA_POSICOES[pav] || {}).sort();
+    if (!dis.length) continue;
+
+    const sec = document.createElement('section');
+    sec.className = 'pav-sec';
+    sec.dataset.pav = pav;
+
+    const cab = document.createElement('div');
+    cab.className = 'pav-cab';
+    cab.innerHTML = `<span class="pav-nome">${esc(NOME_PAVILHAO[pav] || pav)}</span>` +
+      dis.map(x => `<span class="pav-di">${x}</span>`).join('') +
+      '<span class="pav-meta"></span><span class="pav-hits" hidden></span>';
+    sec.appendChild(cab);
+
+    const porDi = [];
+    for (const di of dis) {
+      const alvo = document.createElement('div');
+      alvo.className = 'di-sec';
+      alvo.dataset.di = di;
+      const blocos = montarDrivein(pav, di, alvo);
+      sec.appendChild(alvo);
+      porDi.push({ di, el:alvo, blocos });
+    }
+
+    box.appendChild(sec);
+    _msecs.push({ pav, el:sec, metaEl:cab.querySelector('.pav-meta'),
+                  hitEl:cab.querySelector('.pav-hits'), dis:porDi });
+  }
+
+  box.dataset.vista = _mvista;
+  aplicarEscopoMapa();
+  renderMapa();
+}
+
+/* Um drive-in. Devolve os blocos de linha que criou. */
+function montarDrivein(pav, di, alvo) {
+  const linhas = MAPA_POSICOES[pav]?.[di];
+  if (!linhas) return [];
 
   const nomes    = Object.keys(linhas).sort();
   const primeira = linhas[nomes[0]];
-  const nAndares = Object.keys(primeira).length;
   const nVagas   = primeira[Object.keys(primeira)[0]].length;
 
-  _mcels = []; _mblocos = [];
   const grade = document.createElement('div');
   grade.className = 'mapa-grade';
   grade.style.setProperty('--bloco-w', `calc(${nVagas} * var(--cel) + ${nVagas - 1} * var(--gap) + 40px)`);
 
+  const daqui = [];
   for (const ln of nomes) {
     const andares = linhas[ln];
     const bloco = document.createElement('div');
@@ -3806,7 +3945,7 @@ function construirMapa() {
     head.innerHTML = `<span class="ml-nome">${di}-${ln}</span>
       <span class="ml-qtd"></span><span class="ml-ocup"></span>
       <button class="ml-imp" title="Imprimir só esta linha"
-              onclick="event.stopPropagation();imprimirLinha('${di}','${ln}','${_pavilhao}')">⎙</button>`;
+              onclick="event.stopPropagation();imprimirLinha('${di}','${ln}','${pav}')">⎙</button>`;
     bloco.appendChild(head);
 
     const corpoGrade = document.createElement('div');
@@ -3826,7 +3965,7 @@ function construirMapa() {
         b.textContent = lg;
         b.dataset.pos = pos;
         fila.appendChild(b);
-        const ref = { el:b, pos };
+        const ref = { el:b, pos, di, pav };
         _mcels.push(ref); doBloco.push(ref);
       }
       corpoGrade.appendChild(fila);
@@ -3845,16 +3984,54 @@ function construirMapa() {
     bloco.appendChild(barra);
 
     grade.appendChild(bloco);
-    _mblocos.push({ el:bloco, qtdEl:head.querySelector('.ml-qtd'), ocupEl:head.lastElementChild,
-                    barraEl:barra.firstElementChild, cels:doBloco });
+    const reg = { el:bloco, di, pav, qtdEl:head.querySelector('.ml-qtd'),
+                  ocupEl:head.querySelector('.ml-ocup'),
+                  barraEl:barra.firstElementChild, cels:doBloco };
+    _mblocos.push(reg); daqui.push(reg);
   }
 
-  const box = $('m-mapa');
-  box.innerHTML = '';
-  box.appendChild(grade);
-  box.dataset.vista = _mvista;
-  $('m-di-nome').textContent = `${di} · ${nAndares} andares × ${nVagas} vagas`;
+  alvo.appendChild(grade);
+  return daqui;
+}
+
+/* Escopo é só visibilidade. Nada é remontado, nada sai da busca. */
+function setEscopoMapa(v) {
+  _mescopo = v || 'tudo';
+  try { localStorage.setItem('mapa-escopo', _mescopo); } catch (e) { /* modo privado */ }
+  if ($('m-escopo').value !== _mescopo) $('m-escopo').value = _mescopo;
+  aplicarEscopoMapa();
   renderMapa();
+}
+
+function noEscopo(pav, di) {
+  if (_mescopo === 'tudo' || !_mescopo) return true;
+  if (_mescopo.startsWith('pav:')) return pav === _mescopo.slice(4);
+  if (_mescopo.startsWith('di:'))  return di  === _mescopo.slice(3);
+  return true;
+}
+
+function aplicarEscopoMapa() {
+  for (const s of _msecs) {
+    let algum = false;
+    for (const x of s.dis) {
+      const on = noEscopo(s.pav, x.di);
+      x.el.hidden = !on;
+      if (on) algum = true;
+    }
+    s.el.hidden = !algum;
+  }
+  const rot = { tudo:'Bioma e Simbiose', 'pav:bioma':'pavilhão Bioma', 'pav:simbiose':'pavilhão Simbiose' };
+  $('m-di-nome').textContent = rot[_mescopo] || (_mescopo || '').replace('di:', 'drive-in ');
+}
+
+/* Qual filial é dona deste código, segundo o saldo do ERP. O mobile
+   já fazia isso (_filialPorCodigo); o painel gravava null, e a vaga
+   sumia assim que alguém filtrava por filial. */
+function filialDoCodigo(cod) {
+  const k = chave(cod);
+  for (const s of (_saldo || [])) if (chave(s.codigo) === k && s.filial) return s.filial;
+  for (const r of (_refLinhas || [])) if (chave(r.codigo) === k && r.filial) return r.filial;
+  return null;
 }
 
 function itensDaVaga(pos) { return (_ocupacao[pos] || []).filter(r => daFilial(r.filial)); }
@@ -3884,25 +4061,31 @@ function setModoCor(v) {
 
 function renderMapa() {
   if (!_mcels.length) return;
-  const di     = $('m-di').value;
   const q      = $('m-busca').value.trim().toUpperCase();
   const estado = $('m-estado').value;
   const arm    = $('m-armazem').value;
 
   const ts = termos(q);
   let total = 0, ocup = 0, pend = 0, achados = 0;
+  // A busca varre o galpão inteiro. `porDi` guarda onde ela acertou,
+  // inclusive fora do escopo — é o que responde "tem ou não tem"
+  // sem obrigar a abrir drive-in por drive-in.
+  const porDi = {}, achadosGerais = [];
 
   for (const c of _mcels) {
+    const dentro = noEscopo(c.pav, c.di);
     let itens = itensDaVaga(c.pos);
     if (arm) itens = itens.filter(r => r.armazem === arm);
     const el = c.el;
-    total++;
+    if (dentro) total++;
 
     let cls = 'mapa-cel', fundo = '';
     const temPend = itens.some(r => r.pend);
-    if (itens.length) {
+    if (itens.length && dentro) {
       ocup++;
       if (temPend) pend++;
+    }
+    if (itens.length) {
       if (_mcor === 'estado') {
         cls += itens.length > 1 ? ' multi' : temPend ? ' pend' : ' ok';
       } else if (_mcor === 'produto') {
@@ -3917,7 +4100,12 @@ function renderMapa() {
     }
 
     const achou = acertou(c.pos, itens, ts);
-    if (achou) { achados++; cls = cls.replace('mapa-cel', 'mapa-cel hit'); }
+    if (achou) {
+      (porDi[c.di] ||= { pav:c.pav, n:0, pos:c.pos }).n++;
+      achadosGerais.push(c);
+      if (dentro) achados++;
+      cls = cls.replace('mapa-cel', 'mapa-cel hit');
+    }
 
     if (estado === 'pend'  && !temPend)         cls += ' apagada';
     if (estado === 'multi' && itens.length < 2) cls += ' apagada';
@@ -3936,6 +4124,9 @@ function renderMapa() {
     }
   }
 
+  const soLinha = $('m-so-result').classList.contains('active');
+  const porPav = {};
+
   for (const b of _mblocos) {
     let o = 0, hit = false;
     for (const c of b.cels) {
@@ -3948,28 +4139,75 @@ function renderMapa() {
     b.qtdEl.classList.toggle('varios', resumo.grupos.length > 1);
     b.ocupEl.textContent = `${o}/${n}`;
     b.barraEl.style.width = n ? Math.round(o / n * 100) + '%' : '0';
-    const esconder = q && $('m-so-result').classList.contains('active') && achados > 0 && !hit;
+    // "Só a linha" agora conta os achados do galpão inteiro: com
+    // resultado em B1, as linhas vazias de A1 também recolhem.
+    const esconder = q && soLinha && achadosGerais.length > 0 && !hit;
     b.el.className = 'mlinha' + (o ? '' : ' vazia') + (o === n && n ? ' cheia' : '') +
                      (hit ? ' tem-hit' : '') + (esconder ? ' oculta' : '');
+
+    const p = (porPav[b.pav] ||= { vagas:0, ocup:0, un:0, hits:0 });
+    p.vagas += n; p.ocup += o; p.un += resumo.unidades || 0;
+    if (hit) p.hits++;
   }
 
+  // Cabeçalho de cada pavilhão: ocupação e se a busca acertou lá.
+  for (const s of _msecs) {
+    const p = porPav[s.pav] || { vagas:0, ocup:0, un:0, hits:0 };
+    s.metaEl.textContent = `${num(p.ocup)}/${num(p.vagas)} vagas · ${num(p.un)} un.`;
+    const achouAqui = Object.entries(porDi)
+      .filter(([, v]) => v.pav === s.pav).reduce((t, [, v]) => t + v.n, 0);
+    s.hitEl.hidden = !q || !achouAqui;
+    s.hitEl.textContent = achouAqui ? `${num(achouAqui)} vaga(s) com o que você procura` : '';
+    s.el.classList.toggle('sem-hit', !!q && !achouAqui);
+  }
+
+  desenharAchados(q, porDi);
+
   const geral = Object.values(_ocupacao).flat().filter(r => daFilial(r.filial));
+  const rotEscopo = _mescopo === 'tudo' ? 'no galpão todo' : 'no escopo escolhido';
   $('m-kpis').innerHTML = `
-    ${kpi('Vagas neste drive-in', num(total), `${num(ocup)} ocupadas · ${num(total - ocup)} livres`)}
-    ${kpi('Taxa de ocupação', pct(ocup, total), 'do drive-in visível', 'is-info')}
+    ${kpi('Vagas ' + rotEscopo, num(total), `${num(ocup)} ocupadas · ${num(total - ocup)} livres`)}
+    ${kpi('Taxa de ocupação', pct(ocup, total), rotEscopo, 'is-info')}
     ${kpi('Aguardando validação', num(pend), 'contadas, não validadas', pend ? 'is-alt' : '')}
     ${kpi('Ocupações no total', num(geral.length), `em ${num(new Set(geral.map(r => r.posicao)).size)} vagas`)}
-    ${q ? kpi('Encontradas', num(achados),
-        achados ? `em ${document.querySelectorAll('#m-mapa .mlinha:not(.oculta)').length} linha(s)`
-                : `nada com "${esc(q)}" — confira o termo`,
-        achados ? 'is-info' : 'is-warn') : ''}`;
+    ${q ? kpi('Encontradas', num(achadosGerais.length),
+        achadosGerais.length
+          ? (achados === achadosGerais.length ? 'todas no escopo atual'
+             : `${num(achados)} no escopo · ${num(achadosGerais.length - achados)} fora dele`)
+          : `nada com "${esc(q)}" — confira o termo`,
+        achadosGerais.length ? 'is-info' : 'is-warn') : ''}`;
 
-  $('m-alertas').innerHTML = _naoConf.length
-    ? `<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>${_naoConf.length} vaga(s) não confirmada(s)</b>Saíram do mapa esperando sua decisão. <button class="btn btn-sm btn-info" style="margin-left:8px" onclick="abrirRevisao()">Revisar</button></div></div>`
+  const avisoDup = _mapaSubstituidas
+    ? `<div class="aviso a-info"><span class="aviso-ico">▤</span><div><b>${num(_mapaSubstituidas)} ocupação(ões) do ciclo anterior substituída(s)</b>A contagem desta rodada já passou por essas vagas. Elas saem do mapa de vez quando você encerrar a contagem.</div></div>`
     : '';
 
+  $('m-alertas').innerHTML = avisoDup + (_naoConf.length
+    ? `<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>${_naoConf.length} vaga(s) não confirmada(s)</b>Saíram do mapa esperando sua decisão. <button class="btn btn-sm btn-info" style="margin-left:8px" onclick="abrirRevisao()">Revisar</button></div></div>`
+    : '');
+
   desenharLegendaMapa();
-  renderListaMapa(di, q, arm);
+  renderListaMapa(q, arm);
+}
+
+/* A barra de atalhos: "achei em B1 (3) · B2 (1)". Clicar isola o
+   drive-in. Com a busca vazia, some. */
+function desenharAchados(q, porDi) {
+  const el = $('m-achados');
+  if (!el) return;
+  if (!q) { el.innerHTML = ''; return; }
+
+  const itens = Object.entries(porDi).sort((a, b) => b[1].n - a[1].n);
+  if (!itens.length) {
+    el.innerHTML = `<span class="ach nada">Nada com “${esc(q)}” em nenhum drive-in.</span>`;
+    return;
+  }
+  const total = itens.reduce((s, [, v]) => s + v.n, 0);
+  el.innerHTML =
+    `<span class="ach ach-tot">Achei em <b>${num(total)}</b> vaga(s)</span>` +
+    itens.map(([di, v]) =>
+      `<button class="ach" onclick="setEscopoMapa('di:${di}')" title="Mostrar só ${di}">` +
+      `${esc(NOME_PAVILHAO[v.pav] || v.pav)} · ${di} <b>${num(v.n)}</b></button>`).join('') +
+    (_mescopo !== 'tudo' ? `<button class="ach" onclick="setEscopoMapa('tudo')">Ver tudo de novo</button>` : '');
 }
 
 /* A legenda acompanha o modo de cor — no modo produto ela vira a
@@ -4007,8 +4245,14 @@ function desenharLegendaMapa() {
   el.innerHTML = html + '<span style="margin-left:auto;color:var(--text-3)">cada bloco é uma linha · andar de cima em cima · número = profundidade</span>';
 }
 
-function renderListaMapa(di, q, arm) {
-  let posicoes = Object.keys(_ocupacao).filter(p => p.startsWith(di + '-')).sort();
+function renderListaMapa(q, arm) {
+  // Buscando, a lista mostra o que achou no galpão inteiro; parada,
+  // mostra o escopo. É o oposto de antes, que só via um drive-in.
+  let posicoes = Object.keys(_ocupacao).sort().filter(p => {
+    const di = p.split('-')[0];
+    const pav = PAV_DO_DI[di];
+    return q ? true : noEscopo(pav, di);
+  });
   const linhas = [];
   for (const pos of posicoes) {
     let itens = itensDaVaga(pos);
@@ -4019,7 +4263,7 @@ function renderListaMapa(di, q, arm) {
 
   $('m-lista-cnt').textContent = `${num(linhas.length)} ocupação(ões)`;
 
-  const p = fatiar('mapa', linhas, [di, q, arm, $('filtro-filial').value].join('|'));
+  const p = fatiar('mapa', linhas, [_mescopo, q, arm, $('filtro-filial').value].join('|'));
   $('m-pag').innerHTML = barraPag('mapa', p, 'ocupação(ões)');
 
   if (!linhas.length) { $('m-tbody').innerHTML = vazio('Nenhuma vaga ocupada aqui', 'Use “Ocupar vaga” ou aguarde a contagem.', 9); return; }
@@ -4052,19 +4296,8 @@ function setZoomMapa(tam, btn) {
   try { localStorage.setItem('mapa-zoom', tam); } catch (e) { /* modo privado */ }
 }
 
-function setPavilhao(p, btn) {
-  _pavilhao = p;
-  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  popularDI(); construirMapa();
-}
-
-function popularDI() {
-  const sel = $('m-di'), atual = sel.value;
-  const dis = Object.keys(MAPA_POSICOES[_pavilhao]).sort();
-  sel.innerHTML = dis.map(d => `<option value="${d}">Drive-in ${d}</option>`).join('');
-  sel.value = dis.includes(atual) ? atual : dis[0];
-}
+/* setPavilhao e popularDI foram embora: o mapa mostra os dois
+   pavilhões de uma vez e o recorte é feito por setEscopoMapa(). */
 function abrirVaga(pos) {
   const itens = itensDaVaga(pos);
   if (!itens.length) { abrirModalVaga(null, pos); return; }
@@ -4148,7 +4381,10 @@ function avaliarVagaModal() {
 async function salvarVaga() {
   const id  = $('mv-id').value, tab = $('mv-tab').value || 'historico';
   const pos = $('mv-posicao').value.trim().toUpperCase();
-  const cod = $('mv-codigo').value.trim().toUpperCase();
+  // Sem normalizar, digitar "1012000041" gravava um código de 10
+  // dígitos que não bate com o do ERP — a vaga virava "fora da
+  // planilha" no Saldo mapeado para sempre.
+  const cod = normalizarCodigo($('mv-codigo').value.trim().toUpperCase());
   const nome = $('mv-produto').value.trim();
   const lote = $('mv-lote').value.trim().toUpperCase();
   const arm  = $('mv-armazem').value.trim().toUpperCase();
@@ -4188,13 +4424,20 @@ async function salvarVaga() {
       }).eq('id', id);
       if (error) throw error;
     } else {
-      const { error } = await sb.from('historico').insert({
+      // A filial precisa ir junto: sem ela, daFilial() devolve false e
+      // a vaga some do mapa assim que alguém filtra por filial.
+      await inserirResiliente('historico', {
         posicao:pos, codigo:cod, produto_nome:nome || cod, lote, armazem:arm,
         quantidade:qtd, ocupacao_ativa:true, confirmado:true, origem:'manual',
-        tipo:'ocupacao', usuario:'painel', ciclo_id:_ciclo?.id ?? null,
+        tipo:'ocupacao', usuario:QUEM || 'painel', ciclo_id:_ciclo?.id ?? null,
+        filial: filialDoCodigo(cod),
       });
-      if (error) throw error;
     }
+    await registrarAlteracao({
+      acao: id ? 'editou' : 'ocupou',
+      posicao:pos, codigo:cod, produto_nome:nome || cod, lote, armazem:arm,
+      qtd_depois:qtd, tabela_ref:'historico', ref_id:id || null,
+    });
     fecharModal('modal-vaga');
     toast(jaLa ? `Somado ao palete já existente em ${pos}.` : `Vaga ${pos} salva.`, 'ok');
     carregarMapa();
@@ -4232,6 +4475,11 @@ async function confirmarLiberacao(id, tab, pos, qtd) {
       ? { quantidade: restou, updated_at:new Date().toISOString(), ...carimbo() }
       : { ocupacao_ativa:false, updated_at:new Date().toISOString(), ...carimbo() };
     await atualizarResiliente(tab || 'historico', patch, q => q.eq('id', id));
+    await registrarAlteracao({
+      acao:'liberou', posicao:pos, codigo:r?.codigo, produto_nome:r?.produto_nome,
+      lote:r?.lote, armazem:r?.armazem, qtd_antes:disp, qtd_depois:restou,
+      tabela_ref:tab || 'historico', ref_id:id, obs:`saiu ${num(qtd)}`,
+    });
     fecharModal('modal-vaga');
     toast(restou > 0
       ? `${qtdUn(qtd, r?.codigo, nome)} saiu de ${pos} · restam ${num(restou)}.`
@@ -4472,9 +4720,14 @@ async function carregarPerformance() {
       }
     }
 
+    // Uma linha contada por duas pessoas credita as duas no cartão
+    // individual — mas o total do time é o número de lotes, não a
+    // soma dos cartões, senão dobra a cada contagem em dupla.
+    const doPeriodo = contagens.filter(r => doMes(r) && daFilial(r.filial));
+
     // ── ritmo: mediana do intervalo entre lançamentos seguidos ──
     const porOp = {};
-    for (const l of lancamentos.filter(doMes)) {
+    for (const l of lancamentos.filter(l => doMes(l) && daFilial(l.filial))) {
       if (!l.usuario) continue;
       (porOp[l.usuario] ||= []).push(new Date(l.created_at).getTime());
     }
@@ -4492,9 +4745,9 @@ async function carregarPerformance() {
 
     const lista = Object.entries(ops).sort((a, b) => b[1].lotes - a[1].lotes);
 
-    const totLotes = lista.reduce((s, [, o]) => s + o.lotes, 0);
-    const totUn    = lista.reduce((s, [, o]) => s + o.un, 0);
-    const totOk    = lista.reduce((s, [, o]) => s + o.ok, 0);
+    const totLotes = doPeriodo.length;
+    const totUn    = doPeriodo.reduce((s, r) => s + (Number(r.quantidade) || 0), 0);
+    const totOk    = doPeriodo.filter(r => (Number(r.divergencia) || 0) === 0).length;
     const ritmos   = lista.map(([, o]) => o.ritmo).filter(Boolean);
     const ritmoGeral = ritmos.length ? ritmos.reduce((a, b) => a + b, 0) / ritmos.length : null;
 
