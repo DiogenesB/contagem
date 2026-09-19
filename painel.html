@@ -494,6 +494,35 @@ textarea { resize:vertical; min-height:56px; font-family:var(--sans); }
 .bar.warn > i { background:var(--warn); }
 .bar.neg  > i { background:var(--neg); }
 
+/* ═══════════ KPI DA CONTAGEM ═══════════ */
+.k-hero {
+  display:grid; gap:18px; align-items:center; grid-template-columns:auto 1fr;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  padding:20px 22px; margin-bottom:20px; box-shadow:var(--sh-sm);
+}
+.k-hero-pct { font-family:var(--mono); font-size:3rem; font-weight:700; letter-spacing:-.03em; line-height:1; }
+.k-hero-pct.ok   { color:var(--pos); }
+.k-hero-pct.meio { color:var(--warn); }
+.k-hero-pct.baixo{ color:var(--info); }
+.k-hero-lbl { font-size:.6875rem; font-weight:600; color:var(--text-3); text-transform:uppercase; letter-spacing:.09em; font-family:var(--mono); margin-bottom:6px; }
+.k-hero-txt { font-size:.875rem; color:var(--text-2); margin-top:9px; line-height:1.5; }
+.k-hero-txt b { color:var(--text); font-family:var(--mono); }
+.bar.lg { height:12px; }
+.bar.pos > i { background:var(--pos); }
+.bar .meta { display:none; }
+.k-pbar { display:flex; align-items:center; gap:8px; }
+.k-pbar .bar { flex:1; min-width:60px; }
+.k-pbar span { font-family:var(--mono); font-size:.8125rem; min-width:46px; text-align:right; }
+table.k-prod tbody tr.k-linha { cursor:pointer; }
+table.k-prod tbody tr.k-linha:hover td { background:var(--surface-2); }
+table.k-prod .seta { display:inline-block; width:14px; color:var(--text-3); }
+table.k-prod .chips { max-width:260px; }
+table.k-prod tfoot td { font-weight:600; border-top:1px solid var(--line-2); background:var(--surface-2); }
+.k-det > td { background:var(--bg); padding:12px 16px 14px !important; }
+.aviso a { color:var(--accent); font-weight:600; }
+.k-leg { font-size:.75rem; color:var(--text-3); margin-right:8px; align-self:center; }
+@media (max-width:760px) { .k-hero { grid-template-columns:1fr; } .k-legenda { display:none; } }
+
 /* ═══════════ MAPA DRIVE-IN ═══════════
    Cada linha do drive-in vira um bloco, com os andares empilhados
    como são de verdade (andar de cima em cima) e a profundidade da
@@ -981,6 +1010,10 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
   </button>
 
   <div class="side-label">Análise</div>
+  <button class="nav-item" data-page="kpi" onclick="irPara('kpi')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18a8 8 0 1116 0"/><path d="M12 18l4-6"/><path d="M4 21h16"/></svg>
+    <span>KPI da contagem</span>
+  </button>
   <button class="nav-item" data-page="performance" onclick="irPara('performance')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><rect x="5" y="11" width="3.4" height="6" rx="1"/><rect x="10.3" y="6" width="3.4" height="11" rx="1"/><rect x="15.6" y="13" width="3.4" height="4" rx="1"/></svg>
     <span>Performance</span>
@@ -1334,6 +1367,133 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
 </section>
 
 <!-- ══════════════════ PERFORMANCE ══════════════════ -->
+<!-- ══════════════════ KPI DA CONTAGEM ══════════════════ -->
+<section id="page-kpi" class="page">
+  <div class="page-head">
+    <h1 class="page-title">KPI da contagem</h1>
+    <p class="page-sub">Quanto do estoque já foi contado e validado no mês, o que falta, e o detalhe por produto e por armazém.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="btn-row" style="align-items:flex-end">
+        <div class="field" style="min-width:170px">
+          <label for="k-mes">Mês</label>
+          <input type="month" id="k-mes" onchange="renderKpi()">
+        </div>
+        <div class="field" style="min-width:220px">
+          <label for="k-total">Saldo total do estoque no mês</label>
+          <input type="text" id="k-total" class="mono-in" inputmode="decimal" placeholder="ex.: 1.710.802"
+                 onkeydown="if(event.key==='Enter')salvarTotalMes()">
+        </div>
+        <button class="btn btn-primary btn-sm" id="k-btn-salvar" onclick="salvarTotalMes()">
+          <span class="spin" id="k-spin-salvar"></span>Salvar total
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="usarSaldoDoSistema()" title="Preenche com a soma do saldo do sistema">Usar saldo do sistema</button>
+      </div>
+      <div class="btn-row" style="align-items:flex-end">
+        <div class="field" style="min-width:210px">
+          <label for="k-fonte">Estoque por produto vem de</label>
+          <select id="k-fonte" onchange="renderKpi()">
+            <option value="ciclo">Saldo da contagem (Validação)</option>
+            <option value="ref">Planilha do Saldo mapeado</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="carregarKpi(true)">Atualizar</button>
+        <button class="btn btn-sm" onclick="exportarKpiCSV()">Exportar CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="k-avisos"></div>
+  <div id="k-hero"></div>
+  <div class="kpis" id="k-kpis"></div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="section-title">Por armazém</div>
+      <div class="section-note">linhas = produto + lote no armazém</div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Armazém</th><th class="num">Linhas contadas</th><th style="min-width:160px">Progresso</th>
+          <th class="num">Estoque</th><th class="num">Contado</th><th class="num">Falta</th><th class="num">% do estoque</th>
+        </tr></thead>
+        <tbody id="k-arm"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="section-title">Por produto</div>
+        <div class="section-note" id="k-cnt">—</div>
+      </div>
+      <div class="chips k-legenda">
+        <span class="tag t-ok t-mono">42</span><span class="k-leg">armazém todo contado</span>
+        <span class="tag t-warn t-mono">42</span><span class="k-leg">parte contada</span>
+        <span class="tag t-mute t-mono">42</span><span class="k-leg">nada contado</span>
+        <span class="tag t-alt t-mono">42</span><span class="k-leg">contado fora do saldo</span>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="filters">
+        <div class="field grow"><label for="k-busca">Buscar</label>
+          <input type="text" id="k-busca" placeholder="produto, código ou lote" oninput="dKpi()"></div>
+        <div class="field"><label for="k-situacao">Situação</label>
+          <select id="k-situacao" onchange="renderKpi()">
+            <option value="">Todos</option>
+            <option value="falta">Falta contar (parcial + não iniciado)</option>
+            <option value="nao">Não iniciado</option>
+            <option value="parcial">Parcial</option>
+            <option value="completo">100% contado</option>
+            <option value="fora">Só fora do saldo</option>
+          </select></div>
+        <div class="field"><label for="k-armazem">Armazém</label>
+          <select id="k-armazem" onchange="renderKpi()"><option value="">Todos</option></select></div>
+        <div class="field"><label for="k-ordem">Ordenar por</label>
+          <select id="k-ordem" onchange="renderKpi()">
+            <option value="part">Maior % do estoque</option>
+            <option value="falta">Mais quantidade faltando</option>
+            <option value="pct">Menor % contado</option>
+            <option value="nome">Nome do produto</option>
+          </select></div>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="k-prod">
+        <thead><tr>
+          <th>Produto</th><th>Armazéns</th>
+          <th class="num">Total estoque</th><th class="num">Total contado</th>
+          <th style="min-width:130px">% contado</th><th class="num">Falta contar</th>
+          <th class="num">% do estoque</th><th class="num">Linhas</th><th class="num">Dif. física</th><th>Última</th>
+        </tr></thead>
+        <tbody id="k-tbody"></tbody>
+        <tfoot id="k-tfoot"></tfoot>
+      </table>
+    </div>
+    <div id="k-pag"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="section-title">Evolução mensal</div>
+      <div class="section-note">últimos 12 meses · só validado</div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Mês</th><th class="num">Linhas contadas</th><th class="num">Contado</th>
+          <th class="num">Total digitado</th><th class="num">% contado</th><th class="num">Acurácia</th>
+        </tr></thead>
+        <tbody id="k-evol"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 <section id="page-performance" class="page">
   <div class="page-head">
     <h1 class="page-title">Performance</h1>
@@ -1776,11 +1936,12 @@ const PAG_RENDER = {
   alteracoes: () => renderAlteracoes(_alteracoes),
   mapa:       () => renderMapa(),
   transfer:   () => renderTransferencias(),
+  kpi:        () => renderKpi(),
 };
 /* De quem é a rolagem que precisa voltar ao topo ao virar a página. */
 const PAG_ALVO = {
   validacao:'v-tbody', registros:'r-tbody', historico:'h-tbody', acuracia:'a-tbody',
-  saldo:'s-tabela', alteracoes:'alt-lista', mapa:'m-tbody', transfer:'t-tbody',
+  saldo:'s-tabela', alteracoes:'alt-lista', mapa:'m-tbody', transfer:'t-tbody', kpi:'k-tbody',
 };
 
 function pagEstado(k) {
@@ -2037,6 +2198,7 @@ function irPara(pagina) {
     acuracia:       carregarAcuracia,
     saldo:          carregarSaldoMapa,
     alteracoes:     carregarAlteracoes,
+    kpi:            carregarKpi,
   })[pagina]?.();
 }
 
@@ -2044,6 +2206,7 @@ function aoTrocarFilial() {
   renderValidacao(); renderRegistros(); renderHistorico(); renderAcuracia();
   if ($('page-mapa').classList.contains('active')) renderMapa();
   if ($('page-saldo').classList.contains('active') && _referencia) renderSaldo();
+  if ($('page-kpi').classList.contains('active')) renderKpi();
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -5003,6 +5166,463 @@ function exportarCSV(qual) {
   a.click();
   URL.revokeObjectURL(url);
   toast(`${num(linhas.length)} linha(s) exportadas.`, 'ok');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   KPI DA CONTAGEM
+   Quanto do estoque foi contado (e VALIDADO) no mês.
+
+   - Contado = saldo do sistema dos lotes validados no mês (o campo
+     saldo_sistema gravado no histórico na hora da validação). Usa o
+     sistema, não o físico, para uma falta grande não parecer
+     "menos estoque contado".
+   - Um lote contado duas vezes no mesmo mês entra uma vez (a última).
+   - O % do mês é contra o total que o gestor digita (tabela
+     kpi_mes). Sem total digitado, cai na soma do saldo do sistema.
+   - Estoque por produto vem do saldo do sistema (da Validação ou
+     da planilha do Saldo mapeado), uma linha por código+lote+armazém.
+   ═══════════════════════════════════════════════════════════════ */
+const DIAS_CONTAGEM = [2, 3, 4, 5, 6];   // terça a sábado (0 = domingo)
+
+let _kpi = {
+  carregado:false, saldo:[], ref:null, hist:[], totais:{}, semTabela:false,
+  pendentes:[], abertos:new Set(), produtos:[], somaBase:0,
+};
+const dKpi = debounce(() => renderKpi(), 120);
+
+const mesAtual = () => new Date().toISOString().slice(0, 7);
+
+async function carregarKpi(forcar = false) {
+  if (!$('k-mes').value) $('k-mes').value = mesAtual();
+  if (_kpi.carregado && !forcar) { renderKpi(); return; }
+  $('k-tbody').innerHTML = carregando(10);
+  try {
+    const desde = new Date();
+    desde.setMonth(desde.getMonth() - 12, 1);
+
+    const [saldo, ref, hist, pend, totais] = await Promise.all([
+      buscarTudo(() => sb.from('saldo_sistema').select('id, codigo, descricao, lote, armazem, saldo, unidade, filial')),
+      carregarRef(),
+      buscarTudo(() => sb.from('historico')
+        .select('codigo, produto_nome, lote, armazem, quantidade, saldo_sistema, divergencia, filial, created_at, conta_acuracia')
+        .not('saldo_sistema', 'is', null)
+        .gte('created_at', desde.toISOString().slice(0, 10) + 'T00:00:00')),
+      buscarTudo(() => sb.from('lancamentos').select('codigo, lote, armazem, filial, created_at').eq('status', 'pendente')),
+      carregarTotaisMes(),
+    ]);
+    _kpi = { ..._kpi, carregado:true, saldo, ref, hist, pendentes:pend, totais };
+    renderKpi();
+  } catch (e) {
+    $('k-tbody').innerHTML = vazio('Não foi possível carregar', esc(e.message), 10);
+  }
+}
+
+/* Total digitado por mês. Sem a tabela kpi_mes, guarda no navegador
+   e avisa — assim a tela funciona antes da migração. */
+async function carregarTotaisMes() {
+  const totais = {};
+  try {
+    const { data, error } = await sb.from('kpi_mes').select('mes, saldo_total, atualizado_por, atualizado_em');
+    if (error) throw error;
+    for (const r of data || []) totais[r.mes] = r;
+    _kpi.semTabela = false;
+  } catch {
+    _kpi.semTabela = true;
+    try {
+      const loc = JSON.parse(localStorage.getItem('kpi_mes') || '{}');
+      Object.assign(totais, loc);
+    } catch {}
+  }
+  return totais;
+}
+
+async function salvarTotalMes() {
+  const mes = $('k-mes').value || mesAtual();
+  const v = numeroBR($('k-total').value);
+  if (v === null || v < 0) { toast('Digite o saldo total do estoque (só o número).', 'err'); return; }
+  const reg = { mes, saldo_total:v, atualizado_por:GESTOR || null, atualizado_em:new Date().toISOString() };
+  busy('k-btn-salvar', 'k-spin-salvar', true);
+  try {
+    if (_kpi.semTabela) throw new Error('sem tabela');
+    const { error } = await sb.from('kpi_mes').upsert(reg, { onConflict:'mes' });
+    if (error) throw error;
+    toast(`Total de ${mesLabel(mes)} salvo.`, 'ok');
+  } catch {
+    _kpi.semTabela = true;
+    try {
+      const loc = JSON.parse(localStorage.getItem('kpi_mes') || '{}');
+      loc[mes] = reg;
+      localStorage.setItem('kpi_mes', JSON.stringify(loc));
+    } catch {}
+    toast('Salvo só neste navegador — rode o migracao-kpi.sql para ficar no banco.', 'err', 7000);
+  } finally {
+    busy('k-btn-salvar', 'k-spin-salvar', false);
+  }
+  _kpi.totais[mes] = reg;
+  renderKpi();
+}
+
+/* O campo aceita "1.710.802", "1710802" ou "1.710.802,50".
+   paraNumero leria "1.710.802" como 1,71 (último separador = ponto). */
+function numeroBR(v) {
+  const t = String(v ?? '').trim().replace(/\s/g, '');
+  if (!t) return null;
+  if (t.includes(',')) return paraNumero(t);
+  if (/^\d{1,3}(\.\d{3})+$/.test(t)) return Number(t.replace(/\./g, ''));
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+
+function usarSaldoDoSistema() {
+  $('k-total').value = num(Math.round(_kpi.somaBase));
+  $('k-total').focus();
+}
+
+/* Dias de contagem (terça a sábado) de um mês: os que já passaram
+   (até hoje, inclusive) e os que faltam. */
+function diasDeContagem(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  let passados = 0, restantes = 0;
+  for (let d = new Date(y, m - 1, 1); d.getMonth() === m - 1; d.setDate(d.getDate() + 1)) {
+    if (!DIAS_CONTAGEM.includes(d.getDay())) continue;
+    if (d <= hoje) passados++; else restantes++;
+  }
+  return { passados, restantes };
+}
+
+/* Um lote validado mais de uma vez no mês conta uma vez: a última. */
+function contagensDoMes(ym) {
+  const porLote = new Map();
+  for (const r of _kpi.hist) {
+    if (String(r.created_at).slice(0, 7) !== ym || !daFilial(r.filial)) continue;
+    const k = chaveLote(normalizarCodigo(r.codigo), r.lote, r.armazem);
+    const a = porLote.get(k);
+    if (!a || String(r.created_at) > String(a.created_at)) porLote.set(k, r);
+  }
+  return porLote;
+}
+
+/* Base do estoque: uma linha por código+lote+armazém. Se a mesma
+   chave veio duas vezes (validada de um ciclo antigo + import novo),
+   fica a mais nova. */
+function baseDoEstoque() {
+  const usarRef = $('k-fonte').value === 'ref' && _kpi.ref?.length;
+  const linhas = usarRef ? _kpi.ref : _kpi.saldo;
+  const porLote = new Map();
+  linhas.forEach((s, i) => {
+    if (!daFilial(s.filial)) return;
+    const k = chaveLote(normalizarCodigo(s.codigo), s.lote, s.armazem);
+    const a = porLote.get(k);
+    const ordem = s.id ?? i;
+    if (!a || ordem > a._ordem) porLote.set(k, { ...s, _ordem:ordem });
+  });
+  return { porLote, usarRef };
+}
+
+function calcularKpi(ym) {
+  const { porLote:base, usarRef } = baseDoEstoque();
+  const contadas = contagensDoMes(ym);
+  const prods = new Map();
+  const arms  = new Map();
+
+  const prod = (cod, desc, un) => {
+    let p = prods.get(cod);
+    if (!p) prods.set(cod, p = { codigo:cod, desc:desc || cod, un:un || '', estoque:0, contado:0, fisico:0, dif:0,
+      linhas:0, linhasCont:0, arms:new Map(), lotes:[], ultima:null, busca:'' });
+    if (!p.desc || p.desc === cod) p.desc = desc || p.desc;
+    return p;
+  };
+  const armDe = (p, a) => {
+    let x = p.arms.get(a);
+    if (!x) p.arms.set(a, x = { linhas:0, cont:0, fora:false });
+    return x;
+  };
+  const armGeral = a => {
+    let x = arms.get(a);
+    if (!x) arms.set(a, x = { arm:a, estoque:0, contado:0, linhas:0, cont:0 });
+    return x;
+  };
+
+  for (const [k, s] of base) {
+    const cod = normalizarCodigo(s.codigo);
+    const p = prod(cod, s.descricao, s.unidade);
+    const saldo = Number(s.saldo) || 0;
+    const h = contadas.get(k);
+    p.estoque += saldo; p.linhas++;
+    const a = armDe(p, s.armazem || '—'); a.linhas++;
+    const g = armGeral(s.armazem || '—'); g.estoque += saldo; g.linhas++;
+    p.lotes.push({ lote:s.lote, armazem:s.armazem, saldo, h:h || null });
+    if (h) { p.linhasCont++; a.cont++; g.cont++; }
+  }
+
+  // Tudo que foi validado no mês soma no contado — inclusive lote
+  // que já saiu do saldo depois de contado, ou que estava fora dele.
+  let totContado = 0, totFisico = 0, totLinhas = 0, ok = 0, contaAc = 0;
+  for (const [k, h] of contadas) {
+    const cod = normalizarCodigo(h.codigo);
+    const p = prod(cod, h.produto_nome);
+    const sis = Number(h.saldo_sistema) || 0;
+    p.contado += sis; p.fisico += Number(h.quantidade) || 0; p.dif += Number(h.divergencia) || 0;
+    if (!p.ultima || String(h.created_at) > String(p.ultima)) p.ultima = h.created_at;
+    const g = armGeral(h.armazem || '—'); g.contado += sis;
+    if (!base.has(k)) {
+      armDe(p, h.armazem || '—').fora = true;
+      p.lotes.push({ lote:h.lote, armazem:h.armazem, saldo:null, h });
+    }
+    totContado += sis; totFisico += Number(h.quantidade) || 0; totLinhas++;
+    if (h.conta_acuracia !== false) { contaAc++; if ((Number(h.divergencia) || 0) === 0) ok++; }
+  }
+
+  const somaBase = [...prods.values()].reduce((s, p) => s + p.estoque, 0);
+  for (const p of prods.values()) {
+    p.pct = p.estoque ? Math.min(1, p.contado / p.estoque) : (p.contado ? 1 : 0);
+    p.falta = Math.max(0, p.estoque - p.contado);
+    p.part = somaBase ? p.estoque / somaBase : 0;
+    p.situacao = !p.linhas ? 'fora'
+      : p.linhasCont === p.linhas ? 'completo'
+      : p.linhasCont ? 'parcial' : 'nao';
+    p.busca = [p.codigo, p.desc, ...p.lotes.map(l => l.lote)].join(' ').toUpperCase();
+  }
+
+  return { prods:[...prods.values()], arms:[...arms.values()], somaBase, totContado, totFisico, totLinhas,
+           ok, contaAc, linhasBase:base.size, usarRef };
+}
+
+function barra(frac, cls = '') {
+  const v = Math.max(0, Math.min(1, frac || 0));
+  const c = cls || (v >= 1 ? 'pos' : v >= .5 ? '' : 'warn');
+  return `<div class="k-pbar"><div class="bar ${c}"><i style="width:${(v * 100).toFixed(1)}%"></i></div><span>${num1(v * 100)}%</span></div>`;
+}
+
+function renderKpi() {
+  if (!_kpi.carregado) return;
+  const ym = $('k-mes').value || mesAtual();
+  const R = calcularKpi(ym);
+  _kpi.somaBase = R.somaBase;
+
+  const reg = _kpi.totais[ym];
+  const digitado = reg ? Number(reg.saldo_total) : null;
+  if (document.activeElement !== $('k-total')) $('k-total').value = digitado !== null ? num(digitado) : '';
+  const filtroFilial = !!$('filtro-filial').value;
+  // O total digitado é geral. Com filtro de filial, compara com o sistema da filial.
+  const den = (!filtroFilial && digitado) ? digitado : R.somaBase;
+  const frac = den ? R.totContado / den : 0;
+  const falta = Math.max(0, den - R.totContado);
+
+  // ── avisos ──
+  const av = [];
+  if (_kpi.semTabela) av.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Tabela kpi_mes não existe no banco</b>
+    O total digitado está ficando só neste navegador. Rode o <code>migracao-kpi.sql</code> no Supabase.</div></div>`);
+  if (!digitado) av.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>Sem saldo total digitado para ${esc(mesLabel(ym))}</b>
+    O % está sendo calculado sobre a soma do saldo do sistema (${num(Math.round(R.somaBase))}). Digite o total do estoque aqui em cima.</div></div>`);
+  if (filtroFilial && digitado) av.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>Filtro de filial ligado</b>
+    O total digitado é do estoque geral, então com filial escolhida o % usa o saldo do sistema dessa filial.</div></div>`);
+  if ($('k-fonte').value === 'ref' && !R.usarRef) av.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Sem planilha no Saldo mapeado</b>
+    Usando o saldo da contagem no lugar.</div></div>`);
+  const pendMes = _kpi.pendentes.filter(l => String(l.created_at).slice(0, 7) === ym && daFilial(l.filial)).length;
+  if (pendMes) av.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>${num(pendMes)} lançamento(s) aguardando validação</b>
+    Contagem só entra no KPI depois de validada. <a href="#validacao">Ir para a Validação</a></div></div>`);
+  $('k-avisos').innerHTML = av.join('');
+
+  // ── destaque ──
+  const cls = frac >= 1 ? 'ok' : frac >= .5 ? 'meio' : 'baixo';
+  $('k-hero').innerHTML = `
+    <div class="k-hero">
+      <div>
+        <div class="k-hero-lbl">Estoque contado · ${esc(mesLabel(ym))}</div>
+        <div class="k-hero-pct ${cls}">${num1(frac * 100)}%</div>
+      </div>
+      <div>
+        <div class="bar lg ${frac >= 1 ? 'pos' : ''}"><i style="width:${Math.min(100, frac * 100).toFixed(1)}%"></i></div>
+        <div class="k-hero-txt">
+          Contado e validado <b>${num(Math.round(R.totContado))}</b> de <b>${num(Math.round(den))}</b>
+          ${(!filtroFilial && digitado) ? '(total digitado)' : '(saldo do sistema)'} ·
+          falta contar <b>${num(Math.round(falta))}</b>
+        </div>
+      </div>
+    </div>`;
+
+  // ── cartões ──
+  const prodBase  = R.prods.filter(p => p.linhas);
+  const completos = prodBase.filter(p => p.situacao === 'completo').length;
+  const naoInic   = prodBase.filter(p => p.situacao === 'nao').length;
+  const linhasCont = prodBase.reduce((s, p) => s + p.linhasCont, 0);
+  const armsBase  = R.arms.filter(a => a.linhas);
+  const armsOk    = armsBase.filter(a => a.cont === a.linhas).length;
+
+  const { passados, restantes } = diasDeContagem(ym);
+  const ehAtual = ym === mesAtual();
+  const ritmo = passados ? R.totContado / passados : 0;
+  const projFrac = den ? Math.min(1, (R.totContado + ritmo * restantes) / den) : 0;
+  const porDia = restantes ? falta / restantes : 0;
+
+  $('k-kpis').innerHTML = [
+    kpi('Falta contar', num(Math.round(falta)), `${num1((1 - Math.min(1, frac)) * 100)}% do estoque`, falta ? 'is-warn' : 'is-pos'),
+    kpi('Produtos 100% contados', `${num(completos)}/${num(prodBase.length)}`, `${num(naoInic)} ainda não iniciados`, completos === prodBase.length && prodBase.length ? 'is-pos' : 'is-info'),
+    kpi('Linhas contadas', pct(linhasCont, R.linhasBase), `${num(linhasCont)} de ${num(R.linhasBase)} produto+lote+armazém`, 'is-info'),
+    kpi('Armazéns concluídos', `${num(armsOk)}/${num(armsBase.length)}`, 'todas as linhas contadas', armsOk === armsBase.length && armsBase.length ? 'is-pos' : ''),
+    kpi('Acurácia do mês', pct(R.ok, R.contaAc), `${num(R.ok)} de ${num(R.contaAc)} lotes sem divergência`, R.contaAc && R.ok === R.contaAc ? 'is-pos' : 'is-alt'),
+    ehAtual
+      ? kpi('Projeção fim do mês', `${num1(projFrac * 100)}%`,
+          restantes ? `${restantes} dia(s) de contagem restantes · precisa ${num(Math.round(porDia))}/dia` : 'último dia de contagem',
+          projFrac >= 1 ? 'is-pos' : 'is-warn')
+      : kpi('Ritmo do mês', num(Math.round(ritmo)), `por dia de contagem (${passados} dias ter–sáb)`, ''),
+  ].join('');
+
+  // ── por armazém ──
+  const armList = R.arms.sort((a, b) => b.estoque - a.estoque);
+  $('k-arm').innerHTML = armList.length ? armList.map(a => `
+    <tr>
+      <td class="mono strong">${esc(a.arm)}</td>
+      <td class="num">${num(a.cont)}/${num(a.linhas)}</td>
+      <td>${a.linhas ? barra(a.cont / a.linhas) : '<span class="tag t-alt">só contado</span>'}</td>
+      <td class="num">${num(Math.round(a.estoque))}</td>
+      <td class="num">${num(Math.round(a.contado))}</td>
+      <td class="num">${num(Math.round(Math.max(0, a.estoque - a.contado)))}</td>
+      <td class="num">${R.somaBase ? num1(a.estoque / R.somaBase * 100) + '%' : '—'}</td>
+    </tr>`).join('') : vazio('Sem saldo', 'Importe o saldo na Validação.', 7);
+
+  // ── por produto ──
+  preencherSelect('k-armazem', armList.map(a => a.arm));
+  const q = $('k-busca').value.trim().toUpperCase();
+  const sit = $('k-situacao').value, arm = $('k-armazem').value, ordem = $('k-ordem').value;
+  let lista = R.prods.filter(p =>
+    (!q || p.busca.includes(q)) &&
+    (!arm || p.arms.has(arm)) &&
+    (!sit || (sit === 'falta' ? (p.situacao === 'nao' || p.situacao === 'parcial') : p.situacao === sit)));
+  const ord = {
+    part:  (a, b) => b.estoque - a.estoque,
+    falta: (a, b) => b.falta - a.falta,
+    pct:   (a, b) => a.pct - b.pct || b.estoque - a.estoque,
+    nome:  (a, b) => a.desc.localeCompare(b.desc),
+  }[ordem];
+  lista.sort(ord);
+  _kpi.produtos = lista;
+
+  const p = fatiar('kpi', lista, [ym, q, sit, arm, ordem, $('filtro-filial').value, $('k-fonte').value].join('|'));
+  $('k-cnt').textContent = `${num(lista.length)} produto(s) no filtro`;
+  $('k-pag').innerHTML = barraPag('kpi', p, 'produto(s)');
+  $('k-tbody').innerHTML = lista.length
+    ? p.itens.map(linhaKpi).join('')
+    : vazio('Nada aqui', 'Ajuste a busca ou os filtros.', 10);
+
+  const t = lista.reduce((s, x) => (s.e += x.estoque, s.c += x.contado, s.f += x.falta, s.l += x.linhas, s.lc += x.linhasCont, s.d += x.dif, s), { e:0, c:0, f:0, l:0, lc:0, d:0 });
+  $('k-tfoot').innerHTML = lista.length ? `<tr>
+      <td>Total do filtro</td><td></td>
+      <td class="num">${num(Math.round(t.e))}</td><td class="num">${num(Math.round(t.c))}</td>
+      <td>${barra(t.e ? t.c / t.e : 0)}</td><td class="num">${num(Math.round(t.f))}</td>
+      <td class="num">${R.somaBase ? num1(t.e / R.somaBase * 100) + '%' : '—'}</td>
+      <td class="num">${num(t.lc)}/${num(t.l)}</td><td class="num">${t.d > 0 ? '+' : ''}${num(t.d)}</td><td></td></tr>` : '';
+
+  renderEvolucaoKpi();
+}
+
+function chipsArmazens(pr) {
+  return [...pr.arms.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([a, x]) => {
+    const cls = !x.linhas ? 't-alt' : x.cont === x.linhas ? 't-ok' : x.cont ? 't-warn' : 't-mute';
+    const tit = !x.linhas ? 'contado, mas não existe no saldo' : `${x.cont} de ${x.linhas} lote(s) contado(s)`;
+    return `<span class="tag ${cls} t-mono" title="${esc(tit)}">${esc(a)}${x.linhas > 1 ? ` ${x.cont}/${x.linhas}` : ''}</span>`;
+  }).join('');
+}
+
+function linhaKpi(pr) {
+  const aberto = _kpi.abertos.has(pr.codigo);
+  const un = pr.un ? ` <span class="sub">${esc(pr.un)}</span>` : '';
+  return `
+    <tr class="k-linha" onclick="alternarKpi('${esc(pr.codigo)}')">
+      <td class="nome"><span class="seta">${aberto ? '▾' : '▸'}</span>${esc(pr.desc)}<div class="sub mono">${esc(pr.codigo)}</div></td>
+      <td><div class="chips">${chipsArmazens(pr)}</div></td>
+      <td class="num">${pr.linhas ? num(Math.round(pr.estoque)) : '—'}${un}</td>
+      <td class="num strong">${num(Math.round(pr.contado))}</td>
+      <td>${pr.linhas ? barra(pr.pct) : '<span class="tag t-alt">fora do saldo</span>'}</td>
+      <td class="num ${pr.falta ? '' : 'num-zero'}">${num(Math.round(pr.falta))}</td>
+      <td class="num">${num1(pr.part * 100)}%</td>
+      <td class="num">${num(pr.linhasCont)}/${num(pr.linhas)}</td>
+      <td class="num ${pr.dif ? 'num-neg' : 'num-zero'}">${pr.dif > 0 ? '+' : ''}${num(pr.dif)}</td>
+      <td class="mono">${fmtDia(pr.ultima)}</td>
+    </tr>
+    ${aberto ? `<tr class="k-det"><td colspan="10">${detalheKpi(pr)}</td></tr>` : ''}`;
+}
+
+function alternarKpi(cod) {
+  if (_kpi.abertos.has(cod)) _kpi.abertos.delete(cod); else _kpi.abertos.add(cod);
+  renderKpi();
+}
+
+function detalheKpi(pr) {
+  const lotes = [...pr.lotes].sort((a, b) =>
+    String(a.armazem).localeCompare(String(b.armazem)) || String(a.lote).localeCompare(String(b.lote)));
+  return `
+    <table class="tbl mini">
+      <thead><tr><th>Armazém</th><th>Lote</th><th class="num">Saldo hoje</th><th class="num">Sistema na contagem</th>
+        <th class="num">Físico</th><th class="num">Diferença</th><th>Contado em</th><th>Situação</th></tr></thead>
+      <tbody>${lotes.map(l => {
+        const h = l.h;
+        const dif = h ? Number(h.divergencia) || 0 : null;
+        const tag = l.saldo === null ? '<span class="tag t-alt">fora do saldo</span>'
+          : !h ? '<span class="tag t-mute">falta contar</span>'
+          : dif === 0 ? '<span class="tag t-ok">contado · confere</span>'
+          : `<span class="tag t-warn">contado · ${dif > 0 ? 'sobra' : 'falta'}${h.conta_acuracia === false ? ' justificada' : ''}</span>`;
+        return `<tr>
+          <td class="mono strong">${esc(l.armazem || '—')}</td>
+          <td class="mono">${esc(l.lote || '—')}</td>
+          <td class="num">${l.saldo === null ? '—' : num(l.saldo)}</td>
+          <td class="num">${h ? num(h.saldo_sistema) : '—'}</td>
+          <td class="num">${h ? num(h.quantidade) : '—'}</td>
+          <td class="num ${dif ? 'num-neg' : ''}">${dif === null ? '—' : (dif > 0 ? '+' : '') + num(dif)}</td>
+          <td class="mono">${h ? fmtDia(h.created_at) : '—'}</td>
+          <td>${tag}</td></tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+function renderEvolucaoKpi() {
+  const meses = new Map();
+  for (const r of _kpi.hist) {
+    if (!daFilial(r.filial)) continue;
+    const ym = String(r.created_at).slice(0, 7);
+    let m = meses.get(ym);
+    if (!m) meses.set(ym, m = new Map());
+    const k = chaveLote(normalizarCodigo(r.codigo), r.lote, r.armazem);
+    const a = m.get(k);
+    if (!a || String(r.created_at) > String(a.created_at)) m.set(k, r);
+  }
+  for (const ym of Object.keys(_kpi.totais)) if (!meses.has(ym)) meses.set(ym, new Map());
+  const linhas = [...meses.entries()].sort((a, b) => b[0].localeCompare(a[0])).slice(0, 12);
+  $('k-evol').innerHTML = linhas.length ? linhas.map(([ym, m]) => {
+    const rs = [...m.values()];
+    const cont = rs.reduce((s, r) => s + (Number(r.saldo_sistema) || 0), 0);
+    const conta = rs.filter(r => r.conta_acuracia !== false);
+    const ok = conta.filter(r => (Number(r.divergencia) || 0) === 0).length;
+    const tot = _kpi.totais[ym] ? Number(_kpi.totais[ym].saldo_total) : null;
+    return `<tr>
+      <td class="strong">${esc(mesLabel(ym))}</td>
+      <td class="num">${num(rs.length)}</td>
+      <td class="num">${num(Math.round(cont))}</td>
+      <td class="num">${tot === null ? '<span class="num-zero">não digitado</span>' : num(tot)}</td>
+      <td class="num strong">${tot ? pct(cont, tot) : '—'}</td>
+      <td class="num">${pct(ok, conta.length)}</td></tr>`;
+  }).join('') : vazio('Sem histórico ainda', '', 6);
+}
+
+function exportarKpiCSV() {
+  const lista = _kpi.produtos || [];
+  if (!lista.length) { toast('Nada para exportar.', 'err'); return; }
+  const cab = ['Código','Produto','Armazéns','Total estoque','Total contado','% contado','Falta contar','% do estoque','Linhas contadas','Linhas','Dif. física','Última contagem'];
+  const linhas = lista.map(p => [
+    p.codigo, p.desc,
+    [...p.arms.entries()].map(([a, x]) => `${a} ${x.cont}/${x.linhas}`).join(' | '),
+    String(p.estoque).replace('.', ','), String(p.contado).replace('.', ','),
+    (p.pct * 100).toFixed(1).replace('.', ','), String(p.falta).replace('.', ','),
+    (p.part * 100).toFixed(2).replace('.', ','), p.linhasCont, p.linhas, p.dif, fmtDia(p.ultima),
+  ]);
+  const csv = [cab, ...linhas].map(l => l.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+  const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = `kpi-contagem-${$('k-mes').value || mesAtual()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast(`${num(lista.length)} produto(s) exportados.`, 'ok');
 }
 
 /* ═══════════════════════════════════════════════════════════════
