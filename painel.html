@@ -363,10 +363,13 @@ input[type=date], input[type=month] { color-scheme:dark; font-family:var(--mono)
    mas o overflow-x cria um contexto de rolagem próprio — daí o
    cabeçalho passava por cima das linhas. */
 .tbl-wrap {
-  overflow:auto;
-  max-height:calc(100vh - 210px);
+  /* Sem rolagem vertical dentro da tabela: ela cresce até o tamanho
+     da página (25, 50...) e quem rola é a tela. A rodinha do mouse
+     nunca mais fica "presa" na tabela. Só sobra a rolagem lateral,
+     para tabela larga no celular. */
+  overflow-x:auto; overflow-y:hidden;
+  max-height:none;
   border-radius:0 0 var(--r) var(--r);
-  overscroll-behavior:contain;
 }
 table { width:100%; border-collapse:separate; border-spacing:0; font-size:.875rem; }
 thead th {
@@ -1409,6 +1412,54 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
   <div id="k-hero"></div>
   <div class="kpis" id="k-kpis"></div>
 
+  <div class="panel" id="k-plano-panel">
+    <div class="panel-head">
+      <div>
+        <div class="section-title">Lista do que falta contar <span class="tag t-mute">importada à parte</span></div>
+        <div class="section-note" id="kp-info">—</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('kp-file').click()">Importar lista</button>
+        <button class="btn btn-sm" onclick="exportarPlanoCSV()">Exportar o que falta</button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="drop" id="kp-drop" onclick="document.getElementById('kp-file').click()">
+        <div class="drop-ico">▤</div>
+        <div class="drop-tit">Solte aqui a planilha com os produtos e armazéns a contar</div>
+        <div class="drop-sub">Colunas: código e/ou descrição do produto, armazém e, se quiser, saldo · não mexe no saldo, no ciclo nem na validação</div>
+      </div>
+      <input type="file" id="kp-file" accept=".xlsx,.xls,.csv" hidden onchange="aoEscolherPlano(event)">
+      <div id="kp-status"></div>
+      <div id="kp-avisos"></div>
+      <div class="kpis" id="kp-kpis" style="margin-top:16px"></div>
+      <div class="filters">
+        <div class="field grow"><label for="kp-busca">Buscar</label>
+          <input type="text" id="kp-busca" placeholder="produto ou código" oninput="dPlano()"></div>
+        <div class="field"><label for="kp-situacao">Situação</label>
+          <select id="kp-situacao" onchange="renderPlano()">
+            <option value="">Todos</option>
+            <option value="falta">Falta contar (parcial + não iniciado)</option>
+            <option value="nao">Não iniciado</option>
+            <option value="parcial">Parcial</option>
+            <option value="completo">Contado em todos os armazéns</option>
+          </select></div>
+        <div class="field"><label for="kp-armazem">Armazém</label>
+          <select id="kp-armazem" onchange="renderPlano()"><option value="">Todos</option></select></div>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="k-prod">
+        <thead><tr>
+          <th>Produto</th><th>Armazéns</th><th style="min-width:150px">Armazéns contados</th>
+          <th class="num">Saldo da lista</th><th class="num">Contado (validado)</th><th>Última</th><th>Situação</th>
+        </tr></thead>
+        <tbody id="kp-tbody"></tbody>
+      </table>
+    </div>
+    <div id="kp-pag"></div>
+  </div>
+
   <div class="panel">
     <div class="panel-head">
       <div class="section-title">Por armazém</div>
@@ -1937,11 +1988,12 @@ const PAG_RENDER = {
   mapa:       () => renderMapa(),
   transfer:   () => renderTransferencias(),
   kpi:        () => renderKpi(),
+  plano:      () => renderPlano(),
 };
 /* De quem é a rolagem que precisa voltar ao topo ao virar a página. */
 const PAG_ALVO = {
   validacao:'v-tbody', registros:'r-tbody', historico:'h-tbody', acuracia:'a-tbody',
-  saldo:'s-tabela', alteracoes:'alt-lista', mapa:'m-tbody', transfer:'t-tbody', kpi:'k-tbody',
+  saldo:'s-tabela', alteracoes:'alt-lista', mapa:'m-tbody', transfer:'t-tbody', kpi:'k-tbody', plano:'kp-tbody',
 };
 
 function pagEstado(k) {
@@ -1969,11 +2021,13 @@ function irPagina(k, pg) {
   e.pg = Math.max(1, Number(pg) || 1);
   PAG_RENDER[k]?.();
   const alvo = $(PAG_ALVO[k]);
-  const cx = alvo?.closest('.tbl-wrap') || alvo;
+  // A tabela não rola mais sozinha: ao trocar de página, se o topo
+  // dela ficou acima da tela, a janela volta até o começo da tabela.
+  const cx = alvo?.closest('.panel') || alvo?.closest('.tbl-wrap') || alvo;
   if (!cx) return;
-  cx.scrollTop = 0;
-  // A tabela pode estar abaixo da dobra depois de trocar de página.
-  cx.scrollIntoView?.({ block:'nearest' });
+  const topo = cx.getBoundingClientRect().top;
+  const barra = document.querySelector('.topbar')?.offsetHeight || 60;
+  if (topo < barra) window.scrollTo({ top: window.scrollY + topo - barra - 12, behavior:'smooth' });
 }
 
 function tamPagina(k, tam) {
@@ -5207,10 +5261,11 @@ async function carregarKpi(forcar = false) {
         .select('codigo, produto_nome, lote, armazem, quantidade, saldo_sistema, divergencia, filial, created_at, conta_acuracia')
         .not('saldo_sistema', 'is', null)
         .gte('created_at', desde.toISOString().slice(0, 10) + 'T00:00:00')),
-      buscarTudo(() => sb.from('lancamentos').select('codigo, lote, armazem, filial, created_at').eq('status', 'pendente')),
+      buscarTudo(() => sb.from('lancamentos').select('codigo, produto_nome, lote, armazem, filial, created_at').eq('status', 'pendente')),
       carregarTotaisMes(),
     ]);
     _kpi = { ..._kpi, carregado:true, saldo, ref, hist, pendentes:pend, totais };
+    await carregarPlano($('k-mes').value || mesAtual());
     renderKpi();
   } catch (e) {
     $('k-tbody').innerHTML = vazio('Não foi possível carregar', esc(e.message), 10);
@@ -5516,6 +5571,7 @@ function renderKpi() {
       <td class="num">${num(t.lc)}/${num(t.l)}</td><td class="num">${t.d > 0 ? '+' : ''}${num(t.d)}</td><td></td></tr>` : '';
 
   renderEvolucaoKpi();
+  if (_plano.mes !== ym) carregarPlano(ym).then(renderPlano); else renderPlano();
 }
 
 function chipsArmazens(pr) {
@@ -5624,6 +5680,324 @@ function exportarKpiCSV() {
   URL.revokeObjectURL(url);
   toast(`${num(lista.length)} produto(s) exportados.`, 'ok');
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   LISTA DO QUE FALTA CONTAR — importada à parte (tabela kpi_plano)
+   O gestor importa produto + armazém a contar no mês. Não toca em
+   saldo_sistema, estoque_ref, ciclo nem lançamentos.
+   Um par produto+armazém fica "contado" quando:
+     - existe contagem VALIDADA no mês daquele produto naquele
+       armazém (qualquer lote), ou
+     - o gestor marcou na mão.
+   Lançado e ainda não validado aparece em amarelo.
+   ═══════════════════════════════════════════════════════════════ */
+let _plano = { linhas:null, semTabela:false, abertos:new Set(), grupos:[], importar:null };
+const dPlano = debounce(() => renderPlano(), 120);
+
+const semAcento = t => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const chaveDesc = t => semAcento(t).toUpperCase().replace(/\s+/g, ' ').trim();
+const chaveArm  = a => chave(a) || '—';
+
+const PLANO_COLS = {
+  codigo:   ['b8_produto','codigo','cod','cod.','codigo produto','cod produto','cod. produto','codigo do produto','produto codigo','sku'],
+  descricao:['b1_desc','descricao','descricao produto','desc','nome','nome produto','descricao do produto'],
+  produto:  ['produto'],
+  armazem:  ['b8_local','armazem','arm','arm.','local','armazens','deposito'],
+  saldo:    ['b8_saldo','saldo','quantidade','qtd','qtde','estoque','saldo total'],
+  filial:   ['b8_filial','filial'],
+};
+
+async function carregarPlano(ym) {
+  try {
+    const linhas = await buscarTudo(() => sb.from('kpi_plano').select('*').eq('mes', ym));
+    _plano.linhas = linhas; _plano.semTabela = false; _plano.mes = ym;
+  } catch {
+    _plano.linhas = []; _plano.semTabela = true; _plano.mes = ym;
+  }
+}
+
+function configurarDropPlano() {
+  const d = $('kp-drop');
+  if (!d || d._ok) return;
+  d._ok = true;
+  ['dragenter','dragover'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.remove('over'); }));
+  d.addEventListener('drop', e => { const f = e.dataTransfer.files?.[0]; if (f) lerPlano(f); });
+}
+function aoEscolherPlano(ev) { const f = ev.target.files?.[0]; if (f) lerPlano(f); ev.target.value = ''; }
+
+async function lerPlano(file) {
+  const st = $('kp-status');
+  st.innerHTML = '<div class="skeleton">lendo a planilha…</div>';
+  try {
+    const wb = XLSX.read(await file.arrayBuffer(), { cellDates:true });
+    const brutas = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { raw:true, defval:'' });
+    if (!brutas.length) throw new Error('a planilha está vazia');
+
+    // Cabeçalho → campo, sem acento e sem diferença de maiúscula.
+    const mapa = {};
+    for (const h of Object.keys(brutas[0])) {
+      const n = semAcento(h).trim().toLowerCase();
+      for (const [campo, nomes] of Object.entries(PLANO_COLS)) if (nomes.includes(n) && !mapa[h]) mapa[h] = campo;
+    }
+    const campos = new Set(Object.values(mapa));
+    if (!campos.has('armazem')) throw new Error('não achei a coluna de armazém');
+    if (!campos.has('codigo') && !campos.has('descricao') && !campos.has('produto'))
+      throw new Error('não achei a coluna do produto (código ou descrição)');
+
+    // Uma linha por produto + armazém: lotes repetidos somam o saldo.
+    const pares = new Map();
+    for (const b of brutas) {
+      const o = {};
+      for (const [h, campo] of Object.entries(mapa)) o[campo] = typeof b[h] === 'string' ? b[h].trim() : b[h];
+      if (o.produto !== undefined && o.produto !== '') {
+        if (/^\d+$/.test(String(o.produto))) o.codigo ??= o.produto; else o.descricao ??= o.produto;
+      }
+      const codigo = o.codigo !== undefined && o.codigo !== '' ? normalizarCodigo(o.codigo) : '';
+      const descricao = String(o.descricao ?? '').trim();
+      const armazem = String(o.armazem ?? '').trim().toUpperCase();
+      if ((!codigo && !descricao) || !armazem) continue;
+      const k = (codigo || 'D:' + chaveDesc(descricao)) + '|' + chaveArm(armazem);
+      const p = pares.get(k) || { codigo, descricao, armazem, saldo:null, filial:String(o.filial ?? '').trim() || null };
+      const sd = paraNumero(o.saldo);
+      if (sd !== null) p.saldo = (p.saldo || 0) + sd;
+      if (!p.descricao && descricao) p.descricao = descricao;
+      pares.set(k, p);
+    }
+    const lista = [...pares.values()];
+    if (!lista.length) throw new Error('nenhuma linha com produto e armazém');
+
+    const nProd = new Set(lista.map(p => p.codigo || chaveDesc(p.descricao))).size;
+    const nArm  = new Set(lista.map(p => p.armazem)).size;
+    const ym = $('k-mes').value || mesAtual();
+    _plano.importar = lista;
+    st.innerHTML = `
+      <div class="aviso a-info" style="margin-top:16px"><span class="aviso-ico">▤</span><div>
+        <b>${esc(file.name)}</b>${num(nProd)} produto(s) · ${num(lista.length)} par(es) produto+armazém · ${num(nArm)} armazém(ns)
+        ${campos.has('saldo') ? '· com saldo' : '· sem coluna de saldo (tudo bem)'}</div></div>
+      ${_plano.linhas?.length ? `<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Substitui a lista de ${esc(mesLabel(ym))}</b>
+        A lista atual (${num(_plano.linhas.length)} pares) e as marcações manuais dela saem. Saldo, ciclo e validação não mudam.</div></div>` : ''}
+      <div class="btn-row">
+        <button class="btn btn-primary" id="kp-btn-import" onclick="importarPlano()"><span class="spin" id="kp-spin-import"></span>Importar para ${esc(mesLabel(ym))}</button>
+        <button class="btn btn-ghost" onclick="_plano.importar=null;document.getElementById('kp-status').innerHTML=''">Cancelar</button>
+      </div>`;
+  } catch (e) {
+    st.innerHTML = `<div class="aviso a-neg" style="margin-top:16px"><span class="aviso-ico">✕</span><div><b>Não deu para ler</b>${esc(e.message)}</div></div>`;
+  }
+}
+
+async function importarPlano() {
+  const lista = _plano.importar;
+  if (!lista?.length) return;
+  const ym = $('k-mes').value || mesAtual();
+  busy('kp-btn-import', 'kp-spin-import', true);
+  try {
+    const { error:eD } = await sb.from('kpi_plano').delete().eq('mes', ym);
+    if (eD) throw eD;
+    const agora = new Date().toISOString();
+    const regs = lista.map(p => ({ ...p, mes:ym, contado_manual:false, importado_por:GESTOR || null, importado_em:agora }));
+    for (let i = 0; i < regs.length; i += 500) await inserirResiliente('kpi_plano', regs.slice(i, i + 500));
+    toast(`Lista de ${mesLabel(ym)} importada · ${num(regs.length)} pares.`, 'ok', 5000);
+    _plano.importar = null;
+    $('kp-status').innerHTML = '';
+    await carregarPlano(ym);
+    renderPlano();
+  } catch (e) {
+    const msg = String(e?.message || e);
+    if (/kpi_plano|relation|does not exist|schema cache/i.test(msg)) {
+      _plano.semTabela = true; renderPlano();
+      toast('A tabela kpi_plano não existe — rode o migracao-kpi-plano.sql.', 'err', 8000);
+    } else erro('Falha ao importar a lista', e);
+  } finally {
+    busy('kp-btn-import', 'kp-spin-import', false);
+  }
+}
+
+async function marcarPlano(id, valor) {
+  const reg = _plano.linhas.find(l => String(l.id) === String(id));
+  if (!reg) return;
+  const upd = { contado_manual:valor, marcado_por:valor ? (GESTOR || null) : null, marcado_em:valor ? new Date().toISOString() : null };
+  const { error } = await sb.from('kpi_plano').update(upd).eq('id', id);
+  if (error) { erro('Não consegui marcar', error); return; }
+  Object.assign(reg, upd);
+  renderPlano();
+}
+
+/* Contagens validadas do mês e lançamentos pendentes, somados por
+   produto+armazém (por código e, de reserva, pela descrição). */
+function contadoPorPar(ym) {
+  const val = new Map(), pend = new Set();
+  const somar = (k, h) => {
+    const x = val.get(k) || { sistema:0, fisico:0, lotes:0, ultima:null };
+    x.sistema += Number(h.saldo_sistema) || 0; x.fisico += Number(h.quantidade) || 0; x.lotes++;
+    if (!x.ultima || String(h.created_at) > String(x.ultima)) x.ultima = h.created_at;
+    val.set(k, x);
+  };
+  for (const h of contagensDoMes(ym).values()) {
+    const a = chaveArm(h.armazem);
+    somar(normalizarCodigo(h.codigo) + '|' + a, h);
+    if (h.produto_nome) somar('D:' + chaveDesc(h.produto_nome) + '|' + a, h);
+  }
+  for (const l of _kpi.pendentes) {
+    if (!daFilial(l.filial)) continue;
+    const a = chaveArm(l.armazem);
+    pend.add(normalizarCodigo(l.codigo) + '|' + a);
+    if (l.produto_nome) pend.add('D:' + chaveDesc(l.produto_nome) + '|' + a);
+  }
+  return { val, pend };
+}
+
+function estadoPar(l, C) {
+  const a = chaveArm(l.armazem);
+  const v = (l.codigo && C.val.get(l.codigo + '|' + a)) || (l.descricao && C.val.get('D:' + chaveDesc(l.descricao) + '|' + a)) || null;
+  const p = (l.codigo && C.pend.has(l.codigo + '|' + a)) || (l.descricao && C.pend.has('D:' + chaveDesc(l.descricao) + '|' + a));
+  const estado = v ? 'sistema' : l.contado_manual ? 'manual' : p ? 'lancado' : 'falta';
+  return { v, estado, contado: estado === 'sistema' || estado === 'manual' };
+}
+
+function renderPlano() {
+  if (!$('kp-tbody')) return;
+  configurarDropPlano();
+  const ym = $('k-mes').value || mesAtual();
+  const av = [];
+  if (_plano.semTabela) av.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Tabela kpi_plano não existe no banco</b>
+    Rode o <code>migracao-kpi-plano.sql</code> no Supabase para poder importar a lista.</div></div>`);
+  $('kp-avisos').innerHTML = av.join('');
+
+  const linhas = (_plano.linhas || []).filter(l => !l.filial || daFilial(l.filial));
+  $('kp-drop').style.display = linhas.length ? 'none' : '';
+  const imp = _plano.linhas?.[0];
+  $('kp-info').textContent = linhas.length
+    ? `${esc(mesLabel(ym))} · ${num(linhas.length)} pares · importada ${fmtTS(imp?.importado_em)}${imp?.importado_por ? ' por ' + imp.importado_por : ''}`
+    : `nenhuma lista importada para ${mesLabel(ym)}`;
+
+  if (!linhas.length) {
+    $('kp-kpis').innerHTML = '';
+    $('kp-tbody').innerHTML = vazio('Nenhuma lista importada', 'Importe uma planilha com produto e armazém para acompanhar o que falta contar.', 7);
+    $('kp-pag').innerHTML = '';
+    _plano.grupos = [];
+    return;
+  }
+
+  const C = contadoPorPar(ym);
+  const grupos = new Map();
+  for (const l of linhas) {
+    const k = l.codigo || 'D:' + chaveDesc(l.descricao);
+    const g = grupos.get(k) || { k, codigo:l.codigo, desc:l.descricao || l.codigo, pares:[], saldo:null, contSaldo:0, cont:0, sistema:0, ultima:null };
+    const e = estadoPar(l, C);
+    g.pares.push({ ...l, ...e });
+    if (l.saldo !== null && l.saldo !== undefined) { g.saldo = (g.saldo || 0) + Number(l.saldo); if (e.contado) g.contSaldo += Number(l.saldo); }
+    if (e.contado) g.cont++;
+    if (e.v) { g.sistema += e.v.sistema; if (!g.ultima || String(e.v.ultima) > String(g.ultima)) g.ultima = e.v.ultima; }
+    grupos.set(k, g);
+  }
+  const todos = [...grupos.values()];
+  for (const g of todos) {
+    g.situacao = g.cont === g.pares.length ? 'completo' : g.cont ? 'parcial' : 'nao';
+    g.busca = [g.codigo, g.desc].join(' ').toUpperCase();
+  }
+
+  // ── números da lista ──
+  const pares = todos.reduce((s, g) => s + g.pares.length, 0);
+  const paresOk = todos.reduce((s, g) => s + g.cont, 0);
+  const lancados = todos.reduce((s, g) => s + g.pares.filter(p => p.estado === 'lancado').length, 0);
+  const completos = todos.filter(g => g.situacao === 'completo').length;
+  const naoInic = todos.filter(g => g.situacao === 'nao').length;
+  const temSaldo = todos.some(g => g.saldo !== null);
+  const sT = todos.reduce((s, g) => s + (g.saldo || 0), 0), sC = todos.reduce((s, g) => s + g.contSaldo, 0);
+  $('kp-kpis').innerHTML = [
+    kpi('Produtos concluídos', `${num(completos)}/${num(todos.length)}`, `${num(naoInic)} não iniciados`, completos === todos.length ? 'is-pos' : 'is-info'),
+    kpi('Produto+armazém contados', pct(paresOk, pares), `${num(paresOk)} de ${num(pares)}`, paresOk === pares ? 'is-pos' : 'is-info'),
+    kpi('Falta contar', num(pares - paresOk), 'pares produto+armazém', pares - paresOk ? 'is-warn' : 'is-pos'),
+    kpi('Lançado, falta validar', num(lancados), 'entra quando validar', lancados ? 'is-alt' : ''),
+    ...(temSaldo ? [kpi('% do saldo da lista', pct(sC, sT), `${num(Math.round(sC))} de ${num(Math.round(sT))}`, sC >= sT ? 'is-pos' : 'is-info')] : []),
+  ].join('');
+
+  // ── filtros ──
+  preencherSelect('kp-armazem', linhas.map(l => l.armazem));
+  const q = $('kp-busca').value.trim().toUpperCase(), sit = $('kp-situacao').value, arm = $('kp-armazem').value;
+  const lista = todos.filter(g =>
+    (!q || g.busca.includes(q)) &&
+    (!arm || g.pares.some(p => p.armazem === arm)) &&
+    (!sit || (sit === 'falta' ? g.situacao !== 'completo' : g.situacao === sit)))
+    .sort((a, b) => ({ nao:0, parcial:1, completo:2 }[a.situacao] - { nao:0, parcial:1, completo:2 }[b.situacao])
+                    || (b.saldo || 0) - (a.saldo || 0) || a.desc.localeCompare(b.desc));
+  _plano.grupos = lista;
+
+  const p = fatiar('plano', lista, [ym, q, sit, arm, $('filtro-filial').value].join('|'));
+  $('kp-pag').innerHTML = barraPag('plano', p, 'produto(s)');
+  $('kp-tbody').innerHTML = lista.length ? p.itens.map(linhaPlano).join('') : vazio('Nada aqui', 'Ajuste a busca ou os filtros.', 7);
+}
+
+const TAG_PAR = {
+  sistema:['t-ok','contado e validado'], manual:['t-ok','marcado na mão'],
+  lancado:['t-warn','lançado, falta validar'], falta:['t-mute','falta contar'],
+};
+
+function linhaPlano(g) {
+  const aberto = _plano.abertos.has(g.k);
+  const chips = g.pares.slice().sort((a, b) => a.armazem.localeCompare(b.armazem)).map(pr => {
+    const [cls, tit] = TAG_PAR[pr.estado];
+    return `<span class="tag ${cls} t-mono" title="${esc(tit)}">${pr.contado ? '✓ ' : ''}${esc(pr.armazem)}</span>`;
+  }).join('');
+  const sit = { completo:'<span class="tag t-ok">contado</span>', parcial:'<span class="tag t-warn">parcial</span>', nao:'<span class="tag t-mute">não iniciado</span>' }[g.situacao];
+  return `
+    <tr class="k-linha" onclick="alternarPlano('${esc(g.k)}')">
+      <td class="nome"><span class="seta">${aberto ? '▾' : '▸'}</span>${esc(g.desc)}${g.codigo ? `<div class="sub mono">${esc(g.codigo)}</div>` : ''}</td>
+      <td><div class="chips">${chips}</div></td>
+      <td>${barra(g.cont / g.pares.length)}<div class="sub">${g.cont} de ${g.pares.length} armazém(ns)</div></td>
+      <td class="num">${g.saldo === null ? '—' : num(Math.round(g.saldo))}</td>
+      <td class="num">${g.sistema ? num(Math.round(g.sistema)) : '—'}</td>
+      <td class="mono">${fmtDia(g.ultima)}</td>
+      <td>${sit}</td>
+    </tr>
+    ${aberto ? `<tr class="k-det"><td colspan="7">${detalhePlano(g)}</td></tr>` : ''}`;
+}
+
+function alternarPlano(k) {
+  if (_plano.abertos.has(k)) _plano.abertos.delete(k); else _plano.abertos.add(k);
+  renderPlano();
+}
+
+function detalhePlano(g) {
+  return `
+    <table class="tbl mini">
+      <thead><tr><th>Armazém</th><th>Situação</th><th class="num">Saldo da lista</th><th class="num">Sistema validado</th>
+        <th class="num">Físico</th><th class="num">Lotes</th><th>Quando</th><th></th></tr></thead>
+      <tbody>${g.pares.slice().sort((a, b) => a.armazem.localeCompare(b.armazem)).map(pr => {
+        const [cls, tit] = TAG_PAR[pr.estado];
+        const v = pr.v;
+        const quando = v ? fmtDia(v.ultima) : pr.estado === 'manual' ? `${fmtDia(pr.marcado_em)}${pr.marcado_por ? ' · ' + esc(pr.marcado_por) : ''}` : '—';
+        const acao = pr.estado === 'sistema' ? '<span class="sub">pelo sistema</span>'
+          : pr.contado_manual
+            ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();marcarPlano('${pr.id}',false)">Desmarcar</button>`
+            : `<button class="btn btn-sm" onclick="event.stopPropagation();marcarPlano('${pr.id}',true)">Marcar contado</button>`;
+        return `<tr>
+          <td class="mono strong">${esc(pr.armazem)}</td>
+          <td><span class="tag ${cls}">${esc(tit)}</span></td>
+          <td class="num">${pr.saldo === null || pr.saldo === undefined ? '—' : num(pr.saldo)}</td>
+          <td class="num">${v ? num(v.sistema) : '—'}</td>
+          <td class="num">${v ? num(v.fisico) : '—'}</td>
+          <td class="num">${v ? num(v.lotes) : '—'}</td>
+          <td class="mono">${quando}</td>
+          <td class="acao">${acao}</td></tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+function exportarPlanoCSV() {
+  const faltam = (_plano.grupos || []).flatMap(g => g.pares.filter(p => !p.contado).map(p => [g.codigo, g.desc, p.armazem,
+    p.saldo === null || p.saldo === undefined ? '' : String(p.saldo).replace('.', ','), TAG_PAR[p.estado][1]]));
+  if (!faltam.length) { toast('Nada faltando no filtro atual.', 'ok'); return; }
+  const csv = [['Código','Produto','Armazém','Saldo da lista','Situação'], ...faltam]
+    .map(l => l.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+  const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = `falta-contar-${$('k-mes').value || mesAtual()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast(`${num(faltam.length)} par(es) exportados.`, 'ok');
+}
+
 
 /* ═══════════════════════════════════════════════════════════════
    START
