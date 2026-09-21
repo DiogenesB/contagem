@@ -231,6 +231,10 @@ html[data-tema="claro"]  .ico-lua { display:none; }
 .screen-title { font-size:1.05rem; font-weight:800; letter-spacing:-.01em; }
 .screen-sub   { font-size:.7rem; color:var(--text3); margin-top:1px; }
 
+.recont-item { border:1px solid var(--amber-bd); background:var(--amber-bg); border-radius:12px; padding:11px 12px; margin-top:9px; }
+.recont-item .li-nome { font-size:.95rem; }
+.recont-banner { border:1px solid var(--amber-bd); background:var(--amber-bg); border-radius:14px; padding:12px 14px; margin-bottom:12px; }
+.recont-banner b { color:var(--amber-lt); }
 .card {
   background:var(--bg2); border:1px solid var(--border);
   border-radius:var(--r); padding:15px; margin-bottom:12px;
@@ -687,6 +691,7 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
   <!-- ══════════ HOME ══════════ -->
   <section id="screen-home" class="screen">
     <div id="home-ciclo"></div>
+    <div id="home-recont"></div>
 
     <div class="card">
       <div class="card-title">// sessão ativa</div>
@@ -709,6 +714,8 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
     <div class="screen-head">
       <div><div class="screen-title">Nova contagem</div><div class="screen-sub">Lance um palete por vez</div></div>
     </div>
+
+    <div id="av-recont" hidden></div>
 
     <div class="card">
       <div class="field">
@@ -1059,7 +1066,7 @@ const OPERADORES_RAPIDOS = ['Gabriel Farias', 'Roberto Neto'];
    "Guardar produto"). Use enquanto o pavilhão está sendo
    organizado/mapeado. Troque para true quando quiser voltar a
    alimentar o mapa pela contagem — nada mais precisa mudar. */
-const POSICAO_NA_CONTAGEM = false;
+const POSICAO_NA_CONTAGEM = true;
 
 let sb = null;
 let OPERADOR = '';
@@ -1290,7 +1297,8 @@ function switchScreen(nome) {
   $('screen-' + nome).classList.add('active');
   $('bn-' + nome)?.classList.add('active');
 
-  if (nome === 'home')           carregarHome();
+  if (nome === 'home')           { carregarHome(); carregarRecontagens(); }
+  if (nome === 'avulsa')         aplicarModoRecont();
   if (nome === 'transferencias') carregarTransferencias();
   if (nome === 'historico')      carregarHistoricoOp();
   if (nome === 'posicoes')       carregarPosicoes();
@@ -1339,6 +1347,7 @@ async function carregarCicloAtual() {
     _ciclo = data || null;
     _cicloAtual = data?.id ?? null;
     renderCardCiclo();
+    carregarRecontagens();
   } catch (e) { console.warn('[ciclo]', e); _ciclo = null; _cicloAtual = null; }
 }
 
@@ -1560,6 +1569,10 @@ async function lancar() {
   }
 
   const plano = posicao ? planejarOcupacao(posicao, codigo, lote) : null;
+  // Na recontagem, palete da 1ª contagem na mesma vaga NÃO é corrigido:
+  // a recontagem entra como lançamento novo e a antiga é substituída
+  // inteira quando o conferente conclui.
+  if (_recont && plano?.acao === 'atualizar') { plano.acao = 'inserir'; plano.atualizar = null; plano.confirmarExistente = false; }
 
   // O lote existe no saldo? Só a EXISTÊNCIA é checada — nada de
   // quantidade, senão a contagem deixa de ser cega.
@@ -1598,7 +1611,8 @@ async function lancar() {
         usuario:      OPERADOR,
         filial:       _filialPorCodigo[chave(codigo)] || null,
         status:       'pendente',
-        recontagem:   false,
+        recontagem:   !!_recont,
+        ...(_recont ? { recontagem_id:_recont.id } : {}),
         posicao:      posicao || null,
         ocupacao_ativa: !!posicao,
         ciclo_id:     _cicloAtual,
@@ -1733,6 +1747,157 @@ function limparAvulso(tudo = false) {
     $('av-prev-produto').innerHTML = '';
   }
   $('av-prev-posicao').innerHTML = '';
+  if (_recont) aplicarModoRecont();   // na recontagem, produto/lote/armazém ficam fixos
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RECONTAGEM
+   O gestor pede pelo painel. Aparece aqui com produto, lote,
+   armazém e vagas — nunca a quantidade (a contagem continua cega).
+   O conferente lança os paletes normalmente e toca em "Concluir":
+   a contagem anterior daquele lote é substituída pela nova.
+   ═══════════════════════════════════════════════════════════════ */
+let _recontagens = [];
+let _recont = (() => { try { return JSON.parse(localStorage.getItem('recont-ativa') || 'null'); } catch { return null; } })();
+
+async function carregarRecontagens() {
+  if (!_cicloAtual) { _recontagens = []; renderRecontagens(); return; }
+  try {
+    const { data, error } = await sb.from('recontagens')
+      .select('id, ciclo_id, codigo, produto_nome, lote, armazem, filial, posicoes, solicitado_em, status')
+      .eq('ciclo_id', _cicloAtual).eq('status', 'aberta').order('solicitado_em');
+    if (error) throw error;
+    _recontagens = data || [];
+    // A recontagem em andamento foi cancelada ou concluída em outro aparelho.
+    if (_recont && !_recontagens.some(r => String(r.id) === String(_recont.id))) sairRecontagem(true);
+  } catch (e) { console.warn('[recontagens]', e); }
+  renderRecontagens();
+}
+
+function renderRecontagens() {
+  const box = $('home-recont');
+  if (!box) return;
+  if (!_recontagens.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="card">
+    <div class="card-title" style="color:var(--amber-lt)">// recontagens pedidas (${_recontagens.length})</div>
+    ${_recontagens.map(r => `
+      <div class="recont-item">
+        <div class="li-nome">${esc(r.produto_nome || r.codigo)}</div>
+        <div class="li-meta">${esc(r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')}</div>
+        ${r.posicoes ? `<div class="li-meta">vagas da 1ª contagem: ${esc(r.posicoes)}</div>` : ''}
+        <button class="btn ${_recont && String(_recont.id) === String(r.id) ? 'btn-primary' : 'btn-amber'}" style="margin-top:9px"
+                onclick="iniciarRecontagem('${esc(r.id)}')">${_recont && String(_recont.id) === String(r.id) ? 'Continuar recontagem' : 'Recontar'}</button>
+      </div>`).join('')}
+  </div>`;
+}
+
+function iniciarRecontagem(id) {
+  const r = _recontagens.find(x => String(x.id) === String(id));
+  if (!r) return;
+  if (_recont && String(_recont.id) !== String(id) &&
+      !confirm('Você tem outra recontagem em andamento. Trocar para esta?')) return;
+  _recont = r;
+  try { localStorage.setItem('recont-ativa', JSON.stringify(r)); } catch {}
+  switchScreen('avulsa');
+  limparAvulso(true);
+  aplicarModoRecont();
+  renderRecontagens();
+  $('av-posicao').focus();
+}
+
+function aplicarModoRecont() {
+  const bn = $('av-recont');
+  const campos = ['av-codigo', 'av-produto', 'av-lote', 'av-armazem'];
+  if (!_recont) {
+    bn.hidden = true; bn.innerHTML = '';
+    campos.forEach(id => { $(id).readOnly = false; });
+    return;
+  }
+  $('av-codigo').value  = _recont.codigo || '';
+  $('av-produto').value = _recont.produto_nome || '';
+  $('av-lote').value    = _recont.lote || '';
+  $('av-armazem').value = _recont.armazem || '';
+  campos.forEach(id => { $(id).readOnly = true; });
+  previewProduto(_recont.codigo);
+  bn.hidden = false;
+  bn.innerHTML = `<div class="recont-banner">
+    <div class="eyebrow" style="color:var(--amber-lt)">Recontagem</div>
+    <div class="li-nome" style="margin-top:3px">${esc(_recont.produto_nome || _recont.codigo)}</div>
+    <div class="li-meta">lote <b>${esc(_recont.lote || '—')}</b> · armazém <b>${esc(_recont.armazem || '—')}</b></div>
+    <div class="li-meta" style="margin-top:6px">Conte <b>todos os paletes</b> deste lote neste armazém, um por vez, e toque em Concluir.</div>
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn btn-primary" id="rc-btn" onclick="concluirRecontagem()"><span class="spin" id="rc-spin"></span>Concluir recontagem</button>
+      <button class="btn btn-ghost" onclick="sairRecontagem()">Sair</button>
+    </div>
+  </div>`;
+}
+
+function sairRecontagem(silencioso = false) {
+  _recont = null;
+  try { localStorage.removeItem('recont-ativa'); } catch {}
+  aplicarModoRecont();
+  limparAvulso(true);
+  renderRecontagens();
+  if (!silencioso) toast('Recontagem pausada. Ela continua na lista da tela inicial.', 'ok');
+}
+
+async function concluirRecontagem() {
+  if (!_recont) return;
+  if (!navigator.onLine) { toast('Precisa de rede para concluir a recontagem.', 'warn', 5000); return; }
+  busy('rc-btn', 'rc-spin', true);
+  try {
+    await sincronizarFila();
+    if (await filaQuantos()) { toast('Ainda há lançamento guardado no aparelho. Espere subir e tente de novo.', 'warn', 6000); return; }
+
+    const t = _recont;
+    const { data:novos, error:e1 } = await sb.from('lancamentos').select('id, quantidade')
+      .eq('recontagem_id', t.id).eq('status', 'pendente');
+    if (e1) throw e1;
+    let total = (novos || []).reduce((s, l) => s + (Number(l.quantidade) || 0), 0);
+
+    if (!novos?.length) {
+      if (!confirm(`Nenhum palete lançado nesta recontagem.\n\nConcluir dizendo que NÃO encontrou nada do lote ${t.lote} no armazém ${t.armazem}?`)) return;
+      // Um lançamento zerado: assim o painel vê "contado 0", e não "não contado".
+      const { error:e0 } = await sb.from('lancamentos').insert({
+        codigo:normalizarCodigo(t.codigo), produto_nome:t.produto_nome || t.codigo, lote:t.lote, armazem:t.armazem,
+        quantidade:0, usuario:OPERADOR, filial:t.filial || null, status:'pendente',
+        recontagem:true, recontagem_id:t.id, posicao:null, ocupacao_ativa:false,
+        ciclo_id:_cicloAtual, created_at:new Date().toISOString(),
+      });
+      if (e0) throw e0;
+      total = 0;
+    } else if (!confirm(`Concluir a recontagem?\n\n${novos.length} palete(s) lançado(s). A contagem anterior deste lote será substituída por esta.`)) return;
+
+    // A 1ª contagem do lote sai da conferência (fica registrada como substituída).
+    const { data:ant, error:e2 } = await sb.from('lancamentos').select('id, lote, armazem, recontagem_id')
+      .eq('codigo', normalizarCodigo(t.codigo)).eq('status', 'pendente');
+    if (e2) throw e2;
+    const velhos = (ant || []).filter(a => chave(a.lote) === chave(t.lote) && chave(a.armazem) === chave(t.armazem) &&
+      String(a.recontagem_id ?? '') !== String(t.id)).map(a => a.id);
+    if (velhos.length) {
+      const { error:e3 } = await sb.from('lancamentos')
+        .update({ status:'substituido', ocupacao_ativa:false, updated_at:new Date().toISOString() }).in('id', velhos);
+      if (e3) throw e3;
+    }
+
+    const { error:e4 } = await sb.from('recontagens').update({
+      status:'feita', resultado:total, feito_por:OPERADOR, feito_em:new Date().toISOString(),
+    }).eq('id', t.id);
+    if (e4) throw e4;
+
+    vibrar('ok');
+    toast(`Recontagem concluída · ${t.produto_nome || t.codigo} · lote ${t.lote}.`, 'ok', 5000);
+    _sessaoLocal = []; renderSessaoLocal();
+    sairRecontagem(true);
+    await carregarRecontagens();
+    carregarPosicoes();
+    switchScreen('home');
+  } catch (e) {
+    vibrar('err');
+    erro('Não foi possível concluir a recontagem', e);
+  } finally {
+    busy('rc-btn', 'rc-spin', false);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
