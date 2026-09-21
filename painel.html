@@ -529,6 +529,11 @@ table.k-rg th { white-space:normal; line-height:1.25; }
 table.k-rg th, table.k-rg td { padding-left:9px; padding-right:9px; }
 table.k-rg td.num { white-space:nowrap; }
 table.k-rg tfoot td { font-weight:600; border-top:1px solid var(--line-2); background:var(--surface-2); padding-top:10px; padding-bottom:10px; }
+.causa { border:1px solid var(--line); border-radius:var(--r); padding:12px 14px; margin-bottom:10px; background:var(--surface); }
+.causa.forte { border-color:var(--warn); }
+.causa-top { display:flex; gap:8px; align-items:center; font-size:.9rem; }
+.causa-det { font-size:.8125rem; color:var(--text-2); margin-top:5px; line-height:1.45; }
+.dica-causa { font-size:.75rem; color:var(--warn); margin-top:4px; }
 .k-leg { font-size:.75rem; color:var(--text-3); margin-right:8px; align-self:center; }
 @media (max-width:760px) { .k-hero { grid-template-columns:1fr; } .k-legenda { display:none; } }
 
@@ -1096,9 +1101,13 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
         <button onclick="setFiltroValidacao('divergentes', this)">Divergentes</button>
         <button onclick="setFiltroValidacao('pendentes', this)">Não contados</button>
         <button onclick="setFiltroValidacao('fora', this)">Fora do saldo</button>
+        <button onclick="setFiltroValidacao('auto', this)">Automáticos</button>
         <button onclick="setFiltroValidacao('validados', this)">Validados</button>
       </div>
       <div class="btn-row">
+        <button class="btn btn-sm" id="v-btn-aprovar" onclick="aprovarAutomaticos()" disabled>
+          <span class="spin" id="v-spin-aprovar"></span>Aprovar automáticos
+        </button>
         <button class="btn btn-primary btn-sm" id="v-btn-todos" onclick="validarSemDivergencia()">
           <span class="spin" id="v-spin-todos"></span>Validar sem divergência
         </button>
@@ -1781,6 +1790,20 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
   </div>
 </div>
 
+<div class="modal-bg" id="modal-causas">
+  <div class="modal wide">
+    <div class="modal-head">
+      <div class="modal-title" id="mc-tit">—</div>
+      <div class="modal-sub" id="mc-sub">—</div>
+    </div>
+    <div class="modal-body" id="mc-body"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-causas')">Fechar</button>
+      <button class="btn btn-warn" id="mc-recontar">Pedir recontagem</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="modal-revisao">
   <div class="modal wide">
     <div class="modal-head">
@@ -2390,11 +2413,18 @@ async function importarSaldo() {
 async function carregarValidacao() {
   $('v-tbody').innerHTML = carregando(9);
   try {
-    let [saldo, pend, naoConf] = await Promise.all([
+    let [saldo, pend, naoConf, auto, recont, ocup] = await Promise.all([
       buscarTudo(() => sb.from('saldo_sistema').select('*')),
       buscarTudo(() => sb.from('lancamentos').select('*').eq('status', 'pendente')),
       buscarTudo(() => sb.from('historico').select('*').eq('confirmado', false)),
+      buscarOpcional(() => sb.from('validacoes_auto').select('*')),
+      buscarOpcional(() => sb.from('recontagens').select('*')),
+      buscarOpcional(() => sb.from('historico').select('id, posicao, codigo, lote, armazem, quantidade, ciclo_id')
+        .eq('ocupacao_ativa', true).not('posicao', 'is', null)),
     ]);
+    _vAuto.semTabela = !auto.ok;   _vAuto.registros = auto.data;
+    _vRecont.semTabela = !recont.ok; _vRecont.registros = recont.data;
+    _vOcupacao = ocup.data;
 
     // Pendente de ciclo anterior não é contagem deste ciclo. Antes
     // entrava tudo junto e o saldo novo era conferido com contagem
@@ -2443,6 +2473,7 @@ async function carregarValidacao() {
         div:null, validado:false, extra:true,
       });
     }
+    anexarAutoERecontagem();
 
     preencherSelect('v-armazem', _vLinhas.map(l => l.armazem));
     preencherSelect('v-operador', pend.map(l => l.usuario));
@@ -2453,6 +2484,8 @@ async function carregarValidacao() {
     renderAlertasValidacao();
     renderValidacao();
     renderCicloValidacao();
+    // Bateu exato → valida sozinho e recarrega para mostrar.
+    if (await processarAutomaticos()) return carregarValidacao();
   } catch (e) {
     setConn(false, 'sem conexão');
     $('v-tbody').innerHTML = vazio('Não foi possível carregar', esc(e.message), 9);
@@ -2482,7 +2515,11 @@ const ROTULO_ESTADO = {
 };
 
 function tagEstado(l) {
+  if (l.validado && l.auto) return l.auto.aprovado_em
+    ? '<span class="tag t-ok">Automático · aprovado</span>'
+    : '<span class="tag t-ok">Validado automático</span>';
   if (l.validado) return '<span class="tag t-mute">Validado</span>';
+  if (l.recontAberta) return '<span class="tag t-info">Recontagem pedida</span>';
   const e = estadoDaLinha(l);
   if (e === 'falta' && l.contado === null)
     return '<span class="tag t-neg">Não encontrado</span>';
@@ -2594,6 +2631,8 @@ function renderAlertasValidacao() {
 
   if (_atrasados.length) partes.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>${_atrasados.length} lançamento(s) de contagem anterior</b>Ficaram pendentes em ciclos passados e estão fora deste cruzamento. Aparecem na aba Registros com o ciclo de origem.</div></div>`);
 
+  if (_vAuto.semTabela || _vRecont.semTabela) partes.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Validação automática e recontagem desligadas</b>Rode o <code>migracao-validacao-auto.sql</code> no Supabase para ligar.</div></div>`);
+
   if (_naoConf.length) partes.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>${_naoConf.length} vaga(s) não confirmada(s)</b>A contagem passou pela vaga mas não confirmou estes itens. <button class="btn btn-sm btn-info" style="margin-left:8px" onclick="abrirRevisao()">Revisar agora</button></div></div>`);
 
   box.innerHTML = partes.join('');
@@ -2622,6 +2661,7 @@ function filtrarValidacao() {
       case 'divergentes': return l.div !== null && l.div !== 0 && !l.validado;
       case 'pendentes':   return l.contado === null && !l.validado && !l.extra;
       case 'fora':        return l.extra && !l.validado;
+      case 'auto':        return l.validado && !!l.auto;
       case 'validados':   return l.validado;
       default:            return true;
     }
@@ -2644,6 +2684,8 @@ function renderValidacao() {
   const prontos   = linhas.filter(l => l.div === 0 && !l.validado).length;
 
   const foraSaldo = linhas.filter(l => l.extra && !l.validado).length;
+  const autos     = linhas.filter(l => l.validado && l.auto).length;
+  const autosPend = linhas.filter(l => l.validado && l.auto && !l.auto.aprovado_em).length;
   const doSaldo   = linhas.filter(l => !l.extra).length;
   const contDoSaldo = linhas.filter(l => !l.extra && l.contado !== null).length;
 
@@ -2656,7 +2698,11 @@ function renderValidacao() {
           _contagemEncerrada() ? 'falta física' : 'ainda pendentes',
           _contagemEncerrada() ? 'is-neg' : '')}
     ${kpi('Fora do saldo', num(foraSaldo), foraSaldo ? 'precisam de decisão' : 'nenhuma', foraSaldo ? 'is-alt' : '')}
-    ${kpi('Validadas', num(validados), 'já no histórico')}`;
+    ${kpi('Validadas', num(validados), `${num(autos)} automática(s)${autosPend ? ` · ${num(autosPend)} para aprovar` : ''}`)}`;
+
+  $('v-btn-aprovar').disabled = !autosPend || !_contagemEncerrada();
+  $('v-btn-aprovar').title = !_contagemEncerrada() ? 'Libera depois de encerrar a contagem' : '';
+  $('v-btn-aprovar').lastChild.textContent = autosPend ? `Aprovar ${autosPend} automático(s)` : 'Aprovar automáticos';
 
   $('v-btn-todos').disabled = prontos === 0;
   $('v-btn-todos').textContent = prontos ? `Validar ${prontos} sem divergência` : 'Validar sem divergência';
@@ -2690,6 +2736,11 @@ function renderValidacao() {
       : `<span class="${l.div > 0 ? 'num-pos' : 'num-neg'} strong">${l.div > 0 ? '+' : ''}${num(l.div)}</span>`;
 
     let acoes = '';
+    const temDiv = !l.validado && (l.extra || (l.div !== null && l.div !== 0) || (l.contado === null && _contagemEncerrada()));
+    const dica = temDiv ? sugerirCausas(l)[0] : null;
+    if (l.validado && l.auto && !l.auto.aprovado_em) {
+      acoes = `<button class="btn btn-sm btn-ghost" onclick="desfazerAutoLinha(${i})">Desfazer</button>`;
+    }
     if (!l.validado) {
       if (l.extra) {
         acoes = `
@@ -2702,7 +2753,12 @@ function renderValidacao() {
         acoes = `<button class="btn btn-sm ${l.div === 0 ? 'btn-primary' : 'btn-warn'}" onclick="validarLinha(${i})">
                    ${l.div === 0 ? 'Validar' : 'Validar assim'}</button>`;
       }
+      if (temDiv) acoes = `<button class="btn btn-sm btn-info" onclick="abrirCausas(${i})">Causas</button>` + acoes;
+      if (l.recontAberta) acoes += `<button class="btn btn-sm btn-ghost" onclick="cancelarRecontagem(${i})">Cancelar recontagem</button>`;
+      else if (temDiv && !l.extra) acoes += `<button class="btn btn-sm btn-ghost" onclick="solicitarRecontagem(${i})">Recontar</button>`;
     }
+    const recTxt = l.recont?.status === 'feita'
+      ? `<div class="dica-causa" style="color:var(--text-3)">↻ 1ª ${l.recont.contagem_anterior === null ? '—' : num(l.recont.contagem_anterior)} → recontagem ${num(l.recont.resultado)}</div>` : '';
 
     return `<tr class="st-${est}${l.validado ? ' st-done' : ''}">
       <td class="nome">${esc(l.produto)}<div class="sub">${badgeFilial(l.filial)}</div></td>
@@ -2711,7 +2767,7 @@ function renderValidacao() {
       <td class="num">${l.sistema === null ? '<span class="num-zero">—</span>' : num(l.sistema)}</td>
       <td class="num strong">${l.contado === null ? '<span class="num-zero">—</span>' : num(l.contado)}</td>
       <td class="num">${divTxt}</td>
-      <td>${sit}</td>
+      <td>${sit}${dica ? `<div class="dica-causa">◆ ${esc(dica.titulo)}</div>` : ''}${recTxt}</td>
       <td class="mono">${esc(l.operadores.join(', ') || '—')}</td>
       <td class="acao">${acoes}</td>
     </tr>`;
@@ -2724,7 +2780,7 @@ function kpi(label, valor, foot, cls = '') {
 function pct(a, b) { return b ? num1(a / b * 100) + '%' : '—'; }
 
 /* ── A ÚNICA função de validação. "Validar tudo" é um laço nela. ── */
-async function aplicarValidacao(linha, just = null) {
+async function aplicarValidacao(linha, just = null, opts = {}) {
   if (linha.validado) return { pulado:true };
 
   const contado = linha.contado ?? 0;
@@ -2740,8 +2796,9 @@ async function aplicarValidacao(linha, just = null) {
 
   // 1) Um registro de contagem por LOTE (não por palete).
   //    É isso que conserta a matemática da acurácia.
-  await inserirResiliente('historico', {
+  const hIns = await inserirResiliente('historico', {
     ...carimbo(),
+    validacao_auto: !!opts.auto,
     codigo:        normalizarCodigo(linha.codigo),
     produto_nome:  linha.produto,
     lote:          linha.lote,
@@ -2760,12 +2817,13 @@ async function aplicarValidacao(linha, just = null) {
     motivo:         just?.motivo || null,
     justificativa:  just?.justificativa || null,
     conta_acuracia: just ? just.conta_acuracia : true,
-  });
+  }, { retornar:true });
+  let ocupIds = [];
 
   // 2) Cada palete com posição vira ocupação no mapa.
   const comPosicao = linha.itens.filter(it => it.posicao && it.ocupacao_ativa);
   if (comPosicao.length) {
-    const { error:e2 } = await sb.from('historico').insert(comPosicao.map(it => ({
+    const { data:dOc, error:e2 } = await sb.from('historico').insert(comPosicao.map(it => ({
       codigo:       it.codigo,
       produto_nome: it.produto_nome || linha.produto,
       lote:         it.lote,
@@ -2780,8 +2838,9 @@ async function aplicarValidacao(linha, just = null) {
       tipo:         'ocupacao',
       ciclo_id:     it.ciclo_id ?? _ciclo?.id ?? null,
       created_at:   it.created_at || agora,
-    })));
+    }))).select('id');
     if (e2) throw e2;
+    ocupIds = (dOc || []).map(r => r.id);
   }
 
   // 3) Lançamentos ficam no banco como registro, marcados.
@@ -2800,7 +2859,7 @@ async function aplicarValidacao(linha, just = null) {
   }
 
   linha.validado = true;
-  return { ok:true };
+  return { ok:true, histId:hIns?.[0]?.id ?? null, ocupIds, lancIds:linha.itens.map(i => i.id) };
 }
 
 /* Abre o modal. `ctx` diz o que fazer quando confirmar:
@@ -5167,6 +5226,329 @@ function exportarCSV(qual) {
   a.click();
   URL.revokeObjectURL(url);
   toast(`${num(linhas.length)} linha(s) exportadas.`, 'ok');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VALIDAÇÃO AUTOMÁTICA · RECONTAGEM · POSSÍVEIS CAUSAS
+
+   1. Linha que BATE EXATO com o saldo é validada sozinha
+      (tabela validacoes_auto guarda o que foi feito, para desfazer).
+      Continua visível no filtro "Automáticos" até o gestor aprovar,
+      o que só libera depois de encerrar a contagem.
+   2. Se chegar lançamento novo para um lote validado automático
+      (ainda não aprovado), a validação é desfeita e o lote volta a
+      ser conferido com a soma nova.
+   3. "Desfazer" feito pelo gestor tira a linha da automática de vez
+      neste ciclo: ela passa a ser validada à mão.
+   4. Divergência fica com o gestor, com sugestão de causa e o botão
+      de pedir recontagem (tabela recontagens → aparece no celular).
+   ═══════════════════════════════════════════════════════════════ */
+let _vAuto = { semTabela:false, registros:[], desfeitosManuais:new Set() };
+let _vRecont = { semTabela:false, registros:[] };
+let _vOcupacao = [];
+let _autoRodando = false;
+
+async function buscarOpcional(fn) {
+  try { return { ok:true, data:await buscarTudo(fn) }; }
+  catch (e) { return { ok:false, data:[], erro:e }; }
+}
+
+/* Chamado no fim de carregarValidacao, depois de montar _vLinhas. */
+function anexarAutoERecontagem() {
+  const cid = _ciclo?.id ?? null;
+  const doCiclo = r => cid === null || String(r.ciclo_id ?? '') === String(cid);
+
+  const autos = _vAuto.registros.filter(doCiclo);
+  const ativos = new Map(autos.filter(a => !a.desfeito_em).map(a => [String(a.saldo_id), a]));
+  _vAuto.desfeitosManuais = new Set(autos.filter(a => a.desfeito_em && String(a.desfeito_motivo || '').startsWith('manual'))
+    .map(a => String(a.chave)));
+
+  const rec = new Map();
+  for (const r of _vRecont.registros.filter(doCiclo).sort((a, b) => String(a.solicitado_em).localeCompare(String(b.solicitado_em)))) {
+    rec.set(chaveLote(r.codigo, r.lote, r.armazem), r);   // fica a mais recente
+  }
+
+  for (const l of _vLinhas) {
+    l.auto = l.id ? ativos.get(String(l.id)) || null : null;
+    l.recont = rec.get(l._k) || null;
+    l.recontAberta = l.recont?.status === 'aberta';
+    // Linha validada automática: mostra o que foi contado.
+    if (l.validado && l.auto && !l.itens.length) { l.contado = Number(l.auto.quantidade) || 0; l.div = 0; }
+  }
+}
+
+async function processarAutomaticos() {
+  if (_autoRodando || _vAuto.semTabela || !_ciclo) return false;
+  _autoRodando = true;
+  let mudou = 0, reabertos = 0;
+  try {
+    // 1) Lote validado automático que recebeu lançamento novo: reabre.
+    for (const l of _vLinhas.filter(l => l.validado && l.auto && !l.auto.aprovado_em && l.itens.length)) {
+      await desfazerAuto(l, 'nova contagem do mesmo lote');
+      reabertos++;
+    }
+    if (reabertos) return true;   // recarrega e reavalia com a soma nova
+
+    // 2) Bateu exato → valida sozinho.
+    const alvo = _vLinhas.filter(l => !l.validado && !l.extra && l.contado !== null && l.div === 0 &&
+      !l.recontAberta && !_vAuto.desfeitosManuais.has(l._k) &&
+      l.itens.every(i => String(i.ciclo_id ?? '') === String(_ciclo.id)));
+    for (const l of alvo) {
+      // Trava: só um painel valida a mesma linha, mesmo com dois abertos.
+      const { data:trava, error:eT } = await sb.from('saldo_sistema')
+        .update({ validado:true }).eq('id', l.id).eq('validado', false).select('id');
+      if (eT || !trava?.length) continue;
+      try {
+        const r = await aplicarValidacao(l, null, { auto:true });
+        await inserirResiliente('validacoes_auto', {
+          ciclo_id:_ciclo.id, saldo_id:l.id, chave:l._k,
+          codigo:normalizarCodigo(l.codigo), produto:l.produto, lote:l.lote, armazem:l.armazem, filial:l.filial,
+          quantidade:l.contado, historico_id:r.histId ?? null,
+          ocup_ids:r.ocupIds || [], lanc_ids:r.lancIds || [],
+        });
+        mudou++;
+      } catch (e) {
+        // Não conseguiu terminar: devolve a trava para não sumir da tela.
+        await sb.from('saldo_sistema').update({ validado:false }).eq('id', l.id);
+        console.warn('[auto]', e);
+      }
+    }
+    if (mudou) toast(`${num(mudou)} lote(s) conferem com o saldo e foram validados automaticamente.`, 'ok', 5000);
+    return mudou > 0;
+  } finally {
+    _autoRodando = false;
+  }
+}
+
+/* Desfaz tudo que a validação automática gravou. */
+async function desfazerAuto(l, motivo) {
+  const a = l.auto;
+  if (!a) return;
+  const ids = (a.lanc_ids || []).map(String);
+  if (a.historico_id) await sb.from('historico').delete().eq('id', a.historico_id);
+  if ((a.ocup_ids || []).length) await sb.from('historico').delete().in('id', a.ocup_ids);
+  if (ids.length) {
+    await atualizarResiliente('lancamentos', { status:'pendente', ocupacao_ativa:false, updated_at:new Date().toISOString() }, q => q.in('id', ids));
+    // Palete com vaga volta a ocupar o mapa pelo lançamento.
+    await atualizarResiliente('lancamentos', { ocupacao_ativa:true }, q => q.in('id', ids).not('posicao', 'is', null));
+  }
+  await sb.from('saldo_sistema').update({ validado:false }).eq('id', a.saldo_id);
+  await atualizarResiliente('validacoes_auto', {
+    desfeito_em:new Date().toISOString(), desfeito_por:GESTOR || 'painel', desfeito_motivo:motivo,
+  }, q => q.eq('id', a.id));
+}
+
+async function desfazerAutoLinha(idx) {
+  const l = window._vVisiveis?.[idx];
+  if (!l?.auto) return;
+  if (!confirm(`Desfazer a validação automática de ${l.produto} · lote ${l.lote}?\n\nA linha volta para você validar à mão (ou pedir recontagem).`)) return;
+  try {
+    await desfazerAuto(l, 'manual');
+    toast('Validação automática desfeita.', 'ok');
+    carregarValidacao();
+  } catch (e) { erro('Não consegui desfazer', e); }
+}
+
+async function aprovarAutomaticos() {
+  const pend = _vLinhas.filter(l => l.validado && l.auto && !l.auto.aprovado_em && daFilial(l.filial));
+  if (!pend.length) return;
+  if (!_contagemEncerrada()) { toast('Encerre a contagem antes de aprovar.', 'warn'); return; }
+  if (!confirm(`Aprovar ${pend.length} validação(ões) automática(s)?\n\nDepois de aprovadas não dá mais para desfazer.`)) return;
+  busy('v-btn-aprovar', 'v-spin-aprovar', true);
+  try {
+    const ids = pend.map(l => l.auto.id);
+    for (let i = 0; i < ids.length; i += 200) {
+      await atualizarResiliente('validacoes_auto', { aprovado_em:new Date().toISOString(), aprovado_por:GESTOR || 'painel' },
+        q => q.in('id', ids.slice(i, i + 200)));
+    }
+    toast(`${num(ids.length)} validação(ões) automática(s) aprovada(s).`, 'ok', 5000);
+    carregarValidacao();
+  } catch (e) { erro('Não consegui aprovar', e); }
+  finally { busy('v-btn-aprovar', 'v-spin-aprovar', false); }
+}
+
+/* ── RECONTAGEM ── */
+async function solicitarRecontagem(idx) {
+  const l = window._vVisiveis?.[idx];
+  if (!l) return;
+  if (_vRecont.semTabela) { toast('A tabela recontagens não existe — rode o migracao-validacao-auto.sql.', 'err', 7000); return; }
+  if (l.recontAberta) { toast('Já existe recontagem pedida para este lote.', 'warn'); return; }
+  const causa = sugerirCausas(l)[0];
+  try {
+    await inserirResiliente('recontagens', {
+      ciclo_id:_ciclo?.id ?? null, codigo:normalizarCodigo(l.codigo), produto_nome:l.produto,
+      lote:l.lote, armazem:l.armazem, filial:l.filial,
+      posicoes:[...new Set(l.itens.map(i => i.posicao).filter(Boolean))].sort().join(', ') || null,
+      contagem_anterior:l.contado, status:'aberta',
+      motivo:causa?.titulo || null, solicitado_por:GESTOR || 'painel', solicitado_em:new Date().toISOString(),
+    });
+    fecharModal('modal-causas');
+    toast(`Recontagem pedida: ${l.produto} · lote ${l.lote}. Aparece no celular dos conferentes.`, 'ok', 5000);
+    carregarValidacao();
+  } catch (e) { erro('Não consegui pedir a recontagem', e); }
+}
+
+async function cancelarRecontagem(idx) {
+  const l = window._vVisiveis?.[idx];
+  if (!l?.recontAberta) return;
+  if (!confirm('Cancelar a recontagem pedida para este lote?')) return;
+  const { error } = await sb.from('recontagens').update({ status:'cancelada' }).eq('id', l.recont.id);
+  if (error) { erro('Não consegui cancelar', error); return; }
+  carregarValidacao();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   POSSÍVEIS CAUSAS DA DIVERGÊNCIA
+   Regras simples com os dados do sistema. Cada uma diz o porquê.
+   forca: 'forte' (os números fecham) ou 'possivel' (indício).
+   ═══════════════════════════════════════════════════════════════ */
+function embalagemDe(nome) {
+  const m = String(nome || '').toUpperCase().match(/-\s*([\d.,]+)\s*(L|KG|DS)\b/);
+  return m ? Number(m[1].replace(',', '.')) || null : null;
+}
+function parecidos(a, b) {
+  a = chave(a); b = chave(b);
+  if (!a || !b || a === b) return false;
+  const so = s => s.replace(/[^0-9A-Z]/g, '');
+  if (so(a) === so(b)) return true;
+  if (a.includes(b) || b.includes(a)) return Math.abs(a.length - b.length) <= 2;
+  // distância de edição ≤ 2
+  const d = Array.from({ length:a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length] <= 2;
+}
+function divDe(l) {
+  if (l.extra) return l.contado || 0;
+  if (l.contado === null) return _contagemEncerrada() ? -l.sistema : null;
+  return l.div;
+}
+
+function sugerirCausas(l) {
+  const out = [];
+  const d = divDe(l);
+  if (!d) return out;
+  const S = l.sistema || 0, C = l.contado ?? 0, ad = Math.abs(d);
+  const cod = chave(l.codigo), lot = chave(l.lote), arm = chave(l.armazem);
+  const perto = (x, y) => Math.abs(x - y) <= Math.max(1, Math.abs(y) * 0.01);
+  const vivas = _vLinhas.filter(o => o !== l && !o.validado && chave(o.codigo) === cod);
+  const emb = embalagemDe(l.produto);
+  const pal = limitePalete(l.produto, l.codigo);
+
+  // Palete no mapa que ninguém contou neste ciclo.
+  if (d < 0 && _vOcupacao.length) {
+    const contadas = new Set(_pendentes.map(p => p.posicao).filter(Boolean));
+    const soltas = _vOcupacao.filter(r => chave(r.codigo) === cod && chave(r.lote) === lot &&
+      (!r.armazem || chave(r.armazem) === arm) && String(r.ciclo_id ?? '') !== String(_ciclo?.id ?? '') && !contadas.has(r.posicao));
+    if (soltas.length) {
+      const q = soltas.reduce((s, r) => s + (Number(r.quantidade) || 0), 0);
+      out.push({ forca:perto(q, ad) ? 'forte' : 'possivel', motivo:'erro_contagem',
+        titulo:'Palete no mapa que não foi contado',
+        detalhe:`O mapa tem ${qtdUn(q, l.codigo, l.produto)} deste lote em ${soltas.map(r => r.posicao).join(', ')} e nenhuma contagem deste ciclo passou por lá.` });
+    }
+  }
+
+  for (const o of vivas) {
+    const d2 = divDe(o);
+    if (!d2 || Math.sign(d2) === Math.sign(d)) continue;
+    const fecha = perto(Math.abs(d2), ad);
+    // Mesmo armazém, outro lote.
+    if (chave(o.armazem) === arm && chave(o.lote) !== lot && (fecha || (o.extra && parecidos(o.lote, l.lote)))) {
+      const digitado = o.extra && parecidos(o.lote, l.lote);
+      out.push({ forca:fecha ? 'forte' : 'possivel', motivo:'erro_contagem',
+        titulo:digitado ? 'Lote digitado errado' : 'Lote trocado',
+        detalhe:`${d < 0 ? 'Falta' : 'Sobra'} aqui e ${d2 < 0 ? 'falta' : 'sobra'} de ${qtdUn(Math.abs(d2), o.codigo, o.produto)} no lote ${o.lote}${o.extra ? ' (contado fora do saldo)' : ''}, mesmo armazém.`,
+        mover:(o.extra && d < 0) ? o._k : (l.extra && d2 < 0 ? l._k : null), destino:(o.extra && d < 0) ? l._k : (l.extra ? o._k : null) });
+    }
+    // Mesmo lote, outro armazém.
+    if (chave(o.lote) === lot && chave(o.armazem) !== arm && fecha) {
+      out.push({ forca:'forte', motivo:'transferencia', titulo:'Armazém trocado ou transferência não lançada',
+        detalhe:`O mesmo lote tem ${d2 < 0 ? 'falta' : 'sobra'} de ${qtdUn(Math.abs(d2), o.codigo, o.produto)} no armazém ${o.armazem}.`,
+        mover:(o.extra && d < 0) ? o._k : (l.extra && d2 < 0 ? l._k : null), destino:(o.extra && d < 0) ? l._k : (l.extra ? o._k : null) });
+    }
+  }
+
+  if (!l.extra && C > 0) {
+    if (emb && emb > 1 && perto(C * emb, S)) out.push({ forca:'forte', motivo:'erro_contagem', titulo:'Contou em caixas, não em ' + (unidadeDe(l.codigo, l.produto) || 'unidade'),
+      detalhe:`${num(C)} × ${num(emb)} = ${num(C * emb)}, que é o saldo do sistema.` });
+    const sC = String(Math.round(C)), sS = String(Math.round(S));
+    if (C === S * 10 || C * 10 === S || C === S * 100 || C * 100 === S)
+      out.push({ forca:'forte', motivo:'erro_contagem', titulo:'Erro de digitação (zero a mais ou a menos)', detalhe:`Contado ${num(C)}, sistema ${num(S)}.` });
+    else if (sC.length === sS.length && sC !== sS && [...sC].sort().join('') === [...sS].sort().join(''))
+      out.push({ forca:'forte', motivo:'erro_contagem', titulo:'Erro de digitação (dígitos trocados)', detalhe:`${sC} tem os mesmos dígitos de ${sS} em outra ordem.` });
+  }
+
+  if (pal && ad >= pal * 0.99) {
+    const n = Math.round(ad / pal);
+    if (n >= 1 && n <= 3 && perto(n * pal, ad)) out.push({ forca:'forte', motivo:'erro_contagem',
+      titulo:d < 0 ? `${n} palete(s) cheio(s) faltando` : `${n} palete(s) cheio(s) a mais`,
+      detalhe:d < 0 ? `A diferença é exatamente ${n} × ${num(pal)} (palete cheio). Palete esquecido ou em outra vaga.`
+                    : `A diferença é exatamente ${n} × ${num(pal)} (palete cheio). Palete contado duas vezes?` });
+  }
+  if (emb && ad % emb === 0 && ad / emb <= 10 && !out.some(x => x.titulo.includes('palete')))
+    out.push({ forca:'possivel', motivo:'erro_contagem', titulo:`${num(ad / emb)} caixa(s) ${d < 0 ? 'a menos' : 'a mais'}`,
+      detalhe:`A diferença (${num(ad)}) é múltiplo da caixa de ${num(emb)}. Palete incompleto ou caixa contada errado.` });
+
+  if (d < 0 && !_contagemEncerrada()) out.push({ forca:'possivel', motivo:null, titulo:'Contagem ainda aberta',
+    detalhe:'Pode ter palete deste lote que ainda não foi lançado. Espere encerrar antes de decidir.' });
+
+  if (!out.length) out.push({ forca:'possivel', motivo:d < 0 ? 'nao_encontrado' : 'sobra', titulo:'Sem causa provável identificada',
+    detalhe:'Nenhuma regra explicou a diferença. O melhor caminho é recontar.' });
+  return out.sort((a, b) => (a.forca === 'forte' ? 0 : 1) - (b.forca === 'forte' ? 0 : 1));
+}
+
+function abrirCausas(idx) {
+  const l = window._vVisiveis?.[idx];
+  if (!l) return;
+  const causas = sugerirCausas(l);
+  const d = divDe(l);
+  $('mc-tit').textContent = `${l.produto} · lote ${l.lote || '—'} · arm. ${l.armazem || '—'}`;
+  $('mc-sub').textContent = l.extra
+    ? `Contado ${qtdUn(l.contado, l.codigo, l.produto)} sem linha no saldo`
+    : `Sistema ${num(l.sistema)} · contado ${l.contado === null ? 'nada' : num(l.contado)} · diferença ${d > 0 ? '+' : ''}${num(d)}`;
+  const hist = l.recont ? `<div class="aviso a-info"><span class="aviso-ico">↻</span><div><b>Recontagem ${l.recont.status === 'aberta' ? 'pedida' : l.recont.status === 'feita' ? 'feita' : 'cancelada'}</b>
+      1ª contagem ${l.recont.contagem_anterior === null ? '—' : num(l.recont.contagem_anterior)}${l.recont.status === 'feita' ? ` → recontagem ${num(l.recont.resultado)} (${esc(l.recont.feito_por || '')})` : ''}</div></div>` : '';
+  $('mc-body').innerHTML = hist + causas.map((c, i) => `
+    <div class="causa ${c.forca}">
+      <div class="causa-top"><span class="tag ${c.forca === 'forte' ? 't-warn' : 't-mute'}">${c.forca === 'forte' ? 'provável' : 'possível'}</span>
+        <b>${esc(c.titulo)}</b></div>
+      <div class="causa-det">${esc(c.detalhe)}</div>
+      <div class="btn-row" style="margin-top:8px">
+        ${c.mover ? `<button class="btn btn-sm btn-info" onclick="aplicarMover('${esc(c.mover)}','${esc(c.destino)}')">Mover a contagem para o lote certo</button>` : ''}
+        ${c.motivo ? `<button class="btn btn-sm" onclick="aceitarComMotivo(${idx},'${c.motivo}')">Aceitar como "${esc(textoMotivo(c.motivo))}"</button>` : ''}
+      </div>
+    </div>`).join('');
+  $('mc-recontar').disabled = !!l.recontAberta || l.validado;
+  $('mc-recontar').textContent = l.recontAberta ? 'Recontagem já pedida' : 'Pedir recontagem';
+  $('mc-recontar').onclick = () => solicitarRecontagem(idx);
+  abrirModal('modal-causas');
+}
+
+function aceitarComMotivo(idx, motivo) {
+  fecharModal('modal-causas');
+  const l = window._vVisiveis?.[idx];
+  if (!l) return;
+  const d = divDe(l);
+  abrirJustificar({ tipo:'validar', idx }, l.extra ? 'Por que esse item apareceu?' : 'Por que essa divergência?',
+    `${l.produto} · lote ${l.lote} — sistema ${l.sistema === null ? '—' : num(l.sistema)}, contado ${l.contado === null ? 'nada' : num(l.contado)} (${d > 0 ? '+' : ''}${num(d)})`, motivo);
+}
+
+/* Move os lançamentos de uma linha (normalmente fora do saldo)
+   para outra: é o "lote digitado/trocado" resolvido com um clique. */
+async function aplicarMover(kOrigem, kDestino) {
+  const o = _vLinhas.find(x => x._k === kOrigem), dst = _vLinhas.find(x => x._k === kDestino);
+  if (!o || !dst || !o.itens.length) return;
+  if (!confirm(`Mover ${qtdUn(o.contado, o.codigo, o.produto)} do lote ${o.lote} (arm. ${o.armazem})\npara o lote ${dst.lote} (arm. ${dst.armazem})?`)) return;
+  try {
+    const { error } = await sb.from('lancamentos').update({
+      codigo:dst.codigo, lote:dst.lote, armazem:dst.armazem, updated_at:new Date().toISOString(),
+    }).in('id', o.itens.map(i => i.id));
+    if (error) throw error;
+    fecharModal('modal-causas');
+    toast('Contagem movida. A linha é conferida de novo.', 'ok');
+    carregarValidacao();
+  } catch (e) { erro('Não consegui mover', e); }
 }
 
 /* ═══════════════════════════════════════════════════════════════
