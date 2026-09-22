@@ -901,6 +901,8 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
 .rev-grupo { border-top:1px solid var(--line); }
 .rev-grupo:first-child { border-top:0; }
 .rev-cab { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; padding:12px 16px; background:var(--surface-2); font-size:.8125rem; font-weight:600; }
+.rev-tit { display:flex; flex-direction:column; gap:2px; }
+.enc-lbl { display:inline-flex; align-items:center; gap:6px; font-weight:500; cursor:pointer; white-space:nowrap; }
 .rev-n { color:var(--text-3); font-weight:500; }
 .rev-acoes { margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; }
 .enc-resumo { padding:16px 20px; display:grid; gap:7px; font-size:.8125rem; border-bottom:1px solid var(--line); }
@@ -1814,8 +1816,8 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
 <div class="modal-bg" id="modal-revisao">
   <div class="modal wide">
     <div class="modal-head">
-      <div class="modal-title">Saindo das linhas contadas</div>
-      <div class="modal-sub">O conferente contou estas linhas e não encontrou estes itens. Só aparece aqui o que sai — o que ele contou continua na linha.</div>
+      <div class="modal-title">Vagas antigas de produtos validados</div>
+      <div class="modal-sub">Estes produto/lote/armazém foram contados e validados em outra vaga. O que o conferente contou fica; aqui só aparece o que o mapa antigo ainda tinha em outro lugar.</div>
     </div>
     <div class="modal-body flush" id="mrev-body"></div>
     <div class="modal-foot">
@@ -2592,26 +2594,32 @@ function renderCicloValidacao() {
    novo para disparar a limpeza. Ao encerrar o ciclo, varre tudo
    que ficou de ciclos anteriores e que esta contagem não tocou,
    e manda para a mesma fila de revisão das vagas não confirmadas. */
-/* ═══ Escopo da contagem: por LINHA do drive-in ═══
-   Posição = DI-LINHA-ANDAR-LUGAR (ex.: A1-03-2-05) -> linha A1-03.
-   A contagem só mexe nas linhas onde o conferente lançou alguma
-   coisa. Dentro delas fica exatamente o que ele contou; o que estava
-   registrado ali e ele NÃO contou é o que sai da linha — e só isso
-   vai para revisão. Linha onde ninguém lançou nada não é tocada. */
-const linhaDaPos = p => { const s = chave(p).split('-'); return s.length >= 2 && s[1] ? `${s[0]}-${s[1]}` : ''; };
-
+/* ═══ Escopo da contagem: produto + lote + armazém VALIDADO ═══
+   A contagem é feita por produto/lote/armazém. Quando uma dessas
+   combinações é validada, o que o conferente lançou é a verdade
+   sobre ela: tudo que o mapa antigo ainda tinha dessa mesma
+   combinação em OUTRAS vagas não foi encontrado e é candidato a sair.
+   Combinação não validada, ou produto que ninguém contou, não é
+   tocada. Exemplo: Nemacontrol/lote/armazém contado e validado na
+   B1-29 -> o Nemacontrol do mesmo lote/armazém que o mapa antigo
+   tinha na B1-30 aparece na prévia para retirar.
+   Nada sai sozinho: tudo passa pela prévia do encerramento. */
 async function escopoDaContagem(cicloId) {
   const lanc = await buscarTudo(() => sb.from('lancamentos')
-    .select('posicao, status').eq('ciclo_id', cicloId).not('posicao', 'is', null));
-  const linhas = new Set();
+    .select('posicao, codigo, lote, armazem, status')
+    .eq('ciclo_id', cicloId).eq('status', 'validado'));
+  const chaves = new Set();
+  const ondeContou = {};
   for (const l of lanc) {
-    if (l.status === 'descartado') continue;
-    const ln = linhaDaPos(l.posicao);
-    if (ln) linhas.add(ln);
+    if (!l.codigo) continue;
+    const k = chaveLote(l.codigo, l.lote, l.armazem);
+    chaves.add(k);
+    if (l.posicao) (ondeContou[k] ||= new Set()).add(l.posicao);
   }
-  return { linhas };
+  return { chaves, ondeContou };
 }
-const contagemCobriu = (r, escopo) => escopo.linhas.has(linhaDaPos(r.posicao));
+const chaveItem = r => chaveLote(r.codigo, r.lote, r.armazem);
+const contagemCobriu = (r, escopo) => escopo.chaves.has(chaveItem(r));
 
 async function atualizarEmLotes(ids, patch) {
   for (let i = 0; i < ids.length; i += 200) {
@@ -2620,14 +2628,14 @@ async function atualizarEmLotes(ids, patch) {
   }
 }
 
-/* O que vai sair do mapa se encerrar agora: registrado de antes
-   desta contagem, numa linha que o conferente contou, e que ele
-   não contou. */
+/* Candidatos a sair: ocupação ativa de antes desta contagem, cuja
+   combinação produto+lote+armazém foi validada nela. As ocupações
+   que a própria contagem gerou são deste ciclo e ficam de fora. */
 async function candidatosASair() {
   const corte = _ciclo.contagem_iniciada_em || _ciclo.iniciado_em;
   const [data, escopo] = await Promise.all([
     buscarTudo(() => sb.from('historico')
-      .select('id, posicao, codigo, produto_nome, lote, quantidade, created_at, revisado_em')
+      .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, created_at, revisado_em')
       .eq('ocupacao_ativa', true).not('posicao', 'is', null)
       .or(`ciclo_id.is.null,ciclo_id.neq.${_ciclo.id}`)),
     escopoDaContagem(_ciclo.id),
@@ -2637,44 +2645,55 @@ async function candidatosASair() {
   return { sair, escopo };
 }
 
-/* Tabela agrupada por linha: "Saindo da linha A1-03". */
-function tabelaPorLinha(itens, comAcoes = false) {
+/* Agrupa por produto+lote+armazém e mostra onde foi contado e de
+   onde sai. modo 'previa' = checkbox (encerramento);
+   modo 'revisao' = botões (fila de revisão). */
+let _gruposRev = [];
+function tabelaPorItem(itens, modo, escopo) {
   const grupos = {};
-  for (const r of itens) (grupos[linhaDaPos(r.posicao) || 'sem linha'] ||= []).push(r);
-  return Object.keys(grupos).sort().map(ln => {
-    const g = grupos[ln];
+  for (const r of itens) (grupos[chaveItem(r)] ||= []).push(r);
+  const chaves = Object.keys(grupos).sort((a, b) =>
+    String(grupos[a][0].produto_nome || a).localeCompare(String(grupos[b][0].produto_nome || b)));
+  if (modo === 'revisao') _gruposRev = chaves;
+
+  return chaves.map((k, gi) => {
+    const g = grupos[k], r0 = g[0];
     const un = g.reduce((s, r) => s + (Number(r.quantidade) || 0), 0);
+    const contou = [...(escopo?.ondeContou?.[k] || [])].sort();
     return `<div class="rev-grupo">
       <div class="rev-cab">
-        <span>Saindo da linha <span class="tag t-info t-mono">${esc(ln)}</span></span>
-        <span class="rev-n">${num(g.length)} item(ns) · ${num(un)} un.</span>
-        ${comAcoes ? `<span class="rev-acoes">
-          <button class="btn btn-sm btn-ghost" onclick="resolverLinha('${esc(ln)}', true)">Todos ainda estão lá</button>
-          <button class="btn btn-sm btn-danger" onclick="resolverLinha('${esc(ln)}', false)">Confirmar saída da linha</button>
+        <div class="rev-tit">
+          <span>${esc(r0.produto_nome || r0.codigo)}</span>
+          <span class="rev-n mono">${esc(r0.codigo)} · lote ${esc(r0.lote || '—')} · arm. ${esc(r0.armazem || '—')}</span>
+          <span class="rev-n">${contou.length ? `contado em <span class="mono">${contou.map(esc).join(', ')}</span> · ` : ''}${num(g.length)} vaga(s) antiga(s) · ${num(un)} un.</span>
+        </div>
+        ${modo === 'revisao' ? `<span class="rev-acoes">
+          <button class="btn btn-sm btn-ghost" onclick="resolverGrupo(${gi}, true)">Todos ainda estão lá</button>
+          <button class="btn btn-sm btn-danger" onclick="resolverGrupo(${gi}, false)">Retirar todos</button>
         </span>` : ''}
+        ${modo === 'previa' ? `<label class="rev-acoes enc-lbl"><input type="checkbox" checked onchange="marcarGrupoEnc(this, ${gi})"> retirar todos</label>` : ''}
       </div>
       <div class="tbl-wrap"><table>
-        <thead><tr><th>Vaga</th><th>Produto</th><th>Lote</th><th class="num">Qtd</th><th>Desde</th>${comAcoes ? '<th></th>' : ''}</tr></thead>
+        <thead><tr><th>Sai da vaga</th><th class="num">Qtd</th><th>Desde</th><th></th></tr></thead>
         <tbody>${g.map(r => `
           <tr>
             <td class="mono strong">${esc(r.posicao || '—')}</td>
-            <td class="nome">${esc(r.produto_nome || r.codigo)}</td>
-            <td class="mono">${esc(r.lote || '—')}</td>
             <td class="num">${num(r.quantidade)}</td>
             <td class="mono">${fmtDia(r.created_at)}</td>
-            ${comAcoes ? `<td class="acao">
-              <button class="btn btn-sm btn-primary" onclick="resolverRevisao(${r._idx}, true)">Ainda está lá</button>
-              <button class="btn btn-sm btn-danger" onclick="resolverRevisao(${r._idx}, false)">Saiu</button>
-            </td>` : ''}
+            <td class="acao">${modo === 'revisao'
+              ? `<button class="btn btn-sm btn-primary" onclick="resolverRevisao(${r._idx}, true)">Ainda está lá</button>
+                 <button class="btn btn-sm btn-danger" onclick="resolverRevisao(${r._idx}, false)">Saiu</button>`
+              : `<label class="enc-lbl"><input type="checkbox" class="enc-chk" data-g="${gi}" data-id="${esc(r.id)}" checked> retirar</label>`}
+            </td>
           </tr>`).join('')}</tbody>
       </table></div>
     </div>`;
   }).join('');
 }
 
-/* A lista de revisão é dividida: o que está em linha contada (sai de
-   verdade) e o que a regra antiga tirou do mapa em linha que ninguém
-   contou (erro — pode voltar ao mapa). */
+/* Fila de revisão (o que já estava marcado antes desta regra):
+   dividida entre o que tem produto+lote+armazém validado na última
+   contagem encerrada (decide aqui) e o resto (volta ao mapa). */
 let _naoConfFora = [];
 let _escopoRevisao = null;
 
@@ -2701,7 +2720,7 @@ async function separarNaoConf(lista) {
 async function devolverForaDoEscopo() {
   if (!_naoConfFora.length) return;
   const n = _naoConfFora.length;
-  if (!confirm(`${num(n)} item(ns) foram tirados do mapa, mas estão em linhas onde o conferente não lançou nada na contagem #${_escopoRevisao?.ciclo ?? ''}.\n\nDevolver ao mapa como estavam?`)) return;
+  if (!confirm(`${num(n)} item(ns) foram tirados do mapa, mas o produto/lote/armazém deles não foi validado na contagem #${_escopoRevisao?.ciclo ?? ''}.\n\nDevolver ao mapa como estavam?`)) return;
   try {
     await atualizarEmLotes(_naoConfFora.map(r => r.id), { confirmado:true, ocupacao_ativa:true });
     _naoConfFora = [];
@@ -2714,10 +2733,10 @@ async function devolverForaDoEscopo() {
 
 function avisosRevisao(curto = false) {
   const out = [];
-  if (_naoConfFora.length) out.push(`<div class="aviso a-warn"><span class="aviso-ico">↺</span><div><b>${num(_naoConfFora.length)} item(ns) tirados do mapa em linhas que não foram contadas</b>A contagem não passou por essas linhas, então eles não deviam ter saído. <button class="btn btn-sm btn-primary" style="margin-left:8px" onclick="devolverForaDoEscopo()">Devolver ao mapa</button></div></div>`);
+  if (_naoConfFora.length) out.push(`<div class="aviso a-warn"><span class="aviso-ico">↺</span><div><b>${num(_naoConfFora.length)} item(ns) tirados do mapa sem terem sido contados</b>O produto/lote/armazém deles não foi validado na contagem, então não deviam ter saído. <button class="btn btn-sm btn-primary" style="margin-left:8px" onclick="devolverForaDoEscopo()">Devolver ao mapa</button></div></div>`);
   if (_naoConf.length) {
-    const nl = new Set(_naoConf.map(r => linhaDaPos(r.posicao))).size;
-    out.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>${num(_naoConf.length)} item(ns) saindo de ${num(nl)} linha(s) contada(s)</b>${curto ? 'Saíram do mapa esperando sua decisão.' : 'O conferente contou essas linhas e não encontrou estes itens.'} <button class="btn btn-sm btn-info" style="margin-left:8px" onclick="abrirRevisao()">Revisar</button></div></div>`);
+    const np = new Set(_naoConf.map(chaveItem)).size;
+    out.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>${num(_naoConf.length)} vaga(s) antiga(s) de ${num(np)} produto/lote validado(s)</b>${curto ? 'Saíram do mapa esperando sua decisão.' : 'O produto foi contado em outra vaga e não foi achado nestas.'} <button class="btn btn-sm btn-info" style="margin-left:8px" onclick="abrirRevisao()">Revisar</button></div></div>`);
   }
   return out.join('');
 }
@@ -2731,41 +2750,59 @@ async function encerrarContagem() {
   catch (e) { erro('Falha ao preparar o encerramento', e); return; }
 
   _encerrar = { naoContadas, sair: prev.sair };
-  const linhas = [...prev.escopo.linhas].sort();
   $('menc-title').textContent = `Encerrar a contagem #${_ciclo.id}`;
   $('menc-body').innerHTML = `
     <div class="enc-resumo">
-      <div><b>${num(linhas.length)}</b> linha(s) contada(s)${linhas.length ? `: <span class="mono">${linhas.map(esc).join(', ')}</span>` : ''}</div>
+      <div><b>${num(prev.escopo.chaves.size)}</b> produto/lote/armazém validado(s) nesta contagem.</div>
       <div><b>${num(naoContadas)}</b> linha(s) do saldo não foram lançadas e passam a contar como <b>não encontradas</b>.</div>
       <div>${prev.sair.length
-        ? `<b>${num(prev.sair.length)}</b> item(ns) estavam registrados nas linhas contadas e o conferente não contou. <b>Saem do mapa</b> e vão para revisão:`
-        : 'Nada sai do mapa: tudo que estava registrado nas linhas contadas foi contado.'}</div>
-      <div class="enc-obs">Linhas onde ninguém lançou nada continuam no mapa como estão. Você pode reabrir depois se precisar.</div>
+        ? `<b>${num(prev.sair.length)}</b> vaga(s) do mapa antigo têm um produto/lote/armazém que foi validado em outra vaga. Marcado = <b>retirar do mapa</b>; desmarque o que ainda está lá.`
+        : 'Nada para retirar: o mapa antigo não tem nenhum produto validado fora das vagas contadas.'}</div>
+      ${prev.sair.length ? `<div><label class="enc-lbl"><input type="checkbox" checked onchange="document.querySelectorAll('#menc-body input[type=checkbox]').forEach(c => c.checked = this.checked)"> marcar / desmarcar tudo</label></div>` : ''}
+      <div class="enc-obs">Produto que não foi validado nesta contagem não é tocado. Você pode reabrir a contagem depois se precisar.</div>
     </div>
-    ${tabelaPorLinha(prev.sair)}`;
+    ${tabelaPorItem(prev.sair, 'previa', prev.escopo)}`;
   abrirModal('modal-encerrar');
+}
+
+function marcarGrupoEnc(el, gi) {
+  document.querySelectorAll(`#menc-body .enc-chk[data-g="${gi}"]`).forEach(c => c.checked = el.checked);
 }
 
 async function confirmarEncerramento() {
   if (!_encerrar) return;
   const { naoContadas, sair } = _encerrar;
+  const marcados = new Set([...document.querySelectorAll('#menc-body .enc-chk:checked')].map(c => c.dataset.id));
+  const retirar = sair.filter(r =>  marcados.has(String(r.id)));
+  const manter  = sair.filter(r => !marcados.has(String(r.id)));
+  const agora = new Date().toISOString();
   const btn = $('menc-ok'); if (btn) btn.disabled = true;
   try {
-    if (sair.length) await atualizarEmLotes(sair.map(r => r.id), {
-      ocupacao_ativa: false, confirmado: false, revisado_em: null,
-    });
+    if (retirar.length) await atualizarEmLotes(retirar.map(r => r.id),
+      { ocupacao_ativa:false, confirmado:true, revisado_em:agora });
+    // Desmarcado = "ainda está lá": fica no mapa e não volta a ser
+    // oferecido neste ciclo.
+    if (manter.length) await atualizarEmLotes(manter.map(r => r.id),
+      { confirmado:true, revisado_em:agora });
 
     const { error } = await sb.from('ciclos_contagem').update({
       status:'finalizado',
-      finalizada_em: new Date().toISOString(),
+      finalizada_em: agora,
       finalizada_por: 'painel',
       nao_encontrados: naoContadas,
     }).eq('id', _ciclo.id);
     if (error) throw error;
 
+    for (const r of retirar) registrarAlteracao({
+      acao:'liberou', posicao:r.posicao, codigo:r.codigo, produto_nome:r.produto_nome,
+      lote:r.lote, armazem:r.armazem, qtd_antes:r.quantidade, qtd_depois:0,
+      tabela_ref:'historico', ref_id:r.id,
+      obs:`Encerramento da contagem #${_ciclo.id}: produto/lote/armazém validado em outra vaga`,
+    });
+
     fecharModal('modal-encerrar');
     cacheInvalidar('mapa');
-    toast(`Contagem #${_ciclo.id} encerrada · ${num(naoContadas)} não encontrada(s)${sair.length ? ` · ${num(sair.length)} item(ns) saíram das linhas contadas` : ''}.`, 'ok', 6000);
+    toast(`Contagem #${_ciclo.id} encerrada · ${num(naoContadas)} não encontrada(s)${retirar.length ? ` · ${num(retirar.length)} vaga(s) retirada(s) do mapa` : ''}.`, 'ok', 6000);
     _encerrar = null;
     await carregarCiclo();
     carregarValidacao();
@@ -3233,15 +3270,17 @@ async function descartarExtra(idx) {
 /* ── Revisão das vagas não confirmadas ── */
 function abrirRevisao() {
   $('mrev-body').innerHTML = !_naoConf.length
-    ? '<div class="empty"><div class="empty-tit">Nada saindo do mapa</div></div>'
-    : tabelaPorLinha(_naoConf.map((r, i) => ({ ...r, _idx:i })), true);
+    ? '<div class="empty"><div class="empty-tit">Nada para revisar</div></div>'
+    : tabelaPorItem(_naoConf.map((r, i) => ({ ...r, _idx:i })), 'revisao', _escopoRevisao);
   abrirModal('modal-revisao');
 }
 
-async function resolverLinha(ln, aindaEsta) {
-  const alvo = _naoConf.filter(r => (linhaDaPos(r.posicao) || 'sem linha') === ln);
+async function resolverGrupo(gi, aindaEsta) {
+  const k = _gruposRev[gi];
+  const alvo = _naoConf.filter(r => chaveItem(r) === k);
   if (!alvo.length) return;
-  if (!aindaEsta && !confirm(`Confirmar que ${num(alvo.length)} item(ns) saíram da linha ${ln}? Eles deixam o mapa.`)) return;
+  const nome = alvo[0].produto_nome || alvo[0].codigo;
+  if (!aindaEsta && !confirm(`Retirar do mapa ${num(alvo.length)} vaga(s) de ${nome} (lote ${alvo[0].lote || '—'})?`)) return;
   try {
     await atualizarEmLotes(alvo.map(r => r.id), {
       confirmado: true, ocupacao_ativa: aindaEsta, revisado_em: new Date().toISOString(),
@@ -3249,10 +3288,10 @@ async function resolverLinha(ln, aindaEsta) {
     const ids = new Set(alvo.map(r => r.id));
     _naoConf = _naoConf.filter(r => !ids.has(r.id));
     cacheInvalidar('mapa');
-    toast(aindaEsta ? `Linha ${ln}: ${num(alvo.length)} item(ns) devolvido(s) ao mapa.` : `Linha ${ln}: saída de ${num(alvo.length)} item(ns) confirmada.`, 'ok');
+    toast(aindaEsta ? `${nome}: ${num(alvo.length)} vaga(s) devolvida(s) ao mapa.` : `${nome}: ${num(alvo.length)} vaga(s) retirada(s).`, 'ok');
     abrirRevisao();
     renderAlertasValidacao();
-  } catch (e) { erro('Falha ao revisar a linha', e); }
+  } catch (e) { erro('Falha ao revisar', e); }
 }
 
 async function resolverRevisao(idx, aindaEsta) {
