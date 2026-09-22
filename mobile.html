@@ -1858,13 +1858,12 @@ async function concluirRecontagem() {
     if (!novos?.length) {
       if (!confirm(`Nenhum palete lançado nesta recontagem.\n\nConcluir dizendo que NÃO encontrou nada do lote ${t.lote} no armazém ${t.armazem}?`)) return;
       // Um lançamento zerado: assim o painel vê "contado 0", e não "não contado".
-      const { error:e0 } = await sb.from('lancamentos').insert({
+      await inserirResiliente('lancamentos', {
         codigo:normalizarCodigo(t.codigo), produto_nome:t.produto_nome || t.codigo, lote:t.lote, armazem:t.armazem,
         quantidade:0, usuario:OPERADOR, filial:t.filial || null, status:'pendente',
         recontagem:true, recontagem_id:t.id, posicao:null, ocupacao_ativa:false,
         ciclo_id:_cicloAtual, created_at:new Date().toISOString(),
       });
-      if (e0) throw e0;
       total = 0;
     } else if (!confirm(`Concluir a recontagem?\n\n${novos.length} palete(s) lançado(s). A contagem anterior deste lote será substituída por esta.`)) return;
 
@@ -1875,9 +1874,10 @@ async function concluirRecontagem() {
     const velhos = (ant || []).filter(a => chave(a.lote) === chave(t.lote) && chave(a.armazem) === chave(t.armazem) &&
       String(a.recontagem_id ?? '') !== String(t.id)).map(a => a.id);
     if (velhos.length) {
-      const { error:e3 } = await sb.from('lancamentos')
-        .update({ status:'substituido', ocupacao_ativa:false, updated_at:new Date().toISOString() }).in('id', velhos);
-      if (e3) throw e3;
+      // Resiliente: se a tabela não tiver updated_at, grava sem ela.
+      await atualizarResiliente('lancamentos',
+        { status:'substituido', ocupacao_ativa:false, updated_at:new Date().toISOString() },
+        q => q.in('id', velhos));
     }
 
     const { error:e4 } = await sb.from('recontagens').update({
