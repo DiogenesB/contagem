@@ -1831,13 +1831,14 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
 <div class="modal-bg" id="modal-devolver">
   <div class="modal wide">
     <div class="modal-head">
-      <div class="modal-title">Devolver ao mapa</div>
-      <div class="modal-sub">Confira produto, vaga e motivo antes de devolver.</div>
+      <div class="modal-title">Vagas fora do mapa sem confirmação</div>
+      <div class="modal-sub">Confira produto, vaga e motivo. Devolva o que ainda está lá e retire o que não existe mais.</div>
     </div>
     <div class="modal-body flush" id="mdev-body"></div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="fecharModal('modal-devolver')">Cancelar</button>
-      <button class="btn btn-primary" id="mdev-ok" onclick="confirmarDevolucao()">Devolver marcados</button>
+      <button class="btn btn-danger" id="mdev-ret" onclick="retirarMarcadosDev()">Retirar marcados do mapa</button>
+      <button class="btn btn-primary" id="mdev-ok" onclick="confirmarDevolucao()">Devolver marcados ao mapa</button>
     </div>
   </div>
 </div>
@@ -2742,7 +2743,15 @@ async function ultimoCicloEncerrado() {
   return data || null;
 }
 
+/* Só ocupação de vaga entra na revisão. O registro de contagem
+   (tipo 'contagem', posição vazia ou "A, B, C") também fica com
+   confirmado = false no histórico, mas não é palete no mapa —
+   devolvê-lo criaria uma vaga que nunca existiu. */
+const ehOcupacaoDeVaga = r =>
+  !!r.posicao && !String(r.posicao).includes(',') && r.tipo !== 'contagem';
+
 async function separarNaoConf(lista) {
+  lista = (lista || []).filter(ehOcupacaoDeVaga);
   _naoConf = lista; _naoConfFora = []; _escopoRevisao = null;
   try {
     const c = await ultimoCicloEncerrado();
@@ -2780,8 +2789,8 @@ function devolverForaDoEscopo() {
   $('mdev-body').innerHTML = `
     <div class="enc-resumo">
       <div>Estas vagas saíram do mapa quando a contagem${cic ? ` #${cic}` : ''} foi encerrada, pela regra antiga, que tirava tudo por onde ninguém passou. Ninguém confirmou que elas saíram.</div>
-      <div><b>Marcado = volta ao mapa</b> como estava. Isto não mexe no saldo do ERP nem na contagem, só no mapa das vagas.</div>
-      ${faltas.size ? '<div>Os blocos em vermelho são produtos que estavam no saldo da contagem e <b>não foram encontrados</b> em nenhuma vaga. Esses vêm desmarcados.</div>' : ''}
+      <div>Marque as vagas e escolha no rodapé: <b>Devolver ao mapa</b> (o palete ainda está lá) ou <b>Retirar do mapa</b> (o produto não existe mais na vaga). Isto não mexe no saldo do ERP nem na contagem, só no mapa das vagas.</div>
+      ${faltas.size ? '<div>Os blocos em vermelho são produtos que estavam no saldo da contagem e <b>não foram encontrados</b> em nenhuma vaga.</div>' : ''}
       <div><label class="enc-lbl"><input type="checkbox" onchange="document.querySelectorAll('#mdev-body .dev-chk').forEach(c => c.checked = this.checked)"> marcar / desmarcar tudo</label></div>
     </div>
     ${_gruposDev.map((k, gi) => {
@@ -2798,8 +2807,7 @@ function devolverForaDoEscopo() {
               : `este produto/lote/armazém não foi contado${cic ? ` na contagem #${cic}` : ''}. A saída não foi confirmada por ninguém.`}</span>
           </div>
           <span class="rev-acoes">
-            <label class="enc-lbl"><input type="checkbox" ${falta ? '' : 'checked'} onchange="document.querySelectorAll('#mdev-body .dev-chk[data-g=&quot;${gi}&quot;]').forEach(c => c.checked = this.checked)"> devolver todos</label>
-            ${falta ? `<button class="btn btn-sm btn-danger" onclick="retirarGrupoDev(${gi})">Confirmar que saiu</button>` : ''}
+            <label class="enc-lbl"><input type="checkbox" onchange="document.querySelectorAll('#mdev-body .dev-chk[data-g=&quot;${gi}&quot;]').forEach(c => c.checked = this.checked)"> selecionar todas</label>
           </span>
         </div>
         <div class="tbl-wrap"><table>
@@ -2808,7 +2816,7 @@ function devolverForaDoEscopo() {
             <td class="mono strong">${esc(r.posicao || '—')}</td>
             <td class="num">${num(r.quantidade)}</td>
             <td class="mono">${fmtDia(r.created_at)}</td>
-            <td class="acao"><label class="enc-lbl"><input type="checkbox" class="dev-chk" data-g="${gi}" data-id="${esc(r.id)}" ${falta ? '' : 'checked'}> devolver</label></td>
+            <td class="acao"><label class="enc-lbl"><input type="checkbox" class="dev-chk" data-g="${gi}" data-id="${esc(r.id)}"> selecionar</label></td>
           </tr>`).join('')}</tbody>
         </table></div>
       </div>`;
@@ -2843,12 +2851,13 @@ async function confirmarDevolucao() {
   finally { if (btn) btn.disabled = false; }
 }
 
-async function retirarGrupoDev(gi) {
-  const k = _gruposDev[gi];
-  const alvo = _naoConfFora.filter(r => chaveItem(r) === k);
-  if (!alvo.length) return;
-  const nome = alvo[0].produto_nome || alvo[0].codigo;
-  if (!confirm(`Confirmar que ${nome} (lote ${alvo[0].lote || '—'}) saiu de ${num(alvo.length)} vaga(s)? Elas ficam fora do mapa de vez.`)) return;
+async function retirarMarcadosDev() {
+  const marcados = new Set([...document.querySelectorAll('#mdev-body .dev-chk:checked')].map(c => c.dataset.id));
+  const alvo = _naoConfFora.filter(r => marcados.has(String(r.id)));
+  if (!alvo.length) { toast('Nenhuma vaga marcada para retirar.', 'warn'); return; }
+  const prods = [...new Set(alvo.map(r => r.produto_nome || r.codigo))];
+  if (!confirm(`Retirar do mapa ${num(alvo.length)} vaga(s)?\n\n${prods.slice(0, 8).join('\n')}${prods.length > 8 ? `\n… e mais ${prods.length - 8}` : ''}\n\nElas ficam fora do mapa de vez (fica registrado em Alterações).`)) return;
+  const btn = $('mdev-ret'); if (btn) btn.disabled = true;
   try {
     await atualizarEmLotes(alvo.map(r => r.id), {
       confirmado:true, ocupacao_ativa:false, revisado_em:new Date().toISOString(),
@@ -2856,18 +2865,19 @@ async function retirarGrupoDev(gi) {
     for (const r of alvo) registrarAlteracao({
       acao:'liberou', posicao:r.posicao, codigo:r.codigo, produto_nome:r.produto_nome,
       lote:r.lote, armazem:r.armazem, qtd_antes:r.quantidade, qtd_depois:0, tabela_ref:'historico', ref_id:r.id,
-      obs:'Não encontrado na contagem: saída confirmada no painel',
+      obs:'Retirado do mapa no painel: produto não está mais na vaga (saída confirmada manualmente)',
     });
     const ids = new Set(alvo.map(r => r.id));
     _naoConfFora = _naoConfFora.filter(r => !ids.has(r.id));
-    toast(`${nome}: saída de ${num(alvo.length)} vaga(s) confirmada.`, 'ok');
+    toast(`${num(alvo.length)} vaga(s) retirada(s) do mapa.`, 'ok', 6000);
     _depoisDeDevolver();
-  } catch (e) { erro('Falha ao confirmar a saída', e); }
+  } catch (e) { erro('Falha ao retirar do mapa', e); }
+  finally { if (btn) btn.disabled = false; }
 }
 
 function avisosRevisao(curto = false) {
   const out = [];
-  if (_naoConfFora.length) out.push(`<div class="aviso a-warn"><span class="aviso-ico">↺</span><div><b>${num(_naoConfFora.length)} item(ns) tirados do mapa sem terem sido contados</b>O produto/lote/armazém deles não foi validado na contagem, então não deviam ter saído. <button class="btn btn-sm btn-primary" style="margin-left:8px" onclick="devolverForaDoEscopo()">Ver e devolver ao mapa</button></div></div>`);
+  if (_naoConfFora.length) out.push(`<div class="aviso a-warn"><span class="aviso-ico">↺</span><div><b>${num(_naoConfFora.length)} item(ns) tirados do mapa sem terem sido contados</b>O produto/lote/armazém deles não foi validado na contagem, então não deviam ter saído. <button class="btn btn-sm btn-primary" style="margin-left:8px" onclick="devolverForaDoEscopo()">Ver e decidir</button></div></div>`);
   if (_naoConf.length) {
     const np = new Set(_naoConf.map(chaveItem)).size;
     out.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>${num(_naoConf.length)} vaga(s) antiga(s) de ${num(np)} produto/lote validado(s)</b>${curto ? 'Saíram do mapa esperando sua decisão.' : 'O produto foi contado em outra vaga e não foi achado nestas.'} <button class="btn btn-sm btn-info" style="margin-left:8px" onclick="abrirRevisao()">Revisar</button></div></div>`);
@@ -4425,7 +4435,7 @@ async function carregarMapa() {
         .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, ciclo_id, created_at, filial, usuario')
         .eq('status', 'pendente').eq('ocupacao_ativa', true).not('posicao', 'is', null)),
       buscarTudo(() => sb.from('historico')
-        .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, created_at, filial, ciclo_id')
+        .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, created_at, filial, ciclo_id, tipo')
         .eq('confirmado', false)),
     ]);
 
