@@ -2568,28 +2568,79 @@ function renderCicloValidacao() {
    novo para disparar a limpeza. Ao encerrar o ciclo, varre tudo
    que ficou de ciclos anteriores e que esta contagem não tocou,
    e manda para a mesma fila de revisão das vagas não confirmadas. */
+/* O que ESTA contagem cobriu. Antes a varredura considerava o mapa
+   inteiro: numa contagem de um produto só, todas as outras vagas
+   iam para revisão sem ninguém ter passado por elas. Agora só entra
+   no escopo:
+     - vaga onde houve lançamento neste ciclo (passou pela vaga e
+       achou outra coisa -> o item antigo não foi confirmado);
+     - código+lote que foi contado neste ciclo (o palete estava
+       registrado em outra vaga e não foi achado lá -> mudou de vaga). */
+async function escopoDaContagem(cicloId) {
+  const lanc = await buscarTudo(() => sb.from('lancamentos')
+    .select('posicao, codigo, lote, status').eq('ciclo_id', cicloId));
+  const vagas = new Set(), itens = new Set();
+  for (const l of lanc) {
+    if (l.status === 'descartado') continue;
+    if (l.posicao) vagas.add(chave(l.posicao));
+    if (l.codigo)  itens.add(`${chave(l.codigo)}|${chave(l.lote)}`);
+  }
+  return { vagas, itens };
+}
+const contagemCobriu = (r, escopo) =>
+  (r.posicao && escopo.vagas.has(chave(r.posicao))) ||
+  escopo.itens.has(`${chave(r.codigo)}|${chave(r.lote)}`);
+
+async function atualizarEmLotes(ids, patch) {
+  for (let i = 0; i < ids.length; i += 200) {
+    const { error } = await sb.from('historico').update(patch).in('id', ids.slice(i, i + 200));
+    if (error) throw error;
+  }
+}
+
 async function varrerOcupacaoNaoTocada() {
   const corte = _ciclo.contagem_iniciada_em || _ciclo.iniciado_em;
 
-  const { data, error } = await sb.from('historico')
-    .select('id, revisado_em')
-    .eq('ocupacao_ativa', true)
-    .neq('ciclo_id', _ciclo.id);
-  if (error) throw error;
+  const [data, escopo] = await Promise.all([
+    buscarTudo(() => sb.from('historico')
+      .select('id, posicao, codigo, lote, revisado_em')
+      .eq('ocupacao_ativa', true)
+      .neq('ciclo_id', _ciclo.id)),
+    escopoDaContagem(_ciclo.id),
+  ]);
 
-  const parados = (data || []).filter(r => !r.revisado_em || r.revisado_em < corte);
+  const parados = data.filter(r =>
+    (!r.revisado_em || r.revisado_em < corte) && contagemCobriu(r, escopo));
   if (!parados.length) return 0;
 
-  const { error:e2 } = await sb.from('historico').update({
+  await atualizarEmLotes(parados.map(r => r.id), {
     ocupacao_ativa: false, confirmado: false, revisado_em: null,
-  }).in('id', parados.map(r => r.id));
-  if (e2) throw e2;
+  });
   return parados.length;
+}
+
+/* Conserta o que a varredura antiga jogou para revisão sem a
+   contagem ter passado: devolve ao mapa, como estava. */
+async function devolverForaDoEscopo() {
+  if (!_ciclo) return;
+  try {
+    const escopo = await escopoDaContagem(_ciclo.id);
+    const fora = _naoConf.filter(r => !contagemCobriu(r, escopo));
+    if (!fora.length) { toast('Todas as vagas da lista foram cobertas por esta contagem.', 'ok'); return; }
+    if (!confirm(`${num(fora.length)} vaga(s) da revisão não tiveram nenhum lançamento na contagem #${_ciclo.id} (nem a vaga, nem o produto/lote).\n\nDevolver essas vagas ao mapa como estavam?`)) return;
+
+    await atualizarEmLotes(fora.map(r => r.id), { confirmado: true, ocupacao_ativa: true });
+    const devolvidos = new Set(fora.map(r => r.id));
+    _naoConf = _naoConf.filter(r => !devolvidos.has(r.id));
+    toast(`${num(fora.length)} vaga(s) devolvida(s) ao mapa.`, 'ok', 6000);
+    abrirRevisao();
+    renderAlertasValidacao();
+  } catch (e) { erro('Falha ao devolver vagas', e); }
 }
 
 async function encerrarContagem() {
   const naoContadas = _vLinhas.filter(l => daFilial(l.filial) && !l.extra && l.contado === null && !l.validado).length;
-  if (!confirm(`Encerrar a contagem #${_ciclo.id}?\n\n${num(naoContadas)} linha(s) do saldo não foram lançadas e passarão a contar como NÃO ENCONTRADAS (falta física).\nVagas de ciclos anteriores que ninguém recontou vão para revisão.\n\nVocê pode reabrir depois se precisar.`)) return;
+  if (!confirm(`Encerrar a contagem #${_ciclo.id}?\n\n${num(naoContadas)} linha(s) do saldo não foram lançadas e passarão a contar como NÃO ENCONTRADAS (falta física).\nSó vão para revisão as vagas por onde esta contagem passou e os produtos/lotes contados que estavam registrados em outra vaga.\n\nVocê pode reabrir depois se precisar.`)) return;
 
   try {
     const paradas = await varrerOcupacaoNaoTocada();
@@ -3068,7 +3119,11 @@ async function descartarExtra(idx) {
 function abrirRevisao() {
   $('mrev-body').innerHTML = !_naoConf.length
     ? '<div class="empty"><div class="empty-tit">Nada pendente de revisão</div></div>'
-    : `<div class="tbl-wrap"><table>
+    : `${_ciclo ? `<div style="padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <span style="flex:1;min-width:220px">Apareceu vaga que a contagem nem passou? Devolva de uma vez as que não tiveram lançamento na contagem #${_ciclo.id}.</span>
+          <button class="btn btn-sm btn-primary" onclick="devolverForaDoEscopo()">Devolver as não contadas ao mapa</button>
+        </div>` : ''}
+      <div class="tbl-wrap"><table>
         <thead><tr><th>Vaga</th><th>Produto</th><th>Lote</th><th class="num">Qtd</th><th>Desde</th><th></th></tr></thead>
         <tbody>${_naoConf.map((r, i) => `
           <tr>
