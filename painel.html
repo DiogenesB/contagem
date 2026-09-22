@@ -2392,8 +2392,8 @@ async function lerPlanilha(file) {
         <span class="aviso-ico">!</span>
         <div>
           <b>Isso abre um ciclo novo</b>
-          O saldo ainda não validado é substituído e a contagem passa a valer como “ciclo atual” no mapa.
-          O que já foi validado continua no histórico.
+          O saldo anterior é substituído (inclusive o que já foi validado) e a contagem passa a valer como “ciclo atual” no mapa.
+          O que já foi validado continua no Histórico e no KPI.
         </div>
       </div>
       <div class="btn-row">
@@ -2427,7 +2427,12 @@ async function importarSaldo() {
     // Só as filiais que vieram na planilha. Importando a exportação
     // da Simbiose sozinha, o saldo não validado da Bioma sumia junto.
     const filiaisDaPlanilha = [...new Set(registros.map(r => r.filial).filter(Boolean))];
-    let apagar = sb.from('saldo_sistema').delete().eq('validado', false);
+    // Ciclo novo = foto nova do saldo. Sai também o que já foi validado
+    // em contagens anteriores: senão o produto antigo ficava para sempre
+    // na Validação e na lista do KPI, e contava como "não encontrado"
+    // na contagem nova. Nada se perde: a validação fica no histórico
+    // e o KPI é montado a partir dele.
+    let apagar = sb.from('saldo_sistema').delete().not('id', 'is', null);
     if (filiaisDaPlanilha.length) apagar = apagar.in('filial', filiaisDaPlanilha);
     const { error:eD } = await apagar;
     if (eD) throw eD;
@@ -2456,10 +2461,13 @@ async function carregarValidacao() {
   $('v-tbody').innerHTML = carregando(9);
   try {
     const cicloVal = _ciclo?.id ?? null;
-    let [saldo, pend, naoConf, auto, recont, ocup, validadosLanc] = await Promise.all([
+    let [saldo, pend, naoConf, auto, recont, ocup, validadosLanc, validadosCiclo] = await Promise.all([
       buscarTudo(() => sb.from('saldo_sistema').select('*')),
       buscarTudo(() => sb.from('lancamentos').select('*').eq('status', 'pendente')),
-      buscarTudo(() => sb.from('historico').select('*').eq('confirmado', false)),
+      // confirmado=false sozinho não basta: o mobile grava transferência
+      // e produção sem esse campo (o banco põe false) e elas estão ATIVAS
+      // no mapa. Pendente de revisão = saiu do mapa E não foi confirmado.
+      buscarTudo(() => sb.from('historico').select('*').eq('confirmado', false).eq('ocupacao_ativa', false)),
       buscarOpcional(() => sb.from('validacoes_auto').select('*')),
       buscarOpcional(() => sb.from('recontagens').select('*')),
       buscarOpcional(() => sb.from('historico').select('id, posicao, codigo, lote, armazem, quantidade, ciclo_id')
@@ -2469,7 +2477,19 @@ async function carregarValidacao() {
       cicloVal === null ? Promise.resolve([])
         : buscarTudo(() => sb.from('lancamentos').select('codigo, lote, armazem, quantidade')
             .eq('status', 'validado').eq('ciclo_id', cicloVal)),
+      // Registros de validação deste ciclo (sempre gravados antes de a
+      // linha do saldo ser marcada como validada).
+      cicloVal === null ? Promise.resolve({ ok:false, data:[] })
+        : buscarOpcional(() => sb.from('historico').select('codigo, lote, armazem')
+            .eq('ciclo_id', cicloVal).not('saldo_sistema', 'is', null)),
     ]);
+
+    // Linha validada numa contagem ANTERIOR (sobrou de antes desta
+    // regra de importação): não é desta contagem, sai da tela.
+    if (validadosCiclo.ok) {
+      const doCicloAtual = new Set(validadosCiclo.data.map(r => chaveLote(r.codigo, r.lote, r.armazem)));
+      saldo = saldo.filter(s => !s.validado || doCicloAtual.has(chaveLote(s.codigo, s.lote, s.armazem)));
+    }
     _vAuto.semTabela = !auto.ok;   _vAuto.registros = auto.data;
     _vRecont.semTabela = !recont.ok; _vRecont.registros = recont.data;
     _vOcupacao = ocup.data;
@@ -2640,18 +2660,37 @@ function renderCicloValidacao() {
    tinha na B1-30 aparece na prévia para retirar.
    Nada sai sozinho: tudo passa pela prévia do encerramento. */
 async function escopoDaContagem(cicloId) {
-  const lanc = await buscarTudo(() => sb.from('lancamentos')
-    .select('posicao, codigo, lote, armazem, status')
-    .eq('ciclo_id', cicloId).eq('status', 'validado'));
+  // Duas fontes do mesmo fato "esta combinação foi validada":
+  //  - lançamentos validados (onde o conferente contou);
+  //  - o registro de validação no histórico (tipo 'contagem'), que
+  //    também existe quando a linha foi validada como NÃO ENCONTRADA
+  //    ou automática — sem lançamento com posição.
+  const [lanc, regs] = await Promise.all([
+    buscarTudo(() => sb.from('lancamentos')
+      .select('posicao, codigo, lote, armazem')
+      .eq('ciclo_id', cicloId).eq('status', 'validado')),
+    buscarOpcional(() => sb.from('historico')
+      .select('posicao, codigo, lote, armazem, quantidade')
+      .eq('ciclo_id', cicloId).eq('tipo', 'contagem')),
+  ]);
   const chaves = new Set();
   const ondeContou = {};
+  const zerados = new Set();
   for (const l of lanc) {
     if (!l.codigo) continue;
     const k = chaveLote(l.codigo, l.lote, l.armazem);
     chaves.add(k);
     if (l.posicao) (ondeContou[k] ||= new Set()).add(l.posicao);
   }
-  return { chaves, ondeContou };
+  for (const r of (regs.data || [])) {
+    if (!r.codigo) continue;
+    const k = chaveLote(r.codigo, r.lote, r.armazem);
+    chaves.add(k);
+    for (const p of String(r.posicao || '').split(',').map(s => s.trim()).filter(Boolean))
+      (ondeContou[k] ||= new Set()).add(p);
+    if (!(Number(r.quantidade) > 0)) zerados.add(k);
+  }
+  return { chaves, ondeContou, zerados };
 }
 const chaveItem = r => chaveLote(r.codigo, r.lote, r.armazem);
 const contagemCobriu = (r, escopo) => escopo.chaves.has(chaveItem(r));
@@ -2703,7 +2742,9 @@ function tabelaPorItem(itens, modo, escopo) {
           <span class="rev-n">${num(g.length)} vaga(s) antiga(s) · ${num(un)} un.</span>
           <span class="rev-motivo"><b>Por que sai:</b> ${contou.length
             ? `foi contado e validado em <span class="mono">${contou.map(esc).join(', ')}</span>. O mapa antigo ainda tinha este mesmo produto/lote/armazém nas vagas abaixo, e ninguém o encontrou lá.`
-            : 'este produto/lote/armazém foi validado na contagem, e ninguém o encontrou nas vagas abaixo.'}</span>
+            : (escopo?.zerados?.has(k)
+                ? 'foi validado nesta contagem como <b>não encontrado</b> (contado zero). O mapa antigo ainda tinha ele nas vagas abaixo.'
+                : 'este produto/lote/armazém foi validado na contagem, e ninguém o encontrou nas vagas abaixo.')}</span>
         </div>
         ${modo === 'revisao' ? `<span class="rev-acoes">
           <button class="btn btn-sm btn-ghost" onclick="resolverGrupo(${gi}, true)">Todos ainda estão lá</button>
@@ -2748,7 +2789,7 @@ async function ultimoCicloEncerrado() {
    confirmado = false no histórico, mas não é palete no mapa —
    devolvê-lo criaria uma vaga que nunca existiu. */
 const ehOcupacaoDeVaga = r =>
-  !!r.posicao && !String(r.posicao).includes(',') && r.tipo !== 'contagem';
+  !!r.posicao && !String(r.posicao).includes(',') && r.tipo !== 'contagem' && r.ocupacao_ativa !== true;
 
 async function separarNaoConf(lista) {
   lista = (lista || []).filter(ehOcupacaoDeVaga);
@@ -4435,8 +4476,8 @@ async function carregarMapa() {
         .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, ciclo_id, created_at, filial, usuario')
         .eq('status', 'pendente').eq('ocupacao_ativa', true).not('posicao', 'is', null)),
       buscarTudo(() => sb.from('historico')
-        .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, created_at, filial, ciclo_id, tipo')
-        .eq('confirmado', false)),
+        .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, created_at, filial, ciclo_id, tipo, ocupacao_ativa')
+        .eq('confirmado', false).eq('ocupacao_ativa', false)),
     ]);
 
     // O lançamento pendente é a contagem de agora; a linha de
