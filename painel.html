@@ -5541,10 +5541,9 @@ async function aplicarMover(kOrigem, kDestino) {
   if (!o || !dst || !o.itens.length) return;
   if (!confirm(`Mover ${qtdUn(o.contado, o.codigo, o.produto)} do lote ${o.lote} (arm. ${o.armazem})\npara o lote ${dst.lote} (arm. ${dst.armazem})?`)) return;
   try {
-    const { error } = await sb.from('lancamentos').update({
-      codigo:dst.codigo, lote:dst.lote, armazem:dst.armazem, updated_at:new Date().toISOString(),
-    }).in('id', o.itens.map(i => i.id));
-    if (error) throw error;
+    await atualizarResiliente('lancamentos',
+      { codigo:dst.codigo, lote:dst.lote, armazem:dst.armazem, updated_at:new Date().toISOString() },
+      q => q.in('id', o.itens.map(i => i.id)));
     fecharModal('modal-causas');
     toast('Contagem movida. A linha é conferida de novo.', 'ok');
     carregarValidacao();
