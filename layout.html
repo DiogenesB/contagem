@@ -75,6 +75,10 @@ kbd{font:500 11px var(--f-mono);border:1px solid var(--line);border-bottom-width
 .toast{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%}
 .toast.show{opacity:1}
 .viewport.editing{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.tip{position:absolute;left:0;top:0;z-index:5;pointer-events:none;max-width:320px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.28);font-size:12.5px;display:flex;flex-direction:column;gap:6px}
+.tip .tc{font:600 13px var(--f-mono)}
+.tip .ti b{display:block;font-size:12.5px;line-height:1.3}
+.tip .ti span,.tip .tl{display:block;font:11.5px var(--f-mono);color:var(--muted);margin-top:1px}
 .measure-tag{position:absolute;top:12px;left:12px;right:12px;width:fit-content;max-width:calc(100% - 24px);background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:12px;padding:5px 10px;border-radius:6px}
 
 .side{display:flex;flex-direction:column;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
@@ -186,6 +190,7 @@ a.btn{text-decoration:none;color:inherit}
   <div class="main">
     <div class="viewport" id="vp">
       <div class="toast" id="toast"></div>
+      <div class="tip" id="tip" hidden></div>
       <div class="measure-tag" id="etag" hidden>Editando: arraste estruturas, áreas e textos · puxe os cantos amarelos de uma área para mudar o tamanho · duplo clique renomeia</div>
       <div class="measure-tag" id="mtag" hidden>Medindo: clique em dois pontos do piso · Esc sai</div>
       <div class="overlay">
@@ -241,14 +246,15 @@ const $ = s => document.querySelector(s);
      simbiose B2 linhas 01–36, andares 1–4, lugares 1–4 (= bloco C4)
      bioma    A1 linhas 01–36, andares 1–3, lugares 1–5 (= bloco C2)
      bioma    A2 linhas 29–36, andares 1–3, lugares 1–4 (= bloco C1)
-   Lugar 1 fica no corredor; linha 01 no fundo, linha 36 junto da parede das docas —
-   exceto no B1, que é numerado ao contrário: linha 01 junto das docas, 36 no fundo. */
+   Lugar 1 fica no corredor. Sentido das linhas conferido no galpão:
+     B1 e A1 → linha 01 junto das docas, 36 no fundo;
+     B2 e A2 → linha 01 (ou 29) no fundo, 36 junto das docas. */
 function layoutSimbiose(){
   const PAV3 = makePav3();
   const RUA = 54.48 / 36, PROF = 1.025, Y0 = 0.555, YC = Y0 + 54.48 / 2;
   const base = { tipo: 'drive', firstLane: 1, bayW: RUA, posD: PROF, locked: true, laneNames: null };
   const racks = [
-    { ...base, id: uid(), code: 'B1', grupo: 'Simbiose', x: (16.1 + 21.225) / 2, y: YC, rot: 90, rev: true,   lanes: 36, deep: 5, levels: 4, levelH: 1.85 },
+    { ...base, id: uid(), code: 'B1', grupo: 'Simbiose', x: (16.1 + 21.225) / 2, y: YC, rot: 90, rev: false,  lanes: 36, deep: 5, levels: 4, levelH: 1.85 },
     { ...base, id: uid(), code: 'B2', grupo: 'Simbiose', x: (25.6 + 29.7) / 2,   y: YC, rot: 270, rev: false, lanes: 36, deep: 4, levels: 4, levelH: 1.85 },
     { ...base, id: uid(), code: 'A1', grupo: 'Bioma',    x: (0.8 + 5.925) / 2,   y: YC, rot: 90, rev: false,  lanes: 36, deep: 5, levels: 3, levelH: 2.45 },
     { ...base, id: uid(), code: 'A2', grupo: 'Bioma',    x: (10.4 + 14.5) / 2,   y: Y0 + 12.2 / 2, rot: 270, rev: false, firstLane: 29, lanes: 8, bayW: 12.2 / 8, deep: 4, levels: 3, levelH: 2.45 }
@@ -314,11 +320,11 @@ function migrate(L){
   L.racks.forEach(r => { r.tipo = r.tipo || 'drive'; r.code = r.code || r.name || 'DI'; r.grupo = r.grupo || ''; r.firstLane = r.firstLane || 1; r.rev = !!r.rev; r.laneNames = r.laneNames || null; });
   L.zones.forEach(z => { z.tipo = z.tipo || 'piso'; z.alt = z.alt || 0; });
   L.pav.areas.forEach(a => { a.id = a.id || uid(); a.size = a.size || 2.2; });
-  /* Correção única (out/2026): B1 e A1 estavam com as linhas no sentido contrário. Só vira se ainda
-     estiverem como na versão errada; depois disso a marca impede de mexer de novo. */
-  if (!L._ajusteLinhas){
-    L.racks.forEach(r => { if (r.code === 'B1' && r.rot === 90 && !r.rev){ r.rev = true; L._corrigido = true; } if (r.code === 'A1' && r.rot === 90 && r.rev){ r.rev = false; L._corrigido = true; } });
-    L._ajusteLinhas = 1;
+  /* Correção única (out/2026): sentido das linhas conferido no galpão — B1 e A1 com a linha 01
+     junto das docas. Roda uma vez por layout salvo; depois a marca impede de mexer de novo. */
+  if (!L._ajusteLinhas2){
+    L.racks.forEach(r => { if ((r.code === 'B1' || r.code === 'A1') && r.rot === 90 && r.rev){ r.rev = false; L._corrigido = true; } });
+    L._ajusteLinhas2 = 1; delete L._ajusteLinhas;
   }
   return L;
 }
@@ -1056,6 +1062,40 @@ cv.addEventListener('dblclick', e => {
   if (el){ el.focus(); el.select?.(); }
 });
 cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+
+/* Etiqueta ao passar o mouse: produto, lote e quantidade sem precisar clicar. */
+const tip = $('#tip');
+let hoverRaf = 0, hoverEv = null;
+cv.addEventListener('pointermove', e => {
+  if (drag || e.buttons || e.pointerType === 'touch' || view.measure){ tip.hidden = true; return; }
+  hoverEv = e; if (!hoverRaf) hoverRaf = requestAnimationFrame(() => { hoverRaf = 0; mostrarHover(hoverEv); });
+});
+cv.addEventListener('pointerleave', () => { tip.hidden = true; cv.style.cursor = ''; });
+function textoHover(h){
+  if (h.kind === 'slot'){
+    const r = rackById(h.rackId); if (!r) return '';
+    const code = posCode(r, h.lane, h.pos, h.level);
+    const real = typeof realBySlot !== 'undefined' && realBySlot.get(`${r.id}|${h.lane}|${h.pos}|${h.level}`);
+    if (real) return `<b class="tc">${esc(code)}</b>` + real.items.map(x => `<div class="ti"><b>${esc(x.produto_nome || x.codigo)}</b><span>${esc(x.codigo || '—')} · lote ${esc(x.lote || '—')} · ${num(x.quantidade)} ${esc(unidadeDe(x.codigo, x.produto_nome) || 'un')}${x.pend ? ' · aguardando validação' : ''}</span></div>`).join('');
+    const sims = palletAt(r, h.lane, h.pos, h.level);
+    if (sims.length) return `<b class="tc">${esc(code)}</b>` + sims.map(p => `<div class="ti"><b>${esc(p.prod)}</b><span>${p.lote ? 'lote ' + esc(p.lote) + ' · ' : ''}simulação</span></div>`).join('');
+    return `<b class="tc">${esc(code)}</b><span class="tl">Livre</span>`;
+  }
+  if (h.kind === 'pallet'){ const p = L.pallets.find(x => x.id === h.id); return p ? `<div class="ti"><b>${esc(p.prod)}</b><span>${p.lote ? 'lote ' + esc(p.lote) + ' · ' : ''}${esc(locText(p))}</span></div>` : ''; }
+  if (h.kind === 'rack'){ const r = rackById(h.id); return r ? `<b>${esc(rackTitle(r))}</b>` : ''; }
+  if (h.kind === 'zone'){ const z = L.zones.find(x => x.id === h.id); return z ? `<b>${esc(z.name)}</b>` : ''; }
+  return '';
+}
+function mostrarHover(e){
+  const h = pick(e), html = h ? textoHover(h) : '';
+  if (!html){ tip.hidden = true; cv.style.cursor = ''; return; }
+  tip.innerHTML = html; tip.hidden = false; cv.style.cursor = 'pointer';
+  const r = vp.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+  let x = e.clientX - r.left + 16, y = e.clientY - r.top + 16;
+  if (x + tw > r.width - 8) x = e.clientX - r.left - tw - 12;
+  if (y + th > r.height - 8) y = e.clientY - r.top - th - 12;
+  tip.style.transform = `translate(${Math.max(4, x)}px, ${Math.max(4, y)}px)`;
+}
 
 function measureClick(p){
   clearGroup(measG);
