@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Simbiose · Layout 3D</title>
+<script>
+/* Tema antes da primeira pintura — mesma chave dos outros apps. */
+(function () {
+  try {
+    var t = localStorage.getItem('tema');
+    if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'escuro';
+    document.documentElement.setAttribute('data-tema', t);
+  } catch (e) { document.documentElement.setAttribute('data-tema', 'escuro'); }
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   SIMBIOSE · LAYOUT 3D
+   O pavilhão em escala, com as vagas ocupadas de verdade (historico
+   + lancamentos) e o layout compartilhado na tabela layout_pavilhao.
+   Mesmas cores e fontes do painel e do mapa.
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#08090A; --surface:#101113; --surface-2:#17181B; --ink:#F7F8F8; --muted:#9B9CA6; --line:#26272B;
+  --accent:#4C8DF6; --accent-ink:#FFF; --accent-soft:rgba(76,141,246,.16); --danger:#F0655F; --danger-soft:rgba(240,101,95,.14);
+  --ok:#4FBE7E; --warn:#E5A23C; --alt:#22B8CF; --paint:#E5B53C;
+  --scene:#0B0C0E; --floor:#1C1E22; --grid:#2A2C31; --grid-strong:#3C3F46; --wall:#8B9099; --slot:#4A515C;
+  --f-ui:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; --f-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --r:7px; color-scheme:dark;
+}
+html[data-tema="claro"]{
+  --bg:#F6F7F9; --surface:#FFF; --surface-2:#F2F4F7; --ink:#14161A; --muted:#545B67; --line:#E1E4EA;
+  --accent:#2563EB; --accent-ink:#FFF; --accent-soft:rgba(37,99,235,.10); --danger:#C0342B; --danger-soft:rgba(192,52,43,.09);
+  --ok:#15803D; --warn:#A66206; --alt:#0E7490; --paint:#D9A21B;
+  --scene:#E6E9ED; --floor:#D5D9DF; --grid:#C2C7CF; --grid-strong:#99A0AA; --wall:#6C737D; --slot:#A9B1BC;
+  color-scheme:light;
+}
+
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--f-ui)}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{display:flex;flex-direction:column;gap:10px;height:100%;padding-inline:16px;padding-block:10px 12px}
+
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto;min-width:0}
+.brand h1{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:0;white-space:nowrap}
+.brand select{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:3px 10px;font-size:12.5px;color:var(--ink);max-width:260px}
+.group{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:2px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:6px 11px;cursor:pointer;font-size:13px;font-weight:500;line-height:1.2;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--grid-strong)}
+.btn:focus-visible,.seg button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.slotmap td:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.danger{color:var(--danger)}
+.btn.danger[data-armed]{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.seg button{border:0;background:transparent;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 0 0 1px var(--line);font-weight:600}
+kbd{font:500 11px var(--f-mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--surface)}
+
+.main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:12px}
+.viewport{position:relative;min-width:0;min-height:0;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--scene)}
+.viewport canvas{display:block;width:100%;height:100%;touch-action:none}
+.overlay{position:absolute;left:10px;right:10px;bottom:10px;display:flex;justify-content:space-between;gap:10px;pointer-events:none;flex-wrap:wrap}
+.pill{pointer-events:auto;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--muted)}
+.pill b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.pill .warn{color:var(--danger);font-weight:600}
+.toast{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%}
+.toast.show{opacity:1}
+.viewport.editing{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.measure-tag{position:absolute;top:12px;left:12px;right:12px;width:fit-content;max-width:calc(100% - 24px);background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:12px;padding:5px 10px;border-radius:6px}
+
+.side{display:flex;flex-direction:column;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line);flex-shrink:0}
+.tabs button{flex:1;border:0;background:transparent;padding:10px 4px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.panel{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px}
+.panel h2{font-size:15px;margin:0;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.panel h2.code{font:600 22px var(--f-mono);letter-spacing:.01em}
+.panel h3{font-size:11px;margin:0;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.sec{display:flex;flex-direction:column;gap:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.fld{display:flex;flex-direction:column;gap:3px;min-width:0}
+.fld span{font-size:11.5px;color:var(--muted)}
+.fld input,.fld select,textarea{width:100%;min-width:0;border:1px solid var(--line);background:var(--surface-2);border-radius:6px;padding:6px 8px;font-size:13px}
+.fld input[type=number]{font-family:var(--f-mono);font-size:12.5px}
+.fld input[type=color]{padding:2px;height:32px}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+.chk input{width:16px;height:16px;accent-color:var(--accent)}
+textarea{font-family:var(--f-mono);font-size:12px;resize:vertical}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+.loc{font-family:var(--f-mono);font-size:12.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+.tag{display:inline-block;font-size:11.5px;font-weight:600;border-radius:99px;padding:2px 9px;border:1px solid var(--line)}
+.tag.free{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,var(--line))}
+.tag.busy{color:var(--accent-ink);background:var(--accent);border-color:var(--accent)}
+.tag.lock{color:var(--muted)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:13px;margin:0}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.kv dd.hl{color:var(--ink);font-weight:600}
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.item{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 10px;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;cursor:pointer;width:100%}
+.item:last-child{border-bottom:0}
+.item:hover{background:var(--surface-2)}
+.item.on{background:var(--accent-soft)}
+.dot{width:12px;height:12px;border-radius:3px}
+.item .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500}
+.item .s{font:11.5px var(--f-mono);color:var(--muted);white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chips button{font:500 12px var(--f-mono);border:1px solid var(--line);background:var(--surface-2);border-radius:5px;padding:3px 7px;cursor:pointer}
+.chips button:hover{border-color:var(--accent)}
+.issues{display:flex;flex-direction:column;gap:4px}
+.issue{font-size:12.5px;background:var(--danger-soft);color:var(--ink);border-left:3px solid var(--danger);border-radius:4px;padding:5px 8px;cursor:pointer;text-align:left;border-top:0;border-right:0;border-bottom:0}
+.slotmap{overflow-x:auto;padding-bottom:4px}
+.slotmap table{border-collapse:separate;border-spacing:2px;font:10.5px var(--f-mono)}
+.slotmap td,.slotmap th{min-width:24px;height:22px;text-align:center;border-radius:3px;font-weight:500}
+.slotmap td{cursor:pointer;color:var(--ink)}
+.slotmap td:hover{outline:1px solid var(--accent)}
+.slotmap th{color:var(--muted);font-weight:400;padding:0 3px}
+.empty-state{border:1px dashed var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.shortcuts{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:12.5px;align-items:center}
+details summary{cursor:pointer;font-weight:600;font-size:13px}
+details[open] summary{margin-bottom:8px}
+
+@media (max-width:860px){
+  #hint{display:none}
+  html,body{height:auto}
+  .app{height:auto}
+  .main{grid-template-columns:1fr;grid-template-rows:62vh auto}
+  .panel{overflow:visible}
+  .brand select{max-width:170px}
+}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+a.btn{text-decoration:none;color:inherit}
+.vivo{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);margin-right:5px;vertical-align:1px}
+.vivo.on{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
+.ficha{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:9px 10px}
+.ficha.pend{border-color:var(--alt)}
+.ficha b{display:block;font-size:13px}
+.ficha .m{font:11.5px var(--f-mono);color:var(--muted);margin-top:2px}
+.ficha .q{font:600 15px var(--f-mono);margin-top:4px}
+.ficha .q small{font-size:11px;font-weight:400;color:var(--muted);margin-left:3px}
+.aviso-banco{font-size:12.5px;border:1px solid var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent);border-radius:6px;padding:8px 10px}
+.dlg{position:fixed;inset:0;z-index:50;background:rgba(8,9,10,.6);display:flex;align-items:center;justify-content:center;padding:18px}
+.dlg-cx{width:min(380px,100%);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.dlg-cx input{width:100%;border:1px solid var(--line);background:var(--surface-2);border-radius:6px;padding:9px 10px;font-size:14px}
+.quem-ini{width:20px;height:20px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand"><h1>Layout 3D</h1><select id="laySel" aria-label="Layout aberto"></select></div>
+    <div class="group">
+      <div class="seg" role="group" aria-label="Vista">
+        <button id="v-3d" data-view="3d">3D</button>
+        <button id="v-planta" data-view="planta">Planta</button>
+        <button id="v-frente" data-view="frente">Frente</button>
+      </div>
+      <button class="btn" id="b-fit" title="Enquadrar tudo">Enquadrar</button>
+    </div>
+    <div class="group">
+      <button class="btn" id="t-edit" aria-pressed="false" title="Mover, redimensionar e renomear estruturas, áreas e textos">Editar layout</button>
+      <button class="btn" id="t-slots" aria-pressed="true">Posições</button>
+      <button class="btn" id="t-labels" aria-pressed="true">Rótulos</button>
+      <button class="btn" id="t-dims" aria-pressed="true">Cotas</button>
+      <button class="btn" id="t-measure" aria-pressed="false">Medir</button>
+      <button class="btn" id="b-undo" title="Desfazer (Ctrl+Z)">Desfazer</button>
+    </div>
+    <div class="group">
+      <a class="btn" href="./mapa.html" title="Mapa do drive-in: guardar e expedir">Mapa</a>
+      <button class="btn" id="b-quem" title="Trocar de pessoa"><span class="quem-ini" id="quem-ini">?</span><span id="quem-nome">—</span></button>
+      <button class="btn" id="b-tema" title="Tema">◐</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="viewport" id="vp">
+      <div class="toast" id="toast"></div>
+      <div class="measure-tag" id="etag" hidden>Editando: arraste estruturas, áreas e textos · puxe os cantos amarelos de uma área para mudar o tamanho · duplo clique renomeia</div>
+      <div class="measure-tag" id="mtag" hidden>Medindo: clique em dois pontos do piso · Esc sai</div>
+      <div class="overlay">
+        <div class="pill" id="stats"></div>
+        <div class="pill" id="hint"></div>
+      </div>
+    </div>
+    <aside class="side">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-sel" data-tab="sel">Selecionado</button>
+        <button role="tab" id="tab-itens" data-tab="itens">Itens</button>
+        <button role="tab" id="tab-pav" data-tab="pav">Pavilhão</button>
+        <button role="tab" id="tab-dados" data-tab="dados">Dados</button>
+      </div>
+      <div class="panel" id="panel"></div>
+    </aside>
+  </div>
+</div>
+
+<div class="dlg" id="dlg-quem" hidden>
+  <div class="dlg-cx" role="dialog" aria-labelledby="quem-tit">
+    <h2 id="quem-tit" style="margin:0;font-size:16px">Quem está editando?</h2>
+    <p class="note">O layout é o mesmo para todo mundo. Seu nome fica gravado em cada alteração, como no mapa.</p>
+    <input type="text" id="quem-in" placeholder="seu nome" maxlength="40" autocomplete="name">
+    <div class="row" style="justify-content:flex-end"><button class="btn" id="quem-cancel">Cancelar</button><button class="btn primary" id="quem-ok">Entrar</button></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="./comum.js?v=4"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+/* ================= utilidades ================= */
+const KEY = 'layout3d.v1';
+const PALETTE = ['#3f7cc4','#d0662f','#4f9a5a','#8e5fb8','#c23b58','#2b9aa0','#b88a1f','#5c6bc0','#7a8b3a','#a0522d','#3d8f7f','#b0548f'];
+const uid = () => Math.random().toString(36).slice(2, 9);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = (n, d = 2) => Number(n).toLocaleString('pt-BR', {minimumFractionDigits: d, maximumFractionDigits: d});
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+function colorFor(name){ let h = 0; for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; }
+const snap = (v, s = 0.05) => Math.round(v / s) * s;
+const clampInt = (v, a, b) => Math.max(a, Math.min(b, Math.round(v)));
+const $ = s => document.querySelector(s);
+
+/* ================= plantas reais =================
+   Coordenadas em metros. x = da parede lateral, y = distância da parede da frente (lado das docas).
+   Pavilhão Simbiose/Bioma: projeto Phametal PHA10323 V02 (55,65 × 30,50 m, PD 7,80 m).
+   A frente é a parede das docas (direita no PDF); x cresce do lado do Bioma (baixo no PDF) para o Simbiose (cima).
+   Posições seguem MAPA_POSICOES do projeto Contagem:
+     simbiose B1 linhas 01–36, andares 1–4, lugares 1–5 (= bloco C3 do projeto)
+     simbiose B2 linhas 01–36, andares 1–4, lugares 1–4 (= bloco C4)
+     bioma    A1 linhas 01–36, andares 1–3, lugares 1–5 (= bloco C2)
+     bioma    A2 linhas 29–36, andares 1–3, lugares 1–4 (= bloco C1)
+   Lugar 1 fica no corredor; linha 01 no fundo, linha 36 junto da parede das docas. */
+function layoutSimbiose(){
+  const PAV3 = makePav3();
+  const RUA = 54.48 / 36, PROF = 1.025, Y0 = 0.555, YC = Y0 + 54.48 / 2;
+  const base = { tipo: 'drive', firstLane: 1, bayW: RUA, posD: PROF, locked: true, laneNames: null };
+  const racks = [
+    { ...base, id: uid(), code: 'B1', grupo: 'Simbiose', x: (16.1 + 21.225) / 2, y: YC, rot: 90, rev: true,  lanes: 36, deep: 5, levels: 4, levelH: 1.85 },
+    { ...base, id: uid(), code: 'B2', grupo: 'Simbiose', x: (25.6 + 29.7) / 2,   y: YC, rot: 270, rev: false, lanes: 36, deep: 4, levels: 4, levelH: 1.85 },
+    { ...base, id: uid(), code: 'A1', grupo: 'Bioma',    x: (0.8 + 5.925) / 2,   y: YC, rot: 90, rev: true,  lanes: 36, deep: 5, levels: 3, levelH: 2.45 },
+    { ...base, id: uid(), code: 'A2', grupo: 'Bioma',    x: (10.4 + 14.5) / 2,   y: Y0 + 12.2 / 2, rot: 270, rev: false, firstLane: 29, lanes: 8, bayW: 12.2 / 8, deep: 4, levels: 3, levelH: 2.45 }
+  ];
+  const zone = (name, x1, x2, y1, y2, color, extra = {}) => ({ id: uid(), name, x: (x1 + x2) / 2, y: (y1 + y2) / 2, w: x2 - x1, d: y2 - y1, color, tipo: 'piso', alt: 0, grid: false, locked: true, ...extra });
+  const zones = [
+    zone('Corredor Simbiose', 21.225, 25.6, 0, 55.65, '#6f7b75'),
+    zone('Corredor Bioma', 5.925, 10.4, 0, 55.65, '#6f7b75'),
+    zone('Blocos A e B do projeto (fora da contagem)', 10.4, 14.5, 12.755, 55.035, '#9aa39e'),
+    zone('Cobertura docas', 5.2, 30.5, -14.7, 0, '#5d86b3'),
+    zone('Escritório expedição', 0, 5.0, -12.25, -6.15, '#8e5fb8', { tipo: 'sala', alt: 3 })
+  ];
+  const PX = [0, 5.38, 10.33, 15.33, 20.33, 25.33, 30.27, 35.27, 40.27, 45.27, 50.27, 55.65];
+  const pillars = [];
+  for (const x of [0, 15.3, 30.5]) for (const xd of PX) pillars.push({ x, y: +(55.65 - xd).toFixed(2) });
+  for (const x of [5.1, 10.1, 20.43, 25.5]) pillars.push({ x, y: 0 }, { x, y: 55.65 });
+  pillars.push({ x: 30.35, y: -6.15 }, { x: 20.28, y: -6.15 }, { x: 10.69, y: -6.15 }, { x: 5.0, y: -6.15 }, { x: 5.0, y: -12.25 });
+  const bays = [[27.67, 30.09], [24.27, 26.66], [20.91, 23.27], [17.76, 20.12], [14.31, 16.73], [10.91, 13.36]];
+  return migrate({
+    name: 'Simbiose + Bioma + Pavilhão 3',
+    pav: { w: 30.5, l: 55.65, h: 7.8, plantaRot: 90,
+      doors: [{ x: 6.66, w: 3, h: 3.75 }, { x: 21.91, w: 3, h: 3.75 }],
+      docks: bays.map(([a, b]) => ({ x: a, w: b - a, y: -10.05, d: 3.75 })),
+      walls: [{ x1: 15.3, y1: 0, x2: 15.3, y2: 55.65 }],
+      pillars, areas: [{ text: 'SIMBIOSE', x: 23.4, y: 50 }, { text: 'BIOMA', x: 8.16, y: 50 }, { text: 'PAVILHÃO 3', x: -9, y: 52 }],
+      extras: [PAV3.building] },
+    racks: [...racks, ...PAV3.racks], zones: [...zones, ...PAV3.zones], pallets: []
+  });
+}
+/* Pavilhão 3 (expedição): girado 180° em relação ao PDF, encostado na parede de baixo do prédio dos drive-ins (lado do Bioma), do fundo
+   até depois do escritório, como no esboço. O PDF dele não tem cotas: a grade foi esticada para os 69 m de
+   comprimento do esboço (rua = 1,66 m) e a profundidade ficou com 1,00 m por lugar (18 m no total).
+   u = metros no PDF da esquerda para a direita (célula 1,22), v = metros de cima para baixo. */
+function makePav3(){
+  const L3 = 69.05, U = 50.8, SX = L3 / U, Y0 = 55.65;
+  const Y = u => Y0 - L3 + u * SX, X = v => v - 18;   // girado 180°: o lado de baixo do PDF encosta nos drive-ins
+  const bl = (names, u1, v1, v2, top) => ({ id: uid(), tipo: 'blocado', code: names.join(''), grupo: 'Pav. 3',
+    x: X((v1 + v2) / 2), y: Y(u1 + names.length * 1.22 / 2), rot: top ? 90 : 270, rev: !top, laneNames: names, firstLane: 1,
+    lanes: names.length, deep: 7, levels: 1, bayW: 1.22 * SX, posD: (v2 - v1) / 7, levelH: 1.6, locked: true });
+  const z = (name, u1, u2, v1, v2, color, extra = {}) => ({ id: uid(), name, x: X((v1 + v2) / 2), y: Y((u1 + u2) / 2), w: v2 - v1, d: (u2 - u1) * SX, color, tipo: 'piso', alt: 0, grid: false, cell: [1.0, 1.22 * SX], locked: true, ...extra });
+  const T = [0.25, 6.99], B = [10.89, 17.75];
+  const racks = [
+    bl(['K','J'], 16.14, ...T, true), bl(['I','H'], 22.24, ...T, true), bl(['G','F'], 28.33, ...T, true), bl(['E','D'], 34.43, ...T, true), bl(['C','B'], 40.53, ...T, true), bl(['A'], 46.63, ...T, true),
+    bl(['U','Q'], 15.65, ...B, false), bl(['P','O'], 21.75, ...B, false), bl(['N','M'], 27.85, ...B, false), bl(['L'], 33.94, ...B, false)
+  ];
+  const zones = [
+    z('Área livre', 0.08, 15.65, ...T, '#7d8a84', { grid: true }),
+    z('Área livre', 3.66, 14.43, ...B, '#7d8a84', { grid: true }),
+    ...[[18.58, 22.24], [24.68, 28.33], [30.77, 34.43], [36.87, 40.53], [42.97, 46.63]].map(([a, b]) => z('Área cinza', a, b, ...T, '#5f6a66', { grid: true })),
+    ...[[18.09, 21.75], [24.19, 27.85], [30.29, 33.94]].map(([a, b]) => z('Área cinza', a, b, ...B, '#5f6a66', { grid: true })),
+    z('Área cinza', 35.16, 50.8, 10.89, 12.92, '#5f6a66', { grid: true }),
+    z('Máquinas', 35.16, 50.8, 12.92, 17.92, '#7d6158', { tipo: 'bloqueio', alt: 2.5 }),
+    z('Corredor empilhadeira', 0.1, 50.8, 6.99, 10.89, '#6f7b75'),
+    z('Corredor', 0.1, 3.6, ...B, '#6f7b75'),
+    z('Corredor', 47.9, 50.7, ...T, '#6f7b75')
+  ];
+  return { racks, zones, building: { name: 'Pavilhão 3', x1: -18, x2: 0, y1: Y0 - L3, y2: Y0, h: 8 } };
+}
+function blankLayout(name){ return { name, pav: { w: 30, l: 45, h: 9, plantaRot: 0, doors: [{ x: 5, w: 4, h: 4 }], docks: [], walls: [], pillars: [], areas: [], extras: [] }, racks: [], pallets: [], zones: [] }; }
+function migrate(L){
+  L.pav.doors = (L.pav.doors || []).map(d => ({ h: 4, ...d })); for (const k of ['docks','walls','pillars','areas','extras']) L.pav[k] = L.pav[k] || [];
+  L.pav.plantaRot = L.pav.plantaRot || 0; L.zones = L.zones || []; L.pallets = L.pallets || [];
+  L.racks.forEach(r => { r.tipo = r.tipo || 'drive'; r.code = r.code || r.name || 'DI'; r.grupo = r.grupo || ''; r.firstLane = r.firstLane || 1; r.rev = !!r.rev; r.laneNames = r.laneNames || null; });
+  L.zones.forEach(z => { z.tipo = z.tipo || 'piso'; z.alt = z.alt || 0; });
+  L.pav.areas.forEach(a => { a.id = a.id || uid(); a.size = a.size || 2.2; });
+  return L;
+}
+/* O layout (estruturas, áreas, textos) é compartilhado: vive na tabela layout_pavilhao.
+   Os paletes de SIMULAÇÃO são de quem está planejando: ficam só neste navegador.
+   Aqui o localStorage é só cache, para a tela abrir na hora enquanto o banco responde. */
+const semSim = l => { const { pallets, _cliente, ...resto } = l; return resto; };
+const simKey = id => 'layout3d-sim-' + id;
+function lerSim(id){ try { return JSON.parse(localStorage.getItem(simKey(id))) || []; } catch(e){ return []; } }
+function gravarSim(){ try { localStorage.setItem(simKey(store.current), JSON.stringify(L.pallets)); } catch(e){} }
+function loadStore(){
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && s.layouts && s.layouts[s.current]){ for (const [id, l] of Object.entries(s.layouts)){ l.pallets = lerSim(id); migrate(l); } return s; }
+  } catch(e){}
+  const a = 'principal';
+  return { current: a, layouts: { [a]: { ...layoutSimbiose(), pallets: lerSim(a) } } };
+}
+let store = loadStore();
+let L = store.layouts[store.current];
+let saveT;
+const CLIENTE = uid();
+let sb = null, modoBanco = false, erroBanco = '', canalOk = false, ultimoSync = 0, erroOcup = '';
+const ultimoSalvo = {};
+function save(){
+  clearTimeout(saveT);
+  saveT = setTimeout(async () => {
+    gravarSim();
+    try { localStorage.setItem(KEY, JSON.stringify({ current: store.current, layouts: Object.fromEntries(Object.entries(store.layouts).map(([k, v]) => [k, semSim(v)])) })); } catch(e){}
+    if (!modoBanco) return;
+    const id = store.current, json = JSON.stringify(semSim(L));
+    if (ultimoSalvo[id] === json) return;
+    try {
+      const { error } = await sb.from('layout_pavilhao').upsert({ id, nome: L.name, dados: { ...semSim(L), _cliente: CLIENTE }, feito_por: QUEM || 'sem nome', updated_at: new Date().toISOString() });
+      if (error) throw error;
+      ultimoSalvo[id] = json;
+    } catch(e){ toast('O layout não foi salvo no banco: ' + e.message); }
+  }, 700);
+}
+
+const undoStack = [];
+function pushUndo(){ undoStack.push(JSON.stringify(L)); if (undoStack.length > 60) undoStack.shift(); $('#b-undo').disabled = false; }
+function undo(){
+  if (!undoStack.length) return toast('Nada para desfazer');
+  L = JSON.parse(undoStack.pop()); store.layouts[store.current] = L;
+  if (sel && !selObj()) sel = null;
+  rebuildAll(); afterChange(); $('#b-undo').disabled = !undoStack.length;
+}
+
+/* ================= geometria ================= */
+const rackById = id => L.racks.find(r => r.id === id);
+const rackDims = r => ({ W: r.lanes * r.bayW, D: r.deep * r.posD, H: r.levels * r.levelH });
+function rot2(x, y, deg){ const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return { x: x * c - y * s, y: x * s + y * c }; }
+const linhaIdx = (r, i) => r.rev ? r.lanes - 1 - i : i;
+function laneLabel(r, i){ const k = linhaIdx(r, i); return r.laneNames ? (r.laneNames[k] ?? String(k + 1)) : String((r.firstLane || 1) + k).padStart(2, '0'); }
+function posCode(r, lane, pos, level){
+  if (r.laneNames) return `${laneLabel(r, lane)}-${pos + 1}${r.levels > 1 ? '-' + (level + 1) : ''}`;
+  return `${r.code}-${laneLabel(r, lane)}-${level + 1}-${pos + 1}`;     // drive-linha-andar-lugar, igual à contagem
+}
+const rackTitle = r => r.grupo ? `${r.code} · ${r.grupo}` : r.code;
+function slotLocal(r, lane, pos){ const { W, D } = rackDims(r); return { lx: -W/2 + (lane + 0.5) * r.bayW, ly: -D/2 + (pos + 0.5) * r.posD }; }
+function slotPos(r, lane, pos, level){
+  const { lx, ly } = slotLocal(r, lane, pos); const v = rot2(lx, ly, r.rot);
+  return { x: r.x + v.x, y: r.y + v.y, elev: level * r.levelH + (level > 0 ? 0.03 : 0) };
+}
+function palletWorld(p){
+  if (p.rackId){ const r = rackById(p.rackId); if (r){ const s = slotPos(r, p.lane, p.pos, p.level); return { ...s, rot: r.rot }; } }
+  return { x: p.x, y: p.y, elev: 0, rot: p.rot || 0 };
+}
+function footprint(kind, o){
+  let x, y, hw, hd, rot;
+  if (kind === 'pallet'){ const w = palletWorld(o); x = w.x; y = w.y; hw = o.w/2; hd = o.d/2; rot = w.rot; }
+  else if (kind === 'rack'){ const d = rackDims(o); x = o.x; y = o.y; hw = d.W/2; hd = d.D/2; rot = o.rot; }
+  else if (kind === 'label'){ x = o.x; y = o.y; hw = (o.size || 2.2) * o.text.length * .38; hd = (o.size || 2.2) / 2; rot = labelYaw ? 90 : 0; }
+  else if (kind === 'slot'){ const s = slotPos(o.r, o.lane, o.pos, o.level); x = s.x; y = s.y; hw = o.r.bayW/2; hd = o.r.posD/2; rot = o.r.rot; }
+  else { x = o.x; y = o.y; hw = o.w/2; hd = o.d/2; rot = 0; }
+  if (((rot % 180) + 180) % 180 === 90) [hw, hd] = [hd, hw];
+  return { minX: x - hw, maxX: x + hw, minY: y - hd, maxY: y + hd, cx: x, cy: y };
+}
+const overlaps = (a, b, m = 0.01) => a.minX < b.maxX - m && a.maxX > b.minX + m && a.minY < b.maxY - m && a.maxY > b.minY + m;
+const PIL = 0.35;
+const pillarFp = p => ({ minX: p.x - PIL/2, maxX: p.x + PIL/2, minY: p.y - PIL/2, maxY: p.y + PIL/2 });
+function occupancy(){
+  const m = new Map();
+  for (const p of L.pallets) if (p.rackId && rackById(p.rackId)){ const k = `${p.rackId}|${p.lane}|${p.pos}|${p.level}`; if (!m.has(k)) m.set(k, []); m.get(k).push(p.id); }
+  return m;
+}
+function rackSlotAt(x, y){
+  for (const r of L.racks){
+    const { W, D } = rackDims(r);
+    const v = rot2(x - r.x, y - r.y, -r.rot);
+    if (Math.abs(v.x) <= W/2 && Math.abs(v.y) <= D/2)
+      return { r, lane: clampInt(Math.floor((v.x + W/2) / r.bayW), 0, r.lanes - 1), pos: clampInt(Math.floor((v.y + D/2) / r.posD), 0, r.deep - 1) };
+  }
+  return null;
+}
+function lowestFree(r, lane, pos, exceptId){
+  const used = new Set(L.pallets.filter(p => p.id !== exceptId && p.rackId === r.id && p.lane === lane && p.pos === pos).map(p => p.level));
+  for (let lv = 0; lv < r.levels; lv++) if (!used.has(lv)) return lv;
+  return -1;
+}
+function floorItems(exceptId){
+  const out = [];
+  for (const p of L.pallets) if (!p.rackId && p.id !== exceptId) out.push({ kind: 'pallet', id: p.id, fp: footprint('pallet', p) });
+  for (const r of L.racks) if (r.id !== exceptId) out.push({ kind: 'rack', id: r.id, fp: footprint('rack', r) });
+  return out;
+}
+function obstacles(exceptId){
+  const o = floorItems(exceptId).map(i => i.fp);
+  L.pav.pillars.forEach(p => o.push(pillarFp(p)));
+  L.zones.filter(z => z.tipo !== 'piso').forEach(z => o.push(footprint('zone', z)));
+  return o;
+}
+function findFree(w, d, nearX, nearY, exceptId){
+  const items = obstacles(exceptId);
+  const { w: PW, l: PL } = L.pav; const cands = [];
+  for (let x = w/2 + 0.3; x <= PW - w/2 - 0.3; x += 0.5) for (let y = d/2 + 0.3; y <= PL - d/2 - 0.3; y += 0.5) cands.push([x, y, (x - nearX) ** 2 + (y - nearY) ** 2]);
+  cands.sort((a, b) => a[2] - b[2]);
+  for (const [x, y] of cands){
+    const fp = { minX: x - w/2 - 0.1, maxX: x + w/2 + 0.1, minY: y - d/2 - 0.1, maxY: y + d/2 + 0.1 };
+    if (!items.some(i => overlaps(fp, i, 0))) return { x: snap(x), y: snap(y) };
+  }
+  return { x: nearX, y: nearY };
+}
+function normalizeRack(r){
+  r.lanes = clampInt(r.lanes, 1, 80); r.deep = clampInt(r.deep, 1, 40); r.levels = clampInt(r.levels, 1, 10); r.firstLane = clampInt(r.firstLane || 1, 0, 999);
+  for (const p of L.pallets) if (p.rackId === r.id && (p.lane >= r.lanes || p.pos >= r.deep || p.level >= r.levels)){
+    const f = findFree(p.w, p.d, r.x, r.y, p.id); p.rackId = null; p.x = f.x; p.y = f.y; p.rot = 0;
+  }
+}
+function extents(){
+  const { w, l } = L.pav; let a = 0, b = w, c = 0, d = l, b2 = w;
+  for (const z of L.zones){ const f = footprint('zone', z); a = Math.min(a, f.minX); b = Math.max(b, f.maxX); c = Math.min(c, f.minY); d = Math.max(d, f.maxY); }
+  for (const b of L.pav.extras){ a = Math.min(a, b.x1); b2 = Math.max(b2, b.x2); c = Math.min(c, b.y1); d = Math.max(d, b.y2); }
+  b = Math.max(b, b2);
+  for (const k of L.pav.docks){ a = Math.min(a, k.x); b = Math.max(b, k.x + k.w); c = Math.min(c, k.y); d = Math.max(d, k.y + k.d); }
+  return { minX: a, maxX: b, minY: c, maxY: d };
+}
+const totalSlots = () => L.racks.reduce((a, r) => a + r.lanes * r.deep * r.levels, 0);
+
+const buildingRects = () => [{ x1: 0, x2: L.pav.w, y1: 0, y2: L.pav.l }, ...L.pav.extras];
+const insideBuilding = f => buildingRects().some(b => f.minX >= b.x1 - .01 && f.maxX <= b.x2 + .01 && f.minY >= b.y1 - .01 && f.maxY <= b.y2 + .01);
+function validate(){
+  const issues = []; const bad = new Set();
+  const { w: PW, l: PL, h: PH } = L.pav;
+  const items = floorItems(null);
+  const label = i => i.kind === 'rack' ? 'Estrutura ' + rackById(i.id).code : 'Palete ' + (L.pallets.find(p => p.id === i.id)?.prod || '');
+  for (const i of items){
+    const f = i.fp;
+    if (!insideBuilding(f)){ issues.push({ kind: i.kind, id: i.id, text: `${label(i)} está fora do pavilhão` }); bad.add(i.id); }
+    if (L.pav.pillars.some(p => overlaps(f, pillarFp(p)))){ issues.push({ kind: i.kind, id: i.id, text: `${label(i)} bate em um pilar` }); bad.add(i.id); }
+  }
+  for (let a = 0; a < items.length; a++) for (let b = a + 1; b < items.length; b++){
+    if (overlaps(items[a].fp, items[b].fp)){ issues.push({ kind: items[a].kind, id: items[a].id, text: `${label(items[a])} sobrepõe ${label(items[b])}` }); bad.add(items[a].id); bad.add(items[b].id); }
+  }
+  for (const [k, ids] of occupancy()) if (ids.length > 1){
+    const [rid, lane, pos, lv] = k.split('|'); const r = rackById(rid);
+    issues.push({ kind: 'pallet', id: ids[1], text: `${ids.length} paletes na mesma posição ${posCode(r, +lane, +pos, +lv)}` }); ids.forEach(i => bad.add(i));
+  }
+  for (const p of L.pallets) if (p.rackId){ const r = rackById(p.rackId); if (r && r.tipo === 'drive' && p.h > r.levelH - 0.1 && p.level < r.levels - 1){ issues.push({ kind: 'pallet', id: p.id, text: `${p.prod} (${fmt(p.h)} m) não cabe no vão de ${fmt(r.levelH)} m da ${r.code}` }); bad.add(p.id); } }
+  for (const r of L.racks) if (rackDims(r).H > PH){ issues.push({ kind: 'rack', id: r.id, text: `Estrutura ${r.code} é mais alta que o pé-direito` }); bad.add(r.id); }
+  return { issues, bad };
+}
+
+/* ================= three.js ================= */
+const vp = $('#vp');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+vp.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const persp = new THREE.PerspectiveCamera(45, 1, 0.1, 800);
+const ortho = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 800);
+let cam = persp, controls = null, orthoHalfH = 30;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f8c, 0.78));
+const sun = new THREE.DirectionalLight(0xffffff, 0.72); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0005; scene.add(sun, sun.target);
+
+const envG = new THREE.Group(), zoneG = new THREE.Group(), rackG = new THREE.Group(), palG = new THREE.Group(), dimG = new THREE.Group(), measG = new THREE.Group();
+scene.add(envG, zoneG, rackG, palG, dimG, measG);
+const selBox = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0xf0b400, depthTest: false }));
+selBox.renderOrder = 998; selBox.visible = false; scene.add(selBox);
+const W2 = (x, y, elev = 0) => new THREE.Vector3(x, elev, -y);   // dados → mundo
+
+const geoCache = new Map();
+function boxGeo(w, h, d){ const k = [w,h,d].map(v => v.toFixed(3)).join(); if (!geoCache.has(k)){ const g = new THREE.BoxGeometry(w, h, d); g.userData.shared = true; geoCache.set(k, g); } return geoCache.get(k); }
+const shared = m => (m.userData.shared = true, m);
+const woodMat = shared(new THREE.MeshStandardMaterial({ color: 0xa47a4c, roughness: 0.9 }));
+const upMat = shared(new THREE.MeshStandardMaterial({ color: 0x2f5fa8, roughness: 0.55, metalness: 0.3 }));
+const railMat = shared(new THREE.MeshStandardMaterial({ color: 0xe07b22, roughness: 0.55, metalness: 0.3 }));
+const pillarMat = shared(new THREE.MeshStandardMaterial({ color: 0x4b524f, roughness: 0.8 }));
+const pickMat = shared(new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+const slotMat = shared(new THREE.MeshBasicMaterial({ color: 0x3d9a6a, transparent: true, opacity: .42, depthWrite: false }));
+const hitMat = shared(new THREE.MeshBasicMaterial({ color: 0xf0b400, transparent: true, opacity: .8, depthWrite: false }));
+const HIDE = new THREE.Matrix4().makeTranslation(0, -9999, 0);
+
+let tok = {};
+function readTokens(){
+  const cs = getComputedStyle(document.documentElement); const g = n => cs.getPropertyValue(n).trim();
+  tok = { scene: g('--scene'), floor: g('--floor'), grid: g('--grid'), gridS: g('--grid-strong'), wall: g('--wall'), accent: g('--accent'), ink: g('--ink'), muted: g('--muted'), danger: g('--danger'), slot: g('--slot'),
+          ok: g('--ok'), warn: g('--warn'), alt: g('--alt'), paint: g('--paint'), line: g('--line') };
+  scene.background = new THREE.Color(tok.scene);
+  selBox.material.color.set(tok.accent); slotMat.color.set(tok.slot); hitMat.color.set(tok.accent);
+}
+
+const texCache = new Map();
+function textTex(lines, { fg = '#111', bg = null, size = 44, weight = 600, pad = 14, radius = 10, mono = false } = {}){
+  const key = JSON.stringify([lines, fg, bg, size, weight, mono]);
+  if (texCache.has(key)) return texCache.get(key);
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  const fam = mono ? '"IBM Plex Mono", Consolas, monospace' : '"IBM Plex Sans", "Segoe UI", sans-serif';
+  const fonts = lines.map((_, i) => `${i ? 500 : weight} ${i ? Math.round(size * .78) : size}px ${fam}`);
+  let w = 0; lines.forEach((t, i) => { g.font = fonts[i]; w = Math.max(w, g.measureText(t).width); });
+  const lh = lines.map((_, i) => (i ? size * .78 : size) * 1.2);
+  c.width = Math.ceil(w + pad * 2); c.height = Math.ceil(lh.reduce((a, b) => a + b, 0) + pad * 1.4);
+  if (bg){ g.fillStyle = bg; g.beginPath(); g.roundRect ? g.roundRect(0, 0, c.width, c.height, radius) : g.rect(0, 0, c.width, c.height); g.fill(); }
+  g.fillStyle = fg; g.textBaseline = 'middle'; g.textAlign = 'center';
+  let y = pad * .7; lines.forEach((t, i) => { g.font = fonts[i]; g.fillText(t, c.width / 2, y + lh[i] / 2); y += lh[i]; });
+  const tex = new THREE.CanvasTexture(c); tex.anisotropy = 4;
+  const out = { tex, aspect: c.width / c.height }; texCache.set(key, out); return out;
+}
+function sprite(lines, height, opts, onTop = false){
+  const t = textTex(lines, opts);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t.tex, transparent: true, depthTest: !onTop, depthWrite: false }));
+  s.scale.set(height * t.aspect, height, 1); if (onTop) s.renderOrder = 999; return s;
+}
+let labelYaw = 0;
+/* extX/extY = espaço disponível nos eixos do pai; capH = altura máxima do texto */
+function flatLabel(lines, extX, extY, opts, parentYaw = 0, capH = Infinity){
+  const t = textTex(lines, opts);
+  const sideways = Math.abs(Math.sin(labelYaw - parentYaw)) > .5;
+  const [mw, mh] = sideways ? [extY, extX] : [extX, extY];
+  let w = mw, h = w / t.aspect; const lim = Math.min(mh, capH); if (h > lim){ h = lim; w = h * t.aspect; }
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t.tex, transparent: true, depthWrite: false }));
+  m.rotation.set(-Math.PI / 2, 0, labelYaw - parentYaw); return m;
+}
+function clearGroup(g){
+  g.traverse(o => {
+    if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose();
+    if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (!m.userData.shared) m.dispose(); });
+  });
+  g.clear();
+}
+function lineMat(color, opacity = 1){ return new THREE.LineBasicMaterial({ color, transparent: opacity < 1, opacity }); }
+function segs(points, mat){ return new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(points), mat); }
+function rectPts(hw, hd, y){ const o = [[-hw,-hd],[hw,-hd],[hw,hd],[-hw,hd]].map(([x, z]) => new THREE.Vector3(x, y, z)); return [o[0],o[1],o[1],o[2],o[2],o[3],o[3],o[0]]; }
+
+/* ---------- ambiente ---------- */
+function buildEnv(){
+  clearGroup(envG);
+  const P = L.pav, { w, l, h } = P, E = extents();
+  const gw = E.maxX - E.minX + 400, gl = E.maxY - E.minY + 400;
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(gw, gl), new THREE.MeshStandardMaterial({ color: tok.scene, roughness: 1 }));
+  ground.rotation.x = -Math.PI / 2; ground.position.copy(W2((E.minX + E.maxX) / 2, (E.minY + E.maxY) / 2, -0.02)); ground.receiveShadow = true; envG.add(ground);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, l), new THREE.MeshStandardMaterial({ color: tok.floor, roughness: 0.95 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.set(w / 2, 0, -l / 2); floor.receiveShadow = true; envG.add(floor);
+  const p1 = [], p5 = [];
+  for (let x = 0; x <= w + 1e-6; x += 1) (Math.round(x) % 5 === 0 ? p5 : p1).push(W2(x, 0, .004), W2(x, l, .004));
+  for (let y = 0; y <= l + 1e-6; y += 1) (Math.round(y) % 5 === 0 ? p5 : p1).push(W2(0, y, .004), W2(w, y, .004));
+  envG.add(segs(p1, lineMat(tok.grid, .55)), segs(p5, lineMat(tok.gridS, .8)));
+  // paredes translúcidas
+  const wallMat = new THREE.MeshStandardMaterial({ color: tok.wall, transparent: true, opacity: .1, depthWrite: false, side: THREE.DoubleSide });
+  const wall = (x1, y1, x2, y2, z0 = 0, z1 = h) => { const len = Math.hypot(x2 - x1, y2 - y1); if (len < .01 || z1 - z0 < .01) return; const m = new THREE.Mesh(new THREE.PlaneGeometry(len, z1 - z0), wallMat); m.position.copy(W2((x1 + x2) / 2, (y1 + y2) / 2, (z0 + z1) / 2)); m.rotation.y = Math.atan2(y2 - y1, x2 - x1); envG.add(m); };
+  wall(0, l, w, l); wall(0, 0, 0, l); wall(w, 0, w, l);
+  P.walls.forEach(v => wall(v.x1, v.y1, v.x2, v.y2));
+  const ds = [...P.doors].sort((a, b) => a.x - b.x); let cur = 0;
+  ds.forEach(d => { wall(cur, 0, Math.max(cur, d.x), 0); wall(d.x, 0, d.x + d.w, 0, d.h || 4, h); cur = Math.max(cur, d.x + d.w); }); wall(cur, 0, w, 0);
+  const ep = [];
+  const C = [[0,0],[w,0],[w,l],[0,l]];
+  for (let i = 0; i < 4; i++){ const [a, b] = [C[i], C[(i + 1) % 4]]; ep.push(W2(...a, h), W2(...b, h), W2(...a, .01), W2(...b, .01), W2(...a, 0), W2(...a, h)); }
+  P.walls.forEach(v => ep.push(W2(v.x1, v.y1, h), W2(v.x2, v.y2, h), W2(v.x1, v.y1, .01), W2(v.x2, v.y2, .01)));
+  ds.forEach(d => { const hh = d.h || 4; ep.push(W2(d.x, 0, 0), W2(d.x, 0, hh), W2(d.x, 0, hh), W2(d.x + d.w, 0, hh), W2(d.x + d.w, 0, hh), W2(d.x + d.w, 0, 0)); });
+  envG.add(segs(ep, lineMat(tok.wall, .85)));
+  // outros pavilhões
+  for (const B of P.extras){
+    const bw = B.x2 - B.x1, bl = B.y2 - B.y1, bh = B.h || h;
+    const f2 = new THREE.Mesh(new THREE.PlaneGeometry(bw, bl), new THREE.MeshStandardMaterial({ color: tok.floor, roughness: .95 }));
+    f2.rotation.x = -Math.PI / 2; f2.position.copy(W2((B.x1 + B.x2) / 2, (B.y1 + B.y2) / 2, .001)); f2.receiveShadow = true; envG.add(f2);
+    const ep2 = [];
+    const onMainWall = (x1, y1, x2, y2) => Math.abs(x1 - x2) < .01 && Math.abs(x1) < .01 ? [Math.max(y1, 0), Math.min(y2, l)] : null;
+    [[B.x1, B.y1, B.x2, B.y1], [B.x2, B.y1, B.x2, B.y2], [B.x2, B.y2, B.x1, B.y2], [B.x1, B.y2, B.x1, B.y1]].forEach(([x1, y1, x2, y2]) => {
+      const ov = onMainWall(x1, Math.min(y1, y2), x2, Math.max(y1, y2));
+      if (ov && ov[1] > ov[0]){ wall(x1, Math.min(y1, y2), x1, ov[0], 0, bh); wall(x1, ov[1], x1, Math.max(y1, y2), 0, bh); }
+      else wall(x1, y1, x2, y2, 0, bh);
+      ep2.push(W2(x1, y1, bh), W2(x2, y2, bh), W2(x1, y1, .01), W2(x2, y2, .01), W2(x1, y1, 0), W2(x1, y1, bh));
+    });
+    envG.add(segs(ep2, lineMat(tok.wall, .85)));
+  }
+  // portões
+  ds.forEach(d => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(d.w, 1.2), new THREE.MeshBasicMaterial({ color: tok.paint, transparent: true, opacity: .55, depthWrite: false }));
+    m.rotation.x = -Math.PI / 2; m.position.copy(W2(d.x + d.w / 2, 0.6, .007)); envG.add(m);
+    const lb = flatLabel([`PORTÃO ${fmt(d.w, 1)}×${fmt(d.h || 4, 2)}`], d.w * .9, 1.1, { fg: '#1d1a0e', size: 40, weight: 700 }, 0, .5); lb.position.copy(W2(d.x + d.w / 2, 0.6, .012)); envG.add(lb);
+  });
+  // pilares
+  if (P.pillars.length){
+    const im = new THREE.InstancedMesh(boxGeo(PIL, h, PIL), pillarMat, P.pillars.length); const dm = new THREE.Object3D();
+    P.pillars.forEach((p, i) => { dm.position.copy(W2(p.x, p.y, h / 2)); dm.updateMatrix(); im.setMatrixAt(i, dm.matrix); });
+    im.castShadow = true; envG.add(im);
+  }
+  // docas
+  P.docks.forEach((d, i) => {
+    const cx = d.x + d.w / 2, cy = d.y + d.d / 2;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(d.w, d.d), new THREE.MeshBasicMaterial({ color: tok.paint, transparent: true, opacity: .32, depthWrite: false }));
+    m.rotation.x = -Math.PI / 2; m.position.copy(W2(cx, cy, .014)); envG.add(m);
+    const o = segs(rectPts(d.w / 2, d.d / 2, 0), lineMat(tok.paint)); o.position.copy(W2(cx, cy, .018)); envG.add(o);
+    const lb = flatLabel([`DOCA ${i + 1}`], d.w * .9, d.d * .9, { fg: tok.ink, size: 48, weight: 700 }, 0, 1.2); lb.position.copy(W2(cx, cy, .022)); envG.add(lb);
+  });
+  // nomes das áreas
+  const fr = flatLabel(['FRENTE'], 10, 10, { fg: tok.muted, size: 60, weight: 700 }, 0, 1.6); fr.position.copy(W2(w / 2, E.minY - 2.2, .01)); envG.add(fr);
+  for (let x = 0; x <= w + 1e-6; x += 5){ const s = flatLabel([`${x} m`], 2.4, 2.4, { fg: tok.muted, size: 40, weight: 500 }, 0, .8); s.position.copy(W2(x, l + 0.9, .01)); envG.add(s); }
+  for (let y = 5; y <= l + 1e-6; y += 5){ const s = flatLabel([`${y} m`], 2.4, 2.4, { fg: tok.muted, size: 40, weight: 500 }, 0, .8); s.position.copy(W2(E.minX - 1.7, y, .01)); envG.add(s); }
+  const M = Math.max(E.maxX - E.minX, E.maxY - E.minY);
+  sun.position.copy(W2(w * .2, l * .3 - M * .3, M)); sun.target.position.copy(W2(w / 2, l / 2));
+  const sc = sun.shadow.camera, ext = M * .85; sc.left = -ext; sc.right = ext; sc.top = ext; sc.bottom = -ext; sc.far = M * 3; sc.updateProjectionMatrix();
+}
+
+/* ---------- zonas ---------- */
+const zoneObjs = new Map();
+function buildZones(){
+  clearGroup(zoneG); zoneObjs.clear();
+  for (const z of L.zones){ const g = makeZone(z); zoneG.add(g); zoneObjs.set(z.id, g); }
+}
+function rebuildZone(z){ const o = zoneObjs.get(z.id); if (o){ zoneG.remove(o); clearGroup(o); } const g = makeZone(z); zoneG.add(g); zoneObjs.set(z.id, g); }
+function makeZone(z){
+  {
+    const g = new THREE.Group(); g.userData = { kind: 'zone', id: z.id };
+    const hw = z.w / 2, hd = z.d / 2;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(z.w, z.d), new THREE.MeshBasicMaterial({ color: z.color, transparent: true, opacity: z.tipo === 'piso' ? .2 : .35, depthWrite: false }));
+    m.rotation.x = -Math.PI / 2; m.position.y = .008; g.add(m);
+    g.add(segs(rectPts(hw, hd, .012), lineMat(z.color)));
+    if (z.grid){
+      const [cw, cd] = z.cell || [1.22, 1.0], pts = [];
+      for (let x = -hw + cw; x < hw - .05; x += cw) pts.push(new THREE.Vector3(x, .011, -hd), new THREE.Vector3(x, .011, hd));
+      for (let y = -hd + cd; y < hd - .05; y += cd) pts.push(new THREE.Vector3(-hw, .011, y), new THREE.Vector3(hw, .011, y));
+      g.add(segs(pts, lineMat(z.color, .6)));
+    }
+    let top = .016;
+    if (z.tipo === 'sala' || z.tipo === 'bloqueio'){
+      const H = z.alt || 3;
+      const mat = new THREE.MeshStandardMaterial({ color: z.color, transparent: true, opacity: z.tipo === 'sala' ? .38 : .85, depthWrite: z.tipo !== 'sala', side: THREE.DoubleSide });
+      const b = new THREE.Mesh(new THREE.BoxGeometry(z.w, H, z.d), mat); b.position.y = H / 2; if (z.tipo === 'bloqueio'){ b.castShadow = true; } g.add(b);
+      const e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(z.w, H, z.d)), lineMat(z.color)); e.position.y = H / 2; g.add(e);
+      if (z.tipo === 'bloqueio') top = H + .02;
+      if (view.labels){ const s = sprite([z.name], 1.0, { fg: '#fff', bg: 'rgba(29,40,52,.9)', size: 44 }); s.position.set(0, H + .8, 0); g.add(s); }
+    }
+    if (view.labels){ const lb = flatLabel([z.name.toUpperCase()], z.w * .85, z.d * .85, { fg: z.tipo === 'bloqueio' ? '#fff' : z.color, size: 52, weight: 700 }, 0, 1.3); lb.position.y = top; g.add(lb); }
+    g.position.copy(W2(z.x, z.y)); return g;
+  }
+}
+
+/* ---------- textos no piso (SIMBIOSE, BIOMA…) ---------- */
+const labelG = new THREE.Group(); scene.add(labelG);
+function buildLabels(){
+  clearGroup(labelG);
+  for (const a of L.pav.areas){
+    const lb = flatLabel([a.text], 40, 40, { fg: tok.muted, size: 70, weight: 700 }, 0, a.size || 2.2);
+    lb.position.copy(W2(a.x, a.y, .02)); lb.userData = { kind: 'label', id: a.id }; labelG.add(lb);
+  }
+}
+
+/* ---------- estruturas ---------- */
+const rackObjs = new Map();
+function buildRacks(){
+  clearGroup(rackG); rackObjs.clear();
+  const dm = new THREE.Object3D();
+  for (const r of L.racks){
+    const { W, D, H } = rackDims(r);
+    const yaw = r.rot * Math.PI / 180;
+    const g = new THREE.Group(); g.userData = { kind: 'rack', id: r.id };
+    if (r.tipo === 'drive'){
+      const ups = new THREE.InstancedMesh(boxGeo(.09, H, .09), upMat, (r.lanes + 1) * (r.deep + 1)); let k = 0;
+      for (let i = 0; i <= r.lanes; i++) for (let j = 0; j <= r.deep; j++){ dm.position.set(-W/2 + i * r.bayW, H/2, D/2 - j * r.posD); dm.updateMatrix(); ups.setMatrixAt(k++, dm.matrix); }
+      ups.castShadow = true; g.add(ups);
+      const rails = new THREE.InstancedMesh(boxGeo(.07, .07, D), railMat, Math.max(1, (r.lanes + 1) * Math.max(0, r.levels - 1))); k = 0;
+      for (let i = 0; i <= r.lanes; i++) for (let lv = 1; lv < r.levels; lv++){ dm.position.set(-W/2 + i * r.bayW, lv * r.levelH - .035, 0); dm.updateMatrix(); rails.setMatrixAt(k++, dm.matrix); }
+      rails.count = k; g.add(rails);
+      const beam = new THREE.InstancedMesh(boxGeo(W, .1, .1), railMat, 2);
+      [D/2, -D/2].forEach((z, i) => { dm.position.set(0, H, z); dm.updateMatrix(); beam.setMatrixAt(i, dm.matrix); }); g.add(beam);
+      g.add(segs(rectPts(W/2, D/2, .015), lineMat('#2f5fa8')));
+    } else {
+      const fill = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshBasicMaterial({ color: '#f3d64a', transparent: true, opacity: .35, depthWrite: false }));
+      fill.rotation.x = -Math.PI / 2; fill.position.y = .01; g.add(fill);
+      const pts = rectPts(W/2, D/2, .014);
+      for (let i = 1; i < r.lanes; i++) pts.push(new THREE.Vector3(-W/2 + i * r.bayW, .014, -D/2), new THREE.Vector3(-W/2 + i * r.bayW, .014, D/2));
+      for (let j = 1; j < r.deep; j++) pts.push(new THREE.Vector3(-W/2, .014, D/2 - j * r.posD), new THREE.Vector3(W/2, .014, D/2 - j * r.posD));
+      g.add(segs(pts, lineMat('#c99b00')));
+    }
+    // posições (uma placa por vaga, some quando tem palete)
+    const sw = Math.max(.3, Math.min(1.2, r.bayW - .3)), sd = Math.max(.3, r.posD - .14);
+    const slots = new THREE.InstancedMesh(boxGeo(sw, .05, sd), slotMat, r.lanes * r.deep * r.levels);
+    slots.userData = { slots: true, rackId: r.id }; slots.visible = view.slots; g.add(slots); g.userData.slots = slots;
+    const pick = new THREE.Mesh(boxGeo(W, Math.max(H, .3), D), pickMat); pick.position.y = Math.max(H, .3) / 2; pick.userData.pick = true; g.add(pick);
+    if (view.labels){
+      if (!r.laneNames){ const s = sprite([rackTitle(r)], 1.15, { fg: '#fff', bg: 'rgba(29,40,52,.9)', size: 44 }); s.position.set(0, H + .9, 0); g.add(s); }
+      for (let i = 0; i < r.lanes; i++){
+        const n = flatLabel([laneLabel(r, i)], r.bayW * .85, r.laneNames ? 1.3 : .8, { fg: tok.ink, size: 48, weight: 700, mono: true }, yaw, r.laneNames ? 1.1 : .6);
+        n.position.set(-W/2 + (i + .5) * r.bayW, .02, D/2 + (r.laneNames ? .7 : .45)); g.add(n);
+      }
+    }
+    g.position.copy(W2(r.x, r.y)); g.rotation.y = yaw;
+    rackG.add(g); rackObjs.set(r.id, g);
+    refreshSlots(r);
+  }
+}
+const slotIdx = (r, lane, pos, level) => (level * r.deep + pos) * r.lanes + lane;
+function slotFromIdx(r, idx){ const lane = idx % r.lanes, t = Math.floor(idx / r.lanes); return { lane, pos: t % r.deep, level: Math.floor(t / r.deep) }; }
+function refreshSlots(r, occ = occupancy()){
+  const g = rackObjs.get(r.id); if (!g) return; const m = g.userData.slots; const dm = new THREE.Object3D();
+  for (let lv = 0; lv < r.levels; lv++) for (let pos = 0; pos < r.deep; pos++) for (let lane = 0; lane < r.lanes; lane++){
+    const i = slotIdx(r, lane, pos, lv);
+    if (occ.has(`${r.id}|${lane}|${pos}|${lv}`) || realBySlot.has(`${r.id}|${lane}|${pos}|${lv}`)){ m.setMatrixAt(i, HIDE); continue; }
+    const { lx, ly } = slotLocal(r, lane, pos); dm.position.set(lx, lv * r.levelH + .04, -ly); dm.updateMatrix(); m.setMatrixAt(i, dm.matrix);
+  }
+  m.instanceMatrix.needsUpdate = true;
+}
+function refreshAllSlots(){ const occ = occupancy(); L.racks.forEach(r => refreshSlots(r, occ)); }
+
+/* ---------- paletes ---------- */
+const palObjs = new Map();
+const shortName = s => { s = String(s || '—'); return s.length > 22 ? s.slice(0, 21) + '…' : s; };
+function makePallet(p){
+  const g = new THREE.Group(); g.userData = { kind: 'pallet', id: p.id };
+  const base = new THREE.Mesh(boxGeo(p.w, .15, p.d), woodMat); base.position.y = .075; base.castShadow = true; base.receiveShadow = true;
+  const mat = new THREE.MeshStandardMaterial({ color: p.color || colorFor(p.prod), roughness: .85, transparent: true, opacity: 1, emissive: 0x000000 });
+  const lh = Math.max(.05, p.h - .15);
+  const load = new THREE.Mesh(boxGeo(p.w - .04, lh, p.d - .04), mat); load.position.y = .15 + lh / 2; load.castShadow = true; load.receiveShadow = true;
+  g.add(base, load); g.userData.mat = mat;
+  if (view.labels){
+    const lb = flatLabel([shortName(p.prod), p.lote || ''], p.w - .1, p.d - .15, { fg: '#121212', bg: 'rgba(255,255,255,.9)', size: 40 }, palletWorld(p).rot * Math.PI / 180);
+    lb.position.y = p.h + .006; g.add(lb); g.userData.lbl = lb;
+  }
+  return g;
+}
+function placePallet(p){
+  const o = palObjs.get(p.id); if (!o) return;
+  const w = palletWorld(p); o.position.copy(W2(w.x, w.y, w.elev)); o.rotation.y = w.rot * Math.PI / 180;
+}
+function buildPallets(){ clearGroup(palG); palObjs.clear(); for (const p of L.pallets){ const o = makePallet(p); palG.add(o); palObjs.set(p.id, o); placePallet(p); } }
+function rebuildPallet(p){ const o = palObjs.get(p.id); if (o){ palG.remove(o); clearGroup(o); } const n = makePallet(p); palG.add(n); palObjs.set(p.id, n); placePallet(p); }
+function placeRack(r){ const g = rackObjs.get(r.id); if (g){ g.position.copy(W2(r.x, r.y)); g.rotation.y = r.rot * Math.PI / 180; } L.pallets.forEach(p => p.rackId === r.id && placePallet(p)); buildReal(); }
+function placeZone(z){ const g = zoneObjs.get(z.id); if (g) g.position.copy(W2(z.x, z.y)); }
+/* ---------- vagas ocupadas de verdade (historico + lancamentos) ---------- */
+let _ocupacao = {}, realBySlot = new Map(), realList = [], foraDoLayout = [];
+const corModo = { v: 'produto' };
+const realG = new THREE.Group(); scene.add(realG);
+const realLoadMat = shared(new THREE.MeshStandardMaterial({ roughness: .78 }));
+/* 'B1-22-3-4' → estrutura, linha, andar e lugar no layout. Mesmo formato de MAPA_POSICOES. */
+function slotDeCodigo(code){
+  const m = String(code || '').trim().toUpperCase().match(/^([A-Z]+\d*)-(\d+)-(\d+)-(\d+)$/); if (!m) return null;
+  const [, di, ln, an, lg] = m;
+  for (const r of L.racks){
+    if (r.laneNames || String(r.code).toUpperCase() !== di) continue;
+    const k = +ln - (r.firstLane || 1); if (k < 0 || k >= r.lanes) continue;
+    const lane = r.rev ? r.lanes - 1 - k : k, level = +an - 1, pos = +lg - 1;
+    if (level < 0 || level >= r.levels || pos < 0 || pos >= r.deep) continue;
+    return { r, lane, pos, level };
+  }
+  return null;
+}
+function corProduto(item){
+  const s = String(item?.codigo || item?.produto_nome || ''); let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;    // mesmo hash do corDe() do comum.js
+  return new THREE.Color().setHSL(h / 360, .58, .5);
+}
+function buildReal(){
+  clearGroup(realG); realG.userData = {}; realBySlot = new Map(); realList = []; foraDoLayout = [];
+  for (const [code, items] of Object.entries(_ocupacao)){
+    const s = slotDeCodigo(code);
+    if (!s){ foraDoLayout.push({ code, items }); continue; }
+    const e = { ...s, code, items, key: `${s.r.id}|${s.lane}|${s.pos}|${s.level}` };
+    realBySlot.set(e.key, e); realList.push(e);
+  }
+  if (!realList.length) return;
+  const n = realList.length, dm = new THREE.Object3D();
+  const base = new THREE.InstancedMesh(boxGeo(1, .15, 1), woodMat, n);
+  const load = new THREE.InstancedMesh(boxGeo(1, 1, 1), realLoadMat, n);
+  realList.forEach((e, i) => {
+    const r = e.r, w = Math.min(1.2, r.bayW - .12), d = Math.min(1.0, r.posD - .03), h = Math.min(1.55, r.levelH - .25);
+    const sp = slotPos(r, e.lane, e.pos, e.level);
+    dm.rotation.set(0, r.rot * Math.PI / 180, 0);
+    dm.position.copy(W2(sp.x, sp.y, sp.elev + .075)); dm.scale.set(w, 1, d); dm.updateMatrix(); base.setMatrixAt(i, dm.matrix);
+    dm.position.copy(W2(sp.x, sp.y, sp.elev + .15 + (h - .15) / 2)); dm.scale.set(w - .04, h - .15, d - .04); dm.updateMatrix(); load.setMatrixAt(i, dm.matrix);
+    load.setColorAt(i, corProduto(e.items[0]));
+  });
+  base.castShadow = true; load.castShadow = true; load.receiveShadow = true;
+  realG.add(base, load); realG.userData.load = load;
+  pintarReal();
+}
+function pintarReal(){
+  const load = realG.userData.load; if (!load) return;
+  const ts = termos(view.q), cinza = new THREE.Color(tok.grid || '#444');
+  realList.forEach((e, i) => {
+    const hit = !ts.length || ts.some(t => e.code.includes(t)) || e.items.some(r => casa(r, ts));
+    e.hit = hit && ts.length > 0;
+    const c = !hit ? cinza
+      : corModo.v === 'situacao' ? new THREE.Color(e.items.length > 1 ? tok.warn : e.items.some(r => r.pend) ? tok.alt : tok.ok)
+      : corProduto(e.items[0]);
+    load.setColorAt(i, c);
+  });
+  load.instanceColor.needsUpdate = true;
+}
+function rebuildAll(){ readTokens(); buildEnv(); buildLabels(); buildZones(); buildReal(); buildRacks(); buildPallets(); }
+
+/* ================= estado de UI ================= */
+const view = { mode: '3d', labels: true, dims: true, measure: false, slots: true, edit: false, q: '' };
+let sel = null;     // {kind, id} | {kind:'slot', rackId, lane, pos, level}
+let tab = 'itens';
+let lastVal = { issues: [], bad: new Set() };
+let lastHits = [];
+function selObj(){
+  if (!sel) return null;
+  if (sel.kind === 'pallet') return L.pallets.find(p => p.id === sel.id);
+  if (sel.kind === 'rack') return rackById(sel.id);
+  if (sel.kind === 'zone') return L.zones.find(z => z.id === sel.id);
+  if (sel.kind === 'label') return L.pav.areas.find(a => a.id === sel.id);
+  const r = rackById(sel.rackId); return r && sel.lane < r.lanes && sel.pos < r.deep && sel.level < r.levels ? { r, lane: sel.lane, pos: sel.pos, level: sel.level, id: 'slot' } : null;
+}
+const palletAt = (r, lane, pos, level) => L.pallets.filter(p => p.rackId === r.id && p.lane === lane && p.pos === pos && p.level === level);
+
+function searchSlots(q){
+  const out = []; q = q.toUpperCase().replace(/\s+/g, '');
+  if (!q || !/[0-9-]/.test(q) && q.length > 1) return out;
+  for (const r of L.racks) for (let lane = 0; lane < r.lanes; lane++) for (let pos = 0; pos < r.deep; pos++) for (let lv = 0; lv < r.levels; lv++){
+    const c = posCode(r, lane, pos, lv); if (c.toUpperCase().startsWith(q)) out.push({ r, lane, pos, level: lv, code: c });
+  }
+  return out.sort((a, b) => a.code.localeCompare(b.code, 'pt-BR', { numeric: true }));
+}
+function applyHighlights(){
+  const q = norm(view.q).trim();
+  for (const p of L.pallets){
+    const o = palObjs.get(p.id); if (!o) continue; const m = o.userData.mat;
+    const w = palletWorld(p); const r = p.rackId && rackById(p.rackId);
+    const code = r ? norm(posCode(r, p.lane, p.pos, p.level)) : '';
+    const match = !q || norm(p.prod).includes(q) || norm(p.lote).includes(q) || (code && code.startsWith(q));
+    m.opacity = match ? 1 : .12; m.depthWrite = match;
+    m.emissive.set(lastVal.bad.has(p.id) ? tok.danger : (q && match ? tok.accent : '#000000')); m.emissiveIntensity = lastVal.bad.has(p.id) ? .45 : .25;
+    if (o.userData.lbl) o.userData.lbl.visible = match;
+  }
+  lastHits = searchSlots(view.q.trim());
+  const dm = new THREE.Object3D();
+  for (const r of L.racks){
+    const g = rackObjs.get(r.id); if (!g) continue;
+    if (g.userData.hit){ g.remove(g.userData.hit); g.userData.hit.dispose(); g.userData.hit = null; }
+    const mine = lastHits.filter(h => h.r === r); if (!mine.length) continue;
+    const sw = Math.max(.3, Math.min(1.2, r.bayW - .3)), sd = Math.max(.3, r.posD - .14), hh = Math.min(.9, r.levelH * .5);
+    const im = new THREE.InstancedMesh(boxGeo(sw, hh, sd), hitMat, mine.length);
+    mine.forEach((h, i) => { const { lx, ly } = slotLocal(r, h.lane, h.pos); dm.position.set(lx, h.level * r.levelH + hh / 2 + .05, -ly); dm.updateMatrix(); im.setMatrixAt(i, dm.matrix); });
+    im.renderOrder = 5; g.add(im); g.userData.hit = im;
+  }
+  pintarReal();
+}
+/* alças de canto para redimensionar áreas no modo edição */
+const handleG = new THREE.Group(); scene.add(handleG);
+const handleMat = shared(new THREE.MeshBasicMaterial({ color: 0xf0b400, depthTest: false }));
+function updateHandles(){
+  clearGroup(handleG); const o = selObj();
+  if (!view.edit || !o || sel.kind !== 'zone') return;
+  handleMat.color.set(tok.accent);
+  const hs = Math.max(.35, Math.min(.8, Math.min(o.w, o.d) * .15));
+  [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([sx, sy], i) => {
+    const m = new THREE.Mesh(boxGeo(hs, .12, hs), handleMat); m.renderOrder = 999;
+    m.position.copy(W2(o.x + sx * o.w / 2, o.y + sy * o.d / 2, .08)); m.userData = { kind: 'handle', corner: [sx, sy] }; handleG.add(m);
+  });
+}
+function updateSelBox(){
+  const o = selObj(); if (!o){ selBox.visible = false; clearGroup(handleG); return; }
+  let x, y, elev = 0, w, h, d, rot = 0;
+  if (sel.kind === 'pallet'){ const pw = palletWorld(o); ({ x, y, elev, rot } = pw); w = o.w; d = o.d; h = o.h; }
+  else if (sel.kind === 'rack'){ const dd = rackDims(o); x = o.x; y = o.y; w = dd.W; d = dd.D; h = Math.max(dd.H, .3); rot = o.rot; }
+  else if (sel.kind === 'slot'){ const s = slotPos(o.r, o.lane, o.pos, o.level); x = s.x; y = s.y; elev = s.elev; w = o.r.bayW - .1; d = o.r.posD - .06; h = Math.min(o.r.levelH - .1, 1.6); rot = o.r.rot; }
+  else if (sel.kind === 'label'){ const f = footprint('label', o); x = o.x; y = o.y; w = f.maxX - f.minX; d = f.maxY - f.minY; h = .05; }
+  else { x = o.x; y = o.y; w = o.w; d = o.d; h = o.tipo === 'piso' ? .05 : (o.alt || 3); }
+  updateHandles();
+  selBox.visible = true; selBox.position.copy(W2(x, y, elev + h / 2)); selBox.scale.set(w + .06, h + .06, d + .06); selBox.rotation.y = rot * Math.PI / 180;
+  selBox.material.color.set(lastVal.bad.has(o.id) ? tok.danger : tok.accent);
+}
+function drawDims(){
+  clearGroup(dimG); const o = selObj(); if (!o || !view.dims) return;
+  const f = footprint(sel.kind, o), { w, l } = L.pav, E = .05;
+  const mat = new THREE.LineBasicMaterial({ color: tok.accent, depthTest: false });
+  const inside = f.minY >= -0.01;
+  const runs = inside ? [[f.cx, f.minY, f.cx, 0], [f.cx, f.maxY, f.cx, l], [f.minX, f.cy, 0, f.cy], [f.maxX, f.cy, w, f.cy]] : [];
+  for (const [x1, y1, x2, y2] of runs){
+    const len = Math.hypot(x2 - x1, y2 - y1); if (len < .05) continue;
+    const ln = segs([W2(x1, y1, E), W2(x2, y2, E)], mat); ln.renderOrder = 997; dimG.add(ln);
+    const s = sprite([`${fmt(len)} m`], 1.0, { fg: '#fff', bg: tok.accent, size: 40, weight: 700 }, true);
+    s.position.copy(W2((x1 + x2) / 2, (y1 + y2) / 2, .5)); dimG.add(s);
+  }
+}
+
+/* ================= câmera ================= */
+function setView(v){
+  view.mode = v;
+  const wantShadow = v !== 'planta';
+  if (sun.castShadow !== wantShadow){ sun.castShadow = wantShadow; scene.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); }); }
+  const newYaw = v === 'planta' && L.pav.plantaRot === 90 ? -Math.PI / 2 : 0;
+  if (newYaw !== labelYaw){ labelYaw = newYaw; buildEnv(); buildLabels(); buildZones(); buildRacks(); buildPallets(); applyHighlights(); }
+  const E = extents(), { h } = L.pav;
+  const cx = (E.minX + E.maxX) / 2, cy = (E.minY + E.maxY) / 2, ex = E.maxX - E.minX, ey = E.maxY - E.minY, M = Math.max(ex, ey);
+  const T = W2(cx, cy);
+  if (controls) controls.dispose();
+  if (v === 'planta'){
+    cam = ortho; ortho.zoom = 1;
+    const rot = L.pav.plantaRot === 90;
+    ortho.up.copy(rot ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, -1));
+    const sw = (rot ? ey : ex) + 8, sh = (rot ? ex : ey) + 8;
+    orthoHalfH = Math.max(sh / 2, sw / 2 / aspect()); fitOrtho();
+    ortho.position.set(T.x, 150, T.z);
+  } else {
+    cam = persp; persp.up.set(0, 1, 0);
+    if (v === '3d') persp.position.copy(W2(cx - ex * .55, E.minY - M * .35, M * .6));
+    else persp.position.copy(W2(cx, E.minY - M * .55, h * 1.1));
+  }
+  controls = new THREE.OrbitControls(cam, renderer.domElement);
+  controls.enableDamping = true; controls.dampingFactor = .12; controls.screenSpacePanning = true;
+  if (v === 'planta'){
+    controls.enableRotate = false; controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+    controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN };
+  } else {
+    controls.maxPolarAngle = Math.PI / 2 - .03; controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+    controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }; controls.maxDistance = M * 3;
+  }
+  const t = v === 'frente' ? W2(cx, cy, h * .3) : T;
+  controls.target.copy(t); cam.lookAt(t); controls.update();
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v));
+  $('#hint').innerHTML = v === 'planta'
+    ? 'Arrastar no vazio: mover vista · Roda: zoom · Clique numa vaga: ver o código'
+    : 'Arrastar no vazio: girar · Botão direito: mover vista · Roda: zoom · Clique numa vaga: ver o código';
+}
+const aspect = () => { const r = vp.getBoundingClientRect(); return Math.max(.2, r.width / Math.max(1, r.height)); };
+function fitOrtho(){ const a = aspect(); ortho.left = -orthoHalfH * a; ortho.right = orthoHalfH * a; ortho.top = orthoHalfH; ortho.bottom = -orthoHalfH; ortho.updateProjectionMatrix(); }
+function resize(){ const r = vp.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); persp.aspect = aspect(); persp.updateProjectionMatrix(); fitOrtho(); }
+new ResizeObserver(resize).observe(vp);
+
+let anim = null;
+function focusOn(x, y){
+  const to = W2(x, y); const from = controls.target.clone(); const off = cam.position.clone().sub(from); const t0 = performance.now();
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  anim = now => { const k = reduce ? 1 : Math.min(1, (now - t0) / 450), e = 1 - (1 - k) ** 3; controls.target.lerpVectors(from, to, e); cam.position.copy(controls.target).add(off); if (k >= 1) anim = null; };
+}
+
+/* ================= interação na cena ================= */
+const ray = new THREE.Raycaster(); const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+function ndc(e){ const r = renderer.domElement.getBoundingClientRect(); return new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); }
+function floorPt(e){ ray.setFromCamera(ndc(e), cam); const v = new THREE.Vector3(); return ray.ray.intersectPlane(floorPlane, v) ? { x: v.x, y: -v.z } : null; }
+function ud(o){ while (o && !o.userData.kind) o = o.parent; return o?.userData; }
+function pick(e, forceEdit){
+  ray.setFromCamera(ndc(e), cam);
+  const edit = view.edit || forceEdit;
+  let h = ray.intersectObjects(palG.children, true).find(i => i.object.material?.opacity > .5); if (h) return ud(h.object);
+  if (edit){
+    h = ray.intersectObjects(handleG.children, false)[0]; if (h) return h.object.userData;
+    h = ray.intersectObjects(labelG.children, false)[0]; if (h) return h.object.userData;
+  }
+  const lm = realG.userData.load;
+  if (lm && !edit){
+    h = ray.intersectObject(lm, false).find(i => i.instanceId != null);
+    if (h){ const e = realList[h.instanceId]; return { kind: 'slot', rackId: e.r.id, lane: e.lane, pos: e.pos, level: e.level }; }
+  }
+  if (view.slots && !edit){
+    const ms = [...rackObjs.values()].map(g => g.userData.slots);
+    h = ray.intersectObjects(ms, false).find(i => i.instanceId != null);
+    if (h){ const r = rackById(h.object.userData.rackId); return { kind: 'slot', rackId: r.id, ...slotFromIdx(r, h.instanceId) }; }
+  }
+  h = ray.intersectObjects(rackG.children, true).find(i => i.object.userData.pick); if (h) return ud(h.object);
+  h = ray.intersectObjects(zoneG.children, true).find(i => i.object.isMesh); if (h) return ud(h.object);
+  return null;
+}
+
+let drag = null, down = null, meas = { a: null };
+const cv = renderer.domElement;
+cv.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  if (view.measure){ const p = floorPt(e); if (p) measureClick(p); return; }
+  const hit = pick(e);
+  down = { x: e.clientX, y: e.clientY, hit };
+  if (!hit) return;
+  if (hit.kind === 'slot'){ selectSlot(hit.rackId, hit.lane, hit.pos, hit.level); return; }
+  if (hit.kind === 'handle'){
+    const z = selObj(); if (controls) controls.enabled = false;
+    drag = { kind: 'handle', fixed: { x: z.x - hit.corner[0] * z.w / 2, y: z.y - hit.corner[1] * z.d / 2 }, moved: false, sx: e.clientX, sy: e.clientY };
+    cv.setPointerCapture(e.pointerId); return;
+  }
+  select(hit.kind, hit.id);
+  const o = selObj();
+  if (hit.kind !== 'pallet' && !view.edit) return;   // fora do modo edição a planta não sai do lugar
+  if (controls) controls.enabled = false;
+  const fp = floorPt(e); const f = footprint(hit.kind, o);
+  drag = { kind: hit.kind, id: hit.id, off: fp ? { x: fp.x - f.cx, y: fp.y - f.cy } : { x: 0, y: 0 }, moved: false, sx: e.clientX, sy: e.clientY, orig: JSON.stringify(o) };
+  cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 5) return;
+  const fp = floorPt(e); if (!fp) return;
+  if (!drag.moved){ drag.moved = true; pushUndo(); }
+  const o = selObj();
+  if (drag.kind === 'handle'){
+    const f = drag.fixed, px = snap(fp.x, .1), py = snap(fp.y, .1);
+    o.w = Math.max(.5, Math.abs(px - f.x)); o.d = Math.max(.5, Math.abs(py - f.y));
+    o.x = f.x + Math.sign(px - f.x || 1) * o.w / 2; o.y = f.y + Math.sign(py - f.y || 1) * o.d / 2;
+    rebuildZone(o); updateSelBox(); drawDims(); return;
+  }
+  const tx = fp.x - drag.off.x, ty = fp.y - drag.off.y;
+  if (drag.kind === 'pallet'){
+    const s = rackSlotAt(tx, ty);
+    if (s){ const lv = lowestFree(s.r, s.lane, s.pos, o.id); drag.full = lv < 0; o.rackId = s.r.id; o.lane = s.lane; o.pos = s.pos; o.level = lv < 0 ? s.r.levels - 1 : lv; }
+    else { drag.full = false; o.rackId = null; o.x = snap(tx); o.y = snap(ty); }
+    placePallet(o);
+  } else if (drag.kind === 'rack'){ o.x = snap(tx, .05); o.y = snap(ty, .05); placeRack(o); }
+  else if (drag.kind === 'label'){ o.x = snap(tx, .1); o.y = snap(ty, .1); const lb = labelG.children.find(m => m.userData.id === o.id); if (lb) lb.position.copy(W2(o.x, o.y, .02)); }
+  else { o.x = snap(tx, .1); o.y = snap(ty, .1); placeZone(o); }
+  lastVal = validate(); updateSelBox(); drawDims(); applyHighlights();
+  if (drag.kind === 'pallet' && drag.full) selBox.material.color.set(tok.danger);
+});
+function endDrag(e){
+  if (drag){
+    if (drag.moved){
+      if (drag.kind === 'pallet' && drag.full){
+        const o = selObj(); Object.assign(o, JSON.parse(drag.orig)); placePallet(o); undoStack.pop();
+        toast('Essa rua já está cheia em todos os andares');
+      } else if (drag.kind === 'pallet'){ const o = selObj(); rebuildPallet(o); }
+      afterChange();
+    }
+    drag = null;
+    if (pendenteRemoto){ const r = pendenteRemoto; pendenteRemoto = null; aoMudarLayoutRemoto({ eventType: 'UPDATE', new: { ...r, dados: { ...r.dados, _cliente: 'x' } } }); }
+  } else if (down && !down.hit && e && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 5 && !view.measure){ select(null); }
+  down = null; if (controls) controls.enabled = true;
+}
+cv.addEventListener('dblclick', e => {
+  const hit = pick(e, true); if (!hit || !['zone','rack','label'].includes(hit.kind)) return;
+  select(hit.kind, hit.id);
+  const el = document.getElementById(hit.kind === 'rack' ? 'f-code' : hit.kind === 'label' ? 'f-text' : 'f-name');
+  if (el){ el.focus(); el.select?.(); }
+});
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+
+function measureClick(p){
+  clearGroup(measG);
+  const mk = q => { const m = new THREE.Mesh(new THREE.CylinderGeometry(.15, .15, .06, 20), new THREE.MeshBasicMaterial({ color: tok.accent })); m.position.copy(W2(q.x, q.y, .03)); measG.add(m); };
+  if (!meas.a || meas.b){ meas = { a: p, b: null }; mk(p); return; }
+  meas.b = p; mk(meas.a); mk(p);
+  const ln = segs([W2(meas.a.x, meas.a.y, .06), W2(p.x, p.y, .06)], new THREE.LineBasicMaterial({ color: tok.accent, depthTest: false })); ln.renderOrder = 997; measG.add(ln);
+  const d = Math.hypot(p.x - meas.a.x, p.y - meas.a.y);
+  const s = sprite([`${fmt(d)} m`], 1.0, { fg: '#fff', bg: tok.accent, size: 44, weight: 700 }, true);
+  s.position.copy(W2((p.x + meas.a.x) / 2, (p.y + meas.a.y) / 2, .7)); measG.add(s);
+}
+function setMeasure(on){ if (on && view.edit) setEdit(false); view.measure = on; $('#t-measure').setAttribute('aria-pressed', on); $('#mtag').hidden = !on; if (!on){ clearGroup(measG); meas = { a: null }; } }
+
+/* ================= ações ================= */
+function select(kind, id){
+  sel = kind ? { kind, id } : null;
+  if (kind) tab = 'sel';
+  updateSelBox(); drawDims(); renderTabs(); renderPanel();
+}
+function selectSlot(rackId, lane, pos, level){
+  sel = { kind: 'slot', rackId, lane, pos, level }; tab = 'sel';
+  updateSelBox(); drawDims(); renderTabs(); renderPanel();
+}
+function afterChange(){
+  buildReal();
+  lastVal = validate(); refreshAllSlots(); applyHighlights(); updateSelBox(); drawDims(); renderPanel(); renderStats(); renderLaySel(); save();
+}
+let toastT; function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+
+function newPallet(fields = {}){ return { id: uid(), prod: 'Novo produto', lote: '', qtd: 0, un: 'L', color: null, w: 1.2, d: 1.0, h: 1.55, x: 0, y: 0, rot: 0, rackId: null, lane: 0, pos: 0, level: 0, ...fields }; }
+function addPallet(fields = {}){
+  const p = newPallet(fields);
+  const t = controls.target; const f = findFree(p.w, p.d, fields.nearX ?? t.x, fields.nearY ?? -t.z, null);
+  delete p.nearX; delete p.nearY; p.x = f.x; p.y = f.y;
+  L.pallets.push(p); rebuildPallet(p); return p;
+}
+function addRack(){
+  const n = L.racks.length + 1;
+  const r = { id: uid(), tipo: 'drive', code: 'N' + n, grupo: '', firstLane: 1, rev: false, laneNames: null, x: 0, y: 0, rot: 0, lanes: 6, deep: 4, levels: 4, bayW: 1.513, posD: 1.025, levelH: 1.85, locked: false };
+  const d = rackDims(r); const f = findFree(d.W, d.D, controls.target.x, -controls.target.z, null); r.x = f.x; r.y = f.y;
+  L.racks.push(r); buildRacks(); return r;
+}
+function addZone(){
+  const z = { id: uid(), name: 'Nova zona', x: snap(controls.target.x, .1), y: snap(-controls.target.z, .1), w: 6, d: 4, color: '#2b9aa0', tipo: 'piso', alt: 0, grid: false, locked: false };
+  L.zones.push(z); buildZones(); return z;
+}
+function duplicateSel(){
+  const o = selObj(); if (!o || sel.kind === 'slot') return; pushUndo();
+  if (sel.kind === 'pallet'){
+    const c = { ...JSON.parse(JSON.stringify(o)), id: uid() };
+    if (o.rackId){ const r = rackById(o.rackId); const lv = lowestFree(r, o.lane, o.pos, null); if (lv >= 0) c.level = lv; else { c.rackId = null; const w = palletWorld(o); const f = findFree(c.w, c.d, w.x, w.y, null); c.x = f.x; c.y = f.y; } }
+    else { const f = findFree(c.w, c.d, o.x + 1.3, o.y, null); c.x = f.x; c.y = f.y; }
+    L.pallets.push(c); rebuildPallet(c); select('pallet', c.id);
+  } else if (sel.kind === 'rack'){
+    const c = { ...o, id: uid(), code: o.code + '-c', locked: false }; const d = rackDims(c); const f = findFree(d.W, d.D, o.x + d.W + 3, o.y, null); c.x = f.x; c.y = f.y;
+    L.racks.push(c); buildRacks(); select('rack', c.id);
+  } else if (sel.kind === 'label'){ const c = { ...o, id: uid(), y: o.y - (o.size || 2.2) * 1.5 }; L.pav.areas.push(c); buildLabels(); select('label', c.id); }
+  else { const c = { ...o, id: uid(), x: o.x + 1, y: o.y + 1, name: o.name + ' (cópia)', locked: false }; L.zones.push(c); buildZones(); select('zone', c.id); }
+  afterChange();
+}
+function deleteSel(){
+  const o = selObj(); if (!o || sel.kind === 'slot') return; pushUndo();
+  if (sel.kind === 'pallet'){ L.pallets = L.pallets.filter(p => p.id !== o.id); const ob = palObjs.get(o.id); palG.remove(ob); clearGroup(ob); palObjs.delete(o.id); }
+  else if (sel.kind === 'rack'){ L.pallets = L.pallets.filter(p => p.rackId !== o.id); L.racks = L.racks.filter(r => r.id !== o.id); buildRacks(); buildPallets(); }
+  else if (sel.kind === 'label'){ L.pav.areas = L.pav.areas.filter(a => a.id !== o.id); buildLabels(); }
+  else { L.zones = L.zones.filter(z => z.id !== o.id); buildZones(); }
+  sel = null; afterChange(); renderTabs();
+}
+function rotateSel(){
+  const o = selObj(); if (!o || sel.kind === 'slot') return;
+  if (sel.kind === 'label') return;
+  if (sel.kind !== 'pallet' && !view.edit) return toast('Ligue “Editar layout” para mexer em estruturas e áreas');
+  if (sel.kind === 'pallet'){ if (o.rackId) return toast('Na estrutura o palete segue a orientação dela'); pushUndo(); o.rot = (o.rot + 90) % 360; rebuildPallet(o); }
+  else if (sel.kind === 'rack'){ pushUndo(); o.rot = (o.rot + 90) % 360; buildRacks(); L.pallets.forEach(placePallet); }
+  else { pushUndo(); [o.w, o.d] = [o.d, o.w]; buildZones(); }
+  afterChange();
+}
+function toFloor(p){
+  const w = palletWorld(p); const f = findFree(p.w, p.d, w.x, w.y, p.id);
+  p.rackId = null; p.x = f.x; p.y = f.y; p.rot = 0; rebuildPallet(p);
+}
+function nudge(dx, dy){
+  const o = selObj(); if (!o || sel.kind === 'slot' || (sel.kind !== 'pallet' && !view.edit) || (sel.kind === 'pallet' && o.rackId)) return;
+  pushUndo(); o.x = snap(o.x + dx); o.y = snap(o.y + dy);
+  sel.kind === 'pallet' ? placePallet(o) : sel.kind === 'rack' ? placeRack(o) : sel.kind === 'label' ? buildLabels() : placeZone(o); afterChange();
+}
+function goToSlot(r, lane, pos, level){ const s = slotPos(r, lane, pos, level); focusOn(s.x, s.y); selectSlot(r.id, lane, pos, level); }
+
+/* ================= painel ================= */
+const panel = $('#panel');
+function renderTabs(){ document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab)); }
+const fld = (label, f, val, type = 'number', extra = '') => `<label class="fld"><span>${label}</span><input id="f-${f}" data-f="${f}" type="${type}" value="${esc(val)}" ${type === 'number' ? 'step="0.05" inputmode="decimal"' : ''} ${extra}></label>`;
+const selF = (label, f, opts, val) => `<label class="fld"><span>${label}</span><select id="f-${f}" data-f="${f}">${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(v) === String(val) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>`;
+const chk = (label, f, val) => `<label class="chk"><input type="checkbox" id="f-${f}" data-f="${f}" ${val ? 'checked' : ''}>${label}</label>`;
+const range = n => Array.from({ length: n }, (_, i) => [i, String(i + 1)]);
+const ROT = [[0,'0°'],[90,'90°'],[180,'180°'],[270,'270°']];
+function locText(p){
+  if (p.rackId){ const r = rackById(p.rackId); if (r) return posCode(r, p.lane, p.pos, p.level); }
+  return `Chão · ${fmt(p.x, 1)} × ${fmt(p.y, 1)} m`;
+}
+function nearestDock(f){
+  const list = L.pav.docks.length ? L.pav.docks.map((d, i) => ({ nome: `Doca ${i + 1}`, x: d.x + d.w / 2, y: d.y + d.d })) : L.pav.doors.map((d, i) => ({ nome: `Portão ${i + 1}`, x: d.x + d.w / 2, y: 0 }));
+  if (!list.length) return null;
+  return list.map(d => ({ ...d, dist: Math.hypot(f.cx - d.x, f.cy - d.y) })).sort((a, b) => a.dist - b.dist)[0];
+}
+function distBlock(kind, o){
+  const f = footprint(kind, o), { w, l } = L.pav;
+  if (f.minY < -0.01) return '';
+  const nd = nearestDock(f);
+  return `<div class="sec"><h3>Distâncias</h3><dl class="kv">
+    <dt>Até a parede das docas</dt><dd class="hl">${fmt(Math.max(0, f.minY))} m</dd>
+    <dt>Até o fundo</dt><dd>${fmt(Math.max(0, l - f.maxY))} m</dd>
+    <dt>Lateral (x = 0)</dt><dd>${fmt(Math.max(0, f.minX))} m</dd>
+    <dt>Lateral (x = ${fmt(w, 1)})</dt><dd>${fmt(Math.max(0, w - f.maxX))} m</dd>
+    ${nd ? `<dt>${esc(nd.nome)} (mais perto)</dt><dd class="hl">${fmt(nd.dist, 1)} m</dd>` : ''}</dl></div>`;
+}
+function actions(o){
+  const can = sel.kind === 'pallet' || view.edit;
+  if (!can) return `<div class="row"><button class="btn primary" data-act="editOn">Editar layout</button></div><p class="note">Para mover, girar, duplicar ou excluir, ligue o modo de edição.</p>`;
+  return `<div class="row"><button class="btn" data-act="rot" ${sel.kind === 'label' ? 'disabled' : ''}>Girar 90° <kbd>R</kbd></button><button class="btn" data-act="dup">Duplicar</button><button class="btn danger" data-act="del">Excluir</button></div>`;
+}
+function slotMap(r){
+  const occ = occupancy();
+  const cols = range(r.lanes).map(([i]) => i).sort((a, b) => laneLabel(r, a).localeCompare(laneLabel(r, b), 'pt-BR', { numeric: true }));
+  let h = '<table><tr><th>lugar</th>' + cols.map(i => `<th>${esc(laneLabel(r, i))}</th>`).join('') + '</tr>';
+  for (let pos = r.deep - 1; pos >= 0; pos--){
+    h += `<tr><th>${pos + 1}</th>`;
+    for (const lane of cols){
+      let n = 0; for (let lv = 0; lv < r.levels; lv++) if (occ.has(`${r.id}|${lane}|${pos}|${lv}`) || realBySlot.has(`${r.id}|${lane}|${pos}|${lv}`)) n++;
+      const pct = n / r.levels;
+      h += `<td tabindex="0" data-slot="${r.id}|${lane}|${pos}" style="background:color-mix(in srgb, var(--accent) ${Math.round(pct * 85)}%, var(--surface-2))" title="${esc(posCode(r, lane, pos, 0))} · ${n} de ${r.levels} andares">${n || ''}</td>`;
+    }
+    h += '</tr>';
+  }
+  return h + '</table>';
+}
+function renderSel(){
+  const o = selObj();
+  if (!o) return `<div class="empty-state"><h2>Nada selecionado</h2><p class="note">Os paletes coloridos são as vagas ocupadas no sistema agora. Clique num deles para ver produto, lote e quantidade; clique numa plaquinha cinza para ver uma vaga livre. Para guardar ou expedir, o botão leva ao mapa já na posição certa.</p></div>
+    <div class="sec"><h3>Atalhos</h3><div class="shortcuts">
+    <span><kbd>R</kbd></span><span>Girar o item selecionado</span>
+    <span><kbd>Del</kbd></span><span>Excluir</span>
+    <span><kbd>Ctrl</kbd>+<kbd>D</kbd></span><span>Duplicar</span>
+    <span><kbd>Setas</kbd></span><span>Mover 5 cm (com Shift, 1 m)</span>
+    <span><kbd>Ctrl</kbd>+<kbd>Z</kbd></span><span>Desfazer</span>
+    <span><kbd>Esc</kbd></span><span>Soltar seleção / sair da medição</span></div></div>`;
+  const issues = lastVal.issues.filter(i => i.id === o.id).map(i => `<div class="issue">${esc(i.text)}</div>`).join('');
+  if (sel.kind === 'slot'){
+    const { r, lane, pos, level } = o, ps = palletAt(r, lane, pos, level), sp = slotPos(r, lane, pos, level);
+    const lugarNota = pos === 0 ? ' (boca da rua)' : pos === r.deep - 1 ? ' (fundo)' : '';
+    const code = posCode(r, lane, pos, level), real = realBySlot.get(`${r.id}|${lane}|${pos}|${level}`);
+    const pavKey = Object.keys(MAPA_POSICOES).find(k => MAPA_POSICOES[k][r.code]);
+    const estado = real ? (real.items.length > 1 ? `<span class="tag busy">${real.items.length} lotes</span>` : real.items.some(x => x.pend) ? '<span class="tag busy">Aguardando validação</span>' : '<span class="tag busy">Ocupada</span>')
+      : ps.length ? '<span class="tag">Simulação</span>' : '<span class="tag free">Livre</span>';
+    return `<div class="sec"><h3>Posição</h3><h2 class="code">${esc(code)}</h2>
+      <div class="row">${estado}<span class="tag">${esc(rackTitle(r))}</span></div></div>
+      ${real ? `<div class="sec"><h3>No sistema agora</h3>${real.items.map(x => `<div class="ficha${x.pend ? ' pend' : ''}"><b>${esc(x.produto_nome || x.codigo)}</b>
+        <div class="m">${esc(x.codigo || '—')} · lote ${esc(x.lote || '—')} · arm. ${esc(x.armazem || '—')}${x.pend ? ' · aguardando validação' : ''}</div>
+        <div class="q">${num(x.quantidade)}<small>${esc(unidadeDe(x.codigo, x.produto_nome) || 'un')}</small></div></div>`).join('')}</div>` : ''}
+      ${pavKey ? `<div class="row"><a class="btn primary" href="./mapa.html?pav=${pavKey}&q=${encodeURIComponent(code)}" target="_blank" rel="noopener">${real ? 'Expedir ou editar no mapa ↗' : 'Guardar produto no mapa ↗'}</a></div>` : ''}
+      <div class="sec"><dl class="kv">
+        <dt>${r.laneNames ? 'Rua' : 'Linha'}</dt><dd class="hl">${esc(laneLabel(r, lane))}</dd>
+        ${r.levels > 1 ? `<dt>Andar</dt><dd class="hl">${level + 1} de ${r.levels}</dd>` : ''}
+        <dt>Lugar</dt><dd class="hl">${pos + 1} de ${r.deep}${lugarNota}</dd>
+        <dt>Altura do piso da vaga</dt><dd>${fmt(sp.elev)} m</dd>
+        ${r.tipo === 'drive' ? `<dt>Vão livre (altura)</dt><dd>${fmt(level < r.levels - 1 ? r.levelH - .1 : L.pav.h - sp.elev - .3)} m</dd>` : ''}
+        <dt>Largura × profundidade</dt><dd>${fmt(r.bayW)} × ${fmt(r.posD)} m</dd></dl></div>
+      ${ps.length ? `<div class="sec"><h3>Simulação nesta posição</h3><div class="list">${ps.map(p => `<button class="item" data-pick="pallet" data-id="${p.id}"><span class="dot" style="background:${esc(p.color || colorFor(p.prod))}"></span><span class="t">${esc(p.prod)}</span><span class="s">${esc(p.lote)}</span></button>`).join('')}</div></div>` : ''}
+      ${distBlock('slot', o)}
+      <div class="row">${ps.length || real ? '' : `<button class="btn" data-act="putHere">+ Simular palete aqui</button>`}<button class="btn" data-act="selRack">Ver estrutura ${esc(r.code)}</button></div>`;
+  }
+  if (sel.kind === 'pallet'){
+    const p = o, r = p.rackId && rackById(p.rackId);
+    const rackOpts = [['', 'Chão (livre)'], ...L.racks.map(r => [r.id, rackTitle(r)])];
+    return `<div class="sec"><h3>Palete</h3><h2>${esc(p.prod)}</h2><div class="loc">${esc(locText(p))}</div>${issues ? `<div class="issues">${issues}</div>` : ''}</div>
+      <div class="sec">${fld('Produto', 'prod', p.prod, 'text')}<div class="grid2">${fld('Lote', 'lote', p.lote, 'text')}<label class="fld"><span>Cor</span><input id="f-color" data-f="color" type="color" value="${esc(p.color || colorFor(p.prod))}"></label></div>
+      <div class="grid2">${fld('Quantidade', 'qtd', p.qtd, 'number', 'step="1"')}${selF('Unidade', 'un', [['L','L'],['KG','KG'],['DS','DS'],['UN','UN'],['CX','CX']], p.un)}</div></div>
+      <div class="sec"><h3>Dimensões (m)</h3><div class="grid3">${fld('Frente', 'w', p.w)}${fld('Profund.', 'd', p.d)}${fld('Altura', 'h', p.h)}</div><p class="note">Palete do projeto: 1,20 (frente) × 1,00 m. Alturas com carga: 1,25 · 1,55 · 1,65 · 2,25 m.</p></div>
+      <div class="sec"><h3>Posição</h3>${selF('Onde está', 'rackId', rackOpts, p.rackId || '')}
+      ${r ? `<div class="grid3">${selF(r.laneNames ? 'Rua' : 'Linha', 'lane', range(r.lanes).map(([i]) => [i, laneLabel(r, i)]).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR', { numeric: true })), p.lane)}${r.levels > 1 ? selF('Andar', 'level', range(r.levels), p.level) : ''}${selF('Lugar', 'pos', range(r.deep), p.pos)}</div><p class="note">Lugar 1 é a boca da rua, no corredor. Andar 1 é o chão.</p>`
+           : `<div class="grid3">${fld('X', 'x', p.x)}${fld('Y (da frente)', 'y', p.y)}${selF('Giro', 'rot', ROT, p.rot)}</div>`}</div>
+      ${distBlock('pallet', p)}${actions(p)}`;
+  }
+  if (sel.kind === 'rack'){
+    const r = o, d = rackDims(r); let used = 0;
+    for (const k of realBySlot.keys()) if (k.startsWith(r.id + '|')) used++;
+    const total = r.lanes * r.deep * r.levels;
+    const first = posCode(r, r.rev ? r.lanes - 1 : 0, 0, 0), last = posCode(r, r.rev ? 0 : r.lanes - 1, r.deep - 1, r.levels - 1);
+    return `<div class="sec"><h3>${r.tipo === 'drive' ? 'Drive-in' : 'Blocado'}</h3><h2>${esc(rackTitle(r))}</h2>
+      <div class="row">${view.edit ? '<span class="tag busy">Em edição</span>' : '<span class="tag lock">Fixa</span>'}<span class="tag">${total} posições</span></div>
+      <p class="note">De <b>${esc(first)}</b> até <b>${esc(last)}</b>.</p>${issues ? `<div class="issues">${issues}</div>` : ''}</div>
+      <div class="sec"><h3>Ocupação por lugar</h3><dl class="kv"><dt>Posições ocupadas</dt><dd class="hl">${used} de ${total}</dd></dl>
+      <div class="slotmap">${slotMap(r)}</div><p class="note">Número na célula = andares ocupados. Clique numa célula para ir à posição.</p></div>
+      <div class="sec"><h3>Identificação</h3><div class="grid2">${fld('Código', 'code', r.code, 'text')}${fld('Pavilhão', 'grupo', r.grupo, 'text')}</div>
+      <div class="grid2">${selF('Tipo', 'tipo', [['drive','Drive-in'],['blocado','Blocado (piso)']], r.tipo)}${r.laneNames ? fld('Nomes das ruas', 'laneNames', r.laneNames.join(', '), 'text') : fld('Primeira linha', 'firstLane', r.firstLane, 'number', 'step="1"')}</div>
+      ${chk('Numeração começa do outro lado', 'rev', r.rev)}</div>
+      <div class="sec"><h3>Medidas</h3><div class="grid3">${fld(r.laneNames ? 'Ruas' : 'Linhas', 'lanes', r.lanes, 'number', 'step="1" min="1"')}${fld('Lugares', 'deep', r.deep, 'number', 'step="1" min="1"')}${fld('Andares', 'levels', r.levels, 'number', 'step="1" min="1"')}</div>
+      <div class="grid3">${fld('Larg. rua', 'bayW', +r.bayW.toFixed(3))}${fld('Prof. lugar', 'posD', r.posD)}${fld('Alt. andar', 'levelH', r.levelH)}</div>
+      <div class="grid3">${fld('X centro', 'x', +r.x.toFixed(3))}${fld('Y centro', 'y', +r.y.toFixed(3))}${selF('Giro', 'rot', ROT, r.rot)}</div>
+      <dl class="kv"><dt>Medida total</dt><dd>${fmt(d.W)} × ${fmt(d.D)} × ${fmt(d.H)} m</dd></dl></div>
+      ${distBlock('rack', r)}${actions(r)}`;
+  }
+  if (sel.kind === 'label'){
+    return `<div class="sec"><h3>Texto no piso</h3><h2>${esc(o.text)}</h2></div>
+      <div class="sec">${fld('Texto', 'text', o.text, 'text')}<div class="grid3">${fld('X', 'x', +o.x.toFixed(2))}${fld('Y', 'y', +o.y.toFixed(2))}${fld('Altura letra', 'size', o.size || 2.2)}</div></div>${actions(o)}`;
+  }
+  const z = o;
+  return `<div class="sec"><h3>Área</h3><h2>${esc(z.name)}</h2><div class="row">${view.edit ? '<span class="tag busy">Em edição</span>' : '<span class="tag lock">Fixa</span>'}<span class="tag">${fmt(z.w * z.d, 1)} m²</span></div></div>
+    <div class="sec">${fld('Nome', 'name', z.name, 'text')}${selF('Tipo', 'tipo', [['piso','Marcação no piso'],['sala','Sala (paredes)'],['bloqueio','Bloqueio (máquina, obstáculo)']], z.tipo)}
+    <div class="grid2">${fld('X centro', 'x', +z.x.toFixed(3))}${fld('Y centro', 'y', +z.y.toFixed(3))}${fld('Largura', 'w', +z.w.toFixed(3))}${fld('Profundidade', 'd', +z.d.toFixed(3))}</div>
+    <div class="grid2">${z.tipo !== 'piso' ? fld('Altura', 'alt', z.alt || 3) : ''}<label class="fld"><span>Cor</span><input id="f-zcolor" data-f="color" type="color" value="${esc(z.color)}"></label></div>
+    ${chk('Mostrar grade de paletes', 'grid', z.grid)}${view.edit ? '<p class="note">Puxe os cantos amarelos na cena para mudar o tamanho.</p>' : ''}</div>
+    ${distBlock('zone', z)}${actions(z)}`;
+}
+function renderItens(){
+  const qRaw = view.q.trim(), q = norm(qRaw);
+  const list = L.pallets.filter(p => { const r = p.rackId && rackById(p.rackId); return !q || norm(p.prod).includes(q) || norm(p.lote).includes(q) || (r && norm(posCode(r, p.lane, p.pos, p.level)).startsWith(q)); });
+  const shown = list.slice(0, 150);
+  const occ = new Set([...occupancy().keys(), ...realBySlot.keys()]);
+  const achados = qRaw ? realList.filter(e => e.hit).sort((a, b) => a.code.localeCompare(b.code, 'pt-BR', { numeric: true })) : [];
+  const somaUn = {}; achados.forEach(e => e.items.forEach(x => { const u = unidadeDe(x.codigo, x.produto_nome) || 'un'; somaUn[u] = (somaUn[u] || 0) + (+x.quantidade || 0); }));
+  const issues = lastVal.issues.slice(0, 12).map(i => `<button class="issue" data-pick="${i.kind}" data-id="${i.id}">${esc(i.text)}</button>`).join('');
+  const grupos = [...new Set(L.racks.map(r => r.grupo || 'Sem pavilhão'))];
+  const rackRows = grupos.map(gn => {
+    const rs = L.racks.filter(r => (r.grupo || 'Sem pavilhão') === gn);
+    return `<div class="sec"><h3>${esc(gn)}</h3><div class="list">${rs.map(r => { let u = 0; for (const k of occ.keys()) if (k.startsWith(r.id + '|')) u++; const t = r.lanes * r.deep * r.levels;
+      return `<button class="item ${sel?.id === r.id ? 'on' : ''}" data-pick="rack" data-id="${r.id}"><span class="dot" style="background:${r.tipo === 'drive' ? '#2f5fa8' : '#e0b400'}"></span><span class="t">${esc(r.code)} <span class="s">${r.lanes}×${r.levels}×${r.deep}</span></span><span class="s">${u}/${t}</span></button>`; }).join('')}</div></div>`;
+  }).join('');
+  return `<div class="sec"><h3>Buscar produto, código, lote, armazém ou posição</h3><label class="fld"><input id="f-q" type="search" placeholder="Ex.: MAIZ, 12002000199, B1-22…" value="${esc(view.q)}" autocomplete="off"></label>
+    ${qRaw ? `<p class="note">${achados.length} vaga(s) ocupada(s) batem${Object.keys(somaUn).length ? ' · ' + Object.entries(somaUn).map(([u, v]) => `${num(v)} ${esc(u)}`).join(' · ') : ''}. O resto fica cinza na cena.</p>` : ''}
+    ${achados.length ? `<div class="list">${achados.slice(0, 80).map(e => `<button class="item" data-go="${e.r.id}|${e.lane}|${e.pos}|${e.level}"><span class="dot" style="background:#${corProduto(e.items[0]).getHexString()}"></span><span class="t">${esc(e.items[0].produto_nome || e.items[0].codigo)}${e.items.length > 1 ? ` <span class="s">+${e.items.length - 1}</span>` : ''}</span><span class="s">${esc(e.code)}</span></button>`).join('')}</div>${achados.length > 80 ? `<p class="note">Mostrando 80 de ${achados.length}. Refine a busca.</p>` : ''}` : ''}
+    ${lastHits.length && !achados.length ? `<div class="chips">${lastHits.slice(0, 60).map(h => `<button data-go="${h.r.id}|${h.lane}|${h.pos}|${h.level}">${esc(h.code)}</button>`).join('')}${lastHits.length > 60 ? `<span class="note">+${lastHits.length - 60}</span>` : ''}</div>` : ''}</div>
+    <div class="sec"><h3>Cor dos paletes</h3><div class="seg" role="group" aria-label="Cor dos paletes" style="align-self:flex-start">
+      <button data-cor="produto" aria-pressed="${corModo.v === 'produto'}">Por produto</button><button data-cor="situacao" aria-pressed="${corModo.v === 'situacao'}">Por situação</button></div>
+      ${corModo.v === 'situacao' ? `<p class="note"><span style="color:var(--ok)">■</span> ocupada · <span style="color:var(--warn)">■</span> mais de um lote · <span style="color:var(--alt)">■</span> aguardando validação</p>` : '<p class="note">Cada produto tem sempre a mesma cor.</p>'}</div>
+    ${foraDoLayout.length ? `<div class="sec"><h3>Fora do layout (${foraDoLayout.length})</h3><p class="note">Vagas ocupadas no sistema com código que não existe no layout: ${foraDoLayout.slice(0, 20).map(f => `<b>${esc(f.code)}</b>`).join(', ')}${foraDoLayout.length > 20 ? '…' : ''}</p></div>` : ''}
+    ${lastVal.issues.length ? `<div class="sec"><h3>Alertas (${lastVal.issues.length})</h3><div class="issues">${issues}</div></div>` : ''}
+    ${rackRows}
+    ${L.zones.length ? `<div class="sec"><h3>Áreas</h3><div class="list">${L.zones.map(z => `<button class="item ${sel?.id === z.id ? 'on' : ''}" data-pick="zone" data-id="${z.id}"><span class="dot" style="background:${esc(z.color)}"></span><span class="t">${esc(z.name)}</span><span class="s">${fmt(z.w * z.d, 0)} m²</span></button>`).join('')}</div></div>` : ''}
+    <div class="sec"><h3>Paletes de simulação (${list.length})</h3>${shown.length ? `<div class="list">${shown.map(p => `<button class="item ${sel?.id === p.id ? 'on' : ''}" data-pick="pallet" data-id="${p.id}"><span class="dot" style="background:${esc(p.color || colorFor(p.prod))}"></span><span class="t">${esc(p.prod)}</span><span class="s">${esc(locText(p))}</span></button>`).join('')}</div>` : `<p class="note">Paletes de simulação servem para testar uma arrumação sem mexer no sistema. Ficam só neste navegador.</p>`}
+    <div class="row"><button class="btn" data-act="addPallet">+ Palete de simulação</button><button class="btn" data-act="addRack">+ Estrutura</button><button class="btn" data-act="addZone">+ Área</button><button class="btn" data-act="addLabel">+ Texto no piso</button></div></div>
+    <details class="sec"><summary>Simular a partir de uma lista do Excel</summary><p class="note">Copie as colunas Produto, Lote, Quantidade e, se quiser, Posição (ex.: B1-22-3-4). Com posição, o palete vai direto para a vaga; sem posição, fica no chão perto da vista.</p>
+    <textarea id="f-paste" rows="6" placeholder="Maiz Líquido 100 DS&#9;L2604-031&#9;8400&#9;B1-22-1-1"></textarea><div class="row"><button class="btn primary" data-act="paste">Criar paletes</button></div></details>`;
+}
+function renderPav(){
+  const P = L.pav;
+  const lays = Object.entries(store.layouts).map(([id, l]) => [id, l.name]);
+  return `<div class="sec"><h3>Layouts</h3>
+    <div class="row"><button class="btn" data-act="dupLayout">Duplicar este</button><button class="btn" data-act="newLayout">Novo vazio</button><button class="btn danger" data-act="delLayout" ${lays.length < 2 ? 'disabled' : ''}>Excluir este</button></div>
+    <p class="note">Duplique antes de testar uma reorganização: o original fica guardado. Troque de layout no seletor ao lado do título.</p></div>
+    <div class="sec"><h3>Pavilhão</h3>${fld('Nome', 'pav.name', L.name, 'text')}<div class="grid3">${fld('Largura (m)', 'pav.w', P.w, 'number', 'step="0.05"')}${fld('Comprim. (m)', 'pav.l', P.l, 'number', 'step="0.05"')}${fld('Pé-direito', 'pav.h', P.h, 'number', 'step="0.05"')}</div>
+    ${selF('Planta', 'pav.plantaRot', [[0, 'Frente embaixo'], [90, 'Frente à direita (como o PDF da Phametal)']], P.plantaRot)}
+    <dl class="kv"><dt>Área interna</dt><dd class="hl">${fmt(P.w * P.l, 0)} m²</dd><dt>Posições</dt><dd>${totalSlots().toLocaleString('pt-BR')}</dd><dt>Pilares</dt><dd>${P.pillars.length}</dd></dl></div>
+    ${P.extras.map((B, i) => `<div class="sec"><h3>${esc(B.name || 'Outro pavilhão')}</h3>${fld('Nome', `ext.${i}.name`, B.name, 'text')}
+      <div class="grid3">${fld('X início', `ext.${i}.x1`, +B.x1.toFixed(2))}${fld('X fim', `ext.${i}.x2`, +B.x2.toFixed(2))}${fld('Altura', `ext.${i}.h`, B.h || 8)}</div>
+      <div class="grid2">${fld('Y início', `ext.${i}.y1`, +B.y1.toFixed(2))}${fld('Y fim', `ext.${i}.y2`, +B.y2.toFixed(2))}</div>
+      <p class="note">${fmt((B.x2 - B.x1), 2)} × ${fmt((B.y2 - B.y1), 2)} m. Mudar aqui mexe só nas paredes; as ruas e áreas dentro dele se movem no modo de edição.</p></div>`).join('')}
+    <div class="sec"><h3>Portões na parede da frente</h3><label class="fld"><span>Um por linha: início (m) ; largura ; altura</span><textarea id="f-doors" data-f="pav.doors" rows="3">${P.doors.map(d => `${fmt(d.x, 2)}; ${fmt(d.w, 2)}; ${fmt(d.h || 4, 2)}`).join('\n')}</textarea></label></div>
+    <div class="sec"><h3>Docas</h3><label class="fld"><span>Uma por linha: x ; y (negativo = fora) ; largura ; profundidade</span><textarea id="f-docks" data-f="pav.docks" rows="6">${P.docks.map(d => `${fmt(d.x, 2)}; ${fmt(d.y, 2)}; ${fmt(d.w, 2)}; ${fmt(d.d, 2)}`).join('\n')}</textarea></label></div>`;
+}
+function renderDados(){
+  return `<div class="sec"><h3>Onde fica salvo</h3>${modoBanco
+      ? `<p class="note">O layout fica no Supabase, na tabela <b>layout_pavilhao</b>: é o mesmo em qualquer computador ou celular, e quem estiver com a tela aberta vê a mudança na hora. Os paletes de simulação ficam só neste navegador.</p>`
+      : `<div class="aviso-banco">Não consegui usar a tabela <b>layout_pavilhao</b> (${esc(erroBanco || 'sem conexão')}). Rode o arquivo <b>migracao_layout_3d.sql</b> no SQL Editor do Supabase. Até lá, o layout fica salvo só neste navegador.</div>`}</div>
+    <div class="sec"><h3>Exportar layout aberto</h3><textarea id="f-export" rows="6" readonly>${esc(JSON.stringify(L))}</textarea><div class="row"><button class="btn primary" data-act="copy">Copiar JSON</button></div></div>
+    <div class="sec"><h3>Exportar lista de posições</h3><p class="note">Todas as posições com código, estrutura, linha, andar, lugar e coordenadas (m), separadas por tabulação para colar no Excel.</p><div class="row"><button class="btn" data-act="copyPos">Copiar posições</button></div></div>
+    <div class="sec"><h3>Importar</h3><label class="fld"><span>Arquivo .json</span><input id="f-file" type="file" accept=".json,application/json"></label>
+    <label class="fld"><span>Ou cole o JSON</span><textarea id="f-import" rows="4"></textarea></label><div class="row"><button class="btn" data-act="import">Abrir como novo layout</button></div></div>
+    <div class="sec"><h3>Recomeçar</h3><div class="row"><button class="btn danger" data-act="resetSimb">Abrir a planta original</button></div><p class="note">Abre a planta original como um layout novo. Os seus layouts continuam lá.</p></div>`;
+}
+function renderPanel(){
+  const focus = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
+  const scroll = panel.scrollTop;
+  panel.innerHTML = tab === 'sel' ? renderSel() : tab === 'itens' ? renderItens() : tab === 'pav' ? renderPav() : renderDados();
+  panel.scrollTop = scroll;
+  if (focus){ const el = document.getElementById(focus); if (el && panel.contains(el)){ el.focus(); try { if (selStart != null) el.setSelectionRange(selStart, selStart); } catch(e){} } }
+}
+function renderStats(){
+  const total = totalSlots(), ocup = realBySlot.size, sim = L.pallets.length;
+  const vivo = erroOcup ? `<span class="warn">sem conexão</span>`
+    : canalOk ? `<span class="vivo on"></span>ao vivo` : `<span class="vivo"></span>${ultimoSync ? 'atualizado ' + haQuanto(ultimoSync) : 'carregando…'}`;
+  $('#stats').innerHTML = `<b>${total.toLocaleString('pt-BR')}</b> posições · <b>${ocup.toLocaleString('pt-BR')}</b> ocupadas · <b>${(total - ocup).toLocaleString('pt-BR')}</b> livres${sim ? ` · <b>${sim}</b> em simulação` : ''}${lastVal.issues.length ? ` · <span class="warn">${lastVal.issues.length} alerta(s)</span>` : ''} · ${vivo}`;
+}
+function renderLaySel(){
+  $('#laySel').innerHTML = Object.entries(store.layouts).map(([id, l]) => `<option value="${id}" ${id === store.current ? 'selected' : ''}>${esc(l.name)}</option>`).join('');
+}
+
+const numF = new Set(['qtd','w','d','h','x','y','bayW','posD','levelH','lanes','deep','levels','firstLane','alt','size']);
+const parseNum = s => parseFloat(String(s).replace(',', '.'));
+panel.addEventListener('change', e => {
+  const t = e.target, f = t.dataset.f;
+  if (t.id === 'f-file' && t.files[0]){ const rd = new FileReader(); rd.onload = () => importText(rd.result); rd.readAsText(t.files[0]); return; }
+  if (!f) return;
+  if (f.startsWith('ext.')){
+    const [, i, k] = f.split('.'); const B = L.pav.extras[+i]; if (!B) return; pushUndo();
+    if (k === 'name') B.name = t.value.trim() || B.name; else { const v = parseNum(t.value); if (!isFinite(v)){ undoStack.pop(); return renderPanel(); } B[k] = v; }
+    if (B.x1 > B.x2) [B.x1, B.x2] = [B.x2, B.x1]; if (B.y1 > B.y2) [B.y1, B.y2] = [B.y2, B.y1];
+    buildEnv(); afterChange(); return;
+  }
+  if (f.startsWith('pav.')){
+    const k = f.slice(4); pushUndo();
+    const rows = () => t.value.split('\n').map(s => s.split(/[;\t]/).map(v => parseNum(v.trim()))).filter(a => a.every(isFinite));
+    if (k === 'name') L.name = t.value.trim() || 'Pavilhão';
+    else if (k === 'doors') L.pav.doors = rows().filter(a => a.length >= 2 && a[1] > 0).map(([x, w, h]) => ({ x, w, h: h || 4 }));
+    else if (k === 'docks') L.pav.docks = rows().filter(a => a.length >= 4 && a[2] > 0 && a[3] > 0).map(([x, y, w, d]) => ({ x, y, w, d }));
+    else if (k === 'plantaRot'){ L.pav.plantaRot = parseInt(t.value, 10); afterChange(); setView(view.mode); return; }
+    else { const v = parseNum(t.value); if (!(v > 1)){ undoStack.pop(); return renderPanel(); } L.pav[k] = v; }
+    buildEnv(); afterChange(); return;
+  }
+  const o = selObj(); if (!o || sel.kind === 'slot') return;
+  let v = t.type === 'checkbox' ? t.checked : t.value;
+  if (numF.has(f)){ v = parseNum(v); if (!isFinite(v)) return renderPanel(); }
+  pushUndo();
+  if (sel.kind === 'pallet'){
+    if (f === 'rackId'){
+      if (!v) toFloor(o);
+      else { const r = rackById(v); let placed = false;
+        for (let pos = 0; pos < r.deep && !placed; pos++) for (let lane = 0; lane < r.lanes && !placed; lane++){ const lv = lowestFree(r, lane, pos, o.id); if (lv >= 0){ Object.assign(o, { rackId: r.id, lane, pos, level: lv }); placed = true; } }
+        if (!placed){ undoStack.pop(); toast(`${r.code} está cheia`); return renderPanel(); } }
+    } else if (['lane','pos','level','rot'].includes(f)) o[f] = parseInt(v, 10);
+    else if (['w','d','h'].includes(f)) o[f] = Math.max(.2, Math.min(f === 'h' ? 6 : 3, v));
+    else o[f] = v;
+    rebuildPallet(o);
+  } else if (sel.kind === 'rack'){
+    if (f === 'rot') o.rot = parseInt(v, 10);
+    else if (['bayW','posD','levelH'].includes(f)) o[f] = Math.max(.5, Math.min(5, v));
+    else if (f === 'laneNames'){ const n = String(v).split(/[,;\s]+/).map(s => s.trim()).filter(Boolean); o.laneNames = n.length ? n : null; if (n.length) o.lanes = n.length; }
+    else if (f === 'code') o.code = String(v).trim() || o.code;
+    else o[f] = v;
+    normalizeRack(o); buildRacks(); buildPallets();
+  } else if (sel.kind === 'label'){
+    if (f === 'size') o.size = Math.max(.3, v); else if (f === 'text') o.text = String(v).trim() || o.text; else o[f] = v; buildLabels();
+  } else {
+    if (['w','d'].includes(f)) o[f] = Math.max(.3, v); else if (f === 'alt') o.alt = Math.max(.2, v); else o[f] = v; buildZones();
+  }
+  afterChange();
+});
+panel.addEventListener('input', e => { if (e.target.id === 'f-q'){ view.q = e.target.value; applyHighlights(); renderPanel(); } });
+panel.addEventListener('click', e => {
+  const cb = e.target.closest('[data-cor]');
+  if (cb){ corModo.v = cb.dataset.cor; pintarReal(); renderPanel(); return; }
+  const go = e.target.closest('[data-go]');
+  if (go){ const [rid, lane, pos, lv] = go.dataset.go.split('|'); const r = rackById(rid); if (r) goToSlot(r, +lane, +pos, +lv); return; }
+  const cell = e.target.closest('[data-slot]');
+  if (cell){ const [rid, lane, pos] = cell.dataset.slot.split('|'); const r = rackById(rid); if (r) goToSlot(r, +lane, +pos, 0); return; }
+  const pk = e.target.closest('[data-pick]');
+  if (pk){ const kind = pk.dataset.pick, id = pk.dataset.id; const o = kind === 'pallet' ? L.pallets.find(p => p.id === id) : kind === 'rack' ? rackById(id) : L.zones.find(z => z.id === id);
+    if (o){ const f = footprint(kind, o); focusOn(f.cx, f.cy); select(kind, id); } return; }
+  const b = e.target.closest('[data-act]'); if (!b) return; const act = b.dataset.act;
+  if (['del','delLayout'].includes(act) && !b.dataset.armed){ b.dataset.armed = '1'; const tx = b.textContent; b.textContent = 'Clique de novo para confirmar'; setTimeout(() => { if (b.isConnected){ delete b.dataset.armed; b.textContent = tx; } }, 3000); return; }
+  if (act === 'del') deleteSel();
+  else if (act === 'dup') duplicateSel();
+  else if (act === 'rot') rotateSel();
+  else if (act === 'selRack'){ select('rack', sel.rackId); }
+  else if (act === 'putHere'){ const o = selObj(); pushUndo(); const p = newPallet({ rackId: o.r.id, lane: o.lane, pos: o.pos, level: o.level, h: Math.min(1.55, o.r.levelH - .15) }); L.pallets.push(p); rebuildPallet(p); afterChange(); select('pallet', p.id); }
+  else if (act === 'addPallet'){ pushUndo(); const p = addPallet(); afterChange(); select('pallet', p.id); }
+  else if (act === 'addRack'){ pushUndo(); setEdit(true); const r = addRack(); afterChange(); select('rack', r.id); }
+  else if (act === 'addZone'){ pushUndo(); setEdit(true); const z = addZone(); afterChange(); select('zone', z.id); setTimeout(() => { const el = $('#f-name'); el?.focus(); el?.select(); }, 0); }
+  else if (act === 'addLabel'){ pushUndo(); setEdit(true); const a = { id: uid(), text: 'NOVO TEXTO', x: snap(controls.target.x, .1), y: snap(-controls.target.z, .1), size: 1.6 }; L.pav.areas.push(a); buildLabels(); afterChange(); select('label', a.id); setTimeout(() => { const el = $('#f-text'); el?.focus(); el?.select(); }, 0); }
+  else if (act === 'editOn'){ setEdit(true); }
+  else if (act === 'paste') pasteRows();
+  else if (act === 'newLayout'){ const id = uid(); store.layouts[id] = blankLayout('Novo pavilhão'); openLayout(id); }
+  else if (act === 'dupLayout'){ const id = uid(); const c = JSON.parse(JSON.stringify(L)); c.name = L.name + ' (teste)'; store.layouts[id] = c; openLayout(id); toast('Cópia criada. Agora você está editando a cópia.'); }
+  else if (act === 'delLayout'){
+    const id = store.current;
+    if (modoBanco) sb.from('layout_pavilhao').delete().eq('id', id).then(({ error }) => { if (error) toast('Não excluiu no banco: ' + error.message); });
+    delete store.layouts[id]; try { localStorage.removeItem(simKey(id)); } catch(e){} openLayout(Object.keys(store.layouts)[0]);
+  }
+  else if (act === 'copy') copyText($('#f-export').value, $('#f-export'));
+  else if (act === 'copyPos'){
+    const rows = ['Codigo\tPavilhao\tEstrutura\tLinha\tAndar\tLugar\tX_m\tY_m\tAltura_m'];
+    for (const r of L.racks) for (let lane = 0; lane < r.lanes; lane++) for (let lv = 0; lv < r.levels; lv++) for (let pos = 0; pos < r.deep; pos++){ const s = slotPos(r, lane, pos, lv); rows.push([posCode(r, lane, pos, lv), r.grupo, r.code, laneLabel(r, lane), lv + 1, pos + 1, fmt(s.x), fmt(s.y), fmt(s.elev)].join('\t')); }
+    copyText(rows.join('\n'));
+  }
+  else if (act === 'import') importText($('#f-import').value);
+  else if (act === 'resetSimb'){ const id = uid(); store.layouts[id] = layoutSimbiose(); openLayout(id); toast('Planta original aberta'); }
+});
+function copyText(txt, ta){
+  navigator.clipboard.writeText(txt).then(() => toast('Copiado'), () => { if (ta){ ta.focus(); ta.select(); toast('Selecionei o texto: use Ctrl+C'); } else toast('Não consegui copiar daqui'); });
+}
+function findCode(code){
+  code = String(code || '').trim().toUpperCase(); if (!code) return null;
+  for (const r of L.racks) for (let lane = 0; lane < r.lanes; lane++) for (let pos = 0; pos < r.deep; pos++) for (let lv = 0; lv < r.levels; lv++)
+    if (posCode(r, lane, pos, lv).toUpperCase() === code) return { r, lane, pos, level: lv };
+  return null;
+}
+function pasteRows(){
+  const txt = $('#f-paste').value.trim(); if (!txt) return toast('Cole as linhas da planilha primeiro');
+  const rows = txt.split(/\r?\n/).map(l => l.split(/\t|;/).map(s => s.trim())).filter(r => r[0]);
+  if (rows.length > 1 && !isFinite(parseNum(String(rows[0][2] || '').replace(/\./g, '')))) rows.shift();
+  pushUndo(); const t = controls.target; let inSlot = 0, miss = 0;
+  rows.forEach(r => {
+    const f = { prod: r[0], lote: r[1] || '', qtd: parseNum(String(r[2] || '0').replace(/\./g, '')) || 0 };
+    const s = r[3] && findCode(r[3]);
+    if (s){ const p = newPallet({ ...f, rackId: s.r.id, lane: s.lane, pos: s.pos, level: s.level, h: Math.min(1.55, s.r.levelH - .15) }); L.pallets.push(p); rebuildPallet(p); inSlot++; }
+    else { if (r[3]) miss++; addPallet({ ...f, nearX: t.x, nearY: -t.z }); }
+  });
+  toast(`${rows.length} palete(s): ${inSlot} na posição${miss ? `, ${miss} com posição não encontrada` : ''}`); afterChange();
+}
+function importText(txt){
+  try {
+    const d = JSON.parse(txt);
+    if (!d.pav || !Array.isArray(d.racks)) throw 0;
+    d.name = d.name || 'Importado'; migrate(d);
+    const id = uid(); store.layouts[id] = d; openLayout(id); toast('Layout importado');
+  } catch(e){ toast('Esse JSON não é um layout deste planejador'); }
+}
+function openLayout(id){
+  store.current = id; L = store.layouts[id]; undoStack.length = 0; $('#b-undo').disabled = true; sel = null; setMeasure(false);
+  rebuildAll(); setView(view.mode); afterChange(); renderTabs();
+}
+
+/* ================= banco e tempo real ================= */
+async function carregarLayoutsBanco(){
+  try {
+    const { data, error } = await sb.from('layout_pavilhao').select('id, nome, dados, updated_at, feito_por').order('updated_at', { ascending: true });
+    if (error) throw error;
+    modoBanco = true; erroBanco = '';
+    if (!data.length){
+      const base = store.layouts.principal ? semSim(store.layouts.principal) : semSim(layoutSimbiose());
+      const { error: e2 } = await sb.from('layout_pavilhao').insert({ id: 'principal', nome: base.name, dados: { ...base, _cliente: CLIENTE }, feito_por: QUEM || 'sistema', updated_at: new Date().toISOString() });
+      if (e2) throw e2;
+      data.push({ id: 'principal', nome: base.name, dados: base });
+    }
+    const novo = {};
+    for (const r of data){
+      const d = migrate({ ...r.dados, name: r.nome, pallets: lerSim(r.id) }); delete d._cliente;
+      novo[r.id] = d; ultimoSalvo[r.id] = JSON.stringify(semSim(d));
+    }
+    const atual = novo[store.current] ? store.current : Object.keys(novo)[0];
+    store = { current: atual, layouts: novo };
+    openLayout(atual);
+  } catch(e){
+    modoBanco = false; erroBanco = e.message || String(e);
+    console.warn('layout_pavilhao indisponível:', erroBanco);
+    toast('Layout salvo só neste navegador: rode a migração do layout no Supabase');
+  }
+}
+/* Mesma consulta do mapa.html: o que está guardado (historico) e o
+   que ainda espera validação (lancamentos pendentes). */
+async function carregarOcupacao(){
+  try {
+    const [hist, pend] = await Promise.all([
+      buscarTudo(() => sb.from('historico')
+        .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, origem, created_at')
+        .eq('ocupacao_ativa', true).not('posicao', 'is', null)),
+      buscarTudo(() => sb.from('lancamentos')
+        .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, created_at, usuario')
+        .eq('status', 'pendente').eq('ocupacao_ativa', true).not('posicao', 'is', null)),
+    ]);
+    const o = {};
+    for (const r of hist) (o[String(r.posicao).trim().toUpperCase()] ||= []).push({ ...r, pend: false });
+    for (const r of pend) (o[String(r.posicao).trim().toUpperCase()] ||= []).push({ ...r, pend: true });
+    _ocupacao = o; ultimoSync = Date.now(); erroOcup = '';
+    buildReal(); refreshAllSlots(); applyHighlights(); renderStats();
+    if (tab === 'itens' || sel?.kind === 'slot' || sel?.kind === 'rack') renderPanel();
+  } catch(e){
+    erroOcup = e.message || String(e); console.warn('ocupação:', erroOcup); renderStats();
+  }
+}
+let pendenteRemoto = null;
+function aoMudarLayoutRemoto(p){
+  if (p.eventType === 'DELETE'){
+    const id = p.old?.id;
+    if (id && store.layouts[id] && id !== store.current){ delete store.layouts[id]; renderLaySel(); }
+    return;
+  }
+  const r = p.new; if (!r || !r.dados || r.dados._cliente === CLIENTE) return;
+  const d = migrate({ ...r.dados, name: r.nome, pallets: store.layouts[r.id]?.pallets || lerSim(r.id) }); delete d._cliente;
+  store.layouts[r.id] = d; ultimoSalvo[r.id] = JSON.stringify(semSim(d));
+  if (r.id !== store.current){ renderLaySel(); return; }
+  if (drag){ pendenteRemoto = r; return; }
+  L = d; if (sel && !selObj()) sel = null;
+  rebuildAll(); afterChange(); toast(`${r.feito_por || 'Alguém'} alterou o layout`);
+}
+function ligarTempoReal(){
+  let t; const recarregar = () => { clearTimeout(t); t = setTimeout(carregarOcupacao, 600); };
+  sb.channel('layout-3d')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'historico' }, recarregar)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'lancamentos' }, recarregar)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'layout_pavilhao' }, aoMudarLayoutRemoto)
+    .subscribe(status => { canalOk = status === 'SUBSCRIBED'; renderStats(); });
+  // Rede de segurança: se o tempo real não estiver ligado no banco, a tela ainda se atualiza.
+  setInterval(() => { if (!document.hidden) carregarOcupacao(); }, 60000);
+  setInterval(renderStats, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) carregarOcupacao(); });
+}
+function pedirNome(depois){
+  const d = $('#dlg-quem'); d.hidden = false; const inp = $('#quem-in'); inp.value = QUEM || ''; setTimeout(() => inp.focus(), 40);
+  const ok = () => { const n = inp.value.trim(); if (n.length < 2){ inp.focus(); return; } gravarQuem(n); pintarQuem(); d.hidden = true; limpar(); depois && depois(); };
+  const nao = () => { d.hidden = true; limpar(); };
+  const tecla = e => { if (e.key === 'Enter') ok(); if (e.key === 'Escape') nao(); };
+  const limpar = () => { $('#quem-ok').removeEventListener('click', ok); $('#quem-cancel').removeEventListener('click', nao); inp.removeEventListener('keydown', tecla); };
+  $('#quem-ok').addEventListener('click', ok); $('#quem-cancel').addEventListener('click', nao); inp.addEventListener('keydown', tecla);
+}
+function pintarQuem(){ $('#quem-ini').textContent = iniciais(QUEM); $('#quem-nome').textContent = QUEM || 'Entrar'; }
+
+/* ================= barra e teclado ================= */
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; renderTabs(); renderPanel(); }));
+$('#laySel').addEventListener('change', e => openLayout(e.target.value));
+$('#b-fit').addEventListener('click', () => setView(view.mode));
+$('#b-undo').addEventListener('click', undo);
+$('#t-slots').addEventListener('click', e => { view.slots = !view.slots; e.currentTarget.setAttribute('aria-pressed', view.slots); rackObjs.forEach(g => g.userData.slots.visible = view.slots); });
+$('#t-labels').addEventListener('click', e => { view.labels = !view.labels; e.currentTarget.setAttribute('aria-pressed', view.labels); buildZones(); buildRacks(); buildPallets(); applyHighlights(); });
+$('#t-dims').addEventListener('click', e => { view.dims = !view.dims; e.currentTarget.setAttribute('aria-pressed', view.dims); drawDims(); });
+$('#t-measure').addEventListener('click', () => setMeasure(!view.measure));
+function setEdit(on){
+  if (view.edit === on) return;
+  if (on && modoBanco && !lerQuem()){ pedirNome(() => setEdit(true)); return; }
+  view.edit = on; $('#t-edit').setAttribute('aria-pressed', on); $('#etag').hidden = !on; vp.classList.toggle('editing', on);
+  if (on) setMeasure(false);
+  if (!on && sel?.kind === 'label') sel = null;
+  updateSelBox(); renderPanel();
+}
+$('#t-edit').addEventListener('click', () => setEdit(!view.edit));
+addEventListener('keydown', e => {
+  const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !typing){ e.preventDefault(); undo(); return; }
+  if (typing) return;
+  if (e.key === 'Escape'){ if (view.measure) setMeasure(false); else if (sel) select(null); else if (view.edit) setEdit(false); }
+  else if (e.key === 'r' || e.key === 'R') rotateSel();
+  else if (e.key === 'Delete' || e.key === 'Backspace'){ if (sel && sel.kind !== 'slot'){ e.preventDefault(); deleteSel(); } }
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd'){ e.preventDefault(); duplicateSel(); }
+  else if (e.key.startsWith('Arrow') && sel){
+    e.preventDefault(); const s = e.shiftKey ? 1 : .05;
+    nudge(e.key === 'ArrowLeft' ? -s : e.key === 'ArrowRight' ? s : 0, e.key === 'ArrowUp' ? s : e.key === 'ArrowDown' ? -s : 0);
+  }
+});
+
+const onTheme = () => { readTokens(); texCache.clear(); rebuildAll(); afterChange(); };
+new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-tema'] });
+document.fonts?.ready.then(() => { texCache.clear(); rebuildAll(); afterChange(); });
+
+$('#b-tema').addEventListener('click', alternarTema);
+$('#b-quem').addEventListener('click', () => pedirNome());
+lerQuem(); pintarQuem();
+resize(); rebuildAll(); setView('3d'); renderTabs(); afterChange(); $('#b-undo').disabled = true;
+try {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  carregarLayoutsBanco().then(() => { carregarOcupacao(); ligarTempoReal(); });
+} catch(e){ erroOcup = 'Supabase não carregou'; renderStats(); }
+(function loop(now){ requestAnimationFrame(loop); if (anim) anim(now); controls.update(); renderer.render(scene, cam); })(performance.now());
+})();
+</script>
+</body>
+</html>
