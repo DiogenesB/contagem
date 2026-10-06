@@ -179,7 +179,7 @@ a.btn{text-decoration:none;color:inherit}
     <div class="group">
       <a class="btn" href="./mapa.html" title="Mapa do drive-in: guardar e expedir">Mapa</a>
       <button class="btn" id="b-quem" title="Trocar de pessoa"><span class="quem-ini" id="quem-ini">?</span><span id="quem-nome">—</span></button>
-      <button class="btn" id="b-tema" title="Tema">◐</button>
+      <button class="btn" id="b-tema" title="Alternar tema claro e escuro (T)"></button>
     </div>
   </header>
 
@@ -241,15 +241,16 @@ const $ = s => document.querySelector(s);
      simbiose B2 linhas 01–36, andares 1–4, lugares 1–4 (= bloco C4)
      bioma    A1 linhas 01–36, andares 1–3, lugares 1–5 (= bloco C2)
      bioma    A2 linhas 29–36, andares 1–3, lugares 1–4 (= bloco C1)
-   Lugar 1 fica no corredor; linha 01 no fundo, linha 36 junto da parede das docas. */
+   Lugar 1 fica no corredor; linha 01 no fundo, linha 36 junto da parede das docas —
+   exceto no B1, que é numerado ao contrário: linha 01 junto das docas, 36 no fundo. */
 function layoutSimbiose(){
   const PAV3 = makePav3();
   const RUA = 54.48 / 36, PROF = 1.025, Y0 = 0.555, YC = Y0 + 54.48 / 2;
   const base = { tipo: 'drive', firstLane: 1, bayW: RUA, posD: PROF, locked: true, laneNames: null };
   const racks = [
-    { ...base, id: uid(), code: 'B1', grupo: 'Simbiose', x: (16.1 + 21.225) / 2, y: YC, rot: 90, rev: true,  lanes: 36, deep: 5, levels: 4, levelH: 1.85 },
+    { ...base, id: uid(), code: 'B1', grupo: 'Simbiose', x: (16.1 + 21.225) / 2, y: YC, rot: 90, rev: true,   lanes: 36, deep: 5, levels: 4, levelH: 1.85 },
     { ...base, id: uid(), code: 'B2', grupo: 'Simbiose', x: (25.6 + 29.7) / 2,   y: YC, rot: 270, rev: false, lanes: 36, deep: 4, levels: 4, levelH: 1.85 },
-    { ...base, id: uid(), code: 'A1', grupo: 'Bioma',    x: (0.8 + 5.925) / 2,   y: YC, rot: 90, rev: true,  lanes: 36, deep: 5, levels: 3, levelH: 2.45 },
+    { ...base, id: uid(), code: 'A1', grupo: 'Bioma',    x: (0.8 + 5.925) / 2,   y: YC, rot: 90, rev: false,  lanes: 36, deep: 5, levels: 3, levelH: 2.45 },
     { ...base, id: uid(), code: 'A2', grupo: 'Bioma',    x: (10.4 + 14.5) / 2,   y: Y0 + 12.2 / 2, rot: 270, rev: false, firstLane: 29, lanes: 8, bayW: 12.2 / 8, deep: 4, levels: 3, levelH: 2.45 }
   ];
   const zone = (name, x1, x2, y1, y2, color, extra = {}) => ({ id: uid(), name, x: (x1 + x2) / 2, y: (y1 + y2) / 2, w: x2 - x1, d: y2 - y1, color, tipo: 'piso', alt: 0, grid: false, locked: true, ...extra });
@@ -313,12 +314,18 @@ function migrate(L){
   L.racks.forEach(r => { r.tipo = r.tipo || 'drive'; r.code = r.code || r.name || 'DI'; r.grupo = r.grupo || ''; r.firstLane = r.firstLane || 1; r.rev = !!r.rev; r.laneNames = r.laneNames || null; });
   L.zones.forEach(z => { z.tipo = z.tipo || 'piso'; z.alt = z.alt || 0; });
   L.pav.areas.forEach(a => { a.id = a.id || uid(); a.size = a.size || 2.2; });
+  /* Correção única (out/2026): B1 e A1 estavam com as linhas no sentido contrário. Só vira se ainda
+     estiverem como na versão errada; depois disso a marca impede de mexer de novo. */
+  if (!L._ajusteLinhas){
+    L.racks.forEach(r => { if (r.code === 'B1' && r.rot === 90 && !r.rev){ r.rev = true; L._corrigido = true; } if (r.code === 'A1' && r.rot === 90 && r.rev){ r.rev = false; L._corrigido = true; } });
+    L._ajusteLinhas = 1;
+  }
   return L;
 }
 /* O layout (estruturas, áreas, textos) é compartilhado: vive na tabela layout_pavilhao.
    Os paletes de SIMULAÇÃO são de quem está planejando: ficam só neste navegador.
    Aqui o localStorage é só cache, para a tela abrir na hora enquanto o banco responde. */
-const semSim = l => { const { pallets, _cliente, ...resto } = l; return resto; };
+const semSim = l => { const { pallets, _cliente, _corrigido, ...resto } = l; return resto; };
 const simKey = id => 'layout3d-sim-' + id;
 function lerSim(id){ try { return JSON.parse(localStorage.getItem(simKey(id))) || []; } catch(e){ return []; } }
 function gravarSim(){ try { localStorage.setItem(simKey(store.current), JSON.stringify(L.pallets)); } catch(e){} }
@@ -1477,6 +1484,7 @@ async function carregarLayoutsBanco(){
     for (const r of data){
       const d = migrate({ ...r.dados, name: r.nome, pallets: lerSim(r.id) }); delete d._cliente;
       novo[r.id] = d; ultimoSalvo[r.id] = JSON.stringify(semSim(d));
+      if (d._corrigido){ delete d._corrigido; delete ultimoSalvo[r.id]; }   // grava a correção no banco uma vez
     }
     const atual = novo[store.current] ? store.current : Object.keys(novo)[0];
     store = { current: atual, layouts: novo };
@@ -1569,6 +1577,7 @@ addEventListener('keydown', e => {
   const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !typing){ e.preventDefault(); undo(); return; }
   if (typing) return;
+  if (e.key.toLowerCase() === 't' && !e.ctrlKey && !e.metaKey){ alternarTema(); return; }
   if (e.key === 'Escape'){ if (view.measure) setMeasure(false); else if (sel) select(null); else if (view.edit) setEdit(false); }
   else if (e.key === 'r' || e.key === 'R') rotateSel();
   else if (e.key === 'Delete' || e.key === 'Backspace'){ if (sel && sel.kind !== 'slot'){ e.preventDefault(); deleteSel(); } }
@@ -1579,7 +1588,9 @@ addEventListener('keydown', e => {
   }
 });
 
-const onTheme = () => { readTokens(); texCache.clear(); rebuildAll(); afterChange(); };
+const rotuloTema = () => { $('#b-tema').textContent = document.documentElement.getAttribute('data-tema') === 'claro' ? '☾ Escuro' : '☀ Claro'; };
+rotuloTema();
+const onTheme = () => { rotuloTema(); readTokens(); texCache.clear(); rebuildAll(); afterChange(); };
 new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-tema'] });
 document.fonts?.ready.then(() => { texCache.clear(); rebuildAll(); afterChange(); });
 
