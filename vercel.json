@@ -3,7 +3,8 @@
     { "source": "/",        "destination": "/painel.html" },
     { "source": "/painel",  "destination": "/painel.html" },
     { "source": "/mobile",  "destination": "/mobile.html" },
-    { "source": "/mapa",    "destination": "/mapa.html" }
+    { "source": "/mapa",    "destination": "/mapa.html" },
+    { "source": "/layout",  "destination": "/layout.html" }
   ],
   "headers": [
     {
