@@ -151,6 +151,12 @@ select:hover, .bt:hover { border-color:var(--line-2); }
   font-size:.875rem; line-height:1; padding:3px 5px; border-radius:5px;
 }
 .lh-imp:hover { color:var(--accent); background:var(--accent-sf); }
+.lh-limpar {
+  background:none; border:0; color:var(--text-3); cursor:pointer;
+  line-height:0; padding:4px 5px; border-radius:5px;
+}
+.lh-limpar:hover { color:var(--neg); background:var(--neg-sf); }
+.linha.vazia .lh-limpar { visibility:hidden; }
 
 .corpo-grade { flex:1; display:flex; flex-direction:column; gap:var(--gap); }
 .and { display:flex; align-items:center; gap:var(--gap); }
@@ -437,7 +443,7 @@ select:hover, .bt:hover { border-color:var(--line-2); }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="./comum.js?v=4"></script>
+<script src="./comum.js?v=5"></script>
 <script src="./impressao.js?v=4"></script>
 <script>
 let sb = null;
@@ -509,6 +515,8 @@ function construir() {
         <span class="lh-qtd"></span><span class="lh-ocup"></span>
         <button class="lh-imp" title="Imprimir esta linha"
                 onclick="event.stopPropagation();imprimirLinha('${di}','${ln}','${_pav}')">⎙</button>
+        <button class="lh-limpar" title="Limpar a linha inteira" aria-label="Limpar a linha ${di}-${ln}"
+                onclick="event.stopPropagation();limparLinha('${di}','${ln}','${_pav}',{aoTerminar:()=>carregar(true)})"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
       </div>`;
 
       const corpo = document.createElement('div');
