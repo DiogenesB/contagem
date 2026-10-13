@@ -587,9 +587,95 @@ const ACOES = {
   moveu:    { rot:'Moveu de vaga',       cor:'alt'  },
   validou:  { rot:'Validou',             cor:'pos'  },
   excluiu:  { rot:'Excluiu',             cor:'neg'  },
+  limpou:   { rot:'Limpou a linha',      cor:'neg'  },
 };
 function rotuloAcao(a) { return ACOES[a]?.rot || a; }
 function corAcao(a)    { return ACOES[a]?.cor || 'mute'; }
+
+/* ═══════════════════════════════════════════════════════════════
+   LIMPAR LINHA
+   Esvazia todas as vagas de uma linha do drive-in de uma vez.
+   Busca no banco o que está ativo na linha (não confia só no que
+   a tela tem em memória — o painel esconde ocupação antiga que
+   ficou por baixo de um lançamento pendente, e ela voltaria no
+   próximo carregamento), pede confirmação com o resumo e desativa
+   tudo. Cada palete retirado vira uma linha em `alteracoes`.
+   ═══════════════════════════════════════════════════════════════ */
+function posicoesDaLinha(pav, di, ln) {
+  const andares = MAPA_POSICOES[pav]?.[di]?.[ln] || {};
+  const out = [];
+  for (const an of Object.keys(andares))
+    for (const lg of andares[an]) out.push(`${di}-${ln}-${an}-${lg}`);
+  return out;
+}
+
+let _limpandoLinha = false;
+
+async function limparLinha(di, ln, pav, { extra = null, quem = '', aoTerminar = null } = {}) {
+  if (_limpandoLinha) return;
+  // O app do operador guarda o nome em OPERADOR, não em QUEM.
+  if (!QUEM && quem) QUEM = String(quem).trim();
+  const nomeLinha = `${di}-${ln}`;
+  const posicoes = posicoesDaLinha(pav, di, ln);
+  if (!posicoes.length) { toast(`Linha ${nomeLinha} não existe no mapa.`, 'err'); return; }
+
+  _limpandoLinha = true;
+  try {
+    const campos = 'id, posicao, codigo, produto_nome, lote, armazem, quantidade';
+    const [hist, pend] = await Promise.all([
+      sb.from('historico').select(campos).eq('ocupacao_ativa', true).in('posicao', posicoes),
+      sb.from('lancamentos').select(campos).eq('status', 'pendente').eq('ocupacao_ativa', true).in('posicao', posicoes),
+    ]);
+    if (hist.error) throw hist.error;
+    if (pend.error) throw pend.error;
+
+    const itens = [
+      ...(hist.data || []).map(r => ({ ...r, _tab:'historico' })),
+      ...(pend.data || []).map(r => ({ ...r, _tab:'lancamentos' })),
+    ];
+    if (!itens.length) {
+      toast(`A linha ${nomeLinha} já está vazia.`, 'ok');
+      if (aoTerminar) await aoTerminar();
+      return;
+    }
+
+    const vagas = new Set(itens.map(r => r.posicao)).size;
+    const total = itens.reduce((s, r) => s + (Number(r.quantidade) || 0), 0);
+    const nPend = itens.filter(r => r._tab === 'lancamentos').length;
+    const produtos = [...new Set(itens.map(r => r.produto_nome || r.codigo))];
+    const resumoProd = produtos.slice(0, 4).join('\n  • ') + (produtos.length > 4 ? `\n  • … e mais ${produtos.length - 4}` : '');
+
+    const ok = confirm(
+      `Limpar a linha ${nomeLinha} inteira?\n\n` +
+      `${itens.length} palete(s) em ${vagas} vaga(s) — ${num(total)} no total.\n` +
+      (nPend ? `${nPend} deles ainda aguardando validação.\n` : '') +
+      `\n  • ${resumoProd}\n\n` +
+      `Todas as vagas da linha ficam livres.`);
+    if (!ok) return;
+
+    const agora = new Date().toISOString();
+    const patch = { ocupacao_ativa:false, updated_at:agora, ...(extra || (QUEM ? { feito_por:QUEM } : {})) };
+    for (const tab of ['historico', 'lancamentos']) {
+      const ids = itens.filter(r => r._tab === tab).map(r => r.id);
+      if (ids.length) await atualizarResiliente(tab, patch, q => q.in('id', ids));
+    }
+
+    // A trilha não segura a operação: se falhar, as vagas já estão livres.
+    await Promise.all(itens.map(r => registrarAlteracao({
+      acao:'limpou', posicao:r.posicao, codigo:r.codigo, produto_nome:r.produto_nome,
+      lote:r.lote, armazem:r.armazem, qtd_antes:Number(r.quantidade) || 0, qtd_depois:0,
+      tabela_ref:r._tab, ref_id:r.id, obs:`linha ${nomeLinha} limpa`,
+    })));
+
+    if (typeof cacheInvalidar === 'function') cacheInvalidar('mapa');
+    toast(`Linha ${nomeLinha} limpa · ${vagas} vaga(s) liberada(s).`, 'ok', 4500);
+    if (aoTerminar) await aoTerminar();
+  } catch (e) {
+    toast(`Não deu para limpar ${nomeLinha}: ${e?.message || e}`, 'err', 7000);
+  } finally {
+    _limpandoLinha = false;
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════════
    SUGESTÃO DE PRODUTO
