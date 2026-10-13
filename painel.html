@@ -795,6 +795,12 @@ table.saldo .num { width:1%; white-space:nowrap; }
   font-size:.8125rem; line-height:1; padding:2px 4px; border-radius:4px;
 }
 .ml-imp:hover { color:var(--accent); background:var(--accent-sf); }
+.ml-limpar {
+  background:none; border:0; color:var(--text-3); cursor:pointer;
+  line-height:0; padding:3px 4px; border-radius:4px;
+}
+.ml-limpar:hover { color:var(--neg); background:var(--neg-sf); }
+.mlinha.vazia .ml-limpar { visibility:hidden; }
 .ml-qtd {
   margin-left:auto; font-family:var(--mono); font-size:.6875rem; font-weight:600;
   color:var(--text); background:var(--surface-3); border-radius:4px; padding:0 5px;
@@ -1889,7 +1895,7 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="./comum.js?v=3"></script>
+<script src="./comum.js?v=5"></script>
 <script src="./impressao.js?v=3"></script>
 <script>
 'use strict';
@@ -4574,7 +4580,9 @@ function montarDrivein(pav, di, alvo) {
     head.innerHTML = `<span class="ml-nome">${di}-${ln}</span>
       <span class="ml-qtd"></span><span class="ml-ocup"></span>
       <button class="ml-imp" title="Imprimir só esta linha"
-              onclick="event.stopPropagation();imprimirLinha('${di}','${ln}','${pav}')">⎙</button>`;
+              onclick="event.stopPropagation();imprimirLinha('${di}','${ln}','${pav}')">⎙</button>
+      <button class="ml-limpar" title="Limpar a linha inteira" aria-label="Limpar a linha ${di}-${ln}"
+              onclick="event.stopPropagation();limparLinha('${di}','${ln}','${pav}',{extra:carimbo(),aoTerminar:carregarMapa})"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>`;
     bloco.appendChild(head);
 
     const corpoGrade = document.createElement('div');
