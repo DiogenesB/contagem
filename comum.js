@@ -67,182 +67,221 @@ const linhaDaPosicao = p => String(p || '').split('-').slice(0, 2).join('-');
    Indexado por CÓDIGO, não por nome: 10 produtos compartilham o
    mesmo nome em códigos diferentes (versões Simbiose × Biagro),
    então nome como chave é ambíguo.
-   Formato: 'codigo': [nome, unidade, maximo_por_palete]
-   maximo null = amostra, não tem limite definido.
+   Formato: 'codigo': [nome, unidade, maximo_por_palete, filial]
+   maximo null = amostra ou sem limite definido.
+   filial = de qual empresa é o código (simbiose | bioma | biagro),
+   tirada do ERP (B8_FILIAL). O MESMO nome existe com códigos de
+   filiais diferentes — TRICH PROTECTION 10 L é 01007000091 na
+   Simbiose e 12007000091 na Bioma. Escolher o gêmeo errado faz o
+   lote "sumir" no cruzamento com o sistema. null = código sem saldo
+   na planilha usada para montar a lista; a filial vem do saldo.
    ═══════════════════════════════════════════════════════════════ */
 const PRODUTOS = {
-  '01001000005': ['BIO 12 - 12 L (12X1)', 'L', 528],
-  '01001000007': ['BIO 12 - 10 L (2X5)', 'L', 640],
-  '01001000009': ['BIO 15 + NI - 10 L (2X5)', 'L', 640],
-  '01001000010': ['BIO ATIVO - 20 L (1X20)', 'L', 480],
-  '01001000021': ['BIO APPLIC O - 10 L (2X5)', 'L', 640],
-  '01001000030': ['BIO APPLIC D - 12 L (12X1)', 'L', 528],
-  '01001000031': ['BIO APPLIC F - 12 L (12X1)', 'L', 528],
-  '01001000032': ['BIO APPLIC O - 12 L (12X1)', 'L', 528],
-  '01002000032': ['BIOMA PHOS - 12 L (12X1)', 'L', 528],
-  '01002000033': ['BIOMA PHOS - 12 L (6X2)', 'L', 768],
-  '01002000034': ['BIOMA PHOS - 10 L (2X5)', 'L', 640],
-  '01002000052': ['BIOMA PHOS - 5 L (20X0.25)', 'L', 300],
-  '01002000053': ['BIOMA PHOS - 12 L (12X1)', 'L', 528],
-  '01002000054': ['BIOMA PHOS - 12 L (6X2)', 'L', 768],
-  '01002000055': ['BIOMA PHOS - 10 L (2X5)', 'L', 640],
-  '01002000063': ['BIAGRO ENERGIA - 10 L (2X5)', 'L', 640],
-  '01002000089': ['SOLUBPHOS - 12 L (12X1)', 'L', 528],
-  '01002000090': ['SOLUBPHOS - 10 L (2X5)', 'L', 640],
-  '01002000094': ['SOLUBPHOS - 12 L (12X1) ARGENTINA', 'L', 528],
-  '01002100023': ['AMOSTRA BIOMAPHOS', 'L', null],
-  '01002100026': ['BIAGRO ENERGIA - 12 L (6X2)', 'L', 768],
-  '01002100027': ['AMOSTRA SOLUBPHOS', 'L', null],
-  '01002100028': ['AMOSTRA OMSUGO P', 'L', null],
-  '01002100029': ['SOLUBPHOS - 12 L (6X2)', 'L', 768],
-  '01002100035': ['OMSUGO ECO - 12 L (6X2)', 'L', 768],
-  '01002100075': ['SOLUBPHOS - 12 L (12X1) INGLES', 'L', 528],
-  '01002100088': ['SOLUBPHOS - 2 L - DM', 'L', 768],
-  '01002100093': ['BIOMA PHOS - 2 L - DM', 'L', 768],
-  '01002100130': ['BIOMA BRADY SOJA LIQUIDO - 200 DS (2X100) ECO PACK', 'DS', 16800],
-  '01002100131': ['BIOMA BRADY SOJA LIQUIDO - 160 DS (4X40) ECO PACK', 'DS', 13440],
-  '01002100133': ['BIOMA MAIS LIQUIDO - 80 DS (4X20) ECO PACK', 'DS', 6720],
-  '01002100135': ['BIOMA RHYZO FEIJAO LIQUIDO - 60 DS (4X15) ECO PACK', 'DS', 5040],
-  '01002100144': ['BIOMA MAIS LIQUIDO - 100 DS (2X50) ECO PACK', 'DS', 8400],
-  '01002100145': ['SOLUBPHOS - 12 L (6X2) ARGENTINA', 'L', 768],
-  '01002100180': ['AMOSTRA BIOSTML 0060 - 0.5 L (1X0.5)', 'L', null],
-  '01002100193': ['SOLUBPHOS - 1 L - DM', 'L', 528],
-  '01002100202': ['BIOMA PHOS - 1 L - DM', 'L', 528],
-  '01002100230': ['BIOMA MAIS ENERGY LIQUIDO - 100 DS (2X50)', 'DS', 8400],
-  '01002100233': ['BIOMA HYDRATUS - 12 L (6X2)', 'L', 768],
-  '01002100281': ['AMOSTRA COGNY-008-MESP-0226-S - 2L', 'L', null],
-  '01002100282': ['AMOSTRA COGNY-008-MESP-0226-S - 0,250 L', 'L', null],
-  '01003000010': ['LAPHY PROTECTION - 6 KG (6X1)', 'KG', 456],
-  '01003100006': ['LOOPER PROTECTION - 6 KG (6X1)', 'KG', 456],
-  '01003100007': ['VECTOR PROTECTION - 10 L (2X5)', 'L', 640],
-  '01003100011': ['VECTOR PROTECTION - 12 L (6X2)', 'L', 768],
-  '01003100051': ['BIOMA BRADY SOJA TURFOSO - 250 DS (5X50)', 'DS', 21000],
-  '01004000010': ['BIOMA FIX SUPER - 6 L (6X1)', 'L', 360],
-  '01005000001': ['AEDESCONTROL - 12 L (12X1)', 'L', 528],
-  '01005000002': ['AEDESCONTROL - 10 L', 'L', 750],
-  '01005000004': ['AEDESCONTROL - 10 L (2X5)', 'L', 640],
-  '01006000001': ['INLAYON - 12 L (6X2)', 'L', 768],
-  '01006000006': ['NEMACONTROL SUPER - 12 L (12X1)', 'L', 528],
-  '01006000009': ['NEMACONTROL SUPER - 12 L (6X2)', 'L', 768],
-  '01006000010': ['AMOSTRA NEMACONTROL SUPER', 'L', null],
-  '01006000015': ['NEMA PROTECTION - 12 L (6X2)', 'L', 768],
-  '01006100002': ['BIAGRO RAIZ - 12 L (6X2)', 'L', 768],
-  '01006100003': ['BIAGRO RAIZ - 12 L (12X1)', 'L', 528],
-  '01006100018': ['NEMA PROTECTION - 1 L - DM', 'L', 528],
-  '01006100020': ['NEMACONTROL SUPER - 6 L (6X1)', 'L', 528],
-  '01006100022': ['NEMACONTROL SUPER - 1 L - DM', 'L', 528],
-  '01007000002': ['FX PROTECTION - 10 L (1X10)', 'L', 750],
-  '01007000004': ['BIAGRO PROTECAO - 12 L (6X2)', 'L', 768],
-  '01007000008': ['STIMUCONTROL - 10 L (2X5)', 'L', 640],
-  '01007000014': ['AMOSTRA GREENCONTROL', 'KG', null],
-  '01007000017': ['BIAGRO SOLO - 12 L (6X2)', 'L', 768],
-  '01007000018': ['BIAGRO SOLO - 10 L (2X5)', 'L', 640],
-  '01007000019': ['FX PROTECTION - 12 L (12X1)', 'L', 528],
-  '01007000021': ['FX PROTECTION - 10 L (2X5)', 'L', 640],
-  '01007000022': ['GREENCONTROL - 6 KG (6X1)', 'KG', 456],
-  '01007000023': ['STIMUCONTROL - 12 L (12X1)', 'L', 528],
-  '01007000024': ['STIMUCONTROL - 12 L (6X2)', 'L', 768],
-  '01007000027': ['STIMUCONTROL EVOLUTION - 12 L (6X2)', 'L', 768],
-  '01007000028': ['STIMUCONTROL EVOLUTION - 10 L (2X5)', 'L', 640],
-  '01007000083': ['STIMUCONTROL - 12 L (6X2) PARAGUAY', 'L', 768],
-  '01007000091': ['TRICH PROTECTION - 10 L (2X5)', 'L', 640],
-  '01007000099': ['STIMUCONTROL - 10 L (2X5) PARAGUAY', 'L', 640],
-  '01007100001': ['FX PROTECTION - 12 L (6X2)', 'L', 768],
-  '01007100002': ['BIAGRO PROTECAO - 10 L (2X5)', 'L', 640],
-  '01007100007': ['FRONTIERCONTROL - 12 L (6X2)', 'L', 768],
-  '01007100008': ['FRONTIERCONTROL - 10 L (2X5)', 'L', 640],
-  '01007100012': ['FRONTIERCONTROL - 12 L (12X1)', 'L', 528],
-  '01007100020': ['STIMUCONTROL - 2 L', 'L', 768],
-  '01007100023': ['FRONTIERCONTROL - 2 L - DM', 'L', 768],
-  '01007100029': ['FX PROTECTION - 2 L - DM', 'L', 768],
-  '01007100039': ['ESPORO DE TRICHODERMA HARZIANUM CCT2160', 'KG', 750],
-  '01007100050': ['FRONTIERCONTROL - 1 L - DM', 'L', 528],
-  '01007100051': ['STIMUCONTROL - 1 L - DM', 'L', 528],
-  '01007100054': ['TRICH PROTECTION - 1 L - DM', 'L', 528],
-  '01007100055': ['FX PROTECTION - 1 L - DM', 'L', 528],
-  '01007100058': ['EFICAZCONTROL - 12 L (6X2)', 'L', 768],
-  '01007100063': ['EFICAZCONTROL - 12 L (12X1)', 'L', 528],
-  '01007100064': ['FRONTIERCONTROL - 10 L (2X5) - PARAGUAY', 'L', 640],
-  '01007100066': ['STIMUCONTROL - 2 L - DM', 'L', 768],
-  '01007100071': ['AMOSTRA EFICAZCONTROL', 'L', null],
-  '01007100072': ['ESPORO BEAUVERIA BASSIANA CBMAI 2359', 'KG', 375],
-  '01009000026': ['STIMU SPRAY O - 10 L (2X5)', 'L', 640],
-  '01009000027': ['STIMU SPRAY D - 12 L (12X1)', 'L', 528],
-  '01009000031': ['STIMU SPRAY D - 10 L (2X5)', 'L', 640],
-  '01009000032': ['STIMU SPRAY D - 10 L (1X10)', 'L', 750],
-  '01009000034': ['STIMU SPRAY F - 12 L (12X1)', 'L', 528],
-  '01009000035': ['STIMU SPRAY O - 12 L (12X1)', 'L', 528],
-  '01009000036': ['STIMU SPRAY O - 10 L (1X10)', 'L', 750],
-  '01009000038': ['STIMU SPRAY F - 10 L (2X5)', 'L', 640],
-  '01012000040': ['BIAGRO CRISTALLES - 12 L (12X1)', 'L', 528],
-  '01012000041': ['BIAGRO CRISTALLES - 10 L (1X10)', 'L', 750],
-  '01012000042': ['BIAGRO CRISTALLES - 10 L (2X5)', 'L', 640],
-  '01012000043': ['BTCONTROL - 12 L (12X1)', 'L', 528],
-  '01012000044': ['BTCONTROL - 10 L (1X10)', 'L', 750],
-  '01012000047': ['BTCONTROL - 10 L (2X5)', 'L', 640],
-  '01012000051': ['AMOSTRA VIRCONTROL S.F', 'KG', 456],
-  '01012000061': ['FLYCONTROL - 12 L (12X1)', 'L', 528],
-  '01012000062': ['FLYCONTROL - 12 L (6X2)', 'L', 768],
-  '01012000063': ['FLYCONTROL - 10 L (2X5)', 'L', 640],
-  '01012000074': ['METHACONTROL EVOLUTION - 10 L (2X5)', 'L', 640],
-  '01012000077': ['VIRCONTROL C.I - 6 KG (6X1)', 'KG', 456],
-  '01012000078': ['VIRCONTROL S.F - 6 KG (12X0.5)', 'KG', 456],
-  '01012000079': ['VIRCONTROL S.F - 6 KG (6X1)', 'KG', 456],
-  '01012000089': ['VIRCONTROL H.A - 6 KG (6X1)', 'KG', 456],
-  '01012000112': ['FLYCONTROL 12 L - (6X2) PARAGUAY', 'L', 768],
-  '01012000116': ['AMOSTRA FLYCONTROL', 'L', null],
-  '01012000127': ['VIRCONTROL SF - 1 KG - DM', 'KG', 456],
-  '01012000141': ['METHACONTROL EVOLUTION - 5 L - DM', 'L', 640],
-  '01012000147': ['FLYCONTROL - 5 L - DM', 'L', 640],
-  '01012000148': ['FLYCONTROL - 2 L - DM', 'L', 768],
-  '01012000164': ['BIOISA - 5 KG (1X5)', 'KG', 375],
-  '01012000165': ['BTCONTROL - 5 L (1X5)', 'L', 720],
-  '01012000166': ['VECTOR PROTECTION - 12 L (12X1)', 'L', 528],
-  '01012000182': ['FLYCONTROL - 1 L - DM', 'L', 528],
-  '01012000183': ['BT PROTECTION - 5 L - DM', 'L', 640],
-  '01012000188': ['AMOSTRA ESPORO TRICHODERMA – EX', 'KG', null],
-  '01012000189': ['AMOSTRA SOLUBPHOS WP - ARGENTINA', 'KG', null],
-  '01014000001': ['FACIENS PROTECTION - 10 L (1X10)', 'L', 750],
-  '01014000002': ['NEMACONTROL - 12 L (12X1)', 'L', 528],
-  '01014000003': ['NEMACONTROL - 12 L (6X2)', 'L', 768],
-  '01014000029': ['TRANS F CONTROL - 10 L (2X5) PARAGUAY', 'L', 640],
-  '01014000031': ['NEMACONTROL - 12 L (6X2) PARAGUAY', 'L', 768],
-  '01014000037': ['NEMACONTROL - 2 L - DM', 'L', 768],
-  '01014000042': ['NEMACONTROL - 1 L - DM', 'L', 528],
-  '01014000044': ['AMOSTRA FACIENS PROTECTION', 'L', null],
-  '12001000002': ['STIMU LEG 12 - 12 L (12X1)', 'L', 528],
-  '12001000003': ['STIMU LEG 15 + NI - 10 L (2X5)', 'L', 640],
-  '12001000004': ['STIMU LEG 10 - 10 L (2X5)', 'L', 640],
-  '12001000005': ['STIMU LEG 12 - 10 L (2X5)', 'L', 640],
-  '12002000006': ['SIMBIOSENOD SOJA LIQUIDO - 200 DS (2X100)', 'DS', 16800],
-  '12002000198': ['SIMBIOSENOD SOJA LIQUIDO - 160 DS (4X40) ULTRA CASE', 'DS', 13440],
-  '12002000199': ['SIMBIOSE MAIZ LIQUIDO - 100 DS (2X50) ULTRA CASE', 'DS', 8400],
-  '12002000200': ['SIMBIOSENOD ULTRA TSI - 80 DS (2X40) ULTRA CASE', 'DS', 6720],
-  '12002000201': ['SIMBIOSENOD SOJA LIQUIDO - 200 DS (2X100) ULTRA CASE', 'DS', 16800],
-  '12002000202': ['SIMBIOSE MAIZ LIQUIDO - 80 DS (4X20) ULTRA CASE', 'DS', 6720],
-  '12002000205': ['SIMBIOSENOD FEIJAO LIQUIDO - 60 DS (4X15) ULTRA CASE', 'DS', 4620],
-  '12002000259': ['BIOMA HYDRATUS - 10 L (2X5)', 'L', 640],
-  '12002000260': ['BIOMA HYDRATUS - 12 L (6X2)', 'L', 768],
-  '12002000280': ['BIOMA HYDRATUS - 2 L - DM', 'L', 768],
-  '12003000029': ['BT PROTECTION - 10 L (1X10)', 'L', 750],
-  '12003000031': ['LAPHY PROTECTION - 6 KG (6X1)', 'KG', 456],
-  '12003000033': ['BT PROTECTION - 10 L (2X5)', 'L', 640],
-  '12003000036': ['LOOPER PROTECTION - 6 KG (6X1)', 'KG', 456],
-  '12003000045': ['LAPHY PROTECTION - 1 KG - DM', 'KG', 456],
-  '12004000017': ['BIO PRO - TSI - 6 L (6X1)', 'L', 384],
-  '12004000018': ['SIMBIOSE PRO SUPER - 6 L (6X1)', 'L', 384],
-  '12006000001': ['NEMA PROTECTION - 12 L (6X2)', 'L', 768],
-  '12006000017': ['NEMA PROTECTION - 12 L (12X1)', 'L', 528],
-  '12007000007': ['TRICH PROTECTION - 12 L (12X1)', 'L', 528],
-  '12007000091': ['TRICH PROTECTION - 10 L (2X5)', 'L', 640],
-  '12007000092': ['TRICH PROTECTION - 12 L (6X2)', 'L', 768],
-  '12007000114': ['TRICH PROTECTION - 2 L - DM', 'L', 768],
-  '12007000125': ['FX PROTECTION - 10 L (2X5)', 'L', 640],
-  '12007000126': ['FX PROTECTION - 12 L (12X1)', 'L', 528],
-  '12014000002': ['METHACONTROL - 10 KG (2X5)', 'KG', 640],
-  '12016000018': ['ISACONTROL - 10 L (2X5)', 'L', 640],
-  '12016000030': ['PERC PROTECTION - 10 L (2X5)', 'L', 640],
-  '12019000010': ['SIMBIOSENOD SOJA TURFOSO - 250 DS (5X50)', 'DS', 21000],
+  '01001000005': ['BIO 12 - 12 L (12X1)', 'L', 528, null],
+  '01001000007': ['BIO 12 - 10 L (2X5)', 'L', 640, null],
+  '01001000009': ['BIO 15 + NI - 10 L (2X5)', 'L', 640, null],
+  '01001000010': ['BIO ATIVO - 20 L (1X20)', 'L', 480, null],
+  '01001000021': ['BIO APPLIC O - 10 L (2X5)', 'L', 640, 'bioma'],
+  '01001000030': ['BIO APPLIC D - 12 L (12X1)', 'L', 528, 'bioma'],
+  '01001000031': ['BIO APPLIC F - 12 L (12X1)', 'L', 528, null],
+  '01001000032': ['BIO APPLIC O - 12 L (12X1)', 'L', 528, 'bioma'],
+  '01002000032': ['BIOMA PHOS - 12 L (12X1)', 'L', 528, 'bioma'],
+  '01002000033': ['BIOMA PHOS - 12 L (6X2)', 'L', 768, 'bioma'],
+  '01002000034': ['BIOMA PHOS - 10 L (2X5)', 'L', 640, 'bioma'],
+  '01002000052': ['BIOMA PHOS - 5 L (20X0.25)', 'L', 300, 'simbiose'],
+  '01002000053': ['BIOMA PHOS - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01002000054': ['BIOMA PHOS - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01002000055': ['BIOMA PHOS - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01002000063': ['BIAGRO ENERGIA - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01002000069': ['BIOMA PHOS - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01002000089': ['SOLUBPHOS - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01002000090': ['SOLUBPHOS - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01002000094': ['SOLUBPHOS - 12 L (12X1) ARGENTINA', 'L', 528, null],
+  '01002100023': ['AMOSTRA BIOMAPHOS', 'L', null, 'simbiose'],
+  '01002100026': ['BIAGRO ENERGIA - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01002100027': ['AMOSTRA SOLUBPHOS', 'L', null, 'simbiose'],
+  '01002100028': ['AMOSTRA OMSUGO P', 'L', null, 'simbiose'],
+  '01002100029': ['SOLUBPHOS - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01002100035': ['OMSUGO ECO - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01002100075': ['SOLUBPHOS - 12 L (12X1) INGLES', 'L', 528, 'simbiose'],
+  '01002100088': ['SOLUBPHOS - 2 L - DM', 'L', 768, 'simbiose'],
+  '01002100093': ['BIOMA PHOS - 2 L - DM', 'L', 768, 'bioma'],
+  '01002100130': ['BIOMA BRADY SOJA LIQUIDO - 200 DS (2X100) ECO PACK', 'DS', 16800, 'bioma'],
+  '01002100131': ['BIOMA BRADY SOJA LIQUIDO - 160 DS (4X40) ECO PACK', 'DS', 13440, 'bioma'],
+  '01002100133': ['BIOMA MAIS LIQUIDO - 80 DS (4X20) ECO PACK', 'DS', 6720, 'bioma'],
+  '01002100135': ['BIOMA RHYZO FEIJAO LIQUIDO - 60 DS (4X15) ECO PACK', 'DS', 5040, 'bioma'],
+  '01002100136': ['BIOMA RHYZO CAUPI LIQUIDO - 60 DS (4X15) ECO PACK', 'DS', null, 'bioma'],
+  '01002100144': ['BIOMA MAIS LIQUIDO - 100 DS (2X50) ECO PACK', 'DS', 8400, 'bioma'],
+  '01002100145': ['SOLUBPHOS - 12 L (6X2) ARGENTINA', 'L', 768, 'simbiose'],
+  '01002100180': ['AMOSTRA BIOSTML 0060 - 0.5 L (1X0.5)', 'L', null, 'simbiose'],
+  '01002100193': ['SOLUBPHOS - 1 L - DM', 'L', 528, 'simbiose'],
+  '01002100202': ['BIOMA PHOS - 1 L - DM', 'L', 528, 'bioma'],
+  '01002100230': ['BIOMA MAIS ENERGY LIQUIDO - 100 DS (2X50)', 'DS', 8400, 'bioma'],
+  '01002100233': ['BIOMA HYDRATUS - 12 L (6X2)', 'L', 768, null],
+  '01002100263': ['SOLUBPHOS - 5 L - DM', 'L', null, 'simbiose'],
+  '01002100281': ['AMOSTRA COGNY-008-MESP-0226-S - 2L', 'L', null, 'simbiose'],
+  '01002100282': ['AMOSTRA COGNY-008-MESP-0226-S - 0,250 L', 'L', null, 'simbiose'],
+  '01002100311': ['AMOSTRA OMSUGO P - 250 ML', 'L', null, 'simbiose'],
+  '01002100314': ['SOLUBPHOS - 12 L (12X1) - FOLCOL - BOLIVIA', 'L', null, 'simbiose'],
+  '01002100315': ['BIOMA HYDRATUS - 12 L (6X2) - FOLCOL - BOLIVIA', 'L', null, 'simbiose'],
+  '01002100321': ['SOLUBPHOS - 12 L (12X1) - ADILSON - BOLIVIA', 'L', null, 'simbiose'],
+  '01002100322': ['BIOMA HYDRATUS - 12 L (6X2) - ADILSON - BOLIVIA', 'L', null, 'simbiose'],
+  '01002100324': ['COGNY-015-MESP-26-S 2L', 'L', null, 'simbiose'],
+  '01002100325': ['COGNY-015-MESP-26-S 250 ML', 'L', null, 'simbiose'],
+  '01003000010': ['LAPHY PROTECTION - 6 KG (6X1)', 'KG', 456, 'simbiose'],
+  '01003100006': ['LOOPER PROTECTION - 6 KG (6X1)', 'KG', 456, 'simbiose'],
+  '01003100007': ['VECTOR PROTECTION - 10 L (2X5)', 'L', 640, 'bioma'],
+  '01003100011': ['VECTOR PROTECTION - 12 L (6X2)', 'L', 768, 'bioma'],
+  '01003100051': ['BIOMA BRADY SOJA TURFOSO - 250 DS (5X50)', 'DS', 21000, 'bioma'],
+  '01004000010': ['BIOMA FIX SUPER - 6 L (6X1)', 'L', 360, 'bioma'],
+  '01005000001': ['AEDESCONTROL - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01005000002': ['AEDESCONTROL - 10 L', 'L', 750, 'simbiose'],
+  '01005000004': ['AEDESCONTROL - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01006000001': ['INLAYON - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01006000006': ['NEMACONTROL SUPER - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01006000009': ['NEMACONTROL SUPER - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01006000010': ['AMOSTRA NEMACONTROL SUPER', 'L', null, 'simbiose'],
+  '01006000015': ['NEMA PROTECTION - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01006100002': ['BIAGRO RAIZ - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01006100003': ['BIAGRO RAIZ - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01006100018': ['NEMA PROTECTION - 1 L - DM', 'L', 528, 'bioma'],
+  '01006100020': ['NEMACONTROL SUPER - 6 L (6X1)', 'L', 528, 'simbiose'],
+  '01006100022': ['NEMACONTROL SUPER - 1 L - DM', 'L', 528, 'simbiose'],
+  '01006100023': ['NEMACONTROL SUPER - 2 L - DM', 'L', null, 'simbiose'],
+  '01006100031': ['AMOSTRA PCA4', 'L', null, 'simbiose'],
+  '01007000002': ['FX PROTECTION - 10 L (1X10)', 'L', 750, 'bioma'],
+  '01007000004': ['BIAGRO PROTECAO - 12 L (6X2)', 'L', 768, null],
+  '01007000008': ['STIMUCONTROL - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01007000014': ['AMOSTRA GREENCONTROL', 'KG', null, 'simbiose'],
+  '01007000017': ['BIAGRO SOLO - 12 L (6X2)', 'L', 768, null],
+  '01007000018': ['BIAGRO SOLO - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01007000019': ['FX PROTECTION - 12 L (12X1)', 'L', 528, null],
+  '01007000021': ['FX PROTECTION - 10 L (2X5)', 'L', 640, null],
+  '01007000022': ['GREENCONTROL - 6 KG (6X1)', 'KG', 456, null],
+  '01007000023': ['STIMUCONTROL - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01007000024': ['STIMUCONTROL - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01007000027': ['STIMUCONTROL EVOLUTION - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01007000028': ['STIMUCONTROL EVOLUTION - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01007000083': ['STIMUCONTROL - 12 L (6X2) PARAGUAY', 'L', 768, null],
+  '01007000091': ['TRICH PROTECTION - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01007000099': ['STIMUCONTROL - 10 L (2X5) PARAGUAY', 'L', 640, 'simbiose'],
+  '01007100001': ['FX PROTECTION - 12 L (6X2)', 'L', 768, 'bioma'],
+  '01007100002': ['BIAGRO PROTECAO - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01007100007': ['FRONTIERCONTROL - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01007100008': ['FRONTIERCONTROL - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01007100012': ['FRONTIERCONTROL - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01007100020': ['STIMUCONTROL - 2 L', 'L', 768, null],
+  '01007100023': ['FRONTIERCONTROL - 2 L - DM', 'L', 768, 'simbiose'],
+  '01007100024': ['STIMUCONTROL - 5 L - DM', 'L', null, 'simbiose'],
+  '01007100029': ['FX PROTECTION - 2 L - DM', 'L', 768, 'bioma'],
+  '01007100033': ['FRONTIERCONTROL - 5 L - DM', 'L', null, 'simbiose'],
+  '01007100039': ['ESPORO DE TRICHODERMA HARZIANUM CCT2160', 'KG', 750, 'simbiose'],
+  '01007100050': ['FRONTIERCONTROL - 1 L - DM', 'L', 528, 'simbiose'],
+  '01007100051': ['STIMUCONTROL - 1 L - DM', 'L', 528, 'simbiose'],
+  '01007100053': ['TRICH PROTECTION - 5 L - DM', 'L', null, 'bioma'],
+  '01007100054': ['TRICH PROTECTION - 1 L - DM', 'L', 528, 'bioma'],
+  '01007100055': ['FX PROTECTION - 1 L - DM', 'L', 528, 'bioma'],
+  '01007100058': ['EFICAZCONTROL - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01007100061': ['ARTEFATO - 10 L (2X5)', 'L', null, 'simbiose'],
+  '01007100063': ['EFICAZCONTROL - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01007100064': ['FRONTIERCONTROL - 10 L (2X5) - PARAGUAY', 'L', 640, null],
+  '01007100065': ['EFICAZCONTROL - 2 L - DM', 'L', null, 'simbiose'],
+  '01007100066': ['STIMUCONTROL - 2 L - DM', 'L', 768, 'simbiose'],
+  '01007100067': ['EFICAZCONTROL - 1 L - DM', 'L', null, 'simbiose'],
+  '01007100069': ['STIMUCONTROL EVOLUTION - 2 L - DM', 'L', null, 'simbiose'],
+  '01007100071': ['AMOSTRA EFICAZCONTROL', 'L', null, null],
+  '01007100072': ['ESPORO BEAUVERIA BASSIANA CBMAI 2359', 'KG', 375, 'simbiose'],
+  '01007100083': ['STIMUCONTROL 12 L (12X1) - FOLCOL - BOLIVIA', 'L', null, 'simbiose'],
+  '01007100084': ['STIMUCONTROL 12 L (12X1) - ADILSON - BOLIVIA', 'L', null, 'simbiose'],
+  '01009000026': ['STIMU SPRAY O - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01009000027': ['STIMU SPRAY D - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01009000031': ['STIMU SPRAY D - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01009000032': ['STIMU SPRAY D - 10 L (1X10)', 'L', 750, 'simbiose'],
+  '01009000034': ['STIMU SPRAY F - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01009000035': ['STIMU SPRAY O - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01009000036': ['STIMU SPRAY O - 10 L (1X10)', 'L', 750, 'simbiose'],
+  '01009000038': ['STIMU SPRAY F - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01012000040': ['BIAGRO CRISTALLES - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01012000041': ['BIAGRO CRISTALLES - 10 L (1X10)', 'L', 750, 'simbiose'],
+  '01012000042': ['BIAGRO CRISTALLES - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01012000043': ['BTCONTROL - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01012000044': ['BTCONTROL - 10 L (1X10)', 'L', 750, 'simbiose'],
+  '01012000047': ['BTCONTROL - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01012000051': ['AMOSTRA VIRCONTROL S.F', 'KG', 456, 'simbiose'],
+  '01012000061': ['FLYCONTROL - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01012000062': ['FLYCONTROL - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01012000063': ['FLYCONTROL - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01012000074': ['METHACONTROL EVOLUTION - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '01012000077': ['VIRCONTROL C.I - 6 KG (6X1)', 'KG', 456, 'simbiose'],
+  '01012000078': ['VIRCONTROL S.F - 6 KG (12X0.5)', 'KG', 456, 'simbiose'],
+  '01012000079': ['VIRCONTROL S.F - 6 KG (6X1)', 'KG', 456, 'simbiose'],
+  '01012000089': ['VIRCONTROL H.A - 6 KG (6X1)', 'KG', 456, 'simbiose'],
+  '01012000112': ['FLYCONTROL 12 L - (6X2) PARAGUAY', 'L', 768, null],
+  '01012000116': ['AMOSTRA FLYCONTROL', 'L', null, null],
+  '01012000127': ['VIRCONTROL SF - 1 KG - DM', 'KG', 456, 'simbiose'],
+  '01012000141': ['METHACONTROL EVOLUTION - 5 L - DM', 'L', 640, null],
+  '01012000147': ['FLYCONTROL - 5 L - DM', 'L', 640, null],
+  '01012000148': ['FLYCONTROL - 2 L - DM', 'L', 768, 'simbiose'],
+  '01012000164': ['BIOISA - 5 KG (1X5)', 'KG', 375, null],
+  '01012000165': ['BTCONTROL - 5 L (1X5)', 'L', 720, 'simbiose'],
+  '01012000166': ['VECTOR PROTECTION - 12 L (12X1)', 'L', 528, 'bioma'],
+  '01012000182': ['FLYCONTROL - 1 L - DM', 'L', 528, 'simbiose'],
+  '01012000183': ['BT PROTECTION - 5 L - DM', 'L', 640, null],
+  '01012000188': ['AMOSTRA ESPORO TRICHODERMA – EX', 'KG', null, 'simbiose'],
+  '01012000189': ['AMOSTRA SOLUBPHOS WP - ARGENTINA', 'KG', null, 'simbiose'],
+  '01012000190': ['AMOSTRA SOLUBPHOS WP - EX', 'L', null, 'simbiose'],
+  '01014000001': ['FACIENS PROTECTION - 10 L (1X10)', 'L', 750, null],
+  '01014000002': ['NEMACONTROL - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '01014000003': ['NEMACONTROL - 12 L (6X2)', 'L', 768, 'simbiose'],
+  '01014000029': ['TRANS F CONTROL - 10 L (2X5) PARAGUAY', 'L', 640, 'simbiose'],
+  '01014000031': ['NEMACONTROL - 12 L (6X2) PARAGUAY', 'L', 768, null],
+  '01014000037': ['NEMACONTROL - 2 L - DM', 'L', 768, 'simbiose'],
+  '01014000042': ['NEMACONTROL - 1 L - DM', 'L', 528, 'simbiose'],
+  '01014000044': ['AMOSTRA FACIENS PROTECTION', 'L', null, 'simbiose'],
+  '01019000001': ['AMOSTRA SOLUBPHOS WP - EX', 'L', null, 'simbiose'],
+  '01019000005': ['AMOSTRA OMSUGO P WP - ARGENTINA', 'L', null, 'simbiose'],
+  '12001000002': ['STIMU LEG 12 - 12 L (12X1)', 'L', 528, 'simbiose'],
+  '12001000003': ['STIMU LEG 15 + NI - 10 L (2X5)', 'L', 640, null],
+  '12001000004': ['STIMU LEG 10 - 10 L (2X5)', 'L', 640, null],
+  '12001000005': ['STIMU LEG 12 - 10 L (2X5)', 'L', 640, 'simbiose'],
+  '12002000006': ['SIMBIOSENOD SOJA LIQUIDO - 200 DS (2X100)', 'DS', 16800, null],
+  '12002000198': ['SIMBIOSENOD SOJA LIQUIDO - 160 DS (4X40) ULTRA CASE', 'DS', 13440, 'simbiose'],
+  '12002000199': ['SIMBIOSE MAIZ LIQUIDO - 100 DS (2X50) ULTRA CASE', 'DS', 8400, 'simbiose'],
+  '12002000200': ['SIMBIOSENOD ULTRA TSI - 80 DS (2X40) ULTRA CASE', 'DS', 6720, 'simbiose'],
+  '12002000201': ['SIMBIOSENOD SOJA LIQUIDO - 200 DS (2X100) ULTRA CASE', 'DS', 16800, 'simbiose'],
+  '12002000202': ['SIMBIOSE MAIZ LIQUIDO - 80 DS (4X20) ULTRA CASE', 'DS', 6720, 'simbiose'],
+  '12002000205': ['SIMBIOSENOD FEIJAO LIQUIDO - 60 DS (4X15) ULTRA CASE', 'DS', 4620, 'simbiose'],
+  '12002000259': ['BIOMA HYDRATUS - 10 L (2X5)', 'L', 640, 'bioma'],
+  '12002000260': ['BIOMA HYDRATUS - 12 L (6X2)', 'L', 768, 'bioma'],
+  '12002000280': ['BIOMA HYDRATUS - 2 L - DM', 'L', 768, 'bioma'],
+  '12002000305': ['COGNY-018-FH0826-O (MIX)', 'L', null, 'simbiose'],
+  '12002000306': ['COGNY-017-FH-826-O (ALA)', 'L', null, 'simbiose'],
+  '12002000307': ['AMOSTRA COGNY-013-FN-0926-B', 'L', null, 'simbiose'],
+  '12002000308': ['AMOSTRA COGNY-012-FF-0926-B 1 L', 'L', null, 'simbiose'],
+  '12003000029': ['BT PROTECTION - 10 L (1X10)', 'L', 750, 'bioma'],
+  '12003000031': ['LAPHY PROTECTION - 6 KG (6X1)', 'KG', 456, 'bioma'],
+  '12003000033': ['BT PROTECTION - 10 L (2X5)', 'L', 640, 'bioma'],
+  '12003000036': ['LOOPER PROTECTION - 6 KG (6X1)', 'KG', 456, 'bioma'],
+  '12003000043': ['VECTOR PROTECTION - 2 L - DM', 'L', null, 'bioma'],
+  '12003000045': ['LAPHY PROTECTION - 1 KG - DM', 'KG', 456, 'bioma'],
+  '12004000017': ['BIO PRO - TSI - 6 L (6X1)', 'L', 384, 'simbiose'],
+  '12004000018': ['SIMBIOSE PRO SUPER - 6 L (6X1)', 'L', 384, 'simbiose'],
+  '12004000029': ['SIMBIOSE PRO SUPER - 1 L - DM', 'L', null, 'simbiose'],
+  '12006000001': ['NEMA PROTECTION - 12 L (6X2)', 'L', 768, 'bioma'],
+  '12006000017': ['NEMA PROTECTION - 12 L (12X1)', 'L', 528, 'bioma'],
+  '12006000022': ['NEMA PROTECTION - 2 L - DM', 'L', null, 'bioma'],
+  '12007000007': ['TRICH PROTECTION - 12 L (12X1)', 'L', 528, 'bioma'],
+  '12007000091': ['TRICH PROTECTION - 10 L (2X5)', 'L', 640, 'bioma'],
+  '12007000092': ['TRICH PROTECTION - 12 L (6X2)', 'L', 768, 'bioma'],
+  '12007000114': ['TRICH PROTECTION - 2 L - DM', 'L', 768, 'bioma'],
+  '12007000125': ['FX PROTECTION - 10 L (2X5)', 'L', 640, 'bioma'],
+  '12007000126': ['FX PROTECTION - 12 L (12X1)', 'L', 528, 'bioma'],
+  '12007000156': ['AMOSTRA PARA TESTE - COGNY-007-FF-0326-B', 'L', null, 'simbiose'],
+  '12013000088': ['BIAGRO ENERGIA - 12 L (6X2)', 'L', 768, 'biagro'],
+  '12014000002': ['METHACONTROL - 10 KG (2X5)', 'KG', 640, null],
+  '12016000018': ['ISACONTROL - 10 L (2X5)', 'L', 640, null],
+  '12016000030': ['PERC PROTECTION - 10 L (2X5)', 'L', 640, 'bioma'],
+  '12019000010': ['SIMBIOSENOD SOJA TURFOSO - 250 DS (5X50)', 'DS', 21000, 'simbiose'],
 };
 
 /* Índice por nome, para quando só o nome estiver disponível
@@ -259,8 +298,103 @@ const PRODUTOS_POR_NOME = (() => {
 function produtoPorCodigo(codigo) {
   const c = String(codigo ?? '').trim();
   const p = PRODUTOS[c] || PRODUTOS[c.padStart(11, '0')];
-  return p ? { codigo:c, nome:p[0], unidade:p[1], palete:p[2] } : null;
+  return p ? { codigo:c, nome:p[0], unidade:p[1], palete:p[2], filial:p[3] || null } : null;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   FILIAL DO PRODUTO
+   O código diz de qual empresa é o produto. Tudo que grava, busca
+   ou cruza código usa estas funções — uma regra só nos quatro apps.
+   ═══════════════════════════════════════════════════════════════ */
+/* Entrada de FILIAIS (slug, nome, curto, códigos) do código, ou null. */
+function filialDoProduto(codigo) {
+  const p = produtoPorCodigo(normalizarCodigo(codigo));
+  return p?.filial ? FILIAIS.find(f => f.slug === p.filial) || null : null;
+}
+/* Código da filial no ERP ('010001'), no formato que o saldo grava. */
+const codigoFilialDoProduto = codigo => filialDoProduto(codigo)?.codigos[0] || null;
+
+/* Registro sem filial (gravado antes, ou por tela que não mandava)
+   herda a do código. Sem isso, ele some quando se filtra por filial. */
+function comFilial(lista) {
+  for (const r of lista || []) if (r && !r.filial && r.codigo) r.filial = codigoFilialDoProduto(r.codigo);
+  return lista;
+}
+
+/* Os outros códigos com o MESMO nome (as versões de outra filial). */
+function gemeosDoProduto(codigo) {
+  const c = normalizarCodigo(codigo);
+  const p = PRODUTOS[c];
+  if (!p) return [];
+  const nome = String(p[0]).trim().toUpperCase();
+  return Object.keys(PRODUTOS).filter(k => k !== c && String(PRODUTOS[k][0]).trim().toUpperCase() === nome);
+}
+/* Só o nome repete entre filiais? Aí a filial precisa aparecer em
+   destaque na busca, senão o conferente escolhe o primeiro da lista. */
+const temGemeo = codigo => gemeosDoProduto(codigo).length > 0;
+
+/* Selo "● Bioma" para qualquer lista. `slugOuCodigo` aceita o slug
+   da filial, o código do ERP da filial ou o código do produto. */
+function seloFilial(slugOuCodigo, { destaque = false } = {}) {
+  const v = String(slugOuCodigo ?? '').trim();
+  if (!v) return '';
+  const f = FILIAIS.find(x => x.slug === v) || resolverFilial(v) || filialDoProduto(v);
+  if (!f) return '';
+  return `<span class="selo-fil sf-${f.slug}${destaque ? ' sf-destaque' : ''}" title="Código da ${f.nome}">${f.curto}</span>`;
+}
+
+/* Quais código+lote existem no sistema (saldo da contagem e planilha
+   do Saldo mapeado). Só a existência — serve para achar o código da
+   filial certa quando alguém escolhe o gêmeo. Guarda por 5 minutos. */
+let _lotesSis = null, _lotesSisEm = 0;
+async function lotesDoSistema() {
+  if (_lotesSis && Date.now() - _lotesSisEm < 300000) return _lotesSis;
+  const set = new Set();
+  for (const t of ['saldo_sistema', 'estoque_ref']) {
+    try {
+      const d = await buscarTudo(() => sb.from(t).select('codigo, lote'));
+      for (const r of d) if (r.codigo) set.add(`${chave(normalizarCodigo(r.codigo))}|${chave(r.lote)}`);
+    } catch { /* tabela ausente: segue sem ela */ }
+  }
+  _lotesSis = set; _lotesSisEm = Date.now();
+  return set;
+}
+/* Se o lote não existe com este código e existe com um gêmeo de outra
+   filial, pergunta se troca. Devolve o código a usar (o mesmo, se não
+   trocar ou não houver o que trocar). */
+async function conferirCodigoDaFilial(codigo, lote) {
+  const c = normalizarCodigo(codigo);
+  if (!lote || !temGemeo(c)) return c;
+  const set = await lotesDoSistema();
+  if (!set.size || set.has(`${chave(c)}|${chave(lote)}`)) return c;
+  const gem = gemeosDoProduto(c).find(g => set.has(`${chave(g)}|${chave(lote)}`));
+  if (!gem) return c;
+  const fa = filialDoProduto(c)?.curto || 'outra filial', fb = filialDoProduto(gem)?.curto || 'outra filial';
+  return confirm(`O lote ${lote} não existe com o código ${c} (${fa}).\n` +
+    `Ele existe no sistema com o código ${gem} (${fb}) — mesmo produto, outra filial.\n\n` +
+    `OK = usar ${gem} (${fb})\nCancelar = manter ${c}`) ? gem : c;
+}
+
+/* Estilo do selo, injetado uma vez para os quatro apps herdarem sem
+   cada um repetir o CSS. Cor só no ponto; o nome vai escrito. */
+(function () {
+  if (typeof document === 'undefined' || document.getElementById('css-selo-fil')) return;
+  const st = document.createElement('style');
+  st.id = 'css-selo-fil';
+  st.textContent = `
+    .selo-fil { display:inline-flex; align-items:center; gap:5px; vertical-align:middle;
+      padding:0 7px 0 6px; border-radius:100px; line-height:18px; white-space:nowrap;
+      font-family:var(--sans, system-ui, sans-serif); font-size:11px; font-weight:600;
+      color:var(--text-2, var(--text2, var(--muted, currentColor)));
+      background:rgba(127,127,127,.12); border:1px solid rgba(127,127,127,.28); }
+    .selo-fil::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--sf-cor); }
+    .sf-simbiose { --sf-cor:#16A34A; }
+    .sf-bioma    { --sf-cor:#0891B2; }
+    .sf-biagro   { --sf-cor:#D97706; }
+    .selo-fil.sf-destaque { color:var(--text, var(--ink, currentColor)); border-color:var(--sf-cor);
+      background:color-mix(in srgb, var(--sf-cor) 14%, transparent); }`;
+  (document.head || document.documentElement).appendChild(st);
+})();
 
 
 /* Unidade de medida vem do catálogo: L, KG ou DS conforme o
@@ -743,9 +877,10 @@ function buscarProdutos(termo, limite = 8) {
       if (partes.length > 1 && partes.every(x => nomeUp.includes(x))) peso = 4;
     }
 
-    if (peso >= 0) achados.push({ peso, codigo:cod, nome, unidade:p[1], palete:p[2] });
+    if (peso >= 0) achados.push({ peso, codigo:cod, nome, unidade:p[1], palete:p[2], filial:p[3] || null });
   }
 
-  achados.sort((a, b) => a.peso - b.peso || a.nome.localeCompare(b.nome, 'pt-BR'));
+  // Mesmo nome: ordena pela filial para os gêmeos ficarem lado a lado.
+  achados.sort((a, b) => a.peso - b.peso || a.nome.localeCompare(b.nome, 'pt-BR') || String(a.filial).localeCompare(String(b.filial)));
   return achados.slice(0, limite);
 }
