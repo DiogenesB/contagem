@@ -748,7 +748,7 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
         </div>
         <div class="field">
           <label for="av-armazem">Armazém *</label>
-          <input type="text" id="av-armazem" class="inp-up" placeholder="Ex: 42, D7" autocomplete="off" enterkeyhint="next">
+          <input type="text" id="av-armazem" class="inp-up" placeholder="Ex: 42, D7" list="lista-armazens" autocomplete="off" enterkeyhint="next">
         </div>
       </div>
       <div class="field" id="av-campo-posicao">
@@ -937,7 +937,7 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
       <input type="text" id="ed-produto"></div>
     <div class="grid2">
       <div class="field"><label for="ed-lote">Lote</label><input type="text" id="ed-lote" class="inp-up" autocomplete="off"></div>
-      <div class="field"><label for="ed-armazem">Armazém</label><input type="text" id="ed-armazem" class="inp-up" autocomplete="off"></div>
+      <div class="field"><label for="ed-armazem">Armazém</label><input type="text" id="ed-armazem" class="inp-up" list="lista-armazens" autocomplete="off"></div>
     </div>
     <div class="field">
       <label for="ed-posicao">Posição <span class="opt">— opcional</span></label>
@@ -988,7 +988,7 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
       <input type="text" id="mp-produto" placeholder="Preenchido automaticamente"></div>
     <div class="grid2">
       <div class="field"><label for="mp-lote">Lote *</label><input type="text" id="mp-lote" class="inp-up" autocomplete="off"></div>
-      <div class="field"><label for="mp-armazem">Armazém *</label><input type="text" id="mp-armazem" class="inp-up" autocomplete="off"></div>
+      <div class="field"><label for="mp-armazem">Armazém *</label><input type="text" id="mp-armazem" class="inp-up" list="lista-armazens" autocomplete="off"></div>
     </div>
     <div class="field"><label for="mp-quantidade">Quantidade *</label>
       <input type="number" id="mp-quantidade" class="inp-qtd" min="0" step="1" inputmode="numeric" autocomplete="off"></div>
@@ -1060,7 +1060,9 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="./comum.js?v=5"></script>
+<script src="./comum.js?v=6"></script>
+<datalist id="lista-armazens"></datalist>
+<script>document.getElementById('lista-armazens').innerHTML = Object.entries(ARMAZENS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');</script>
 <script src="./impressao.js?v=3"></script>
 <script src="./fila.js?v=2"></script>
 <script>
@@ -1326,8 +1328,12 @@ async function carregarReferencias() {
     _filialPorCodigo = {};
     _chavesSaldo = new Set();
     for (const r of dados) {
-      if (r.codigo && r.filial) _filialPorCodigo[chave(r.codigo)] = r.filial;
-      if (r.codigo) _chavesSaldo.add(`${chave(r.codigo)}|${chave(r.lote)}|${chave(r.armazem)}`);
+      // Código sempre normalizado nos dois lados da consulta: sem isso,
+      // código digitado sem o zero não achava a filial e o item ficava
+      // com filial vazia — e sumia quando o painel filtrava por filial.
+      const cod = chave(normalizarCodigo(r.codigo));
+      if (r.codigo && r.filial) _filialPorCodigo[cod] = r.filial;
+      if (r.codigo) _chavesSaldo.add(`${cod}|${chave(r.lote)}|${chave(r.armazem)}`);
     }
   } catch (e) { console.warn('[referencias]', e); }
 }
@@ -1555,16 +1561,17 @@ function atualizarBadgeTf(n) {
    CONTAGEM
    ═══════════════════════════════════════════════════════════════ */
 async function lancar() {
-  const codigo  = $('av-codigo').value.trim().toUpperCase();
+  const codigo  = normalizarCodigo($('av-codigo').value.trim().toUpperCase());
   const produto = $('av-produto').value.trim();
   const lote    = $('av-lote').value.trim().toUpperCase();
-  const armazem = $('av-armazem').value.trim().toUpperCase();
+  const armazem = normalizarArmazem($('av-armazem').value);
   const posicao = POSICAO_NA_CONTAGEM ? $('av-posicao').value.trim().toUpperCase() : '';
   const qtdStr  = $('av-quantidade').value;
 
   if (!codigo)  { toast('Informe o código do produto.', 'warn'); $('av-codigo').focus();  return; }
   if (!lote)    { toast('Informe o lote.', 'warn');              $('av-lote').focus();    return; }
   if (!armazem) { toast('Informe o armazém.', 'warn');           $('av-armazem').focus(); return; }
+  if (!_novoLoteConfirmado && !confirmarArmazem(armazem)) { $('av-armazem').focus(); return; }
   if (qtdStr === '') { toast('Informe a quantidade (pode ser 0).', 'warn'); $('av-quantidade').focus(); return; }
 
   const qtd = Number(qtdStr);
@@ -2332,7 +2339,7 @@ const buscaProduto = {
     aoEscolher: it => {
       $('av-codigo').value  = it.codigo;
       $('av-produto').value = it.descricao || '';
-      if (it.filial) _filialPorCodigo[chave(it.codigo)] = it.filial;
+      if (it.filial) _filialPorCodigo[chave(normalizarCodigo(it.codigo))] = it.filial;
       previewProduto(it.codigo);
       $('av-lote').focus();
     },
@@ -2416,14 +2423,17 @@ async function editarLancamento(id) {
 
 async function salvarEdicao() {
   const id      = $('ed-id').value;
-  const codigo  = $('ed-codigo').value.trim().toUpperCase();
+  // Sem normalizar, "1012000041" gravava sem o zero e o lote virava
+  // "fora da planilha" no Saldo mapeado.
+  const codigo  = normalizarCodigo($('ed-codigo').value.trim().toUpperCase());
   const produto = $('ed-produto').value.trim();
   const lote    = $('ed-lote').value.trim().toUpperCase();
-  const armazem = $('ed-armazem').value.trim().toUpperCase();
+  const armazem = normalizarArmazem($('ed-armazem').value);
   const posicao = $('ed-posicao').value.trim().toUpperCase();
   const qtdStr  = $('ed-quantidade').value;
 
   if (!codigo || !lote || !armazem || qtdStr === '') { toast('Código, lote, armazém e quantidade são obrigatórios.', 'warn'); return; }
+  if (!confirmarArmazem(armazem)) return;
   const qtd = Number(qtdStr);
   if (!Number.isFinite(qtd) || qtd < 0) { toast('Quantidade inválida.', 'warn'); return; }
   if (posicao && !TODAS_POSICOES.includes(posicao)) { toast(`A posição ${posicao} não existe no mapa.`, 'warn', 5000); return; }
@@ -2714,10 +2724,10 @@ function abrirModalPosicao(r, posicaoPreset = '') {
 async function salvarPosicao() {
   const id      = $('mp-id').value;
   const posicao = $('mp-posicao').value.trim().toUpperCase();
-  const codigo  = $('mp-codigo').value.trim().toUpperCase();
+  const codigo  = normalizarCodigo($('mp-codigo').value.trim().toUpperCase());
   const produto = $('mp-produto').value.trim();
   const lote    = $('mp-lote').value.trim().toUpperCase();
-  const armazem = $('mp-armazem').value.trim().toUpperCase();
+  const armazem = normalizarArmazem($('mp-armazem').value);
   const qtdStr  = $('mp-quantidade').value;
 
   if (!posicao) { toast('Informe a posição.', 'warn'); return; }
@@ -2725,6 +2735,7 @@ async function salvarPosicao() {
   if (!codigo)  { toast('Informe o código.', 'warn'); return; }
   if (!lote)    { toast('Informe o lote.', 'warn'); return; }
   if (!armazem) { toast('Informe o armazém.', 'warn'); return; }
+  if (!confirmarArmazem(armazem)) return;
   if (qtdStr === '') { toast('Informe a quantidade.', 'warn'); return; }
 
   const qtd = Number(qtdStr);
