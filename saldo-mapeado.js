@@ -183,9 +183,10 @@ async function lerPlanilhaRef(file) {
 
     const filiais = [...new Set(_registrosRef.map(r => filialCurta(r.filial)).filter(Boolean))];
     const zeradas = _registrosRef.filter(r => !r.saldo).length;
+    const antigas = _importAlvo ? (_refLinhas || []).filter(r => normalizarArmazem(r.armazem) === _importAlvo).length : 0;
     const oque = _importAlvo
       ? `<b>Só o armazém ${esc(_importAlvo)}</b>${num(_registrosRef.length)} linha(s) de ${num(todas.length)} na planilha.
-         Troca a foto do ${esc(_importAlvo)} ${filiais.length > 1 ? 'nessas filiais' : 'nessa filial'}; os outros armazéns não mudam.`
+         Apaga todo o saldo antigo do ${esc(_importAlvo)}${antigas ? ` (${num(antigas)} linha(s), de qualquer filial)` : ''} e grava este no lugar; os outros armazéns não mudam.`
       : `<b>Geral — todos os armazéns</b>${num(_registrosRef.length)} linha(s).
          Troca a foto inteira ${filiais.length > 1 ? 'dessas filiais' : 'dessa filial'}, inclusive armazéns importados um a um antes.`;
     status.innerHTML = `
@@ -214,10 +215,12 @@ async function importarRef() {
   busy('s-btn-import', 's-spin-import', true);
   try {
     const filiais = [...new Set(_registrosRef.map(r => r.filial).filter(Boolean))];
-    // Geral apaga a filial inteira; um armazém apaga só ele.
+    // Um armazém: apaga TODO o saldo antigo dele, de qualquer filial —
+    // a planilha nova passa a ser a única foto do D7.
+    // Geral: apaga a filial inteira que veio na planilha.
     let apagar = sb.from('estoque_ref').delete().not('id', 'is', null);
-    if (filiais.length) apagar = apagar.in('filial', filiais);
-    if (_importAlvo)    apagar = apagar.eq('armazem', _importAlvo);
+    if (_importAlvo)          apagar = apagar.eq('armazem', _importAlvo);
+    else if (filiais.length)  apagar = apagar.in('filial', filiais);
     const { error:eD } = await apagar;
     if (eD) throw eD;
 
