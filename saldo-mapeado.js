@@ -11,15 +11,17 @@
      · código sem o zero à esquerda não casava com o do ERP;
      · item sem filial sumia quando se filtrava por filial.
 
+   Os dois lados vêm só desta aba: o Mapeado é o que está ocupando
+   vaga no mapa (historico com ocupacao_ativa) e o Sistema é a
+   planilha importada aqui. Nada vem da contagem.
+
    Depende do painel (carregado antes dele): _ocupacao, _naoConf,
-   _naoConfFora, _saldo, _ciclo, carregarMapa, fatiar, barraPag,
+   _naoConfFora, _ciclo, carregarMapa, fatiar, barraPag,
    kpi, irPara, abrirVaga, setEscopoMapa, imprimirTabela...
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── planilha de referência ── */
-let _fonteRef       = 'ref';      // ref | contagem
-let _fonteEscolhida = false;      // a pessoa mexeu no seletor ou importou
-let _refInfo        = null;       // { linhas, porFilial:{slug:{quando,quem,linhas}} }
+let _refInfo        = null;       // { linhas, porArm:{arm:{quando,quem,linhas}}, de, ate }
 let _registrosRef   = null;       // planilha lida, esperando "Usar esta planilha"
 let _refLinhas      = null;
 let _referencia     = null;       // marca que a fonte já foi carregada
@@ -97,13 +99,30 @@ function lotesParecidos(a, b) {
 
 /* ═══════════════════════════════════════════════════════════════
    PLANILHA DE REFERÊNCIA
-   A mesma exportação do ERP da contagem, guardada à parte só para
-   comparar com o mapa. Importar troca a foto DAS FILIAIS QUE VIERAM
-   na planilha — antes apagava tudo, e importar só a Simbiose
-   sumia com a Bioma.
+   A mesma exportação do ERP, guardada à parte só para comparar com
+   o mapa. Nunca usa o saldo da contagem (saldo_sistema).
+
+   Duas formas de importar:
+     · Geral — troca a foto inteira da filial que veio na planilha;
+     · Um armazém (D7, D5...) — entram só as linhas daquele armazém
+       e só a foto dele é trocada. Os outros continuam como estavam.
    ═══════════════════════════════════════════════════════════════ */
-function linhasDeReferencia() {
-  return _fonteRef === 'contagem' ? _saldo : (_refLinhas || []);
+let _importAlvo = '';             // armazém da planilha lida ('' = geral)
+let _sOcup      = {};             // vaga → itens, só o que está no mapa
+
+function linhasDeReferencia() { return _refLinhas || []; }
+const armImport = () => $('s-imp-arm')?.value || '';
+
+function atualizarTextoImport() {
+  const a = armImport();
+  if ($('s-drop-tit')) $('s-drop-tit').textContent = a
+    ? `Solte a planilha para atualizar só o armazém ${a}`
+    : 'Solte a planilha para atualizar todos os armazéns';
+  if ($('s-drop-sub')) $('s-drop-sub').textContent = a
+    ? `Só as linhas do ${a}${nomeArmazem(a) ? ' (' + nomeArmazem(a) + ')' : ''} entram. Os outros armazéns continuam com a foto que já têm.`
+    : 'Troca a foto inteira da filial que vier na planilha. Não abre ciclo nem mexe na contagem.';
+  _registrosRef = null;
+  if ($('s-import-status')) $('s-import-status').innerHTML = '';
 }
 
 function configurarDropRef() {
@@ -139,7 +158,7 @@ async function lerPlanilhaRef(file) {
     const faltando = ['codigo','lote','saldo','armazem'].filter(c => linhas.every(l => l[c] === undefined));
     if (faltando.length) throw new Error(`colunas não encontradas: ${faltando.join(', ')}`);
 
-    _registrosRef = linhas.filter(l => l.codigo).map(l => ({
+    const todas = linhas.filter(l => l.codigo).map(l => ({
       codigo:    normalizarCodigo(l.codigo),
       descricao: String(l.descricao || '').trim(),
       lote:      String(l.lote || '').trim().toUpperCase(),
@@ -151,26 +170,36 @@ async function lerPlanilhaRef(file) {
       filial:    String(l.filial || '').trim(),
       importado_por: GESTOR || 'painel',
     }));
-    if (!_registrosRef.length) throw new Error('nenhuma linha com código');
+    if (!todas.length) throw new Error('nenhuma linha com código');
+
+    _importAlvo = armImport();
+    _registrosRef = _importAlvo ? todas.filter(r => r.armazem === _importAlvo) : todas;
+    if (!_registrosRef.length) {
+      const tem = [...new Set(todas.map(r => r.armazem).filter(Boolean))].sort();
+      throw new Error(`a planilha não tem nenhuma linha do armazém ${_importAlvo}. Armazéns nela: ${tem.join(', ') || '—'}`);
+    }
 
     const filiais = [...new Set(_registrosRef.map(r => filialCurta(r.filial)).filter(Boolean))];
-    const fisicas = _registrosRef.filter(r => armazemConhecido(r.armazem)).length;
     const zeradas = _registrosRef.filter(r => !r.saldo).length;
+    const oque = _importAlvo
+      ? `<b>Só o armazém ${esc(_importAlvo)}</b>${num(_registrosRef.length)} linha(s) de ${num(todas.length)} na planilha.
+         Troca a foto do ${esc(_importAlvo)} ${filiais.length > 1 ? 'nessas filiais' : 'nessa filial'}; os outros armazéns não mudam.`
+      : `<b>Geral — todos os armazéns</b>${num(_registrosRef.length)} linha(s).
+         Troca a foto inteira ${filiais.length > 1 ? 'dessas filiais' : 'dessa filial'}, inclusive armazéns importados um a um antes.`;
     status.innerHTML = `
-      <div class="aviso a-info" style="margin-top:12px">
+      <div class="aviso ${_importAlvo ? 'a-info' : 'a-warn'}" style="margin-top:12px">
         <span class="aviso-ico">▤</span>
         <div><b>${esc(file.name)}</b>
-          ${num(_registrosRef.length)} linha(s) · filial ${esc(filiais.join(', ') || '—')} ·
-          ${num(fisicas)} em armazém físico · ${num(zeradas)} com saldo zero (ficam fora da conta).
-          Substitui só a foto ${filiais.length > 1 ? 'dessas filiais' : 'dessa filial'}; a Validação e os ciclos não são tocados.
+          ${oque} Filial ${esc(filiais.join(', ') || '—')}${zeradas ? ` · ${num(zeradas)} com saldo zero (ficam fora da conta)` : ''}.
           <div style="margin-top:10px">
             <button class="btn btn-primary btn-sm" id="s-btn-import" onclick="importarRef()">
-              <span class="spin" id="s-spin-import"></span>Usar esta planilha</button>
+              <span class="spin" id="s-spin-import"></span>${_importAlvo ? `Atualizar o ${esc(_importAlvo)}` : 'Atualizar todos os armazéns'}</button>
             <button class="btn btn-ghost btn-sm" onclick="$('s-import-status').innerHTML=''">Cancelar</button>
           </div>
         </div>
       </div>`;
   } catch (e) {
+    _registrosRef = null;
     status.innerHTML = `<div class="aviso a-warn"><span class="aviso-ico">!</span>
       <div><b>Não deu para ler</b>${esc(e.message)}</div></div>`;
   }
@@ -178,24 +207,27 @@ async function lerPlanilhaRef(file) {
 
 async function importarRef() {
   if (!_registrosRef?.length) return;
+  // Trocou o seletor depois de ler a planilha: a prévia não vale mais.
+  if (_importAlvo !== armImport()) { toast('Você trocou o armazém depois de ler a planilha. Solte o arquivo de novo.', 'warn', 5000); return; }
   busy('s-btn-import', 's-spin-import', true);
   try {
-    // Foto nova substitui a anterior inteira — mas só da filial que veio.
     const filiais = [...new Set(_registrosRef.map(r => r.filial).filter(Boolean))];
+    // Geral apaga a filial inteira; um armazém apaga só ele.
     let apagar = sb.from('estoque_ref').delete().not('id', 'is', null);
     if (filiais.length) apagar = apagar.in('filial', filiais);
+    if (_importAlvo)    apagar = apagar.eq('armazem', _importAlvo);
     const { error:eD } = await apagar;
     if (eD) throw eD;
 
-    for (let i = 0; i < _registrosRef.length; i += 500) {
-      await inserirResiliente('estoque_ref', _registrosRef.slice(i, i + 500));
+    const agora = new Date().toISOString();
+    const linhas = _registrosRef.map(r => ({ ...r, importado_em:agora }));
+    for (let i = 0; i < linhas.length; i += 500) {
+      await inserirResiliente('estoque_ref', linhas.slice(i, i + 500));
     }
-    toast(`${num(_registrosRef.length)} linhas importadas.`, 'ok', 4500);
+    toast(_importAlvo ? `Armazém ${_importAlvo} atualizado: ${num(linhas.length)} linha(s).`
+                      : `Todos os armazéns atualizados: ${num(linhas.length)} linha(s).`, 'ok', 4500);
     _registrosRef = null;
     $('s-import-status').innerHTML = avisoColunasIgnoradas('estoque_ref');
-    _fonteRef = 'ref';
-    _fonteEscolhida = true;
-    if ($('s-fonte')) $('s-fonte').value = 'ref';
     await carregarSaldoMapa(true);
   } catch (e) {
     erro('Falha ao importar', e);
@@ -209,33 +241,38 @@ async function carregarRef() {
     // select('*'): tipo e empenho só existem depois da migração; pedir
     // a coluna pelo nome derrubava a leitura inteira antes dela.
     const linhas = await buscarTudo(() => sb.from('estoque_ref').select('*'));
-    const porFilial = {};
+    const porArm = {};
     for (const l of linhas) {
-      const f = sFil(l.filial) || 'sem';
-      const p = porFilial[f] ||= { quando:l.importado_em, quem:l.importado_por, linhas:0 };
+      const a = normalizarArmazem(l.armazem) || '—';
+      const p = porArm[a] ||= { quando:l.importado_em, quem:l.importado_por, linhas:0 };
       p.linhas++;
       if (l.importado_em && (!p.quando || l.importado_em < p.quando)) { p.quando = l.importado_em; p.quem = l.importado_por; }
     }
-    _refInfo = linhas.length ? { linhas:linhas.length, porFilial } : null;
+    const datas = Object.values(porArm).map(p => p.quando).filter(Boolean).sort();
+    _refInfo = linhas.length ? { linhas:linhas.length, porArm, de:datas[0], ate:datas[datas.length - 1] } : null;
     return linhas;
   } catch (e) {
-    _refInfo = null;   // migração não rodada: a tela cai no saldo da contagem
-    return null;
+    _refInfo = null;
+    return [];
   }
 }
 
-/* Data da foto que está sendo comparada, por filial. */
-function dataDaFoto(slug) {
-  if (_fonteRef === 'contagem') return _ciclo?.iniciado_em || null;
-  const pf = _refInfo?.porFilial || {};
-  return (slug && pf[slug]?.quando) || Object.values(pf).map(p => p.quando).filter(Boolean).sort()[0] || null;
+/* Só o que está ocupando vaga no mapa. Lançamento de contagem ainda
+   pendente NÃO entra: o saldo mapeado é o mapa, não a contagem. */
+async function carregarOcupacaoSaldo() {
+  const hist = await buscarTudo(() => sb.from('historico')
+    .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, origem, ciclo_id, created_at, filial')
+    .eq('ocupacao_ativa', true).not('posicao', 'is', null));
+  const m = {};
+  for (const r of hist) (m[r.posicao] ||= []).push({ ...r, _tab:'historico' });
+  _sOcup = m;
 }
 
-/* Quantas vezes o mapa mexeu em cada produto+lote depois da foto.
-   É o primeiro suspeito de qualquer diferença: saiu ou entrou
-   mercadoria depois que a planilha foi tirada. */
+/* Mexidas no mapa por produto+lote, com a data de cada uma. Cada
+   lote compara com a data da SUA planilha — com importação por
+   armazém, o D7 pode ser de hoje e o 42 de semana passada. */
 async function carregarMovimentos() {
-  const desde = dataDaFoto(null);
+  const desde = _refInfo?.de;
   if (!desde) { _movFoto = null; return; }
   try {
     const linhas = await buscarTudo(() => sb.from('alteracoes')
@@ -244,13 +281,14 @@ async function carregarMovimentos() {
     for (const a of linhas) {
       if (!a.codigo || a.acao === 'validou') continue;
       const k = sKc(a.codigo, a.lote);
-      const g = m.get(k) || { n:0, ultimo:null };
-      g.n++;
-      if (!g.ultimo || a.created_at > g.ultimo) g.ultimo = a.created_at;
-      m.set(k, g);
+      (m.get(k) || m.set(k, []).get(k)).push(a.created_at);
     }
     _movFoto = m;
   } catch { _movFoto = null; }
+}
+function mexidasDepois(kc, desde) {
+  const ts = (_movFoto?.get(kc) || []).filter(t => !desde || t > desde);
+  return ts.length ? { n:ts.length, ultimo:ts.sort().pop() } : null;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -260,22 +298,14 @@ async function carregarSaldoMapa(forcar = false) {
   $('s-tabela').innerHTML = `<div class="skeleton">carregando…</div>`;
   try {
     if (forcar) cacheInvalidar('mapa');
-    if (forcar || !Object.keys(_ocupacao).length) await carregarMapa();
-
-    if (forcar || _referencia === null) {
-      const ref = await carregarRef();
-      if (ref === null || !ref.length) {
-        if (!_saldo.length) _saldo = await buscarTudo(() => sb.from('saldo_sistema').select('*'));
-        // Só troca sozinho enquanto ninguém escolheu.
-        if (!_fonteEscolhida && _fonteRef === 'ref' && _saldo.length) _fonteRef = 'contagem';
-      }
-      _refLinhas = ref || [];
-    }
-    if (_fonteRef === 'contagem' && !_saldo.length) {
-      _saldo = await buscarTudo(() => sb.from('saldo_sistema').select('*'));
-    }
+    // O mapa da aba Mapa continua sendo carregado: dele vêm as vagas
+    // não confirmadas e é para ele que "Ver no mapa" leva.
+    await Promise.all([
+      (forcar || !Object.keys(_ocupacao).length) ? carregarMapa() : null,
+      carregarOcupacaoSaldo(),
+      (forcar || _referencia === null) ? carregarRef().then(r => { _refLinhas = r; }) : null,
+    ]);
     _referencia = true;
-    if ($('s-fonte')) $('s-fonte').value = _fonteRef;
     await carregarMovimentos();
     renderSaldo();
   } catch (e) {
@@ -313,8 +343,9 @@ function calcularSaldoCompleto() {
     let g = sis.get(k);
     if (!g) sis.set(k, g = {
       k, kc:sKc(cod, s.lote), cod, desc:s.descricao || '', lote:String(s.lote || '').trim().toUpperCase(),
-      arm, saldo:0, empenho:0, unSis:String(s.unidade || '').trim().toUpperCase(), filial:f,
+      arm, saldo:0, empenho:0, unSis:String(s.unidade || '').trim().toUpperCase(), filial:f, foto:null,
     });
+    if (s.importado_em && (!g.foto || s.importado_em < g.foto)) g.foto = s.importado_em;
     g.saldo   += saldo;
     g.empenho += Number(s.empenho) || 0;
   }
@@ -322,7 +353,7 @@ function calcularSaldoCompleto() {
   // ── lado do mapa ──
   const mapa = new Map();
   let semFilial = 0;
-  for (const [pos, itens] of Object.entries(_ocupacao)) {
+  for (const [pos, itens] of Object.entries(_sOcup)) {
     for (const r of itens) {
       const cod = sCod(r.codigo);
       const f = sFil(r.filial) || filialCod[cod] || null;
@@ -364,7 +395,7 @@ function calcularSaldoCompleto() {
   const nova = (base) => ({
     k:base.k, kc:base.kc, cod:base.cod, produto:base.nome || base.desc || '',
     lote:base.lote, armsMapa:[], armsSis:[], mapa:0, pend:0, sistema:null, empenho:0,
-    vagas:new Set(), itens:[], dias:0, filial:base.filial, unSis:'',
+    vagas:new Set(), itens:[], dias:0, filial:base.filial, unSis:'', foto:null,
   });
   const somaMapa = (l, m) => {
     l.mapa += m.qtd; l.pend += m.pend; l.dias = Math.max(l.dias, m.dias);
@@ -374,6 +405,7 @@ function calcularSaldoCompleto() {
   };
   const somaSis = (l, s) => {
     l.sistema = (l.sistema ?? 0) + s.saldo; l.empenho += s.empenho;
+    if (s.foto && (!l.foto || s.foto < l.foto)) l.foto = s.foto;
     if (!l.armsSis.includes(s.arm)) l.armsSis.push(s.arm);
     if (s.desc) l.produto = s.desc;           // a descrição do ERP manda
     l.unSis = l.unSis || s.unSis;
@@ -476,7 +508,8 @@ function calcularSaldoCompleto() {
     if (l.estado === 'ok') continue;
     const un = l.un;
     const nc = naoConf.get(l.kc);
-    const mv = _movFoto?.get(l.kc);
+    // Sem linha no sistema, vale a data da planilha do armazém do mapa.
+    const mv = mexidasDepois(l.kc, l.foto || _refInfo?.porArm?.[l.armsMapa[0]]?.quando || _refInfo?.de);
     const falta = l.sistema !== null ? l.sistema - l.mapa : 0;
 
     if (l.estado === 'armazem') {
@@ -492,7 +525,6 @@ function calcularSaldoCompleto() {
         ? { t:'Lote parecido no sistema: ' + l.sug.map(s => `<b>${esc(s.lote)}</b> (arm. ${esc(s.arm)}, ${sQtd(s.saldo, un)})`).join(' · '), c:'neg' }
         : { t:'Nenhum lote parecido no sistema para este produto.', c:'neg' });
     }
-    if (l.pend > 0) l.dicas.push({ t:`${sQtd(l.pend, un)} do mapeado ainda está pendente de validação.`, c:'mute' });
     if (nc?.qtd && (falta > 0 || l.estado === 'armazem')) {
       const pos = [...nc.pos].sort();
       l.dicas.push({ t:`${sQtd(nc.qtd, un)} em vaga não confirmada (${pos.slice(0, 4).map(esc).join(', ')}${pos.length > 4 ? '…' : ''})` +
@@ -502,7 +534,7 @@ function calcularSaldoCompleto() {
       l.dicas.push({ t:`${sQtd(l.empenho, un)} empenhado no ERP — pode já estar separado fora do drive.`, c:'info' });
     }
     if (mv?.n) {
-      l.dicas.push({ t:`${mv.n} mexida(s) no mapa depois da planilha (última ${fmtTS(mv.ultimo)}) — pode ser saída ou entrada posterior.`, c:'warn' });
+      l.dicas.push({ t:`${mv.n} mexida(s) no mapa depois da planilha deste armazém (última ${fmtTS(mv.ultimo)}) — pode ser saída ou entrada posterior.`, c:'warn', mexida:true });
     }
     // Falta num armazém e sobra do mesmo lote em outro: troca parcial.
     const irmas = (porKc.get(l.kc) || []).filter(o => o !== l && o.sistema !== null);
@@ -628,14 +660,11 @@ function renderSaldo() {
 function renderInfoRef() {
   const info = $('s-ref-info');
   if (!info) return;
-  if (_fonteRef === 'contagem') {
-    info.textContent = `usando o saldo da contagem · ${num(_saldo.length)} linha(s)` +
-      (_ciclo?.iniciado_em ? ` · ciclo aberto em ${fmtTS(_ciclo.iniciado_em)}` : '');
-    return;
-  }
   if (!_refInfo) { info.textContent = 'nenhuma planilha importada aqui ainda'; return; }
-  info.textContent = Object.entries(_refInfo.porFilial).map(([f, p]) =>
-    `${f === 'sem' ? 'sem filial' : filialCurta(f) || f} ${fmtTS(p.quando)} (${num(p.linhas)} linhas${p.quem ? ', ' + p.quem : ''})`).join(' · ');
+  const arms = Object.keys(_refInfo.porArm).length;
+  info.textContent = `${num(_refInfo.linhas)} linhas em ${arms} armazém(ns) · ` + (fmtDia(_refInfo.de) === fmtDia(_refInfo.ate)
+    ? `importada em ${fmtTS(_refInfo.ate)}`
+    : `fotos de ${fmtDia(_refInfo.de)} a ${fmtDia(_refInfo.ate)} — a data de cada armazém está no card dele`);
 }
 
 function renderResumoSaldo(base) {
@@ -686,6 +715,7 @@ function renderArmazensSaldo(calc) {
       </div>
       ${!a.fora && a.fisico && p !== null ? `<div class="s-barra"><i style="width:${Math.min(100, p).toFixed(1)}%"></i></div>` : ''}
       <div class="s-arm-pe">${!a.fora && a.fisico && p !== null ? `<b>${num1(p)}%</b> · ` : ''}${resumo}${a.div && !a.fora && a.fisico ? ` · <span class="s-neg">${num(a.div)} div.</span>` : ''}</div>
+      ${_refInfo?.porArm?.[a.arm]?.quando ? `<div class="s-arm-foto${diasDesde(_refInfo.porArm[a.arm].quando) >= 2 ? ' velha' : ''}">planilha de ${fmtTS(_refInfo.porArm[a.arm].quando)}</div>` : (a.fisico ? '<div class="s-arm-foto">sem planilha</div>' : '')}
     </div>`;
   };
   $('s-arms').innerHTML = lista.map(card).join('');
@@ -704,14 +734,14 @@ function renderAvisosSaldo(calc) {
   if (!linhasDeReferencia().length) {
     av.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Sem estoque para comparar</b>
       Solte a planilha aqui em cima. Sem ela, só dá para ver o lado do mapa.</div></div>`);
-  } else if (_fonteRef === 'contagem') {
-    av.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>Comparando com o saldo da contagem</b>
-      É a planilha que abriu o ciclo — vai ficando velha. Para o número do dia, importe uma foto nova aqui em cima.</div></div>`);
   }
-  const foto = dataDaFoto(null);
-  if (foto && diasDesde(foto) >= 2) {
-    av.push(`<div class="aviso a-warn"><span class="aviso-ico">◔</span><div><b>A planilha tem ${diasDesde(foto)} dia(s)</b>
-      Tudo que entrou ou saiu depois dela aparece como divergência. As linhas com mexida no mapa depois da foto vêm marcadas.</div></div>`);
+  // Velha é por armazém: importar só o D7 hoje não deixa o 42 em dia.
+  const velhos = Object.entries(_refInfo?.porArm || {})
+    .filter(([a, p]) => armazemConhecido(a) && !_armFora.has(a) && p.quando && diasDesde(p.quando) >= 2)
+    .sort((x, y) => String(x[1].quando).localeCompare(String(y[1].quando)));
+  if (velhos.length) {
+    av.push(`<div class="aviso a-warn"><span class="aviso-ico">◔</span><div><b>${velhos.length === 1 ? `A planilha do ${esc(velhos[0][0])} tem ${diasDesde(velhos[0][1].quando)} dia(s)` : `${velhos.length} armazéns com planilha de 2 dias ou mais`}</b>
+      ${velhos.map(([a, p]) => `${esc(a)}: ${fmtDia(p.quando)}`).join(' · ')}. O que entrou ou saiu depois aparece como divergência — atualize só esses armazéns, se quiser.</div></div>`);
   }
   if (calc.semFilial) {
     av.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>${num(calc.semFilial)} item(ns) do mapa sem filial ficaram de fora</b>
@@ -755,7 +785,7 @@ function chipsSaldo() {
 function renderTabelaLote(tab) {
   _saldoMapa = tab;
   const p = fatiar('saldo', tab, [$('s-busca').value, _situacao, _sArmFiltro, $('s-tipo')?.value, _sVisao,
-    $('filtro-filial').value, _fonteRef, [..._armFora].join()].join('|'));
+    $('filtro-filial').value, [..._armFora].join()].join('|'));
   $('s-cnt').textContent = tab.length ? `${num(tab.length)} lote(s) no filtro` : 'nenhum lote no filtro atual';
   $('s-pag').innerHTML = barraPag('saldo', p, 'lote(s)');
 
@@ -797,8 +827,7 @@ function linhaLote(l, sub = false) {
       <td class="nome strong">
         <span class="seta">${aberta ? '▾' : '▸'}</span>${esc(sub ? '' : l.produto)}
         <span class="est-rot c-${s.cor}">${s.rot}</span>
-        ${l.pend ? '<span class="tag t-alt">pendente</span>' : ''}
-        ${_movFoto?.get(l.kc)?.n && l.estado !== 'ok' ? '<span class="tag t-warn" title="Mexeram no mapa depois da planilha">mexido</span>' : ''}
+        ${l.estado !== 'ok' && l.dicas.some(d => d.mexida) ? '<span class="tag t-warn" title="Mexeram no mapa depois da planilha deste armazém">mexido</span>' : ''}
       </td>
       <td class="mono">${sub ? '' : esc(l.cod)}</td>
       <td class="mono">${esc(l.lote || '—')}</td>
@@ -844,7 +873,7 @@ function detalheLote(l, i) {
             <td class="mono strong">${esc(r.pos)}</td>
             <td class="mono">${esc(normalizarArmazem(r.armazem) || '—')}</td>
             <td class="mono">${sQtd(r.quantidade, l.un)}</td>
-            <td>${r.pend ? '<span class="tag t-alt">aguardando validação</span>' : `<span class="tag t-mute">${esc(r.origem || 'manual')}</span>`}</td>
+            <td><span class="tag t-mute">${esc(r.origem || 'manual')}</span></td>
             <td class="mono">${fmtDia(r.created_at)}</td>
             <td class="acao"><button class="btn btn-sm" onclick="event.stopPropagation();irParaVaga('${esc(r.pos)}')">Ver no mapa</button></td>
           </tr>`).join('')}
@@ -883,7 +912,7 @@ function renderTabelaProduto(tabLotes) {
   _saldoMapa = tabLotes;
 
   const p = fatiar('saldo', lista, ['produto', $('s-busca').value, _situacao, _sArmFiltro, $('s-tipo')?.value,
-    $('filtro-filial').value, _fonteRef, [..._armFora].join()].join('|'));
+    $('filtro-filial').value, [..._armFora].join()].join('|'));
   $('s-cnt').textContent = lista.length ? `${num(lista.length)} produto(s) · ${num(tabLotes.length)} lote(s) no filtro` : 'nenhum produto no filtro atual';
   $('s-pag').innerHTML = barraPag('saldo', p, 'produto(s)');
   if (!lista.length) {
@@ -969,9 +998,11 @@ function ligarSaldo() {
   $('s-ordem').addEventListener('change', ordemSaldoSelect);
   $('s-dir').addEventListener('change', ordemSaldoSelect);
   $('s-busca').addEventListener('input', debounce(renderSaldo, 130));
-  $('s-fonte').addEventListener('change', e => {
-    _fonteRef = e.target.value; _fonteEscolhida = true; carregarSaldoMapa();
-  });
+  const sel = $('s-imp-arm');
+  sel.innerHTML = `<option value="">Geral — todos os armazéns</option>` +
+    Object.entries(ARMAZENS).map(([a, n]) => `<option value="${esc(a)}">Só o ${esc(a)} · ${esc(n)}</option>`).join('');
+  sel.addEventListener('change', atualizarTextoImport);
+  atualizarTextoImport();
   configurarDropRef();
 }
 
@@ -1066,7 +1097,7 @@ function linhasExport() {
   return _saldoMapa.map(l => ({
     Produto:l.produto, Codigo:l.cod, Lote:l.lote,
     'Arm. mapa':l.armsMapa.join(' '), 'Arm. sistema':l.armsSis.join(' '), Unidade:l.un,
-    Vagas:l.vagas.size, Mapeado:arred(l.mapa), Pendente:arred(l.pend), Sistema:l.sistema ?? '',
+    Vagas:l.vagas.size, Mapeado:arred(l.mapa), Sistema:l.sistema ?? '',
     Empenho:l.empenho || '', Diferenca:l.estado === 'ok' ? 0 : l.dif,
     'Dif. paletes':l.difPl == null ? '' : Math.round(l.difPl * 100) / 100,
     Situacao:SITUACOES[l.estado].rot,
