@@ -443,7 +443,7 @@ select:hover, .bt:hover { border-color:var(--line-2); }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="./comum.js?v=5"></script>
+<script src="./comum.js?v=6"></script>
 <script src="./impressao.js?v=4"></script>
 <script>
 let sb = null;
@@ -818,10 +818,11 @@ async function salvarForm() {
   const codigo  = normalizarCodigo($('df-codigo').value);
   const produto = $('df-produto').value.trim();
   const lote    = $('df-lote').value.trim().toUpperCase();
-  const armazem = $('df-armazem').value.trim().toUpperCase();
+  const armazem = normalizarArmazem($('df-armazem').value);
   const qtd     = Number(String($('df-qtd').value).replace(/\./g, '').replace(',', '.'));
 
   if (!codigo) { toast('Falta o código.', 'err'); return; }
+  if (!confirmarArmazem(armazem)) return;
   if (!Number.isFinite(qtd) || qtd <= 0) { toast('Quantidade inválida.', 'err'); return; }
 
   const nome = produto || produtoPorCodigo(codigo)?.nome || codigo;
