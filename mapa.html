@@ -443,7 +443,7 @@ select:hover, .bt:hover { border-color:var(--line-2); }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="./comum.js?v=6"></script>
+<script src="./comum.js?v=7"></script>
 <script src="./impressao.js?v=4"></script>
 <script>
 let sb = null;
@@ -648,7 +648,7 @@ function renderLista(ts) {
             <span class="item-qtd">${num(r.quantidade)}<small>${esc(unidadeDe(r.codigo, r.produto_nome) || 'un')}</small></span>
           </div>
           <div class="item-nome">${esc(r.produto_nome || r.codigo)}</div>
-          <div class="item-meta">${esc(r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')}</div>
+          <div class="item-meta">${esc(r.codigo)} ${seloFilial(r.filial || r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')}</div>
         </div>`).join('') +
       (linhas.length > 300 ? `<div class="vazio-s" style="text-align:center">mostrando 300 de ${num(linhas.length)} — refine a busca</div>` : '')
     : `<div class="vazio"><div class="vazio-t">${_q ? 'Nada encontrado' : 'Nenhuma vaga ocupada'}</div>
@@ -669,7 +669,7 @@ function abrirVaga(pos) {
     ? itens.map(r => `
         <div class="ficha${r.pend ? ' pend' : ''}">
           <div class="ficha-nome">${esc(r.produto_nome || r.codigo)}</div>
-          <div class="ficha-meta">${esc(r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')}${r.pend ? ' · aguardando validação' : ''}</div>
+          <div class="ficha-meta">${esc(r.codigo)} ${seloFilial(r.filial || r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')}${r.pend ? ' · aguardando validação' : ''}</div>
           <div class="ficha-qtd">${num(r.quantidade)}<small>${esc(unidadeDe(r.codigo, r.produto_nome) || 'un')}</small></div>
           <div class="ficha-acoes">
             <button class="bt destaque" onclick="abrirExpedicao('${esc(pos)}','${esc(r.id)}')">Expedir</button>
@@ -734,17 +734,27 @@ function mostrarSugestoes(idCaixa, termo) {
   caixa.innerHTML = itens.map((p, i) => `
     <button type="button" data-i="${i}">
       <div class="sug-nome">${esc(p.nome)}</div>
-      <div class="sug-meta">${esc(p.codigo)} · ${esc(p.unidade || 'un')}${p.palete ? ` · palete ${num(p.palete)}` : ''}</div>
+      <div class="sug-meta">${esc(p.codigo)} · ${esc(p.unidade || 'un')}${p.palete ? ` · palete ${num(p.palete)}` : ''} ${seloFilial(p.codigo, { destaque:temGemeo(p.codigo) })}</div>
     </button>`).join('');
   caixa.hidden = false;
   _sugAtiva = { caixa, itens, i:-1 };
 }
 
+/* Nome, unidade e de qual filial é o código; se o mesmo nome existir
+   em outra filial, avisa — é onde o gêmeo errado costuma entrar. */
+function avisoProdutoForm(cod) {
+  const p = produtoPorCodigo(cod);
+  if (!p) return;
+  const gem = gemeosDoProduto(cod);
+  $('df-aviso').innerHTML = `${esc(p.nome)} · ${esc(p.unidade || 'un')} ${seloFilial(cod, { destaque:gem.length > 0 })}` +
+    (gem.length ? `<div style="margin-top:4px">Mesmo nome em outra filial: ${gem.map(g => `${esc(g)} ${seloFilial(g)}`).join(' · ')}</div>` : '');
+  $('df-aviso').className = 'aviso ' + (gem.length ? 'alerta' : 'ok');
+}
+
 function escolherProduto(p) {
   $('df-codigo').value  = p.codigo;
   $('df-produto').value = p.nome;
-  $('df-aviso').textContent = `${p.nome} · ${p.unidade || 'un'}`;
-  $('df-aviso').className = 'aviso ok';
+  avisoProdutoForm(p.codigo);
   fecharSugestoes();
   $('df-lote').focus();
 }
@@ -800,8 +810,7 @@ function completarPeloCodigo() {
   const p = produtoPorCodigo(cod);
   if (p) {
     if (!$('df-produto').value.trim()) $('df-produto').value = p.nome || '';
-    $('df-aviso').textContent = `${p.nome} · ${p.unidade || 'un'}`;
-    $('df-aviso').className = 'aviso ok';
+    avisoProdutoForm(cod);
   } else {
     $('df-aviso').textContent = 'Código fora do catálogo — dá para salvar, mas confira.';
     $('df-aviso').className = 'aviso alerta';
@@ -815,14 +824,20 @@ async function salvarForm() {
     if (achados.length === 1) escolherProduto(achados[0]);
     else { toast('Escolha o produto na lista de sugestões.', 'err'); $('df-codigo').focus(); return; }
   }
-  const codigo  = normalizarCodigo($('df-codigo').value);
-  const produto = $('df-produto').value.trim();
+  let   codigo  = normalizarCodigo($('df-codigo').value);
+  let   produto = $('df-produto').value.trim();
   const lote    = $('df-lote').value.trim().toUpperCase();
   const armazem = normalizarArmazem($('df-armazem').value);
   const qtd     = Number(String($('df-qtd').value).replace(/\./g, '').replace(',', '.'));
 
   if (!codigo) { toast('Falta o código.', 'err'); return; }
   if (!confirmarArmazem(armazem)) return;
+  // Mesmo produto de outra filial com este lote no sistema? Pergunta.
+  const certo = await conferirCodigoDaFilial(codigo, lote);
+  if (certo !== codigo) {
+    codigo = certo; produto = produtoPorCodigo(certo)?.nome || produto;
+    $('df-codigo').value = codigo; $('df-produto').value = produto; avisoProdutoForm(codigo);
+  }
   if (!Number.isFinite(qtd) || qtd <= 0) { toast('Quantidade inválida.', 'err'); return; }
 
   const nome = produto || produtoPorCodigo(codigo)?.nome || codigo;
@@ -830,7 +845,7 @@ async function salvarForm() {
   try {
     if (_dfItem) {
       await atualizarResiliente(_dfItem._tab || 'historico', {
-        codigo, produto_nome:nome, lote, armazem, quantidade:qtd,
+        codigo, produto_nome:nome, lote, armazem, quantidade:qtd, filial:codigoFilialDoProduto(codigo),
         origem:_dfOrigem, updated_at:new Date().toISOString(), feito_por:QUEM,
       }, q => q.eq('id', _dfItem.id));
       await registrarAlteracao({
@@ -841,7 +856,7 @@ async function salvarForm() {
       toast(`${_dfPos} atualizada.`);
     } else {
       await inserirResiliente('historico', {
-        codigo, produto_nome:nome, lote, armazem, quantidade:qtd,
+        codigo, produto_nome:nome, lote, armazem, quantidade:qtd, filial:codigoFilialDoProduto(codigo),
         posicao:_dfPos, ocupacao_ativa:true, confirmado:true,
         origem:_dfOrigem, feito_por:QUEM, created_at:new Date().toISOString(),
       });
