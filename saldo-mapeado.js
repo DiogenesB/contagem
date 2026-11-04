@@ -54,6 +54,8 @@ const SITUACOES = {
                    expl:'Está no mapa, mas o produto não tem saldo nenhum no sistema (nesta filial).' },
   'lote':        { rot:'Lote não existe',           cor:'neg',  peso:1,
                    expl:'O produto tem saldo, mas não com este lote. Quase sempre é lote digitado errado.' },
+  'codigo':      { rot:'Código de outra filial',    cor:'alt',  peso:2,
+                   expl:'O mesmo lote está no mapa com o código de uma filial e no sistema com o código da outra (mesmo produto, Simbiose × Bioma).' },
   'armazem':     { rot:'Armazém trocado',           cor:'alt',  peso:2,
                    expl:'O mesmo produto+lote está no mapa com um armazém e no sistema com outro.' },
   'sobra':       { rot:'Sobra no mapa',             cor:'warn', peso:3,
@@ -264,6 +266,7 @@ async function carregarOcupacaoSaldo() {
     .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, origem, ciclo_id, created_at, filial')
     .eq('ocupacao_ativa', true).not('posicao', 'is', null));
   const m = {};
+  comFilial(hist);
   for (const r of hist) (m[r.posicao] ||= []).push({ ...r, _tab:'historico' });
   _sOcup = m;
 }
@@ -356,7 +359,7 @@ function calcularSaldoCompleto() {
   for (const [pos, itens] of Object.entries(_sOcup)) {
     for (const r of itens) {
       const cod = sCod(r.codigo);
-      const f = sFil(r.filial) || filialCod[cod] || null;
+      const f = sFil(r.filial) || filialCod[cod] || sFil(codigoFilialDoProduto(cod)) || null;
       if (!sPassaFilial(f)) { if (!f) semFilial++; continue; }
       const arm = normalizarArmazem(r.armazem);
       const k = sKl(cod, r.lote, arm);
@@ -460,6 +463,43 @@ function calcularSaldoCompleto() {
     linhas.set(j.k, j);
   }
 
+  // ── código de outra filial: órfã do mapa + o MESMO lote no sistema com
+  //    o código gêmeo (mesmo nome, outra filial). Ex.: mapa com o TRICH
+  //    da Simbiose (01007000091), ERP com o lote no da Bioma (12007000091).
+  //    Armazém não importa aqui: o erro pode vir junto. ──
+  const sisPorLote = new Map();
+  const pushLote = (lote, x) => { const k = chave(lote); (sisPorLote.get(k) || sisPorLote.set(k, []).get(k)).push(x); };
+  for (const l of linhas.values()) if (l.mapa === 0 && l.sistema > 0) pushLote(l.lote, { l, cod:l.cod });
+  for (const s of foraSis.values()) pushLote(s.lote, { s, cod:s.cod });
+  for (const m of [...linhas.values()]) {
+    if (m.trocado || m.sistema !== null || !(m.mapa > 0)) continue;
+    const gem = new Set(gemeosDoProduto(m.cod));
+    if (!gem.size) continue;
+    const cands = (sisPorLote.get(chave(m.lote)) || []).filter(x => !x.usado && gem.has(normalizarCodigo(x.cod)));
+    if (!cands.length) continue;
+    const j = nova(m);
+    j.k = `${m.kc}|codigo`; j.produto = m.produto;
+    j.mapa = m.mapa; j.dias = m.dias; j.itens.push(...m.itens); j.armsMapa = [...m.armsMapa];
+    m.vagas.forEach(v => j.vagas.add(v));
+    j.codMapa = m.cod; j.filMapa = m.filial || sFil(codigoFilialDoProduto(m.cod));
+    for (const x of cands) {
+      x.usado = true;
+      if (x.l) {
+        linhas.delete(x.l.k);
+        j.sistema = (j.sistema ?? 0) + x.l.sistema; j.empenho += x.l.empenho;
+        x.l.armsSis.forEach(a => j.armsSis.includes(a) || j.armsSis.push(a));
+        if (x.l.foto && (!j.foto || x.l.foto < j.foto)) j.foto = x.l.foto;
+        if (x.l.produto) j.produto = x.l.produto;
+        j.unSis = j.unSis || x.l.unSis; j.filial = x.l.filial || j.filial;
+      } else { foraSis.delete(x.s.k); somaSis(j, x.s); j.filial = x.s.filial || j.filial; }
+      j.codSis = j.codSis || normalizarCodigo(x.cod);
+    }
+    j.filSis = sFil(codigoFilialDoProduto(j.codSis)) || j.filial;
+    linhas.delete(m.k);
+    j.codTrocado = true;
+    linhas.set(j.k, j);
+  }
+
   // Lotes que o sistema tem por produto — para "lote não existe" e
   // para sugerir o lote certo.
   const lotesPorCod = new Map();
@@ -481,7 +521,9 @@ function calcularSaldoCompleto() {
     l.dicas  = [];
     l.sug    = [];
 
-    if (l.trocado) {
+    if (l.codTrocado) {
+      l.estado = 'codigo';
+    } else if (l.trocado) {
       l.estado = 'armazem';
     } else if (l.sistema === null) {
       const doProduto = lotesPorCod.get(chave(l.cod)) || [];
@@ -512,6 +554,12 @@ function calcularSaldoCompleto() {
     const mv = mexidasDepois(l.kc, l.foto || _refInfo?.porArm?.[l.armsMapa[0]]?.quando || _refInfo?.de);
     const falta = l.sistema !== null ? l.sistema - l.mapa : 0;
 
+    if (l.estado === 'codigo') {
+      const armDif = l.armsMapa.join() !== l.armsSis.join();
+      l.dicas.push({ t:`No mapa está com o código <b>${esc(l.codMapa)}</b> ${seloFilial(l.filMapa || l.codMapa)}; no sistema este lote é do <b>${esc(l.codSis)}</b> ${seloFilial(l.filSis || l.codSis)} — mesmo produto, outra filial.` +
+        (armDif ? ` E o armazém também difere: mapa ${esc(l.armsMapa.join(', '))}, sistema ${esc(l.armsSis.join(', '))}.` : '') +
+        (Math.abs(l.mapa - (l.sistema || 0)) > 0.001 ? ` Depois de corrigir ainda sobra/falta ${sQtd(l.mapa - (l.sistema || 0), l.un)}.` : ' A quantidade bate.'), c:'alt' });
+    }
     if (l.estado === 'armazem') {
       l.dicas.push({ t:'Mapa diz <b>' + l.armsMapa.map(esc).join(', ') + '</b>, sistema diz <b>' +
         l.armsSis.map(a => esc(a) + (nomeArmazem(a) ? ` (${esc(nomeArmazem(a))})` : '')).join(', ') + '</b>.' +
@@ -829,7 +877,9 @@ function linhaLote(l, sub = false) {
         <span class="est-rot c-${s.cor}">${s.rot}</span>
         ${l.estado !== 'ok' && l.dicas.some(d => d.mexida) ? '<span class="tag t-warn" title="Mexeram no mapa depois da planilha deste armazém">mexido</span>' : ''}
       </td>
-      <td class="mono">${sub ? '' : esc(l.cod)}</td>
+      <td class="mono">${l.estado === 'codigo'
+        ? `<span class="s-troca">${esc(l.codMapa)}<i>→</i>${esc(l.codSis)}</span><div class="s-fils">${seloFilial(l.filMapa || l.codMapa)} → ${seloFilial(l.filSis || l.codSis)}</div>`
+        : sub ? '' : `${esc(l.cod)}<div class="s-fils">${seloFilial(l.filial || l.cod)}</div>`}</td>
       <td class="mono">${esc(l.lote || '—')}</td>
       <td class="mono">${celArm(l)}</td>
       <td class="num mono">${l.vagas.size || '—'}</td>
@@ -844,6 +894,8 @@ function linhaLote(l, sub = false) {
 function detalheLote(l, i) {
   const s = SITUACOES[l.estado];
   const acoes = [];
+  if (l.estado === 'codigo' && l.itens.length)
+    acoes.push(`<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();corrigirMapaSaldo(${i},'codigo')">Corrigir o código no mapa para ${esc(l.codSis)} (${esc(filialDoProduto(l.codSis)?.curto || 'outra filial')})</button>`);
   if (l.estado === 'armazem' && l.armsSis.length === 1 && l.itens.length)
     acoes.push(`<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();corrigirMapaSaldo(${i},'armazem','${esc(l.armsSis[0])}')">Corrigir o mapa para o armazém ${esc(l.armsSis[0])}</button>`);
   if (l.estado === 'armazem')
@@ -1013,17 +1065,21 @@ function ligarSaldo() {
 async function corrigirMapaSaldo(i, campo, valor) {
   const l = _sReg[i];
   if (!l?.itens.length) return;
-  const novo = campo === 'lote' ? l.sug[valor]?.lote : normalizarArmazem(valor);
+  const novo = campo === 'lote' ? l.sug[valor]?.lote : campo === 'codigo' ? l.codSis : normalizarArmazem(valor);
   if (!novo) return;
-  const rot = campo === 'lote' ? 'lote' : 'armazém';
+  const rot = campo === 'lote' ? 'lote' : campo === 'codigo' ? 'código' : 'armazém';
   if (!confirm(`Trocar o ${rot} de ${l.itens.length} item(ns) do mapa (${[...l.vagas].sort().join(', ')}) para ${novo}?\n\n` +
                `Use quando o mapa estiver errado. Se o errado for o ERP, faça a transferência lá em vez disto.`)) return;
   try {
     for (const r of l.itens) {
-      const antes = campo === 'lote' ? r.lote : r.armazem;
-      await atualizarResiliente(r._tab || 'historico', { [campo]:novo, updated_at:new Date().toISOString() }, q => q.eq('id', r.id));
+      const antes = campo === 'lote' ? r.lote : campo === 'codigo' ? r.codigo : r.armazem;
+      // Código novo leva junto o nome e a filial dele.
+      const patch = campo === 'codigo'
+        ? { codigo:novo, produto_nome:produtoPorCodigo(novo)?.nome || r.produto_nome, filial:codigoFilialDoProduto(novo) || r.filial }
+        : { [campo]:novo };
+      await atualizarResiliente(r._tab || 'historico', { ...patch, updated_at:new Date().toISOString() }, q => q.eq('id', r.id));
       await registrarAlteracao({
-        acao:'ajustou', posicao:r.pos, codigo:sCod(r.codigo), produto_nome:r.produto_nome,
+        acao:'ajustou', posicao:r.pos, codigo:campo === 'codigo' ? novo : sCod(r.codigo), produto_nome:patch.produto_nome || r.produto_nome,
         lote:campo === 'lote' ? novo : r.lote, armazem:campo === 'armazem' ? novo : r.armazem,
         qtd_antes:r.quantidade, qtd_depois:r.quantidade, tabela_ref:r._tab, ref_id:r.id,
         obs:`${rot} ${antes || 'vazio'} → ${novo} (Saldo mapeado)`,
@@ -1095,7 +1151,7 @@ function irParaVaga(pos) {
 /* ── exportar ── */
 function linhasExport() {
   return _saldoMapa.map(l => ({
-    Produto:l.produto, Codigo:l.cod, Lote:l.lote,
+    Produto:l.produto, Codigo:l.cod, 'Codigo no sistema':l.codSis || '', Filial:filialDoProduto(l.codSis || l.cod)?.curto || '', Lote:l.lote,
     'Arm. mapa':l.armsMapa.join(' '), 'Arm. sistema':l.armsSis.join(' '), Unidade:l.un,
     Vagas:l.vagas.size, Mapeado:arred(l.mapa), Sistema:l.sistema ?? '',
     Empenho:l.empenho || '', Diferenca:l.estado === 'ok' ? 0 : l.dif,
