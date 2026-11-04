@@ -488,6 +488,8 @@ html[data-tema="claro"]  .ico-lua { display:none; }
 .prev.alerta { background:var(--amber-bg); border-color:var(--amber-bd); }
 .prev-nome { font-size:.88rem; font-weight:700; color:var(--text); overflow-wrap:anywhere; }
 .prev-meta { font-size:.72rem; color:var(--text2); margin-top:4px; font-family:var(--mono); }
+.prev-gemeo { font-family:inherit; color:var(--amber); line-height:1.45; }
+.prev-meta .selo-fil, .ac-meta .selo-fil, .li-meta .selo-fil { font-family:var(--sans, inherit); margin-left:2px; }
 .prev-linha { display:flex; align-items:center; justify-content:space-between; gap:9px; margin-top:7px; padding-top:7px; border-top:1px solid var(--border); }
 .prev-linha:first-of-type { margin-top:6px; }
 .prev-lbl { font-size:.72rem; color:var(--text3); }
@@ -1060,7 +1062,7 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="./comum.js?v=6"></script>
+<script src="./comum.js?v=7"></script>
 <datalist id="lista-armazens"></datalist>
 <script>document.getElementById('lista-armazens').innerHTML = Object.entries(ARMAZENS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');</script>
 <script src="./impressao.js?v=3"></script>
@@ -1086,6 +1088,7 @@ let _sessaoLocal  = [];   // lançamentos desta visita (só para a lista da tela
 let _transferencias = [];
 let _filialPorCodigo = {};
 let _chavesSaldo  = new Set();  // codigo|lote|armazem que existem no saldo
+let _lotesSaldo   = new Set();  // codigo|lote (qualquer armazém) — acha o código da filial certa
 let _novoLoteConfirmado = false;
 let _lanceParaConfirmar = null;
 let _posOcupadas  = {};
@@ -1327,6 +1330,7 @@ async function carregarReferencias() {
     // esperado ou vai "corrigir" o número dele para bater.
     _filialPorCodigo = {};
     _chavesSaldo = new Set();
+    _lotesSaldo  = new Set();
     for (const r of dados) {
       // Código sempre normalizado nos dois lados da consulta: sem isso,
       // código digitado sem o zero não achava a filial e o item ficava
@@ -1334,6 +1338,7 @@ async function carregarReferencias() {
       const cod = chave(normalizarCodigo(r.codigo));
       if (r.codigo && r.filial) _filialPorCodigo[cod] = r.filial;
       if (r.codigo) _chavesSaldo.add(`${cod}|${chave(r.lote)}|${chave(r.armazem)}`);
+      if (r.codigo) _lotesSaldo.add(`${cod}|${chave(r.lote)}`);
     }
   } catch (e) { console.warn('[referencias]', e); }
 }
@@ -1589,6 +1594,10 @@ async function lancar() {
   // inteira quando o conferente conclui.
   if (_recont && plano?.acao === 'atualizar') { plano.acao = 'inserir'; plano.atualizar = null; plano.confirmarExistente = false; }
 
+  // Código da filial errada: o lote não existe com este código, mas
+  // existe com o mesmo produto de outra filial (gêmeo).
+  if (!_novoLoteConfirmado && await trocarPeloGemeo(codigo, lote, 'av-codigo')) return lancar();
+
   // O lote existe no saldo? Só a EXISTÊNCIA é checada — nada de
   // quantidade, senão a contagem deixa de ser cega.
   const k = `${chave(codigo)}|${chave(lote)}|${chave(armazem)}`;
@@ -1624,7 +1633,7 @@ async function lancar() {
         lote, armazem,
         quantidade:   qtd,
         usuario:      OPERADOR,
-        filial:       _filialPorCodigo[chave(codigo)] || null,
+        filial:       filialParaGravar(codigo),
         status:       'pendente',
         recontagem:   !!_recont,
         ...(_recont ? { recontagem_id:_recont.id } : {}),
@@ -1721,7 +1730,7 @@ function renderSessaoLocal() {
       <div class="li-top">
         <div class="li-body">
           <div class="li-nome">${esc(l.produto_nome)}</div>
-          <div class="li-meta">${esc(l.codigo)} · Lote ${esc(l.lote)} · Arm. ${esc(l.armazem)}</div>
+          <div class="li-meta">${esc(l.codigo)} ${seloFilial(l.codigo)} · Lote ${esc(l.lote)} · Arm. ${esc(l.armazem)}</div>
           ${l.foraDoSaldo ? '<span class="pill pill-andando" style="margin-top:5px">fora do saldo · aguarda validação</span>' : ''}
           ${l.posicao ? `<span class="pill pill-pos" style="margin-top:5px">${esc(l.posicao)}</span>` : ''}
         </div>
@@ -2108,7 +2117,7 @@ async function confirmarTransferencia() {
       ocupacao_ativa: true,
       origem:         'transferencia',
       usuario:        OPERADOR,
-      filial:         _filialPorCodigo[chave(t.codigo)] || null,
+      filial:         filialParaGravar(t.codigo),
       ciclo_id:       _cicloAtual,
     });
     if (e2) throw e2;
@@ -2153,7 +2162,7 @@ function criarAutocomplete({ inputId, buscar, aoEscolher, mono = false }) {
     drop.innerHTML = itens.map((it, i) => `
       <div class="ac-opt${mono ? ' mono' : ''}" data-i="${i}">
         <div class="ac-nome">${esc(it.titulo)}</div>
-        ${it.sub ? `<div class="ac-meta">${esc(it.sub)}</div>` : ''}
+        ${it.sub || it.selo ? `<div class="ac-meta">${esc(it.sub || '')} ${it.selo || ''}</div>` : ''}
       </div>`).join('');
     drop.querySelectorAll('.ac-opt').forEach(el => {
       el.onclick = () => { aoEscolher(itens[+el.dataset.i]); fechar(); };
@@ -2235,9 +2244,11 @@ function previewProduto(codigo) {
   if (!$('av-produto').value) $('av-produto').value = cat.nome;
 
   const UM = { L:'litros', KG:'quilos', DS:'doses' };
+  const gem = gemeosDoProduto(cat.codigo);
   box.innerHTML = `<div class="prev">
     <div class="prev-nome">${esc(cat.nome)}</div>
-    <div class="prev-meta">${esc(cat.codigo)}${cat.unidade ? ' · ' + esc(UM[cat.unidade] || cat.unidade) : ''}</div>
+    <div class="prev-meta">${esc(cat.codigo)}${cat.unidade ? ' · ' + esc(UM[cat.unidade] || cat.unidade) : ''} ${seloFilial(cat.codigo, { destaque:gem.length > 0 })}</div>
+    ${gem.length ? `<div class="prev-meta prev-gemeo">Mesmo nome em outra filial: ${gem.map(g => `${esc(g)} ${seloFilial(g)}`).join(' · ')}. Confira na etiqueta qual é.</div>` : ''}
   </div>`;
 }
 
@@ -2262,6 +2273,34 @@ function previewPosicao(pos) {
 
 const previewProdutoDebounce = debounce(previewProduto, 250);
 
+/* --- filial do produto --- */
+/* Filial a gravar: a do saldo importado manda; sem ela, a do
+   catálogo (o código diz de qual empresa é). */
+function filialParaGravar(codigo) {
+  return _filialPorCodigo[chave(normalizarCodigo(codigo))] || codigoFilialDoProduto(codigo) || null;
+}
+
+/* O lote não existe com este código, mas existe com o gêmeo de outra
+   filial? Pergunta e, se o conferente aceitar, troca o código no
+   campo. Devolve true quando trocou (quem chamou refaz o envio).
+   Só diz que o lote EXISTE no outro código — nada de quantidade. */
+async function trocarPeloGemeo(codigo, lote, campo) {
+  if (!_lotesSaldo.size || !lote) return false;
+  const c = normalizarCodigo(codigo);
+  if (_lotesSaldo.has(`${chave(c)}|${chave(lote)}`)) return false;
+  const gem = gemeosDoProduto(c).find(g => _lotesSaldo.has(`${chave(g)}|${chave(lote)}`));
+  if (!gem) return false;
+  const fa = filialDoProduto(c)?.curto || 'outra filial', fb = filialDoProduto(gem)?.curto || 'outra filial';
+  const ok = confirm(`O lote ${lote} não existe com o código ${c} (${fa}).\n` +
+    `Ele existe no sistema com o código ${gem} (${fb}) — mesmo produto, outra filial.\n\n` +
+    `OK = trocar para ${gem} (${fb})\nCancelar = manter ${c}`);
+  if (!ok) return false;
+  $(campo).value = gem;
+  if (campo === 'av-codigo') previewProduto(gem);
+  toast(`Código trocado para ${gem} (${fb}).`, 'ok');
+  return true;
+}
+
 /* --- produtos --- */
 /* Busca no catálogo local — instantânea, sem rede. É a primeira
    fonte: o operador digita 2 dígitos e já vê a lista. */
@@ -2269,16 +2308,18 @@ function buscarNoCatalogo(termo) {
   const q = String(termo).trim().toUpperCase();
   if (!q) return [];
   const out = [];
-  for (const [cod, [nome, um, lim]] of Object.entries(PRODUTOS)) {
-    const alvo = cod + ' ' + nome.toUpperCase();
+  for (const [cod, [nome, um, lim, fil]] of Object.entries(PRODUTOS)) {
+    const alvo = cod + ' ' + nome.toUpperCase() + ' ' + (FILIAIS.find(f => f.slug === fil)?.curto || '').toUpperCase();
     if (!alvo.includes(q)) continue;
     out.push({
       codigo:cod, descricao:nome, unidade:um, palete:lim,
+      filial:codigoFilialDoProduto(cod),
       _peso: cod.startsWith(q) ? 0 : (nome.toUpperCase().startsWith(q) ? 1 : 2),
     });
     if (out.length > 60) break;
   }
-  return out.sort((a, b) => a._peso - b._peso || a.descricao.localeCompare(b.descricao));
+  // Mesmo nome: os gêmeos de filiais diferentes ficam lado a lado.
+  return out.sort((a, b) => a._peso - b._peso || a.descricao.localeCompare(b.descricao) || a.codigo.localeCompare(b.codigo));
 }
 
 async function buscarProdutos(v) {
@@ -2287,6 +2328,8 @@ async function buscarProdutos(v) {
   // Código completo digitado: resposta direta, sem lista.
   const exatoCat = produtoPorCodigo(cod);
   if (exatoCat) return [{ ...exatoCat, descricao:exatoCat.nome, titulo:exatoCat.nome,
+                          filial:codigoFilialDoProduto(exatoCat.codigo),
+                          selo:seloFilial(exatoCat.codigo, { destaque:temGemeo(exatoCat.codigo) }),
                           sub:`${exatoCat.codigo} · ${exatoCat.unidade}`, exato:true }];
 
   // Catálogo local primeiro — sem esperar rede.
@@ -2295,6 +2338,7 @@ async function buscarProdutos(v) {
     return locais.slice(0, 10).map(r => ({
       ...r,
       titulo: r.descricao,
+      selo: seloFilial(r.codigo, { destaque:temGemeo(r.codigo) }),
       sub: [r.codigo, r.unidade].filter(Boolean).join(' · '),
     }));
   }
@@ -2329,6 +2373,7 @@ async function buscarProdutos(v) {
   }).slice(0, 10).map(r => ({
     ...r,
     titulo: r.descricao || r.codigo,
+    selo:   seloFilial(r.filial || r.codigo),
     sub:    [r.codigo, r.unidade].filter(Boolean).join(' · '),
   }));
 }
@@ -2339,7 +2384,7 @@ const buscaProduto = {
     aoEscolher: it => {
       $('av-codigo').value  = it.codigo;
       $('av-produto').value = it.descricao || '';
-      if (it.filial) _filialPorCodigo[chave(normalizarCodigo(it.codigo))] = it.filial;
+      if (it.filial && !_filialPorCodigo[chave(normalizarCodigo(it.codigo))]) _filialPorCodigo[chave(normalizarCodigo(it.codigo))] = it.filial;
       previewProduto(it.codigo);
       $('av-lote').focus();
     },
@@ -2377,7 +2422,7 @@ async function carregarHistoricoOp() {
         <div class="li-top">
           <div class="li-body">
             <div class="li-nome">${esc(r.produto_nome || r.codigo)}</div>
-            <div class="li-meta">${esc(r.codigo)} · Lote ${esc(r.lote || '—')} · Arm. ${esc(r.armazem || '—')}</div>
+            <div class="li-meta">${esc(r.codigo)} ${seloFilial(r.filial || r.codigo)} · Lote ${esc(r.lote || '—')} · Arm. ${esc(r.armazem || '—')}</div>
             ${r.posicao ? `<span class="pill pill-pos" style="margin-top:5px">${esc(r.posicao)}</span>` : ''}
           </div>
           <div style="text-align:right;flex-shrink:0">
@@ -2736,6 +2781,7 @@ async function salvarPosicao() {
   if (!lote)    { toast('Informe o lote.', 'warn'); return; }
   if (!armazem) { toast('Informe o armazém.', 'warn'); return; }
   if (!confirmarArmazem(armazem)) return;
+  if (await trocarPeloGemeo(codigo, lote, 'mp-codigo')) return salvarPosicao();
   if (qtdStr === '') { toast('Informe a quantidade.', 'warn'); return; }
 
   const qtd = Number(qtdStr);
@@ -2745,7 +2791,7 @@ async function salvarPosicao() {
   const registro = {
     posicao, codigo, produto_nome:produto || codigo, lote, armazem,
     quantidade:qtd, ocupacao_ativa:true, origem:_origemManual, usuario:OPERADOR,
-    filial: _filialPorCodigo[chave(codigo)] || null,
+    filial: filialParaGravar(codigo),
     ciclo_id: _cicloAtual,
   };
 
