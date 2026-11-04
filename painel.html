@@ -617,42 +617,109 @@ html[data-tema="claro"] .mapa-cel.pend { color:#FFF; }
 .hev.a-alt  .hev-ini { background:var(--alt-sf);  color:var(--alt);  }
 
 /* ═══════════ SALDO MAPEADO × SISTEMA ═══════════ */
-table.saldo th { cursor:pointer; user-select:none; }
+/* Cor = situação. Uma família por causa, a mesma no chip, na faixa
+   da linha, no selo e na diferença — o olho acha o grupo sem ler. */
+.c-pos  { --c:var(--pos);  --c-sf:var(--pos-sf);  }
+.c-neg  { --c:var(--neg);  --c-sf:var(--neg-sf);  }
+.c-warn { --c:var(--warn); --c-sf:var(--warn-sf); }
+.c-info { --c:var(--info); --c-sf:var(--info-sf); }
+.c-alt  { --c:var(--alt);  --c-sf:var(--alt-sf);  }
+.c-mute { --c:var(--text-3); --c-sf:var(--surface-3); }
+b.c-pos, b.c-neg, b.c-warn, b.c-info, b.c-alt { color:var(--c); }
+.s-neg  { color:var(--neg); font-weight:600; }
+.s-mute { color:var(--text-3); }
+.field[hidden] { display:none !important; }
+
+.kpi-value small { font-size:.6em; font-weight:500; color:var(--text-3); margin-left:3px; }
+.s-barra { height:5px; border-radius:100px; background:var(--surface-3); overflow:hidden; margin:7px 0 6px; }
+.s-barra i { display:block; height:100%; background:var(--accent); border-radius:100px; }
+
+/* armazéns */
+.s-arms { display:grid; gap:9px; grid-template-columns:repeat(auto-fill, minmax(208px, 1fr)); }
+.s-arm {
+  border:1px solid var(--line-2); border-radius:var(--r-sm); background:var(--surface-2);
+  padding:9px 11px; cursor:pointer; transition:border-color .12s, background .12s; min-width:0;
+}
+.s-arm:hover { border-color:var(--accent-ln); }
+.s-arm.sel { border-color:var(--accent); background:var(--accent-sf); }
+.s-arm.fora, .s-arm.nfis, .s-arm.vazio { cursor:default; opacity:.55; background:transparent; }
+.s-arm.fora:hover, .s-arm.nfis:hover, .s-arm.vazio:hover { border-color:var(--line-2); }
+.s-arm-top { display:flex; align-items:center; gap:8px; min-width:0; }
+.s-arm-cod { font-family:var(--mono); font-weight:700; font-size:.875rem; color:var(--text); }
+.s-arm-nome { font-size:.6875rem; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; }
+.s-arm-tg { display:flex; cursor:pointer; }
+.s-arm-tg input { width:15px; height:15px; margin:0; accent-color:var(--accent); cursor:pointer; }
+.s-arm-pe { font-size:.6875rem; color:var(--text-2); line-height:1.4; margin-top:3px; }
+.s-arm-pe b { color:var(--text); }
+
+/* chips de situação */
+.s-sits { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+.s-sit {
+  display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+  padding:5px 7px 5px 11px; border-radius:100px; font:inherit; font-size:.8125rem;
+  background:var(--surface-2); color:var(--text-2); border:1px solid var(--line-2);
+  box-shadow:inset 3px 0 0 var(--c);
+}
+.s-sit b {
+  font-family:var(--mono); font-size:.75rem; min-width:22px; text-align:center;
+  padding:1px 6px; border-radius:100px; background:var(--c-sf); color:var(--c);
+}
+.s-sit:hover { color:var(--text); border-color:var(--c); }
+.s-sit.on { background:var(--c-sf); border-color:var(--c); color:var(--text); }
+.s-sit.zero { opacity:.45; }
+
+/* tabela */
+table.saldo th { cursor:pointer; user-select:none; white-space:nowrap; }
 table.saldo th.ord::after { content:' ↓'; color:var(--accent); }
 table.saldo th.ord.asc::after { content:' ↑'; }
-
+table.saldo tbody td { padding:8px 13px; }
+table.saldo td.nome { min-width:280px; }
+table.saldo td.mono, table.saldo th.mono { white-space:nowrap; }
+table.saldo .num { width:1%; white-space:nowrap; }
+table.saldo td.nome .sub { font-size:.6875rem; font-weight:400; margin-top:2px; padding-left:13px; }
 .linha-saldo { cursor:pointer; }
-.linha-saldo:hover > td { background:var(--surface-2); }
+.linha-saldo > td:first-child { box-shadow:inset 3px 0 0 var(--c); }
+.linha-saldo:hover > td, .linha-saldo.aberta > td { background:var(--surface-2); }
 .linha-saldo .seta { display:inline-block; width:13px; color:var(--text-3); }
 .linha-saldo.aberta .seta { color:var(--accent); }
-.linha-saldo.aberta > td { background:var(--surface-2); }
-
-/* A cor mora na coluna da diferença, não na linha inteira: linha
-   toda vermelha vira ruído quando metade da tela diverge. */
-.dif {
-  display:inline-block; min-width:62px; text-align:right;
-  font-family:var(--mono); font-weight:600;
-  padding:1px 7px; border-radius:5px; border:1px solid transparent;
-}
-.d-ok   { background:var(--pos-sf);  color:var(--pos);  border-color:var(--pos); }
-.d-ruim { background:var(--neg-sf);  color:var(--neg);  border-color:var(--neg); }
-.d-fora { background:var(--surface-3); color:var(--text-3); border-color:var(--line-2); }
-
+.linha-saldo.sub > td { background:var(--bg); }
+.linha-saldo.sub > td.nome { padding-left:30px; }
+.linha-saldo.e-pos  { --c:var(--pos);  --c-sf:var(--pos-sf); }
+.linha-saldo.e-neg  { --c:var(--neg);  --c-sf:var(--neg-sf); }
+.linha-saldo.e-warn { --c:var(--warn); --c-sf:var(--warn-sf); }
+.linha-saldo.e-info { --c:var(--info); --c-sf:var(--info-sf); }
+.linha-saldo.e-alt  { --c:var(--alt);  --c-sf:var(--alt-sf); }
 .est-rot {
-  margin-left:8px; font-size:.6875rem; font-weight:500; color:var(--text-3);
-  text-transform:none; letter-spacing:0;
+  display:inline-block; margin-left:8px; padding:1px 8px; border-radius:100px;
+  font-size:.6875rem; font-weight:600; letter-spacing:0; text-transform:none;
+  background:var(--c-sf); color:var(--c); border:1px solid transparent;
 }
-.e-ok          .est-rot { color:var(--pos); }
-.e-diverge     .est-rot { color:var(--neg); }
-.e-fora        .est-rot,
-.e-nao-mapeado .est-rot { color:var(--warn); }
+.dif {
+  display:inline-block; min-width:56px; text-align:right;
+  font-family:var(--mono); font-weight:600;
+  padding:1px 7px; border-radius:5px; background:var(--c-sf); color:var(--c);
+}
+.d-ok   { --c:var(--pos);  --c-sf:var(--pos-sf); }
+.d-neg  { --c:var(--neg);  --c-sf:var(--neg-sf); }
+.d-warn { --c:var(--warn); --c-sf:var(--warn-sf); }
+.d-info { --c:var(--info); --c-sf:var(--info-sf); }
+.d-alt  { --c:var(--alt);  --c-sf:var(--alt-sf); }
+.d-pos  { --c:var(--pos);  --c-sf:var(--pos-sf); }
+.s-un-tx { font-family:var(--mono); font-size:.625rem; color:var(--text-3); margin-left:4px; }
+.s-troca { font-family:var(--mono); color:var(--alt); font-weight:600; }
+.s-troca i { font-style:normal; color:var(--text-3); margin:0 4px; }
 
+/* detalhe */
 .detalhe-saldo > td { background:var(--bg); padding:12px 16px 14px !important; }
-.det-cabeca {
-  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
-  margin-bottom:9px; font-size:.75rem; color:var(--text-3);
+.s-det-cab { display:flex; flex-direction:column; gap:3px; font-size:.8125rem; color:var(--text-2); margin-bottom:10px; }
+.s-det-cab .s-mute { font-family:var(--mono); font-size:.6875rem; }
+.s-dicas { list-style:none; margin:0 0 11px; padding:0; display:flex; flex-direction:column; gap:5px; }
+.s-dicas li {
+  font-size:.8125rem; color:var(--text-2); line-height:1.45;
+  padding:6px 10px; border-radius:var(--r-xs); background:var(--c-sf); border-left:3px solid var(--c);
 }
-.det-cabeca button { margin-left:auto; }
+.s-dicas li b { color:var(--text); }
+.s-acoes { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px; }
 .det-vazio-s { font-size:.8125rem; color:var(--text-2); padding:4px 0; }
 table.mini { width:100%; border-collapse:collapse; font-size:.75rem; }
 table.mini th {
@@ -662,6 +729,10 @@ table.mini th {
 table.mini td { padding:6px 9px; border-bottom:1px solid var(--line); }
 table.mini tr:last-child td { border-bottom:0; }
 table.mini .acao { text-align:right; }
+@media (max-width:820px) {
+  .s-arms { grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); }
+  table.saldo td.nome { min-width:200px; }
+}
 
 /* ═══════════ MAPA: PAVILHÕES EMPILHADOS ═══════════ */
 /* Os quatro drive-ins ficam montados de uma vez, um debaixo do
@@ -748,26 +819,6 @@ table.mini .acao { text-align:right; }
   cursor:pointer; font-size:.875rem; line-height:1; padding:0 3px;
 }
 .fchip button:hover { color:var(--neg); }
-
-/* ═══════════ SALDO: DENSIDADE ═══════════ */
-/* A tabela tinha linha de 44px e coluna de produto espremida.
-   Aqui o nome ganha espaço e o resto encolhe para o mínimo. */
-table.saldo tbody td { padding:8px 13px; }
-table.saldo td.nome { min-width:280px; }
-table.saldo td.mono, table.saldo th.mono { white-space:nowrap; }
-table.saldo .num { width:1%; white-space:nowrap; }
-.linha-saldo.e-diverge     > td:first-child { box-shadow:inset 3px 0 0 var(--neg); }
-.linha-saldo.e-ok          > td:first-child { box-shadow:inset 3px 0 0 var(--pos); }
-.linha-saldo.e-fora        > td:first-child { box-shadow:inset 3px 0 0 var(--warn); }
-.linha-saldo.e-nao-mapeado > td:first-child { box-shadow:inset 3px 0 0 var(--alt); }
-.est-rot {
-  display:inline-block; padding:1px 7px; border-radius:100px;
-  background:var(--surface-3); border:1px solid var(--line-2);
-}
-.e-ok .est-rot          { background:var(--pos-sf);  border-color:var(--pos-ln, var(--line-2)); }
-.e-diverge .est-rot     { background:var(--neg-sf);  border-color:var(--neg-ln, var(--line-2)); }
-.e-fora .est-rot        { background:var(--warn-sf); border-color:var(--warn-ln, var(--line-2)); }
-.e-nao-mapeado .est-rot { background:var(--alt-sf);  border-color:var(--alt-ln, var(--line-2)); }
 
 /* ═══════════ SUGESTÃO DE PRODUTO ═══════════ */
 .field.com-sug { position:relative; }
@@ -1567,8 +1618,8 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
 <section id="page-saldo" class="page">
   <div class="page-head">
     <div>
-      <h1>Saldo mapeado</h1>
-      <p class="page-sub">De um lado o que está nas vagas, do outro o saldo da planilha do ERP — a mesma da contagem. Clique numa linha para ver onde aquilo está.</p>
+      <h1>Saldo mapeado × sistema</h1>
+      <p class="page-sub">O que está nas vagas do drive-in contra o saldo do ERP, só nos armazéns físicos. Cada lote diz a provável causa da diferença; clique para ver as vagas e corrigir.</p>
     </div>
   </div>
 
@@ -1586,7 +1637,7 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
       <div class="drop" id="s-drop" onclick="document.getElementById('s-file').click()">
         <div class="drop-ico">▤</div>
         <div class="drop-tit">Solte aqui a planilha do estoque, ou clique para escolher</div>
-        <div class="drop-sub">A mesma exportação do ERP usada na contagem · substitui só a foto desta tela, não abre ciclo</div>
+        <div class="drop-sub">A mesma exportação do ERP usada na contagem · troca só a foto da filial que vier nela, não abre ciclo</div>
       </div>
       <input type="file" id="s-file" accept=".xlsx,.xls" hidden onchange="aoEscolherPlanilhaRef(event)">
       <div id="s-import-status"></div>
@@ -1594,12 +1645,23 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
   </div>
 
   <div class="kpi-row" id="s-kpis"></div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="section-title">Armazéns</div>
+        <div class="section-note" id="s-arm-nota">—</div>
+      </div>
+    </div>
+    <div class="panel-body"><div class="s-arms" id="s-arms"></div></div>
+  </div>
+
   <div id="s-avisos"></div>
 
   <div class="panel">
     <div class="panel-head">
       <div>
-        <div class="section-title">Linhas do saldo</div>
+        <div class="section-title">Lotes</div>
         <div class="section-note" id="s-cnt">—</div>
       </div>
       <div class="btn-row">
@@ -1610,45 +1672,28 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
       </div>
     </div>
     <div class="panel-body">
+      <div class="s-sits" id="s-sits"></div>
       <div class="filters">
         <div class="field grow">
           <label for="s-busca">Buscar</label>
-          <input type="search" id="s-busca" placeholder="produto, código, lote ou armazém · separe por vírgula" autocomplete="off">
+          <input type="search" id="s-busca" placeholder="produto, código, lote, armazém ou vaga · separe por vírgula" autocomplete="off">
         </div>
         <div class="field">
-          <label for="s-situacao">Situação</label>
-          <select id="s-situacao">
-            <option value="todas">Todas</option>
-            <option value="divergentes">Só divergentes</option>
-            <option value="conferindo">Batendo certo</option>
-            <option value="fora-planilha">No mapa, fora da planilha</option>
-            <option value="nao-mapeado">Na planilha, fora do mapa</option>
-            <option value="fora">Fora de um dos dois</option>
+          <label for="s-visao">Ver por</label>
+          <select id="s-visao">
+            <option value="lote">Lote</option>
+            <option value="produto">Produto (abre os lotes)</option>
           </select>
         </div>
-        <div class="field">
-          <label for="s-armazem">Armazém</label>
-          <select id="s-armazem"><option value="">Todos</option></select>
-        </div>
-        <div class="field">
-          <label for="s-agrupar">Agrupar por</label>
-          <select id="s-agrupar">
-            <option value="lote">Produto + lote + armazém</option>
-            <option value="produto">Só por produto</option>
-            <option value="armazem">Só por armazém</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="s-escopo">Escopo do mapa</label>
-          <select id="s-escopo">
-            <option value="tudo">Todo o mapa</option>
-            <option value="mapa">Só o escopo da aba Mapa</option>
-          </select>
+        <div class="field" hidden>
+          <label for="s-tipo">Tipo</label>
+          <select id="s-tipo"><option value="">Todos</option></select>
         </div>
         <div class="field">
           <label for="s-ordem">Ordenar por</label>
           <select id="s-ordem">
-            <option value="diferenca">Diferença</option>
+            <option value="gravidade">Gravidade</option>
+            <option value="paletes">Diferença em paletes</option>
             <option value="produto">Produto</option>
             <option value="codigo">Código</option>
             <option value="lote">Lote</option>
@@ -1895,7 +1940,8 @@ button.dv:hover { background:var(--surface-3); color:var(--text); }
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="./comum.js?v=5"></script>
+<script src="./comum.js?v=6"></script>
+<script src="./saldo-mapeado.js?v=1"></script>
 <script src="./impressao.js?v=3"></script>
 <script>
 'use strict';
@@ -2172,17 +2218,7 @@ async function init() {
   QUEM = GESTOR;
   ligarSugestoes();   // a trilha de alterações usa o mesmo nome do topo
 
-  $('s-escopo').addEventListener('change',   e => { _escopo = e.target.value; _abertas.clear(); renderSaldo(); });
-  $('s-agrupar').addEventListener('change',  e => { _agrupar = e.target.value; _abertas.clear(); renderSaldo(); });
-  $('s-situacao').addEventListener('change', e => { _situacao = e.target.value; renderSaldo(); });
-  $('s-armazem').addEventListener('change', () => renderSaldo());
-  $('s-ordem').addEventListener('change', ordemSaldoSelect);
-  $('s-dir').addEventListener('change', ordemSaldoSelect);
-  $('s-busca').addEventListener('input', debounce(renderSaldo, 130));
-  $('s-fonte').addEventListener('change', e => {
-    _fonteRef = e.target.value; _fonteEscolhida = true; carregarSaldoMapa();
-  });
-  configurarDropRef();
+  ligarSaldo();
   $('alt-busca').addEventListener('input', debounce(() => renderAlteracoes(_alteracoes), 140));
   $('alt-acao').addEventListener('change', () => renderAlteracoes(_alteracoes));
   $('alt-quem').addEventListener('change', () => renderAlteracoes(_alteracoes));
@@ -2365,6 +2401,7 @@ async function lerPlanilha(file) {
         lote:          String(l.lote || '').trim().toUpperCase(),
         armazem:       String(l.armazem || '').trim().toUpperCase(),
         unidade:       String(l.unidade || '').trim(),
+        tipo:          String(l.tipo || '').trim().toUpperCase() || null,
         saldo:         paraNumero(l.saldo) ?? 0,
         empenho:       paraNumero(l.empenho),
         dias_vida:     paraNumero(l.dias_vida),
@@ -3807,577 +3844,7 @@ function corpoDetalhe(cels) {
    uma vez para o pavilhão inteiro em desenharCorredor(). */
 
 
-/* ═══════════════════════════════════════════════════════════════
-   PLANILHA DE REFERÊNCIA
-   A mesma planilha do ERP que alimenta a contagem, mas guardada em
-   outro lugar e com outra finalidade: aqui é só uma foto do estoque
-   para comparar contra o mapa. Importar de novo troca a foto
-   inteira e não abre ciclo nem mexe em nada da Validação.
-   ═══════════════════════════════════════════════════════════════ */
-let _fonteRef  = 'ref';     // ref | contagem
-let _fonteEscolhida = false;   // a pessoa mexeu no seletor ou importou
-let _refInfo   = null;      // { quando, quem, linhas }
-let _registrosRef = null;
-
-function configurarDropRef() {
-  const d = $('s-drop');
-  if (!d) return;
-  ['dragenter','dragover'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.add('over'); }));
-  ['dragleave','drop'].forEach(ev => d.addEventListener(ev, e => { e.preventDefault(); d.classList.remove('over'); }));
-  d.addEventListener('drop', e => { const f = e.dataTransfer.files?.[0]; if (f) lerPlanilhaRef(f); });
-}
-
-function aoEscolherPlanilhaRef(ev) {
-  const f = ev.target.files?.[0];
-  if (f) lerPlanilhaRef(f);
-  ev.target.value = '';
-}
-
-async function lerPlanilhaRef(file) {
-  const status = $('s-import-status');
-  status.innerHTML = '<div class="skeleton">lendo a planilha…</div>';
-  try {
-    const buf = await file.arrayBuffer();
-    const ws  = XLSX.read(buf, { cellDates:true }).Sheets[XLSX.read(buf, { cellDates:true }).SheetNames[0]];
-    const brutas = XLSX.utils.sheet_to_json(ws, { raw:true, defval:'' });
-    if (!brutas.length) throw new Error('a planilha está vazia');
-
-    // Mesmo mapa de colunas da Validação: é a mesma exportação.
-    const linhas = brutas.map(bruta => {
-      const o = {};
-      for (const [k, v] of Object.entries(bruta)) {
-        const destino = COL_MAP[String(k).trim().toLowerCase()];
-        if (destino) o[destino] = typeof v === 'string' ? v.trim() : v;
-      }
-      return o;
-    });
-
-    const faltando = ['codigo','lote','saldo','armazem'].filter(c => linhas.every(l => l[c] === undefined));
-    if (faltando.length) throw new Error(`colunas não encontradas: ${faltando.join(', ')}`);
-
-    _registrosRef = linhas.filter(l => l.codigo).map(l => ({
-      codigo:    normalizarCodigo(l.codigo),
-      descricao: String(l.descricao || '').trim(),
-      lote:      String(l.lote || '').trim().toUpperCase(),
-      armazem:   String(l.armazem || '').trim().toUpperCase(),
-      unidade:   String(l.unidade || '').trim(),
-      saldo:     paraNumero(l.saldo) ?? 0,
-      filial:    String(l.filial || '').trim(),
-      importado_por: GESTOR || 'painel',
-    }));
-
-    if (!_registrosRef.length) throw new Error('nenhuma linha com código');
-
-    const soma = _registrosRef.reduce((s, r) => s + r.saldo, 0);
-    const lotes = new Set(_registrosRef.map(r => chaveLote(r.codigo, r.lote, r.armazem))).size;
-    status.innerHTML = `
-      <div class="aviso a-info" style="margin-top:12px">
-        <span class="aviso-ico">▤</span>
-        <div><b>${esc(file.name)}</b>
-          ${num(_registrosRef.length)} linha(s) · ${num(lotes)} lote(s) · ${num(soma)} unidades no total.
-          Isto substitui a foto anterior desta tela. A Validação e os ciclos de contagem não são tocados.
-          <div style="margin-top:10px">
-            <button class="btn btn-primary btn-sm" id="s-btn-import" onclick="importarRef()">
-              <span class="spin" id="s-spin-import"></span>Usar esta planilha</button>
-            <button class="btn btn-ghost btn-sm" onclick="$('s-import-status').innerHTML=''">Cancelar</button>
-          </div>
-        </div>
-      </div>`;
-  } catch (e) {
-    status.innerHTML = `<div class="aviso a-warn"><span class="aviso-ico">!</span>
-      <div><b>Não deu para ler</b>${esc(e.message)}</div></div>`;
-  }
-}
-
-async function importarRef() {
-  if (!_registrosRef?.length) return;
-  busy('s-btn-import', 's-spin-import', true);
-  try {
-    // Foto nova substitui a anterior inteira: meia planilha antiga
-    // misturada com metade da nova geraria diferença fantasma.
-    const { error:eD } = await sb.from('estoque_ref').delete().neq('id', 0);
-    if (eD) throw eD;
-
-    for (let i = 0; i < _registrosRef.length; i += 500) {
-      await inserirResiliente('estoque_ref', _registrosRef.slice(i, i + 500));
-    }
-
-    toast(`${num(_registrosRef.length)} linhas importadas.`, 'ok', 4500);
-    _registrosRef = null;
-    $('s-import-status').innerHTML = '';
-    _fonteRef = 'ref';
-    _fonteEscolhida = true;
-    if ($('s-fonte')) $('s-fonte').value = 'ref';
-    await carregarSaldoMapa(true);
-  } catch (e) {
-    erro('Falha ao importar', e);
-  } finally {
-    busy('s-btn-import', 's-spin-import', false);
-  }
-}
-
-async function carregarRef() {
-  try {
-    const linhas = await buscarTudo(() => sb.from('estoque_ref')
-      .select('codigo, descricao, lote, armazem, saldo, unidade, filial, importado_por, importado_em'));
-    _refInfo = linhas.length
-      ? { quando:linhas[0].importado_em, quem:linhas[0].importado_por, linhas:linhas.length }
-      : null;
-    return linhas;
-  } catch (e) {
-    // Migração não rodada: a tela cai no saldo da contagem.
-    _refInfo = null;
-    return null;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   SALDO MAPEADO × SISTEMA
-   De um lado o que está fisicamente nas vagas; do outro o saldo da
-   planilha do ERP — a mesma que alimenta a contagem, importada na
-   aba Validação. A diferença entre os dois é o que interessa.
-
-   A tabela abre resumida, uma linha por produto + lote + armazém.
-   Clicar na linha abre onde aquilo está.
-   ═══════════════════════════════════════════════════════════════ */
-let _escopo     = 'tudo';
-let _agrupar    = 'lote';        // lote | produto | armazem
-let _situacao   = 'todas';       // todas | divergentes | conferindo | fora
-let _ordem      = 'diferenca';
-let _ordemAsc   = false;
-let _saldoMapa  = [];
-let _abertas    = new Set();     // linhas expandidas
-let _refLinhas  = null;          // planilha própria desta tela
-let _referencia = null;          // marca que a fonte já foi carregada
-
-/* De onde vem a coluna "Sistema": a planilha desta tela ou o saldo
-   que abriu o ciclo de contagem. São duas coisas diferentes. */
-function linhasDeReferencia() {
-  return _fonteRef === 'contagem' ? _saldo : (_refLinhas || []);
-}
-
-async function carregarSaldoMapa(forcar = false) {
-  $('s-tabela').innerHTML = carregando(8);
-  try {
-    // A tela precisa dos dois lados. O mapa pode ainda não ter sido
-    // aberto nesta sessão, então garante ele aqui.
-    if (forcar || !Object.keys(_ocupacao).length) await carregarMapa();
-
-    if (forcar || _referencia === null) {
-      const ref = await carregarRef();
-      // Primeira vez sem planilha própria: usa o saldo da contagem
-      // em vez de mostrar a tela vazia, mas deixa claro na tela.
-      if (ref === null || !ref.length) {
-        if (!_saldo.length) {
-          _saldo = await buscarTudo(() => sb.from('saldo_sistema')
-            .select('codigo, descricao, lote, armazem, saldo, unidade, filial'));
-        }
-        // Só troca sozinho enquanto ninguém escolheu. Depois de a
-        // pessoa importar ou escolher, trocar por baixo seria mentir
-        // sobre com o que ela está comparando.
-        if (!_fonteEscolhida && _fonteRef === 'ref' && _saldo.length) _fonteRef = 'contagem';
-      }
-      _refLinhas = ref || [];
-    }
-    if (_fonteRef === 'contagem' && !_saldo.length) {
-      _saldo = await buscarTudo(() => sb.from('saldo_sistema')
-        .select('codigo, descricao, lote, armazem, saldo, unidade, filial'));
-    }
-    _referencia = true;
-    if ($('s-fonte')) $('s-fonte').value = _fonteRef;
-    renderSaldo();
-  } catch (e) {
-    $('s-tabela').innerHTML = vazio('Não foi possível carregar', esc(e.message), 8);
-  }
-}
-
-/* A chave do agrupamento decide como os dois lados se encontram.
-   Por lote é a comparação exata; por produto ou armazém, os dois
-   lados são somados do mesmo jeito, então continua batendo. */
-function chaveDoGrupo(r, campoCodigo = 'codigo') {
-  if (_agrupar === 'produto') return chave(r[campoCodigo]);
-  if (_agrupar === 'armazem') return chave(r.armazem || '—');
-  return chaveLote(r[campoCodigo], r.lote, r.armazem);
-}
-
-function calcularSaldo() {
-  const q = $('s-busca')?.value.trim().toUpperCase() || '';
-  const ts = termos(q);
-  const grupos = new Map();
-
-  // ── lado do mapa ──
-  for (const [pos, itens] of Object.entries(_ocupacao)) {
-    const di  = pos.split('-')[0];
-    const pav = PAV_DO_DI[di];
-    // "Só o que está no escopo do mapa" usa o mesmo seletor da aba
-    // Mapa, então os dois números sempre falam do mesmo pedaço.
-    if (_escopo === 'mapa' && !noEscopo(pav, di)) continue;
-
-    for (const r of itens) {
-      if (!daFilial(r.filial)) continue;
-      const k = chaveDoGrupo(r);
-      let g = grupos.get(k);
-      if (!g) g = novoGrupo(k, r);
-      g.mapeado += Number(r.quantidade) || 0;
-      g.vagas.add(pos);
-      g.itens.push({ ...r, pos });
-      if (r.pend) g.pend++;
-      g.dias = Math.max(g.dias, diasDesde(r.created_at));
-      grupos.set(k, g);
-    }
-  }
-
-  // ── lado do sistema ──
-  for (const s of linhasDeReferencia()) {
-    if (!daFilial(s.filial)) continue;
-    const k = chaveDoGrupo(s);
-    let g = grupos.get(k);
-    if (!g) {
-      g = novoGrupo(k, { codigo:s.codigo, produto_nome:s.descricao, lote:s.lote, armazem:s.armazem });
-      grupos.set(k, g);
-    }
-    g.sistema = (g.sistema ?? 0) + (Number(s.saldo) || 0);
-    if (!g.produto || g.produto === g.codigo) g.produto = s.descricao || g.produto;
-  }
-
-  let lista = [...grupos.values()].map(g => {
-    g.diferenca = g.sistema === null ? null : g.mapeado - g.sistema;
-    g.estado = g.sistema === null ? 'fora'
-             : g.mapeado === 0    ? 'nao-mapeado'
-             : g.diferenca === 0  ? 'ok' : 'diverge';
-    return g;
-  });
-
-  if (ts.length) {
-    lista = lista.filter(g => ts.some(x =>
-      [g.produto, g.codigo, g.lote, g.armazem].filter(Boolean).join(' ').toUpperCase().includes(x)));
-  }
-  // O armazém entra aqui e não lá em cima porque o grupo pode ter
-  // vindo dos dois lados; filtrar o grupo pronto mantém os dois
-  // lados coerentes.
-  const armF = $('s-armazem')?.value || '';
-  if (armF && _agrupar !== 'produto') lista = lista.filter(g => (g.armazem || '—') === armF);
-
-  if (_situacao === 'divergentes')   lista = lista.filter(g => g.estado === 'diverge');
-  if (_situacao === 'conferindo')    lista = lista.filter(g => g.estado === 'ok');
-  if (_situacao === 'fora-planilha') lista = lista.filter(g => g.estado === 'fora');
-  if (_situacao === 'nao-mapeado')   lista = lista.filter(g => g.estado === 'nao-mapeado');
-  if (_situacao === 'fora')          lista = lista.filter(g => g.estado === 'fora' || g.estado === 'nao-mapeado');
-
-  const valor = g => ({
-    produto:g.produto, codigo:g.codigo, lote:g.lote, armazem:g.armazem,
-    vagas:g.vagas.size, mapeado:g.mapeado, sistema:g.sistema ?? -1,
-    diferenca:g.diferenca === null ? -Infinity : Math.abs(g.diferenca), dias:g.dias,
-  })[_ordem];
-
-  lista.sort((a, b) => {
-    const va = valor(a), vb = valor(b);
-    const r = (typeof va === 'number' && typeof vb === 'number')
-      ? va - vb : String(va ?? '').localeCompare(String(vb ?? ''), 'pt-BR');
-    return _ordemAsc ? r : -r;
-  });
-
-  _saldoMapa = lista;
-  return lista;
-}
-
-function novoGrupo(k, r) {
-  return {
-    chave:k,
-    codigo:  r.codigo || '—',
-    produto: r.produto_nome || r.codigo || '—',
-    lote:    _agrupar === 'produto' ? null : (r.lote || '—'),
-    armazem: _agrupar === 'produto' ? null : (r.armazem || '—'),
-    mapeado:0, sistema:null, vagas:new Set(), itens:[], pend:0, dias:0,
-  };
-}
-
-function ordenarSaldo(campo) {
-  if (_ordem === campo) _ordemAsc = !_ordemAsc;
-  else { _ordem = campo; _ordemAsc = false; }
-  renderSaldo();
-}
-
-/* Os selects de ordem e o clique no cabeçalho mexem na mesma coisa;
-   este é o lado do select. */
-function ordemSaldoSelect() {
-  _ordem    = $('s-ordem').value;
-  _ordemAsc = $('s-dir').value === 'asc';
-  renderSaldo();
-}
-
-/* Quantos armazéns existem nos dois lados — alimenta o select. */
-function armazensDoSaldo() {
-  const s = new Set();
-  for (const itens of Object.values(_ocupacao))
-    for (const r of itens) if (daFilial(r.filial) && r.armazem) s.add(r.armazem);
-  for (const r of linhasDeReferencia()) if (daFilial(r.filial) && r.armazem) s.add(r.armazem);
-  return [...s];
-}
-
-function limparFiltrosSaldo() {
-  $('s-busca').value = '';
-  $('s-situacao').value = 'todas';  _situacao = 'todas';
-  $('s-armazem').value = '';
-  $('s-escopo').value = 'tudo';     _escopo = 'tudo';
-  $('s-agrupar').value = 'lote';    _agrupar = 'lote';
-  $('s-ordem').value = 'diferenca'; _ordem = 'diferenca';
-  $('s-dir').value = 'desc';        _ordemAsc = false;
-  _abertas.clear();
-  renderSaldo();
-}
-
-/* Um chip por filtro ligado, com o X para desligar só aquele.
-   Sem isso, a tela mostra "nada aqui" e ninguém lembra por quê. */
-function chipsSaldo() {
-  const c = [];
-  const chip = (rot, val, limpar) =>
-    `<span class="fchip">${rot}: <b>${esc(val)}</b>` +
-    `<button title="Tirar este filtro" onclick="${limpar}">×</button></span>`;
-
-  const q = $('s-busca').value.trim();
-  if (q) c.push(chip('busca', q, `$('s-busca').value='';renderSaldo()`));
-
-  const sit = $('s-situacao');
-  if (_situacao !== 'todas')
-    c.push(chip('situação', sit.options[sit.selectedIndex].text,
-      `$('s-situacao').value='todas';_situacao='todas';renderSaldo()`));
-
-  const arm = $('s-armazem').value;
-  if (arm) c.push(chip('armazém', arm, `$('s-armazem').value='';renderSaldo()`));
-
-  if (_escopo !== 'tudo') {
-    const e = $('s-escopo');
-    c.push(chip('escopo', e.options[e.selectedIndex].text,
-      `$('s-escopo').value='tudo';_escopo='tudo';renderSaldo()`));
-  }
-  if (_agrupar !== 'lote') {
-    const a = $('s-agrupar');
-    c.push(chip('agrupado', a.options[a.selectedIndex].text,
-      `$('s-agrupar').value='lote';_agrupar='lote';_abertas.clear();renderSaldo()`));
-  }
-  $('s-chips').innerHTML = c.join('');
-}
-
-function alternarLinhaSaldo(k) {
-  if (_abertas.has(k)) _abertas.delete(k); else _abertas.add(k);
-  renderSaldo();
-}
-
-function renderSaldo() {
-  const dados = calcularSaldo();
-
-  const totMap = dados.reduce((s, g) => s + g.mapeado, 0);
-  const totSis = dados.reduce((s, g) => s + (g.sistema || 0), 0);
-  const okN    = dados.filter(g => g.estado === 'ok').length;
-  const divN   = dados.filter(g => g.estado === 'diverge').length;
-
-  $('s-kpis').innerHTML = [
-    kpi('Mapeado', num(totMap), 'somando as vagas'),
-    kpi('Sistema', num(totSis),
-        _fonteRef === 'contagem' ? 'saldo da contagem' : 'planilha desta tela',
-        linhasDeReferencia().length ? '' : 'is-warn'),
-    kpi('Conferindo', num(okN), 'mapa igual ao sistema', okN ? 'is-pos' : ''),
-    kpi('Divergentes', num(divN), divN ? 'precisam de olhada' : 'nada fora', divN ? 'is-neg' : ''),
-  ].join('');
-
-  const avisos = [];
-  if (!linhasDeReferencia().length) {
-    avisos.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Sem estoque para comparar</b>
-      Solte a planilha aqui em cima. Sem ela, só dá para ver o lado do mapa.</div></div>`);
-  } else if (_fonteRef === 'contagem') {
-    avisos.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>Comparando com o saldo da contagem</b>
-      Esta tela ainda não tem planilha própria, então está usando a que abriu o ciclo. Ela vai ficando desatualizada conforme as linhas são validadas — importe uma foto nova aqui em cima quando quiser o número do dia.</div></div>`);
-  }
-  if (_escopo !== 'tudo') {
-    avisos.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>Comparação parcial</b>
-      Você limitou o escopo do mapa, mas o sistema não sabe de drive-in: a coluna Sistema continua sendo o total. A diferença aqui não é confiável.</div></div>`);
-  }
-  $('s-avisos').innerHTML = avisos.join('');
-
-  const info = $('s-ref-info');
-  if (info) {
-    info.textContent = _fonteRef === 'contagem'
-      ? `usando o saldo da contagem · ${num(_saldo.length)} linha(s)`
-      : _refInfo
-        ? `${num(_refInfo.linhas)} linha(s) · importada ${fmtTS(_refInfo.quando)}${_refInfo.quem ? ' por ' + _refInfo.quem : ''}`
-        : 'nenhuma planilha importada aqui ainda';
-  }
-
-  preencherSelect('s-armazem', armazensDoSaldo());
-  chipsSaldo();
-  if ($('s-ordem')) $('s-ordem').value = _ordem;
-  if ($('s-dir'))   $('s-dir').value   = _ordemAsc ? 'asc' : 'desc';
-
-  const p = fatiar('saldo', dados, [
-    $('s-busca').value, _situacao, $('s-armazem').value, _escopo, _agrupar,
-    $('filtro-filial').value, _fonteRef,
-  ].join('|'));
-
-  $('s-cnt').textContent = dados.length
-    ? `${num(dados.length)} linha(s) no filtro · mostrando ${num(p.ini + 1)}–${num(p.fim)}`
-    : 'nenhuma linha no filtro atual';
-  $('s-pag').innerHTML = barraPag('saldo', p, 'linha(s)');
-
-  if (!dados.length) {
-    $('s-tabela').innerHTML = vazio('Nada aqui',
-      'Ajuste o filtro, o escopo ou a busca.', 8);
-    return;
-  }
-
-  const th = (campo, rot, cls = '') =>
-    `<th class="${cls}${_ordem === campo ? ' ord' + (_ordemAsc ? ' asc' : '') : ''}" onclick="ordenarSaldo('${campo}')">${rot}</th>`;
-
-  $('s-tabela').innerHTML = `
-    <table class="tbl saldo">
-      <thead><tr>
-        ${th('produto', 'Produto')}
-        ${th('codigo', 'Código', 'mono')}
-        ${_agrupar !== 'produto' ? th('lote', 'Lote', 'mono') : ''}
-        ${_agrupar !== 'produto' ? th('armazem', 'Arm.', 'mono') : ''}
-        ${th('vagas', 'Vagas', 'num')}
-        ${th('mapeado', 'Mapeado', 'num')}
-        ${th('sistema', 'Sistema', 'num')}
-        ${th('diferenca', 'Diferença', 'num')}
-      </tr></thead>
-      <tbody>${p.itens.map(g => linhaSaldo(g)).join('')}</tbody>
-    </table>`;
-}
-
-const COLS = () => _agrupar === 'produto' ? 6 : 8;
-
-function linhaSaldo(g) {
-  const aberta = _abertas.has(g.chave);
-  const dif = g.diferenca;
-  const rot = { ok:'confere', diverge:'diverge', fora:'fora da planilha', 'nao-mapeado':'só na planilha' }[g.estado];
-
-  const cel = dif === null
-    ? `<td class="num"><span class="dif d-fora">—</span></td>`
-    : `<td class="num"><span class="dif ${dif === 0 ? 'd-ok' : 'd-ruim'}">${dif > 0 ? '+' : ''}${num(dif)}</span></td>`;
-
-  return `
-    <tr class="linha-saldo e-${g.estado}${aberta ? ' aberta' : ''}" onclick="alternarLinhaSaldo('${esc(g.chave)}')">
-      <td class="nome strong">
-        <span class="seta">${aberta ? '▾' : '▸'}</span>${esc(g.produto)}
-        ${g.pend ? '<span class="tag t-alt">pendente</span>' : ''}
-        <span class="est-rot">${rot}</span>
-      </td>
-      <td class="mono">${esc(g.codigo)}</td>
-      ${_agrupar !== 'produto' ? `<td class="mono">${esc(g.lote || '—')}</td>` : ''}
-      ${_agrupar !== 'produto' ? `<td class="mono">${esc(g.armazem || '—')}</td>` : ''}
-      <td class="num mono">${g.vagas.size || '—'}</td>
-      <td class="num mono strong">${num(g.mapeado)}</td>
-      <td class="num mono">${g.sistema === null ? '—' : num(g.sistema)}</td>
-      ${cel}
-    </tr>
-    ${aberta ? `<tr class="detalhe-saldo"><td colspan="${COLS()}">${detalheSaldo(g)}</td></tr>` : ''}`;
-}
-
-function detalheSaldo(g) {
-  if (!g.itens.length) {
-    return `<div class="det-vazio-s">Este lote está no saldo do sistema mas não tem nenhuma vaga no mapa.
-      Ou não foi guardado ainda, ou foi expedido sem baixar aqui.</div>`;
-  }
-  const un = unidadeDe(g.codigo, g.produto) || 'un';
-  return `
-    <div class="det-cabeca">
-      <span>${g.vagas.size} vaga(s) · ${num(g.mapeado)} ${esc(un)} · parado há até ${g.dias} dia(s)</span>
-      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();imprimirGrupo('${esc(g.chave)}')">⎙ Imprimir as linhas</button>
-    </div>
-    <table class="tbl mini">
-      <thead><tr><th>Vaga</th><th>Quantidade</th><th>Origem</th><th>Desde</th><th></th></tr></thead>
-      <tbody>${g.itens.sort((a, b) => a.pos.localeCompare(b.pos)).map(r => `
-        <tr>
-          <td class="mono strong">${esc(r.pos)}</td>
-          <td class="mono">${num(r.quantidade)}</td>
-          <td>${r.pend ? '<span class="tag t-alt">aguardando validação</span>'
-                       : `<span class="tag t-mute">${esc(r.origem || 'manual')}</span>`}</td>
-          <td class="mono">${fmtDia(r.created_at)}</td>
-          <td class="acao"><button class="btn btn-sm" onclick="event.stopPropagation();irParaVaga('${esc(r.pos)}')">Ver no mapa</button></td>
-        </tr>`).join('')}
-      </tbody>
-    </table>`;
-}
-
-/* Imprime as linhas onde este lote está — o caminho de quem vai
-   conferir no galpão o que a tela diz estar errado. */
-function imprimirGrupo(k) {
-  const g = _saldoMapa.find(x => x.chave === k);
-  if (!g?.itens.length) return;
-  const linhas = [...new Set(g.itens.map(r => r.pos.split('-').slice(0, 2).join('-')))].sort();
-  const alvos = linhas.map(id => {
-    const [di, ln] = id.split('-');
-    return alvoDaLinha(di, ln);
-  });
-  const n = paginarLinhas(caixaImpressao(), alvos, 'Espelho do drive-in',
-                          `${g.produto} · lote ${g.lote || '—'}`, 1);
-  dispararImpressao(n);
-}
-
-function baixarCSV() {
-  const dados = calcularSaldo();
-  if (!dados.length) { toast('Nada para exportar.', 'warn'); return; }
-  const cab = ['Produto', 'Codigo', 'Lote', 'Armazem', 'Vagas', 'Mapeado', 'Sistema', 'Diferenca', 'Situacao', 'Posicoes'];
-  const linhas = dados.map(g => [
-    g.produto, g.codigo, g.lote ?? '', g.armazem ?? '', g.vagas.size,
-    g.mapeado, g.sistema ?? '', g.diferenca ?? '', g.estado,
-    [...g.vagas].sort().join(' '),
-  ]);
-  const txt = [cab, ...linhas]
-    .map(l => l.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
-  const url = URL.createObjectURL(new Blob(['\uFEFF' + txt], { type:'text/csv;charset=utf-8' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `saldo-mapeado-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  toast(`${dados.length} linha(s) exportada(s).`);
-}
-
-function imprimirSaldo() {
-  const dados = calcularSaldo();
-  if (!dados.length) { toast('Nada para imprimir.', 'warn'); return; }
-  const totMap = dados.reduce((s, g) => s + g.mapeado, 0);
-  const totSis = dados.reduce((s, g) => s + (g.sistema || 0), 0);
-
-  const cab = `<tr><th>Produto</th><th>Código</th>${_agrupar !== 'produto' ? '<th>Lote</th><th>Arm.</th>' : ''}` +
-              `<th class="num">Vagas</th><th class="num">Mapeado</th><th class="num">Sistema</th><th class="num">Dif.</th></tr>`;
-  const blocos = [];
-  for (let i = 0; i < dados.length; i += 24) {
-    const t = document.createElement('table');
-    t.className = 'p-tab';
-    t.innerHTML = `<thead>${cab}</thead><tbody>` + dados.slice(i, i + 24).map(g => `
-      <tr>
-        <td>${esc(g.produto)}</td><td>${esc(g.codigo)}</td>
-        ${_agrupar !== 'produto' ? `<td>${esc(g.lote || '—')}</td><td>${esc(g.armazem || '—')}</td>` : ''}
-        <td class="num">${g.vagas.size || '—'}</td>
-        <td class="num">${num(g.mapeado)}</td>
-        <td class="num">${g.sistema === null ? '—' : num(g.sistema)}</td>
-        <td class="num">${g.diferenca === null ? '—' : (g.diferenca > 0 ? '+' : '') + num(g.diferenca)}</td>
-      </tr>`).join('') +
-      (i + 24 >= dados.length
-        ? `<tr class="tot"><td colspan="${_agrupar === 'produto' ? 3 : 5}">Total</td>
-             <td class="num">${num(totMap)}</td><td class="num">${num(totSis)}</td>
-             <td class="num">${(totMap - totSis > 0 ? '+' : '') + num(totMap - totSis)}</td></tr>` : '') +
-      '</tbody>';
-    blocos.push(t);
-  }
-  imprimirTabela(blocos, 'Saldo mapeado × sistema',
-    `${dados.length} linha(s) · mapeado ${num(totMap)} · sistema ${num(totSis)}`);
-}
-
-/* Clicou numa vaga: leva para o mapa com ela aberta. */
-function irParaVaga(pos) {
-  const di = pos.split('-')[0];
-  _pavilhao = PAV_DO_DI[di] || _pavilhao;
-  irPara('mapa');
-  // O mapa inteiro já está montado: é só apontar o escopo e rolar
-  // até a vaga, sem reconstruir nada.
-  setEscopoMapa('di:' + di);
-  const cel = _mcels.find(c => c.pos === pos);
-  cel?.el.scrollIntoView?.({ block:'center', behavior:'smooth' });
-  abrirVaga(pos);
-}
+/* Planilha de referência e Saldo mapeado × sistema: ver saldo-mapeado.js */
 
 
 /* ═══════════════════════════════════════════════════════════════
@@ -5043,11 +4510,12 @@ async function salvarVaga() {
   const cod = normalizarCodigo($('mv-codigo').value.trim().toUpperCase());
   const nome = $('mv-produto').value.trim();
   const lote = $('mv-lote').value.trim().toUpperCase();
-  const arm  = $('mv-armazem').value.trim().toUpperCase();
+  const arm  = normalizarArmazem($('mv-armazem').value);
   const qtdStr = $('mv-qtd').value;
 
   if (!TODAS_POSICOES.includes(pos)) { toast('Vaga inválida.', 'warn'); return; }
   if (!cod || !lote || !arm || qtdStr === '') { toast('Código, lote, armazém e quantidade são obrigatórios.', 'warn'); return; }
+  if (!confirmarArmazem(arm)) return;
   const qtd = Number(qtdStr);
   if (!Number.isFinite(qtd) || qtd < 0) { toast('Quantidade inválida.', 'warn'); return; }
 
