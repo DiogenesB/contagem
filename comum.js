@@ -318,6 +318,46 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
 const chave = v => String(v ?? '').trim().toUpperCase().replace(/\s+/g, '');
 const chaveLote = (cod, lote, arm) => `${chave(cod)}|${chave(lote)}|${chave(arm)}`;
 
+/* ═══════════════════════════════════════════════════════════════
+   ARMAZÉNS FÍSICOS (B8_LOCAL)
+   Os que têm mercadoria de verdade no galpão. Qualquer outro código
+   que aparecer num lançamento é erro de digitação — e um armazém
+   digitado errado faz o mesmo lote virar duas divergências no
+   Saldo mapeado (uma "sobra" num armazém, uma "falta" no outro).
+   Vale para as duas filiais.
+   ═══════════════════════════════════════════════════════════════ */
+const ARMAZENS = {
+  '42': 'PA ESTOQUE ABASTECIMENTO',
+  '48': 'DESCARTE QUALIDADE',
+  '49': 'PA AMOSTRAS',
+  '85': 'DESMONTE',
+  '91': 'RETRABALHO QUALIDADE',
+  '94': 'RETRABALHO / REVALIDAÇÃO',
+  '98': 'QUARENTENA',
+  'CE': 'CONTROLE DE ESTOQUE DE CLIENTES',
+  'D2': 'FATURAMENTO',
+  'D4': 'AVARIA',
+  'D5': 'RISCO SHELF LIFE',
+  'D6': 'BLOQUEADO CQ',
+  'D7': 'VENCIDOS',
+  'D8': 'FRACIONADO - DM',
+};
+/* "d 7" → "D7". Espaço e caixa não podem criar armazém novo. */
+const normalizarArmazem = v => chave(v);
+const armazemConhecido  = v => Object.prototype.hasOwnProperty.call(ARMAZENS, normalizarArmazem(v));
+const nomeArmazem       = v => ARMAZENS[normalizarArmazem(v)] || '';
+
+/* Confere o armazém antes de gravar. Desconhecido pede confirmação
+   em vez de bloquear: se abrir um armazém novo no ERP, o galpão
+   não para esperando atualizar o código. */
+function confirmarArmazem(v) {
+  const a = normalizarArmazem(v);
+  if (!a || armazemConhecido(a)) return true;
+  return confirm(`O armazém "${a}" não existe na lista.\n\n` +
+    `Armazéns válidos: ${Object.keys(ARMAZENS).join(', ')}\n\n` +
+    `Gravar assim mesmo?`);
+}
+
 const num = n => Number(n ?? 0).toLocaleString('pt-BR');
 const num1 = n => Number(n ?? 0).toLocaleString('pt-BR', { minimumFractionDigits:1, maximumFractionDigits:1 });
 
