@@ -884,6 +884,8 @@ table.saldo td.nome .sub { font-size:.6875rem; font-weight:400; margin-top:2px; 
 .d-pos  { --c:var(--pos);  --c-sf:var(--pos-sf); }
 .s-un-tx { font-family:var(--mono); font-size:.625rem; color:var(--text-3); margin-left:4px; }
 .s-troca { font-family:var(--mono); color:var(--alt); font-weight:600; }
+.s-fils { margin-top:3px; font-family:var(--sans); white-space:nowrap; }
+.s-fils .selo-fil { font-size:10.5px; }
 .s-troca i { font-style:normal; color:var(--text-3); margin:0 4px; }
 
 /* detalhe */
@@ -2392,8 +2394,8 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="./comum.js?v=6"></script>
-<script src="./saldo-mapeado.js?v=2"></script>
+<script src="./comum.js?v=7"></script>
+<script src="./saldo-mapeado.js?v=3"></script>
 <script src="./inicio.js?v=1"></script>
 <script src="./impressao.js?v=3"></script>
 <script>
@@ -2401,9 +2403,10 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 
 let sb = null;
 
-function badgeFilial(v) {
-  const f = resolverFilial(v);
-  return f ? `<span class="tag t-mute">${f.curto}</span>` : (v ? `<span class="tag t-mute">${esc(v)}</span>` : '');
+/* Selo da filial (mesmo dos quatro apps). Aceita a filial gravada ou,
+   sem ela, o próprio código do produto. */
+function badgeFilial(v, codigo) {
+  return seloFilial(v) || seloFilial(codigo) || (v ? `<span class="tag t-mute">${esc(v)}</span>` : '');
 }
 /* Um registro passa no filtro global de filial? Sem filtro, tudo passa. */
 function daFilial(v) {
@@ -3648,7 +3651,7 @@ function renderValidacao() {
       ? `<div class="dica-causa" style="color:var(--text-3)">↻ 1ª ${l.recont.contagem_anterior === null ? '—' : num(l.recont.contagem_anterior)} → recontagem ${num(l.recont.resultado)}</div>` : '';
 
     return `<tr class="st-${est}${l.validado ? ' st-done' : ''}">
-      <td class="nome">${esc(l.produto)}<div class="sub">${badgeFilial(l.filial)}</div></td>
+      <td class="nome">${esc(l.produto)}<div class="sub"><span class="mono">${esc(l.codigo)}</span> ${badgeFilial(l.filial, l.codigo)}</div></td>
       <td class="mono">${esc(l.lote || '—')}</td>
       <td class="mono">${esc(l.armazem || '—')}</td>
       <td class="num">${l.sistema === null ? '<span class="num-zero">—</span>' : num(l.sistema)}</td>
@@ -4025,6 +4028,7 @@ async function carregarRegistros(forcar = false) {
       if (ate) q = q.lte('created_at', ate + 'T23:59:59');
       return q;
     });
+    comFilial(_registros);
     for (const r of _registros) r._busca = chaveBusca(r);
     cacheGravar(chaveCache, _registros);
     $('r-periodo').textContent = padrao
@@ -4075,7 +4079,7 @@ function renderRegistros() {
 
   $('r-tbody').innerHTML = p.itens.map(r => `
     <tr>
-      <td class="nome">${esc(r.produto_nome || r.codigo)}</td>
+      <td class="nome">${esc(r.produto_nome || r.codigo)}<div class="sub">${badgeFilial(r.filial, r.codigo)}</div></td>
       <td class="mono">${esc(r.codigo)}</td>
       <td class="mono">${esc(r.lote || '—')}</td>
       <td class="mono">${esc(r.armazem || '—')}</td>
@@ -4117,6 +4121,7 @@ async function carregarHistorico() {
       }
       return q;
     });
+    comFilial(_historico);
     preencherSelect('h-operador', _historico.map(r => r.usuario));
     renderHistorico();
   } catch (e) { $('h-tbody').innerHTML = vazio('Não foi possível carregar', esc(e.message), 10); }
@@ -4161,7 +4166,7 @@ function renderHistorico() {
   $('h-tbody').innerHTML = p.itens.map(r => {
     const div = Number(r.divergencia) || 0;
     return `<tr>
-      <td class="nome">${esc(r.produto_nome || r.codigo)}<div class="sub">${badgeFilial(r.filial)}</div></td>
+      <td class="nome">${esc(r.produto_nome || r.codigo)}<div class="sub">${badgeFilial(r.filial, r.codigo)}</div></td>
       <td class="mono">${esc(r.codigo)}</td>
       <td class="mono">${esc(r.lote || '—')}</td>
       <td class="mono">${esc(r.armazem || '—')}</td>
@@ -4408,6 +4413,7 @@ async function carregarMapa() {
         .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, created_at, filial, ciclo_id, tipo, ocupacao_ativa')
         .eq('confirmado', false).eq('ocupacao_ativa', false)),
     ]);
+    comFilial(hist); comFilial(pend); comFilial(naoConf);
 
     // O lançamento pendente é a contagem de agora; a linha de
     // histórico na mesma vaga com o mesmo produto+lote é a ocupação
@@ -4589,7 +4595,8 @@ function filialDoCodigo(cod) {
   const k = chave(cod);
   for (const s of (_saldo || [])) if (chave(s.codigo) === k && s.filial) return s.filial;
   for (const r of (_refLinhas || [])) if (chave(r.codigo) === k && r.filial) return r.filial;
-  return null;
+  // O código diz de qual empresa é o produto, mesmo sem saldo importado.
+  return codigoFilialDoProduto(cod);
 }
 
 /* Abre a ficha do produto na linha: de quais vagas vem aquele
@@ -4849,7 +4856,7 @@ function renderListaMapa(q, arm) {
   $('m-tbody').innerHTML = p.itens.map(r => `
     <tr>
       <td class="mono strong">${esc(r.pos)}</td>
-      <td class="nome">${esc(r.produto_nome || r.codigo)}</td>
+      <td class="nome">${esc(r.produto_nome || r.codigo)}<div class="sub">${badgeFilial(r.filial, r.codigo)}</div></td>
       <td class="mono">${esc(r.codigo)}</td>
       <td class="mono">${esc(r.lote || '—')}</td>
       <td class="mono">${esc(r.armazem || '—')}</td>
@@ -4888,7 +4895,7 @@ function abrirVaga(pos) {
         <div class="section-head" style="margin:0">
           <div>
             <div class="strong">${esc(r.produto_nome || r.codigo)}</div>
-            <div class="section-note">${esc(r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')} · ${qtdUn(r.quantidade, r.codigo, r.produto_nome)}</div>
+            <div class="section-note">${esc(r.codigo)} ${badgeFilial(r.filial, r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')} · ${qtdUn(r.quantidade, r.codigo, r.produto_nome)}</div>
           </div>
           <div class="btn-row">
             <button class="btn btn-sm" onclick="fecharModal('modal-vaga-lista');editarVaga('${esc(pos)}','${esc(r.id)}','${esc(r._tab)}')">Editar</button>
@@ -4953,7 +4960,18 @@ function avaliarVagaModal() {
         <b>Linha ${esc(ln)}</b>
         ${naLinha} de ${vagasDaLinha} vagas ocupadas${ocupadosAqui ? ` · esta vaga já tem ${ocupadosAqui} item(ns)` : ' · esta vaga está livre'}${lim ? ` · máx. ${qtdUn(lim, cod, nome)} por palete` : ''}
       </div>
-    </div>`;
+    </div>${avisoFilialProduto(cod)}`;
+}
+
+/* De qual filial é o código digitado; se o mesmo nome existir em
+   outra filial, mostra os dois para não gravar o gêmeo errado. */
+function avisoFilialProduto(cod) {
+  const c = normalizarCodigo(cod);
+  if (!produtoPorCodigo(c)) return '';
+  const gem = gemeosDoProduto(c);
+  if (!gem.length) return filialDoProduto(c) ? `<div class="aviso a-info" style="margin-top:-6px"><span class="aviso-ico">◇</span><div>Código ${esc(c)} é da filial ${seloFilial(c)}</div></div>` : '';
+  return `<div class="aviso a-warn" style="margin-top:-6px"><span class="aviso-ico">!</span><div><b>Este nome existe em mais de uma filial</b>
+    ${esc(c)} ${seloFilial(c, { destaque:true })} · ${gem.map(g => `${esc(g)} ${seloFilial(g)}`).join(' · ')} — confira o código na etiqueta.</div></div>`;
 }
 
 async function salvarVaga() {
@@ -4962,8 +4980,8 @@ async function salvarVaga() {
   // Sem normalizar, digitar "1012000041" gravava um código de 10
   // dígitos que não bate com o do ERP — a vaga virava "fora da
   // planilha" no Saldo mapeado para sempre.
-  const cod = normalizarCodigo($('mv-codigo').value.trim().toUpperCase());
-  const nome = $('mv-produto').value.trim();
+  let   cod = normalizarCodigo($('mv-codigo').value.trim().toUpperCase());
+  let   nome = $('mv-produto').value.trim();
   const lote = $('mv-lote').value.trim().toUpperCase();
   const arm  = normalizarArmazem($('mv-armazem').value);
   const qtdStr = $('mv-qtd').value;
@@ -4973,6 +4991,9 @@ async function salvarVaga() {
   if (!confirmarArmazem(arm)) return;
   const qtd = Number(qtdStr);
   if (!Number.isFinite(qtd) || qtd < 0) { toast('Quantidade inválida.', 'warn'); return; }
+  // Mesmo produto de outra filial com este lote no sistema? Pergunta.
+  const certo = await conferirCodigoDaFilial(cod, lote);
+  if (certo !== cod) { cod = certo; nome = produtoPorCodigo(certo)?.nome || nome; $('mv-codigo').value = cod; $('mv-produto').value = nome; }
 
   busy('mv-btn', 'mv-spin', true);
   try {
@@ -4999,7 +5020,7 @@ async function salvarVaga() {
     } else if (id) {
       const { error } = await sb.from(tab).update({
         posicao:pos, codigo:cod, produto_nome:nome || cod, lote, armazem:arm,
-        quantidade:qtd, updated_at:new Date().toISOString(),
+        quantidade:qtd, filial:filialDoCodigo(cod), updated_at:new Date().toISOString(),
       }).eq('id', id);
       if (error) throw error;
     } else {
@@ -5086,7 +5107,7 @@ function mostrarSugestoes(idCaixa, termo) {
   caixa.innerHTML = itens.map((p, i) => `
     <button type="button" data-i="${i}">
       <div class="sug-nome">${esc(p.nome)}</div>
-      <div class="sug-meta">${esc(p.codigo)} · ${esc(p.unidade || 'un')}${p.palete ? ` · palete ${num(p.palete)}` : ''}</div>
+      <div class="sug-meta">${esc(p.codigo)} · ${esc(p.unidade || 'un')}${p.palete ? ` · palete ${num(p.palete)}` : ''} ${seloFilial(p.codigo, { destaque:temGemeo(p.codigo) })}</div>
     </button>`).join('');
   caixa.hidden = false;
   _sugAtiva = { caixa, itens, i:-1 };
@@ -5149,6 +5170,7 @@ async function buscarProdutoVaga() {
   // O catálogo responde na hora; o saldo só completa lote e armazém.
   const p = produtoPorCodigo(normalizarCodigo(cod));
   if (p && !$('mv-produto').value.trim()) $('mv-produto').value = p.nome || '';
+  avaliarVagaModal();
   const { data } = await sb.from('saldo_sistema')
     .select('descricao, lote, armazem').ilike('codigo', normalizarCodigo(cod)).limit(1).maybeSingle();
   if (data) {
@@ -5192,7 +5214,7 @@ function renderTransferencias() {
     const feita = t.status !== 'pendente';
     const dif = feita && t.quantidade_movida != null && Number(t.quantidade_movida) !== Number(t.quantidade);
     return `<tr>
-      <td class="nome">${esc(t.produto_nome || t.codigo)}<div class="sub">${esc(t.codigo || '')}</div></td>
+      <td class="nome">${esc(t.produto_nome || t.codigo)}<div class="sub">${esc(t.codigo || '')} ${t.codigo ? badgeFilial(null, t.codigo) : ''}</div></td>
       <td class="mono">${esc(t.lote || '—')}</td>
       <td class="num">${num(t.quantidade)}</td>
       <td class="num ${dif ? 'num-neg strong' : ''}">${t.quantidade_movida != null ? num(t.quantidade_movida) : '—'}</td>
@@ -5220,9 +5242,10 @@ async function buscarProdutoTf() {
   for (const r of data) (porArm[r.armazem] ||= 0), porArm[r.armazem] += Number(r.saldo) || 0;
   const arms = Object.entries(porArm);
 
-  $('t-sugestao').innerHTML = arms.length > 1
+  const fil = seloFilial(norm, { destaque:temGemeo(norm) });
+  $('t-sugestao').innerHTML = (fil ? `<div style="margin:-4px 0 8px;font-size:.8125rem;color:var(--text-2)">Código ${esc(norm)} ${fil}${temGemeo(norm) ? ` · mesmo nome em ${gemeosDoProduto(norm).map(g => esc(g) + ' ' + seloFilial(g)).join(', ')}` : ''}</div>` : '') + (arms.length > 1
     ? `<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Este produto está em ${arms.length} armazéns</b>${arms.map(([a, s]) => `${esc(a)}: ${num(s)} un.`).join(' · ')} — é exatamente o caso que a transferência resolve.</div></div>`
-    : `<div class="aviso a-info"><span class="aviso-ico">◇</span><div><b>No sistema</b>${arms.map(([a, s]) => `${esc(a)}: ${num(s)} un.`).join(' · ')}</div></div>`;
+    : `<div class="aviso a-info"><span class="aviso-ico">◇</span><div><b>No sistema</b>${arms.map(([a, s]) => `${esc(a)}: ${num(s)} un.`).join(' · ')}</div></div>`);
 }
 
 async function criarTransferencia() {
@@ -5396,6 +5419,7 @@ async function carregarAcuracia() {
       if (ate) q = q.lte('created_at', ate + 'T23:59:59');
       return q.order('created_at', { ascending:false });
     });
+    comFilial(_acDados);
     renderAcuracia();
   } catch (e) { $('a-tbody').innerHTML = vazio('Não foi possível carregar', esc(e.message), 9); }
 }
@@ -5495,7 +5519,7 @@ function renderAcuracia() {
       : (r.resolvido_em ? `<span class="section-note">${fmtDia(r.resolvido_em)}</span>` : '');
 
     return `<tr class="st-${est}${r.resolvido_em ? ' st-done' : ''}">
-      <td class="nome">${esc(r.produto_nome || r.codigo)}<div class="sub">${esc(r.codigo)} · ${badgeFilial(r.filial)}</div></td>
+      <td class="nome">${esc(r.produto_nome || r.codigo)}<div class="sub">${esc(r.codigo)} · ${badgeFilial(r.filial, r.codigo)}</div></td>
       <td class="mono">${esc(r.lote || '—')}</td>
       <td class="mono">${esc(r.armazem || '—')}</td>
       <td class="num">${num(sis)}</td>
@@ -5794,6 +5818,21 @@ function sugerirCausas(l) {
     }
   }
 
+  // Mesmo lote lançado com o código gêmeo (mesmo nome, outra filial):
+  // falta num código e sobra no outro.
+  const gemL = new Set(gemeosDoProduto(l.codigo));
+  if (gemL.size) for (const o of _vLinhas) {
+    if (o === l || o.validado || chave(o.lote) !== lot || !gemL.has(normalizarCodigo(o.codigo))) continue;
+    const d2 = divDe(o);
+    if (!d2 || Math.sign(d2) === Math.sign(d)) continue;
+    const fl = filialDoProduto(l.codigo)?.curto || '?', fo = filialDoProduto(o.codigo)?.curto || '?';
+    out.push({ forca:perto(Math.abs(d2), ad) ? 'forte' : 'possivel', motivo:'erro_contagem',
+      titulo:'Código de outra filial',
+      detalhe:`${d < 0 ? 'Falta' : 'Sobra'} aqui (${l.codigo}, ${fl}) e ${d2 < 0 ? 'falta' : 'sobra'} de ${qtdUn(Math.abs(d2), o.codigo, o.produto)} no mesmo lote com o código ${o.codigo} (${fo}) — mesmo produto, outra filial.`,
+      botao:'Mover a contagem para o código certo',
+      mover:(o.extra && d < 0) ? o._k : (l.extra && d2 < 0 ? l._k : null), destino:(o.extra && d < 0) ? l._k : (l.extra ? o._k : null) });
+  }
+
   if (!l.extra && C > 0) {
     if (emb && emb > 1 && perto(C * emb, S)) out.push({ forca:'forte', motivo:'erro_contagem', titulo:'Contou em caixas, não em ' + (unidadeDe(l.codigo, l.produto) || 'unidade'),
       detalhe:`${num(C)} × ${num(emb)} = ${num(C * emb)}, que é o saldo do sistema.` });
@@ -5840,7 +5879,7 @@ function abrirCausas(idx) {
         <b>${esc(c.titulo)}</b></div>
       <div class="causa-det">${esc(c.detalhe)}</div>
       <div class="btn-row" style="margin-top:8px">
-        ${c.mover ? `<button class="btn btn-sm btn-info" onclick="aplicarMover('${esc(c.mover)}','${esc(c.destino)}')">Mover a contagem para o lote certo</button>` : ''}
+        ${c.mover ? `<button class="btn btn-sm btn-info" onclick="aplicarMover('${esc(c.mover)}','${esc(c.destino)}')">${esc(c.botao || 'Mover a contagem para o lote certo')}</button>` : ''}
         ${c.motivo ? `<button class="btn btn-sm" onclick="aceitarComMotivo(${idx},'${c.motivo}')">Aceitar como "${esc(textoMotivo(c.motivo))}"</button>` : ''}
       </div>
     </div>`).join('');
@@ -5864,10 +5903,13 @@ function aceitarComMotivo(idx, motivo) {
 async function aplicarMover(kOrigem, kDestino) {
   const o = _vLinhas.find(x => x._k === kOrigem), dst = _vLinhas.find(x => x._k === kDestino);
   if (!o || !dst || !o.itens.length) return;
-  if (!confirm(`Mover ${qtdUn(o.contado, o.codigo, o.produto)} do lote ${o.lote} (arm. ${o.armazem})\npara o lote ${dst.lote} (arm. ${dst.armazem})?`)) return;
+  if (!confirm(`Mover ${qtdUn(o.contado, o.codigo, o.produto)} de ${o.codigo} · lote ${o.lote} (arm. ${o.armazem})\npara ${dst.codigo} · lote ${dst.lote} (arm. ${dst.armazem})?`)) return;
   try {
+    // Código novo leva junto o nome e a filial dele.
     await atualizarResiliente('lancamentos',
-      { codigo:dst.codigo, lote:dst.lote, armazem:dst.armazem, updated_at:new Date().toISOString() },
+      { codigo:dst.codigo, lote:dst.lote, armazem:dst.armazem,
+        produto_nome:dst.produto || o.produto, filial:dst.filial || codigoFilialDoProduto(dst.codigo) || o.filial,
+        updated_at:new Date().toISOString() },
       q => q.in('id', o.itens.map(i => i.id)));
     fecharModal('modal-causas');
     toast('Contagem movida. A linha é conferida de novo.', 'ok');
