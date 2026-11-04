@@ -826,6 +826,8 @@ b.c-pos, b.c-neg, b.c-warn, b.c-info, b.c-alt { color:var(--c); }
 .s-arm-tg input { width:15px; height:15px; margin:0; accent-color:var(--accent); cursor:pointer; }
 .s-arm-pe { font-size:.6875rem; color:var(--text-2); line-height:1.4; margin-top:3px; }
 .s-arm-pe b { color:var(--text); }
+.s-arm-foto { font-size:.6875rem; color:var(--text-3); margin-top:2px; }
+.s-arm-foto.velha { color:var(--warn); }
 
 /* chips de situação */
 .s-sits { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
@@ -2070,7 +2072,7 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
   <div class="page-head">
     <div>
       <h1 class="page-title">Saldo mapeado × sistema</h1>
-      <p class="page-sub">O que está nas vagas do drive-in contra o saldo do ERP, só nos armazéns físicos. Cada lote diz a provável causa da diferença; clique para ver as vagas e corrigir.</p>
+      <p class="page-sub">O que está ocupando vaga no mapa contra a planilha do ERP importada aqui, só nos armazéns físicos. Lançamento de contagem ainda não validado não entra. Clique num lote para ver as vagas e corrigir.</p>
     </div>
   </div>
 
@@ -2078,17 +2080,16 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
     <div class="panel-head">
       <div class="section-title">Planilha de referência <span class="section-note" id="s-ref-info">—</span></div>
       <div class="btn-row">
-        <select id="s-fonte" style="width:auto" aria-label="De onde vem a coluna Sistema">
-          <option value="ref">Comparar com a planilha desta tela</option>
-          <option value="contagem">Comparar com o saldo da contagem</option>
+        <select id="s-imp-arm" style="width:auto;min-width:260px" aria-label="O que importar">
+          <option value="">Geral — todos os armazéns</option>
         </select>
       </div>
     </div>
     <div class="panel-body">
       <div class="drop" id="s-drop" onclick="document.getElementById('s-file').click()">
         <div class="drop-ico">▤</div>
-        <div class="drop-tit">Solte aqui a planilha do estoque, ou clique para escolher</div>
-        <div class="drop-sub">A mesma exportação do ERP usada na contagem · troca só a foto da filial que vier nela, não abre ciclo</div>
+        <div class="drop-tit" id="s-drop-tit">Solte a planilha para atualizar todos os armazéns</div>
+        <div class="drop-sub" id="s-drop-sub">Troca a foto inteira da filial que vier na planilha. Não abre ciclo nem mexe na contagem.</div>
       </div>
       <input type="file" id="s-file" accept=".xlsx,.xls" hidden onchange="aoEscolherPlanilhaRef(event)">
       <div id="s-import-status"></div>
@@ -2392,7 +2393,7 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="./comum.js?v=6"></script>
-<script src="./saldo-mapeado.js?v=1"></script>
+<script src="./saldo-mapeado.js?v=2"></script>
 <script src="./inicio.js?v=1"></script>
 <script src="./impressao.js?v=3"></script>
 <script>
