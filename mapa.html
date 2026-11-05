@@ -283,6 +283,92 @@ select:hover, .bt:hover { border-color:var(--line-2); }
 .ex-restante.zera  { background:var(--warn-sf); border-color:var(--warn); color:var(--warn); }
 .ex-restante.alerta{ background:var(--neg-sf);  border-color:var(--neg);  color:var(--neg);  }
 
+
+/* ═══════════ PAINEL DA VAGA ═══════════
+   Abre ao lado do mapa (no celular, de baixo para cima) em vez de
+   cobrir a tela: dá para olhar a linha e clicar em outra vaga. */
+:root { --lado:380px; }
+.lado {
+  position:fixed; z-index:30; right:16px; top:calc(var(--barh, 58px) + 12px);
+  width:var(--lado); max-height:calc(100dvh - var(--barh, 58px) - 24px); overflow:auto;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--sh);
+}
+.lado[hidden] { display:none !important; }
+body.com-lado .tela { max-width:none; margin:0 calc(var(--lado) + 28px) 0 0; }
+.lado-cab {
+  position:sticky; top:0; z-index:2; background:var(--surface);
+  display:flex; align-items:flex-start; gap:10px; padding:14px 16px 12px; border-bottom:1px solid var(--line);
+}
+.lado-cab .t { font-family:var(--mono); font-size:1.0625rem; font-weight:700; }
+.lado-cab .s { font-size:.75rem; color:var(--text-3); margin-top:1px; }
+.lado-x { margin-left:auto; background:none; border:0; color:var(--text-3); cursor:pointer; padding:2px 4px; font-size:1.1rem; line-height:1; }
+.lado-x:hover { color:var(--text); }
+.lado-corpo { padding:14px 16px; }
+.lado-sec { font-size:.75rem; font-weight:600; color:var(--text-2); margin:16px 0 8px; }
+.lado-sec span { font-weight:400; color:var(--text-3); }
+.lado-acoes { display:flex; gap:8px; margin-top:4px; }
+.lado-acoes .bt { flex:1; padding:9px; }
+.lado-veu { display:none; }
+.ficha { position:relative; }
+.ficha::before { content:''; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:0 3px 3px 0; background:var(--c, transparent); }
+.ficha-qtd small + small { margin-left:6px; }
+.lv { display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:8px; align-items:baseline;
+  padding:6px 8px; border-radius:6px; cursor:pointer; font-size:.75rem; }
+.lv:hover { background:var(--surface-2); }
+.lv.atual { background:var(--accent-sf); }
+.lv b { font-family:var(--mono); font-size:.75rem; }
+.lv .n { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lv .n i { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px; }
+.lv .n small { color:var(--text-3); font-family:var(--mono); margin-left:5px; }
+.lv .q { font-family:var(--mono); color:var(--text-2); }
+.lv-livres { font-size:.75rem; color:var(--text-3); padding:6px 8px; line-height:1.6; }
+.lv-livres b { font-family:var(--mono); font-weight:500; color:var(--text-2); }
+.cel.aberta { box-shadow:0 0 0 2px var(--text), 0 0 0 4px var(--accent); z-index:3; position:relative; }
+.movendo .cel.origem { box-shadow:0 0 0 2px var(--warn); }
+.selbar {
+  position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:150;
+  width:min(640px, calc(100vw - 24px)); display:flex; align-items:center; gap:12px;
+  padding:12px 14px; border-radius:12px; background:var(--surface); border:1px solid var(--accent); box-shadow:var(--sh);
+}
+.selbar .txt { flex:1; min-width:0; font-size:.8125rem; line-height:1.4; }
+.selbar .txt small { display:block; color:var(--text-3); font-size:.75rem; }
+@media (max-width:1100px) {
+  .lado { left:0; right:0; bottom:0; top:auto; width:auto; max-height:80dvh; border-radius:14px 14px 0 0; }
+  body.com-lado .tela { max-width:1400px; margin:0 auto; }
+  body.com-lado .lado-veu { display:block; position:fixed; inset:0; z-index:25; background:var(--overlay); }
+}
+
+/* ═══════════ BUSCA DE PRODUTO ═══════════ */
+.busca-sug {
+  position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:35;
+  max-height:min(440px, 70dvh); overflow:auto;
+  background:var(--surface); border:1px solid var(--line-2); border-radius:var(--r-sm); box-shadow:var(--sh);
+}
+.bs-grupo { padding:8px 12px 4px; font-size:.6875rem; font-weight:600; color:var(--text-3); }
+.bs-op {
+  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; align-items:center;
+  width:100%; padding:9px 12px; border:0; border-top:1px solid var(--line); background:transparent;
+  color:var(--text); font:inherit; text-align:left; cursor:pointer;
+}
+.bs-op:hover, .bs-op.marcado { background:var(--accent-sf); }
+.bs-nome { font-size:.875rem; font-weight:600; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bs-nome mark { background:transparent; color:var(--accent); }
+.bs-meta { grid-column:1; font-family:var(--mono); font-size:.6875rem; color:var(--text-3); }
+.bs-meta .selo-fil { font-family:var(--sans); }
+.bs-num { grid-column:2; grid-row:1 / span 2; text-align:right; font-family:var(--mono); font-size:.75rem; color:var(--text-2); white-space:nowrap; }
+.bs-num b { display:block; font-size:.875rem; color:var(--text); }
+.bs-num .outro { color:var(--warn); }
+.bs-nada { padding:12px; font-size:.8125rem; color:var(--text-3); }
+.busca-filtro {
+  display:inline-flex; align-items:center; gap:8px; margin:8px 0 0; padding:4px 6px 4px 11px; border-radius:100px;
+  background:var(--accent-sf); border:1px solid var(--accent-ln); font-size:.8125rem;
+}
+.busca-filtro b { font-weight:600; }
+.busca-filtro button { border:0; background:none; color:var(--text-3); cursor:pointer; font-size:1rem; line-height:1; padding:0 4px; }
+.busca-filtro button:hover { color:var(--neg); }
+.busca-res { font-size:.8125rem; color:var(--text-2); }
+.busca-res b { color:var(--text); }
+
 /* ═══════════ PORTARIA ═══════════ */
 .portaria { position:fixed; inset:0; z-index:300; background:var(--bg);
   display:flex; align-items:center; justify-content:center; padding:24px; }
@@ -344,8 +430,11 @@ select:hover, .bt:hover { border-color:var(--line-2); }
 <main class="tela">
   <div class="busca">
     <span class="lupa" aria-hidden="true">⌕</span>
-    <input type="search" id="busca" placeholder="produto, código, lote, armazém ou linha (B1-22)" autocomplete="off">
+    <input type="search" id="busca" placeholder="Buscar produto (nome ou código), lote, armazém ou linha (B1-22) · tecla /" autocomplete="off"
+           role="combobox" aria-expanded="false" aria-controls="busca-sug">
+    <div class="busca-sug" id="busca-sug" role="listbox" hidden></div>
   </div>
+  <div id="busca-filtro"></div>
   <div class="busca-cnt" id="busca-cnt"></div>
 
   <div class="stats">
@@ -367,14 +456,9 @@ select:hover, .bt:hover { border-color:var(--line-2); }
   <div id="lista"></div>
 </main>
 
-<div class="dlg" id="dlg-vaga" hidden>
-  <div class="dlg-cx" role="dialog" aria-labelledby="dg-tit">
-    <div class="dlg-topo"><b id="dg-tit">—</b><span id="dg-sub"></span>
-      <button class="dlg-x" id="dg-x" aria-label="Fechar">✕</button></div>
-    <div class="dlg-corpo" id="dg-corpo"></div>
-    <div class="dlg-pe"><button class="bt destaque" id="dg-add">Guardar produto aqui</button></div>
-  </div>
-</div>
+<aside class="lado" id="lado" hidden aria-live="polite"></aside>
+<div class="lado-veu" onclick="fecharLado()"></div>
+<div class="selbar" id="selbar" hidden></div>
 
 <div class="dlg" id="dlg-form" hidden>
   <div class="dlg-cx" role="dialog" aria-labelledby="df-tit">
@@ -454,6 +538,7 @@ let _q   = '';
 let _cels = [];
 let _blocos = [];
 let _posAberta = '';
+const PAV_DO_DI_MAPA = (() => { const m = {}; for (const [pav, dis] of Object.entries(MAPA_POSICOES)) for (const di of Object.keys(dis)) m[di] = pav; return m; })();
 
 /* ═══════════════════════════════════════════════════════════════
    CARGA
@@ -475,6 +560,7 @@ async function carregar(silencioso = false) {
     for (const r of pend) (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'lancamentos', pend:true,  _busca:chaveBusca(r) });
 
     construir();
+    if (_posAberta) renderLado();
   } catch (e) {
     $('mapa').innerHTML = `<div class="vazio"><div class="vazio-t">O mapa não carregou</div>
       <div class="vazio-s">${esc(e.message)}</div></div>`;
@@ -563,8 +649,9 @@ function construir() {
    PINTURA
    ═══════════════════════════════════════════════════════════════ */
 function acertou(pos, itens, ts) {
+  if (_qProd) return itens.some(r => normalizarCodigo(r.codigo) === _qProd.codigo);
   if (!ts.length) return false;
-  return ts.some(x => pos.includes(x)) || itens.some(r => casa(r, ts));
+  return ts.some(t => casaTermo(pos, itens, t));
 }
 
 function pintar() {
@@ -589,6 +676,8 @@ function pintar() {
     }
     if (acertou(c.pos, itens, ts)) { cls += ' achou'; achados++; }
     else if (_q) cls += ' fora';
+    if (c.pos === _posAberta) cls += ' aberta';
+    if (_sel && c.pos === _sel.de) cls += ' origem';
     if (c.el.className !== cls) c.el.className = cls;
   }
 
@@ -620,9 +709,7 @@ function pintar() {
   $('k-livre').textContent = num(total - ocup);
 
   const cnt = $('busca-cnt');
-  cnt.textContent = !_q ? ''
-    : achados ? `${num(achados)} vaga(s) em ${document.querySelectorAll('.linha:not(.oculta)').length} linha(s)`
-              : `nada com "${_q}" — confira o termo`;
+  cnt.innerHTML = resumoBusca(achados);
   cnt.className = 'busca-cnt' + (_q && !achados ? ' nada' : '');
 
   renderLista(ts);
@@ -656,31 +743,330 @@ function renderLista(ts) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   VAGA
+   VAGA — painel ao lado do mapa
+   O que tem na vaga, as ações, e a linha inteira vaga por vaga.
    ═══════════════════════════════════════════════════════════════ */
+let _sel = null;   // mover: { modo:'mover', item, de }
+const unDe = r => unidadeDe(r.codigo, r.produto_nome) || 'un';
+const nomeCurto = n => String(n || '').replace(/\s+-\s+/, ' ').trim();
+/* A cor do produto: a mesma em qualquer tela, todo dia. */
+const corItem = r => corDe(normalizarCodigo(r.codigo));
+
 function abrirVaga(pos) {
   _posAberta = pos;
+  renderLado();
+  $('lado').hidden = false;
+  document.body.classList.add('com-lado');
+  pintar();
+}
+function fecharLado() {
+  _posAberta = '';
+  $('lado').hidden = true;
+  document.body.classList.remove('com-lado');
+  pintar();
+}
+function renderLado() {
+  if (!_posAberta) return;
+  $('lado').innerHTML = htmlVaga(_posAberta);
+}
+
+function fichaHTML(pos, r) {
+  return `<div class="ficha${r.pend ? ' pend' : ''}" style="--c:${corItem(r)}">
+    <div class="ficha-nome">${esc(r.produto_nome || r.codigo)}</div>
+    <div class="ficha-meta">${esc(r.codigo)} ${seloFilial(r.filial || r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')}${r.pend ? ' · aguardando validação' : ''}</div>
+    <div class="ficha-qtd">${num(r.quantidade)}<small>${esc(unDe(r))}</small><small>· há ${diasDesde(r.created_at)} dia(s)</small></div>
+    <div class="ficha-acoes">
+      <button class="bt destaque" onclick="abrirExpedicao('${esc(pos)}','${esc(r.id)}','${r._tab}')">Expedir</button>
+      <button class="bt" onclick="iniciarMover('${esc(pos)}','${esc(r.id)}','${r._tab}')">Mover</button>
+      <button class="bt" onclick="editarItem('${esc(pos)}','${esc(r.id)}','${r._tab}')">Editar</button>
+    </div>
+  </div>`;
+}
+
+function htmlVaga(pos) {
   const itens = _ocupacao[pos] || [];
-  $('dg-tit').textContent = pos;
-  $('dg-sub').textContent = itens.length
-    ? `${itens.length} ${itens.length > 1 ? 'lotes' : 'lote'}` : 'vaga livre';
+  const [di, ln, an, lg] = pos.split('-');
+  return `<div class="lado-cab"><div><div class="t">${esc(pos)}</div>
+      <div class="s">Drive-in ${esc(di)} · linha ${esc(ln)} · andar ${esc(an)} · vaga ${esc(lg)} · ${itens.length ? `${itens.length} lote(s)` : 'livre'}</div></div>
+      <button class="lado-x" onclick="fecharLado()" aria-label="Fechar">✕</button></div>
+    <div class="lado-corpo">
+      ${itens.length ? itens.map(r => fichaHTML(pos, r)).join('')
+        : `<div class="vazio" style="padding:12px"><div class="vazio-t">Vaga livre</div><div class="vazio-s">Nada ocupando ${esc(pos)}.</div></div>`}
+      <div class="lado-acoes">
+        <button class="bt destaque" onclick="abrirForm('${esc(pos)}')">${itens.length ? 'Guardar outro produto aqui' : 'Guardar produto aqui'}</button>
+      </div>
+      ${htmlLinhaCorpo(linhaDaPosicao(pos), pos)}
+    </div>`;
+}
 
-  $('dg-corpo').innerHTML = itens.length
-    ? itens.map(r => `
-        <div class="ficha${r.pend ? ' pend' : ''}">
-          <div class="ficha-nome">${esc(r.produto_nome || r.codigo)}</div>
-          <div class="ficha-meta">${esc(r.codigo)} ${seloFilial(r.filial || r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')}${r.pend ? ' · aguardando validação' : ''}</div>
-          <div class="ficha-qtd">${num(r.quantidade)}<small>${esc(unidadeDe(r.codigo, r.produto_nome) || 'un')}</small></div>
-          <div class="ficha-acoes">
-            <button class="bt destaque" onclick="abrirExpedicao('${esc(pos)}','${esc(r.id)}')">Expedir</button>
-            <button class="bt" onclick="editarItem('${esc(pos)}','${esc(r.id)}')">Editar</button>
-          </div>
-        </div>`).join('')
-    : `<div class="vazio"><div class="vazio-t">Vaga livre</div>
-       <div class="vazio-s">Nada ocupando ${esc(pos)}.</div></div>`;
+function posicoesDaLinhaId(id) {
+  const [di, ln] = id.split('-');
+  const pav = Object.keys(MAPA_POSICOES).find(p => MAPA_POSICOES[p][di]);
+  const ands = MAPA_POSICOES[pav]?.[di]?.[ln] || {};
+  const out = [];
+  for (const an of Object.keys(ands).sort((a, b) => b - a))
+    for (const lg of ands[an]) out.push(`${di}-${ln}-${an}-${lg}`);
+  return out;
+}
 
-  $('dg-add').textContent = itens.length ? 'Guardar outro produto aqui' : 'Guardar produto aqui';
-  $('dlg-vaga').hidden = false;
+/* A linha vaga por vaga: o que tem em cada uma; as livres juntas. */
+function htmlLinhaCorpo(id, atual) {
+  const ocupadas = [], livres = [];
+  for (const p of posicoesDaLinhaId(id)) {
+    const itens = _ocupacao[p] || [];
+    if (!itens.length) { livres.push(p); continue; }
+    for (const r of itens) ocupadas.push({ p, r });
+  }
+  const curto = p => p.split('-').slice(2).join('-');
+  return `<div class="lado-sec">Linha ${esc(id)} <span>· andar-vaga</span></div>
+    ${ocupadas.map(({ p, r }) => `<div class="lv${p === atual ? ' atual' : ''}" onclick="abrirVaga('${p}')">
+        <b>${curto(p)}</b><span class="n"><i style="background:${corItem(r)}"></i>${esc(nomeCurto(r.produto_nome || r.codigo))}<small>${esc(r.lote || '—')}</small></span>
+        <span class="q">${num(r.quantidade)} ${esc(unDe(r))}</span></div>`).join('')}
+    ${livres.length ? `<div class="lv-livres">Livres: ${livres.map(p => `<b>${curto(p)}</b>`).join(' · ')}</div>` : ''}`;
+}
+
+/* ── mover: toca-se na vaga de destino ── */
+function iniciarMover(pos, id, tab) {
+  const r = (_ocupacao[pos] || []).find(x => String(x.id) === String(id) && (!tab || x._tab === tab));
+  if (!r) return;
+  _sel = { modo:'mover', item:r, de:pos };
+  if (matchMedia('(max-width:1100px)').matches) { $('lado').hidden = true; document.body.classList.remove('com-lado'); }
+  renderSelbar(); pintar();
+}
+function cancelarMover() { _sel = null; renderSelbar(); pintar(); }
+function renderSelbar() {
+  const bar = $('selbar');
+  document.body.classList.toggle('movendo', !!_sel);
+  if (!_sel) { bar.hidden = true; return; }
+  const r = _sel.item;
+  bar.hidden = false;
+  bar.innerHTML = `<div class="txt"><b>Movendo ${esc(nomeCurto(r.produto_nome || r.codigo))}</b> · lote ${esc(r.lote || '—')} · ${num(r.quantidade)} ${esc(unDe(r))}
+      <small>Saindo de ${esc(_sel.de)}. Toque na vaga de destino.</small></div>
+    <button class="bt" onclick="cancelarMover()">Cancelar</button>`;
+}
+async function moverPara(dest) {
+  const { item:r, de } = _sel;
+  if (dest === de) { toast('Essa é a vaga de origem. Toque em outra.', 'err'); return; }
+  const ja = _ocupacao[dest] || [];
+  if (!confirm(`Mover ${r.produto_nome || r.codigo} · lote ${r.lote || '—'} (${num(r.quantidade)} ${unDe(r)})\nde ${de} para ${dest}?` +
+               (ja.length ? `\n\n${dest} já tem ${ja.length} item(ns); o palete fica junto.` : ''))) return;
+  try {
+    await atualizarResiliente(r._tab || 'historico',
+      { posicao:dest, updated_at:new Date().toISOString(), feito_por:QUEM }, q => q.eq('id', r.id));
+    await registrarAlteracao({
+      acao:'moveu', posicao:dest, codigo:r.codigo, produto_nome:r.produto_nome, lote:r.lote, armazem:r.armazem,
+      qtd_antes:r.quantidade, qtd_depois:r.quantidade, tabela_ref:r._tab || 'historico', ref_id:r.id,
+      obs:`de ${de} para ${dest}`,
+    });
+    toast(`Movido para ${dest}.`);
+    _sel = null; renderSelbar();
+    await carregar(true);
+    abrirVaga(dest);
+  } catch (e) { toast('Não deu para mover: ' + e.message, 'err', 6000); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BUSCA DE PRODUTO
+   Enquanto digita, lista o que existe: produtos que estão no mapa
+   (com quantas vagas em cada pavilhão), lotes e linhas. Escolher um
+   produto filtra pelo CÓDIGO dele — "BIO 12" não acende mais o
+   BIO 15, o BIOMA PHOS e tudo que tem "BIO" no nome.
+   As palavras valem em qualquer ordem: "trich 10" acha
+   TRICH PROTECTION - 10 L.
+   ═══════════════════════════════════════════════════════════════ */
+let _qProd = null;        // { codigo, nome } quando um produto foi escolhido
+let _bsOps = [];          // opções da lista aberta
+let _bsI = -1;
+
+/* Cada palavra digitada precisa ser o COMEÇO de uma palavra do texto
+   ("bio" acha BIO 12 e BIOMA PHOS, mas não SIMBIOSE). Número longo
+   (código, lote) vale em qualquer parte. */
+const palavrasDe = txt => String(txt || '').toUpperCase().split(/[^A-Z0-9À-Ú-]+/).filter(Boolean)
+  .flatMap(w => w.includes('-') ? [w, ...w.split('-')] : [w]);
+function batePalavras(ps, texto, palavras = palavrasDe(texto)) {
+  const T = String(texto || '').toUpperCase();
+  return ps.every(p => palavras.some(w => w.startsWith(p)) || (p.length >= 4 && /\d/.test(p) && T.includes(p)));
+}
+
+/* Uma vaga bate com o termo? Termo com espaço: todas as palavras
+   precisam bater (produto, código, lote, armazém...). */
+function casaTermo(pos, itens, t) {
+  const ps = t.split(/\s+/).filter(Boolean);
+  if (ps.length === 1 && pos.includes(ps[0])) return true;
+  return itens.some(r => {
+    const b = r._busca ?? (r._busca = chaveBusca(r));
+    const w = r._palavras ?? (r._palavras = palavrasDe(b));
+    return batePalavras(ps, b, w);
+  });
+}
+
+function sugerirBusca(texto) {
+  const q = String(texto || '').trim().toUpperCase();
+  const ps = q.split(/\s+/).filter(Boolean);
+  if (!ps.length) return [];
+  const bate = s => batePalavras(ps, s);
+
+  // produtos no mapa, nos dois pavilhões
+  const prods = new Map(), lotes = new Map();
+  for (const [pos, itens] of Object.entries(_ocupacao)) {
+    const pav = PAV_DO_DI_MAPA[pos.split('-')[0]];
+    for (const r of itens) {
+      const c = normalizarCodigo(r.codigo);
+      const nome = r.produto_nome || produtoPorCodigo(c)?.nome || c;
+      if (bate(`${c} ${nome.toUpperCase()}`)) {
+        const g = prods.get(c) || { tipo:'produto', codigo:c, nome, un:unDe(r), qtd:0, lotes:new Set(), vagas:{} };
+        g.qtd += Number(r.quantidade) || 0; g.lotes.add(r.lote);
+        (g.vagas[pav] ||= new Set()).add(pos);
+        prods.set(c, g);
+      }
+      const lote = String(r.lote || '').toUpperCase();
+      if (q.length >= 3 && lote && lote.includes(q.replace(/\s+/g, ''))) {
+        const k = `${c}|${lote}`;
+        const g = lotes.get(k) || { tipo:'lote', codigo:c, nome, lote, un:unDe(r), qtd:0, vagas:{} };
+        g.qtd += Number(r.quantidade) || 0;
+        (g.vagas[pav] ||= new Set()).add(pos);
+        lotes.set(k, g);
+      }
+    }
+  }
+  const nVagas = g => Object.values(g.vagas).reduce((s, v) => s + v.size, 0);
+  const peso = g => (g.codigo.startsWith(q) ? 0 : g.nome.toUpperCase().startsWith(ps[0]) ? 1 : 2);
+  const out = [];
+  const listaP = [...prods.values()].sort((a, b) => peso(a) - peso(b) || nVagas(b) - nVagas(a)).slice(0, 8);
+  if (listaP.length) out.push({ grupo:'Produtos no mapa' }, ...listaP);
+
+  // do catálogo, mas sem nenhuma vaga — para saber que não está guardado
+  const fora = buscarProdutos(q, 12).filter(p => !prods.has(p.codigo) && bate(`${p.codigo} ${p.nome.toUpperCase()}`)).slice(0, 3);
+  if (fora.length) out.push({ grupo:'No catálogo, sem vaga no mapa' },
+    ...fora.map(p => ({ tipo:'fora', codigo:p.codigo, nome:p.nome })));
+
+  const listaL = [...lotes.values()].sort((a, b) => nVagas(b) - nVagas(a)).slice(0, 5);
+  if (listaL.length) out.push({ grupo:'Lotes' }, ...listaL);
+
+  // linhas: "B1-2" sugere B1-20 a B1-29
+  const m = q.match(/^([AB][12])(?:-(\d{0,2}))?$/);
+  if (m) {
+    const pav = PAV_DO_DI_MAPA[m[1]];
+    const ids = Object.keys(MAPA_POSICOES[pav]?.[m[1]] || {}).filter(ln => !m[2] || ln.startsWith(m[2])).slice(0, 6);
+    if (ids.length) out.push({ grupo:'Linhas' }, ...ids.map(ln => ({ tipo:'linha', id:`${m[1]}-${ln}`, pav })));
+  }
+  return out;
+}
+
+function marcar(txt, q) {
+  let h = esc(txt);
+  for (const p of String(q).trim().toUpperCase().split(/\s+/).filter(x => x.length > 1)) {
+    const re = new RegExp(p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    h = h.replace(re, m => `<mark>${m}</mark>`);
+  }
+  return h;
+}
+
+function renderSugBusca() {
+  const box = $('busca-sug');
+  const texto = $('busca').value;
+  _bsOps = sugerirBusca(texto);
+  _bsI = -1;
+  if (!texto.trim()) { box.hidden = true; $('busca').setAttribute('aria-expanded', 'false'); return; }
+  const outro = p => p === 'simbiose' ? 'Simbiose' : 'Bioma';
+  let i = 0;
+  box.innerHTML = _bsOps.length ? _bsOps.map(o => {
+    if (o.grupo) return `<div class="bs-grupo">${esc(o.grupo)}</div>`;
+    const idx = i++;
+    o._i = idx;
+    if (o.tipo === 'linha') {
+      const pos = posicoesDaLinhaId(o.id);
+      const oc = pos.filter(p => (_ocupacao[p] || []).length).length;
+      return `<button class="bs-op" data-i="${idx}"><span class="bs-nome">Linha ${esc(o.id)}</span>
+        <span class="bs-meta">Pavilhão ${outro(o.pav)}</span><span class="bs-num"><b>${oc}/${pos.length}</b>ocupadas</span></button>`;
+    }
+    if (o.tipo === 'fora') {
+      return `<button class="bs-op" data-i="${idx}"><span class="bs-nome">${marcar(o.nome, texto)}</span>
+        <span class="bs-meta">${esc(o.codigo)} ${seloFilial(o.codigo)}</span><span class="bs-num">nenhuma vaga</span></button>`;
+    }
+    const aqui = o.vagas[_pav]?.size || 0;
+    const la = Object.entries(o.vagas).filter(([p]) => p !== _pav);
+    return `<button class="bs-op" data-i="${idx}">
+      <span class="bs-nome">${o.tipo === 'lote' ? `Lote ${marcar(o.lote, texto)}` : marcar(o.nome, texto)}</span>
+      <span class="bs-meta">${o.tipo === 'lote' ? esc(nomeCurto(o.nome)) + ' · ' : ''}${esc(o.codigo)} ${seloFilial(o.codigo, { destaque:temGemeo(o.codigo) })}${o.tipo === 'produto' ? ` · ${o.lotes.size} lote(s)` : ''}</span>
+      <span class="bs-num"><b>${num(o.qtd)} ${esc(o.un)}</b>${aqui ? `${aqui} vaga(s) aqui` : ''}${la.map(([p, v]) => `<div class="outro">${v.size} no ${outro(p)}</div>`).join('')}</span>
+    </button>`;
+  }).join('') : `<div class="bs-nada">Nada no mapa nem no catálogo com “${esc(texto)}”.</div>`;
+  box.hidden = false;
+  $('busca').setAttribute('aria-expanded', 'true');
+}
+
+function escolherBusca(o) {
+  $('busca-sug').hidden = true;
+  if (!o) return;
+  if (o.tipo === 'linha') {
+    _qProd = null; _q = o.id; $('busca').value = o.id;
+    trocarPavilhao(o.pav);
+  } else if (o.tipo === 'lote') {
+    _qProd = null; _q = o.lote; $('busca').value = o.lote;
+    trocarPavilhao(paraOndeIr(o));
+  } else {
+    _qProd = { codigo:o.codigo, nome:o.nome };
+    _q = o.codigo; $('busca').value = '';
+    if (o.tipo !== 'fora') trocarPavilhao(paraOndeIr(o));
+  }
+  pintar(); gravarURL();
+  document.querySelector('.linha.achou')?.scrollIntoView?.({ block:'center', behavior:'smooth' });
+}
+/* Produto que só está no outro pavilhão: troca sozinho para lá. */
+function paraOndeIr(o) {
+  if (o.vagas?.[_pav]?.size) return _pav;
+  return Object.keys(o.vagas || {})[0] || _pav;
+}
+function trocarPavilhao(pav) {
+  if (!pav || pav === _pav) return;
+  _pav = pav; _di = '';
+  $('sel-pav').value = _pav; popularDI(); construir();
+}
+function limparProduto() {
+  _qProd = null; _q = ''; $('busca').value = '';
+  pintar(); gravarURL(); $('busca').focus();
+}
+
+function teclasBusca(e) {
+  const box = $('busca-sug');
+  const ops = _bsOps.filter(o => !o.grupo);
+  if (e.key === 'Escape') { if (!box.hidden) { box.hidden = true; e.preventDefault(); } return; }
+  if (box.hidden || !ops.length) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    _bsI = (_bsI + (e.key === 'ArrowDown' ? 1 : -1) + ops.length) % ops.length;
+    box.querySelectorAll('.bs-op').forEach((b, i) => b.classList.toggle('marcado', i === _bsI));
+    box.querySelector('.marcado')?.scrollIntoView?.({ block:'nearest' });
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_bsI >= 0) escolherBusca(ops[_bsI]);
+    else box.hidden = true;     // Enter sem escolher: busca pelo texto digitado
+  }
+}
+
+/* O que a busca achou, em uma linha. */
+function resumoBusca(achados) {
+  const fil = $('busca-filtro');
+  if (_qProd) {
+    fil.innerHTML = `<span class="busca-filtro">Produto: <b>${esc(_qProd.nome)}</b> <span class="mono" style="font-family:var(--mono);font-size:.75rem;color:var(--text-3)">${esc(_qProd.codigo)}</span> ${seloFilial(_qProd.codigo)}
+      <button onclick="limparProduto()" title="Tirar o filtro" aria-label="Tirar o filtro">×</button></span>`;
+  } else fil.innerHTML = '';
+  if (!_q) return '';
+  let qtd = 0, un = '', outros = 0;
+  const linhas = new Set();
+  for (const [pos, itens] of Object.entries(_ocupacao)) {
+    const doPav = PAV_DO_DI_MAPA[pos.split('-')[0]] === _pav;
+    const meus = _qProd ? itens.filter(r => normalizarCodigo(r.codigo) === _qProd.codigo) : (casaTermo(pos, itens, _q) ? itens : []);
+    if (!meus.length) continue;
+    if (!doPav) { outros++; continue; }
+    if (_di && !pos.startsWith(_di + '-')) continue;
+    linhas.add(linhaDaPosicao(pos));
+    for (const r of meus) { qtd += Number(r.quantidade) || 0; un = un || unDe(r); }
+  }
+  const outroPav = _pav === 'simbiose' ? 'Bioma' : 'Simbiose';
+  if (!achados) return `<span class="nada">Nada${_qProd ? ' deste produto' : ` com “${esc(_q)}”`} no pavilhão ${_pav === 'simbiose' ? 'Simbiose' : 'Bioma'}${outros ? ` — tem ${outros} vaga(s) no ${outroPav}` : ''}.</span>`;
+  return `<span class="busca-res"><b>${num(achados)}</b> vaga(s) em <b>${linhas.size}</b> linha(s)${_qProd && un ? ` · <b>${num(qtd)} ${esc(un)}</b>` : ''}${outros ? ` · também ${outros} vaga(s) no ${outroPav}` : ''}</span>`;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -702,13 +1088,12 @@ function abrirForm(pos, item = null) {
   $('df-aviso').textContent = '';
   $('df-origem').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.o === _dfOrigem));
   fecharSugestoes();
-  $('dlg-vaga').hidden = true;
   $('dlg-form').hidden = false;
   setTimeout(() => $(item ? 'df-qtd' : 'df-codigo').focus(), 50);
 }
 
-function editarItem(pos, id) {
-  const r = (_ocupacao[pos] || []).find(x => String(x.id) === String(id));
+function editarItem(pos, id, tab) {
+  const r = (_ocupacao[pos] || []).find(x => String(x.id) === String(id) && (!tab || x._tab === tab));
   if (r) abrirForm(pos, r);
 }
 
@@ -881,8 +1266,8 @@ async function salvarForm() {
    ═══════════════════════════════════════════════════════════════ */
 let _exItem = null;
 
-function abrirExpedicao(pos, id) {
-  const r = (_ocupacao[pos] || []).find(x => String(x.id) === String(id));
+function abrirExpedicao(pos, id, tab) {
+  const r = (_ocupacao[pos] || []).find(x => String(x.id) === String(id) && (!tab || x._tab === tab));
   if (!r) return;
   _exItem = { ...r, _pos:pos };
   const un = unidadeDe(r.codigo, r.produto_nome) || 'un';
@@ -891,7 +1276,6 @@ function abrirExpedicao(pos, id) {
   $('ex-disp').textContent = `${num(r.quantidade)} ${un}`;
   $('ex-qtd').value = r.quantidade;
   atualizarRestante();
-  $('dlg-vaga').hidden = true;
   $('dlg-exp').hidden = false;
   setTimeout(() => { $('ex-qtd').focus(); $('ex-qtd').select(); }, 50);
 }
@@ -1013,22 +1397,40 @@ function init() {
   if (MAPA_POSICOES[p.get('pav')]) _pav = p.get('pav');
   _di = (p.get('di') || '').toUpperCase();
   _q  = (p.get('q') || '').trim().toUpperCase();
+  // Link com código de produto: volta com o produto escolhido.
+  if (/^\d{11}$/.test(_q) && produtoPorCodigo(_q)) { _qProd = { codigo:_q, nome:produtoPorCodigo(_q).nome }; }
   $('sel-pav').value = _pav;
-  $('busca').value = _q;
+  $('busca').value = _qProd ? '' : _q;
   popularDI();
 
   lerQuem();
   pintarQuem();
 
-  $('sel-pav').addEventListener('change', e => { _pav = e.target.value; _di = ''; popularDI(); construir(); gravarURL(); });
+  $('sel-pav').addEventListener('change', e => {
+    _pav = e.target.value; _di = '';
+    if (_posAberta && PAV_DO_DI_MAPA[_posAberta.split('-')[0]] !== _pav) fecharLado();
+    popularDI(); construir(); gravarURL();
+  });
   $('sel-di').addEventListener('change', e => { _di = e.target.value; construir(); gravarURL(); });
 
-  const buscar = debounce(v => { _q = v.trim().toUpperCase(); pintar(); gravarURL(); }, 110);
+  const buscar = debounce(v => { _qProd = null; _q = v.trim().toUpperCase(); pintar(); gravarURL(); renderSugBusca(); }, 110);
   $('busca').addEventListener('input', e => buscar(e.target.value));
+  $('busca').addEventListener('keydown', teclasBusca);
+  $('busca').addEventListener('focus', () => { if ($('busca').value.trim()) renderSugBusca(); });
+  $('busca').addEventListener('blur', () => setTimeout(() => { $('busca-sug').hidden = true; }, 150));
+  $('busca-sug').addEventListener('mousedown', e => {
+    const b = e.target.closest('.bs-op'); if (!b) return;
+    e.preventDefault();
+    escolherBusca(_bsOps.find(o => o._i === Number(b.dataset.i)));
+  });
+  // Altura do topo (ele quebra linha no celular): o painel encosta embaixo dele.
+  const ajustarBarra = () => document.documentElement.style.setProperty('--barh', document.querySelector('.bar').offsetHeight + 'px');
+  ajustarBarra(); addEventListener('resize', ajustarBarra);
 
   $('mapa').addEventListener('click', e => {
     const c = e.target.closest('.cel');
-    if (c?.dataset.pos) abrirVaga(c.dataset.pos);
+    if (!c?.dataset.pos) return;
+    if (_sel) moverPara(c.dataset.pos); else abrirVaga(c.dataset.pos);
   });
 
   $('bt-atualizar').addEventListener('click', () => carregar(true));
@@ -1036,8 +1438,6 @@ function init() {
   $('bt-quem').addEventListener('click', mostrarPortaria);
   $('bt-imprimir').addEventListener('click', abrirDialogoImpressao);
 
-  $('dg-x').addEventListener('click', () => { $('dlg-vaga').hidden = true; });
-  $('dg-add').addEventListener('click', () => abrirForm(_posAberta));
   $('df-x').addEventListener('click', () => { $('dlg-form').hidden = true; });
   $('df-cancelar').addEventListener('click', () => { $('dlg-form').hidden = true; });
   $('df-salvar').addEventListener('click', salvarForm);
@@ -1070,7 +1470,7 @@ function init() {
     if (_exItem) { $('ex-qtd').value = _exItem.quantidade; atualizarRestante(); }
   });
 
-  for (const id of ['dlg-vaga', 'dlg-form', 'dlg-exp']) {
+  for (const id of ['dlg-form', 'dlg-exp']) {
     $(id).addEventListener('click', e => { if (e.target.id === id) $(id).hidden = true; });
   }
   $('port-entrar').addEventListener('click', () => entrar($('port-nome').value));
@@ -1080,12 +1480,16 @@ function init() {
   });
 
   document.addEventListener('keydown', e => {
-    if (e.target.matches('input, select')) return;
+    if (e.defaultPrevented) return;
+    // Esc fecha o que estiver aberto mesmo com o cursor num campo.
+    if (e.target.matches('input, select') && e.key !== 'Escape') return;
     if (e.key === '/') { e.preventDefault(); $('busca').focus(); }
     if (e.key === 'Escape') {
-      const ab = ['dlg-exp', 'dlg-form', 'dlg-vaga', 'modal-imp']
+      const ab = ['dlg-exp', 'dlg-form', 'modal-imp']
         .map(id => document.getElementById(id)).find(el => el && !el.hidden);
       if (ab) ab.hidden = true;
+      else if (_sel) cancelarMover();
+      else if (_posAberta) fecharLado();
     }
     if (e.key.toLowerCase() === 't') alternarTema();
     if (e.key.toLowerCase() === 'r') carregar(true);
@@ -1107,7 +1511,8 @@ function init() {
   // Sem nome, ninguém entra: é o que dá dono a cada alteração.
   if (QUEM) carregar(); else mostrarPortaria();
 
-  setInterval(() => { if (!document.hidden) carregar(true); }, 90000);
+  // Atualiza sozinho, mas não no meio de um formulário ou de um mover.
+  setInterval(() => { if (!document.hidden && !_sel && $('dlg-form').hidden && $('dlg-exp').hidden) carregar(true); }, 90000);
 }
 
 window.addEventListener('DOMContentLoaded', init);
