@@ -393,10 +393,106 @@ body.com-lado .tela { max-width:none; margin:0 calc(var(--lado) + 28px) 0 0; }
 .toast.show { opacity:1; transform:translate(-50%,0); }
 .toast.err  { background:var(--toast-er-bg); color:var(--toast-er-fg); }
 
-@media (max-width:700px) {
-  :root { --cel:26px; }
-  .linha { flex-direction:column; align-items:stretch; gap:7px; }
-  .lh { width:100%; }
+/* ═══════════ CELULAR ═══════════
+   Polegar primeiro: topo numa linha só, busca e drive-in grudados
+   embaixo dele, vagas do tamanho do dedo, painel e formulários
+   abrindo de baixo, campos com 16px (o iPhone não dá zoom). */
+.so-cel { display:none !important; }
+.di-tabs { display:none; }
+.menu-mais {
+  position:absolute; right:10px; top:calc(100% + 6px); z-index:60; min-width:230px;
+  background:var(--surface); border:1px solid var(--line-2); border-radius:12px; box-shadow:var(--sh); padding:6px;
+}
+.mm {
+  display:block; width:100%; text-align:left; padding:12px; border:0; border-radius:8px; background:none;
+  color:var(--text); font:inherit; font-size:.9375rem; cursor:pointer; text-decoration:none;
+}
+.mm:hover, .mm:active { background:var(--surface-2); }
+
+@media (max-width:760px) {
+  :root { --cel:40px; --gap:5px; }
+  body { padding-bottom:calc(28px + env(safe-area-inset-bottom)); -webkit-tap-highlight-color:transparent; }
+
+  /* topo: marca, pavilhão, quem e ⋯ */
+  .bar { flex-wrap:nowrap; gap:8px; padding:8px 10px; padding-top:calc(8px + env(safe-area-inset-top)); }
+  .marca b { display:none; }
+  .marca svg { width:24px; height:24px; }
+  .bar select { flex:1 1 0; min-width:0; min-height:42px; font-size:16px; }
+  #sel-di { display:none; }
+  .direita { margin-left:0; gap:6px; flex-shrink:0; }
+  .direita > a.bt, #bt-imprimir, #bt-atualizar, #bt-tema, #quem-nome { display:none; }
+  .so-cel { display:inline-flex !important; align-items:center; justify-content:center; }
+  .direita .bt { display:inline-flex; align-items:center; justify-content:center; min-height:42px; min-width:42px; font-size:1.125rem; }
+  .quem-ini { width:28px; height:28px; font-size:.6875rem; }
+
+  /* busca + abas grudadas embaixo do topo */
+  .tela { padding:0 12px 12px; }
+  .busca-fixa { position:sticky; top:var(--barh, 58px); z-index:19; background:var(--bg); padding:10px 0 8px; margin:0 -12px; padding-left:12px; padding-right:12px; }
+  .busca input { font-size:16px; padding:12px 14px 12px 36px; min-height:48px; }
+  .busca-sug { max-height:58dvh; }
+  .bs-op { padding:13px 12px; }
+  .di-tabs { display:flex; gap:4px; margin-top:8px; padding:3px; border-radius:10px; background:var(--surface-2); border:1px solid var(--line); }
+  .di-tabs button {
+    flex:1; min-height:38px; border:0; border-radius:7px; background:transparent; color:var(--text-2);
+    font:inherit; font-size:.875rem; font-weight:600; cursor:pointer;
+  }
+  .di-tabs button.on { background:var(--surface); color:var(--text); box-shadow:0 0 0 1px var(--line-2); }
+  .busca-filtro { display:flex; width:100%; border-radius:10px; white-space:nowrap; padding:2px 2px 2px 11px; }
+  .busca-filtro b { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+  .busca-filtro > .mono { display:none; }
+  .busca-filtro button { margin-left:auto; min-width:40px; min-height:40px; font-size:1.25rem; }
+  .busca-cnt { margin:6px 0 0; font-size:.75rem; line-height:1.35; min-height:0; }
+  .busca-cnt:empty { display:none; }
+  .stats { margin-top:4px; }
+  .linha { scroll-margin-top:calc(var(--barh, 58px) + 140px); }
+
+  /* números numa faixa só */
+  .stats { display:flex; gap:6px; margin-bottom:10px; }
+  .stat { flex:1; display:flex; align-items:baseline; justify-content:center; gap:5px; padding:7px 6px; }
+  .stat-val { font-size:1.0625rem; }
+  .stat-lbl { font-size:.6875rem; margin:0; }
+
+  /* vagas do tamanho do dedo */
+  .colunas { grid-template-columns:minmax(0,1fr); gap:16px; }
+  .linha { flex-direction:column; align-items:stretch; gap:8px; padding:10px 10px 12px; }
+  .lh { width:100%; flex-wrap:nowrap; gap:8px; }
+  .lh-nome { font-size:.875rem; }
+  .lh-qtd { font-size:.75rem; padding:1px 6px; }
+  .lh-imp, .lh-limpar { padding:10px; }
+  .and .cel { flex:1 1 0; width:auto; max-width:72px; height:var(--cel); border-radius:7px; font-size:.75rem; }
+  .and-n { width:14px; font-size:.625rem; }
+  .cel:hover { box-shadow:none; }
+  .cel.achou { box-shadow:0 0 0 3px var(--accent), 0 0 12px var(--accent-ln); }
+  .legenda { flex-wrap:nowrap; overflow-x:auto; white-space:nowrap; gap:14px; padding-bottom:6px; margin:12px 0 16px; scrollbar-width:none; }
+  .item { padding:12px 13px; }
+
+  /* painel da vaga: folha de baixo, com alça */
+  .lado { max-height:86dvh; padding-bottom:env(safe-area-inset-bottom); border-radius:16px 16px 0 0; }
+  .lado-cab { padding-top:22px; }
+  .lado-cab::before {
+    content:''; position:absolute; top:8px; left:50%; width:38px; height:4px; margin-left:-19px;
+    border-radius:4px; background:var(--line-2);
+  }
+  .lado .bt { min-height:44px; font-size:.9375rem; }
+  .lado-x { font-size:1.375rem; padding:6px 10px; }
+  .lv { padding-top:10px; padding-bottom:10px; }
+
+  /* formulários: folha de baixo, campos grandes */
+  .dlg { padding:0; align-items:flex-end; }
+  .dlg-cx { width:100%; max-width:none; max-height:92dvh; border-radius:16px 16px 0 0; }
+  .dlg-x { font-size:1.375rem; padding:6px 10px; }
+  .dlg-corpo { padding:14px 16px; }
+  .dlg-pe { padding:12px 16px calc(12px + env(safe-area-inset-bottom)); }
+  .dlg-pe .bt { flex:1; min-height:48px; font-size:.9375rem; }
+  .cp input, .cp select, .cp textarea { font-size:16px; padding:12px; min-height:48px; }
+  .seg2 button { min-height:44px; font-size:.875rem; }
+  .sug { max-height:42dvh; }
+  .sug button { padding:12px; }
+
+  .selbar { bottom:calc(10px + env(safe-area-inset-bottom)); flex-wrap:wrap; }
+  .selbar .bt { min-height:44px; }
+  .toast { bottom:calc(16px + env(safe-area-inset-bottom)); max-width:calc(100vw - 24px); }
+  .port-cx input { font-size:16px; }
 }
 </style>
 </head>
@@ -424,18 +520,29 @@ body.com-lado .tela { max-width:none; margin:0 calc(var(--lado) + 28px) 0 0; }
       <span class="quem-ini" id="quem-ini">?</span><span id="quem-nome">—</span>
     </button>
     <button class="bt" id="bt-tema" title="Tema (T)">◐</button>
+    <button class="bt so-cel" id="bt-mais" aria-label="Mais opções" aria-expanded="false">⋯</button>
+  </div>
+  <div class="menu-mais" id="menu-mais" hidden>
+    <button class="mm" onclick="fecharMais();carregar(true)">Atualizar o mapa</button>
+    <button class="mm" onclick="fecharMais();abrirDialogoImpressao()">Imprimir</button>
+    <a class="mm" href="./layout.html">Ver o pavilhão em 3D</a>
+    <button class="mm" onclick="fecharMais();alternarTema()">Trocar o tema</button>
+    <button class="mm" onclick="fecharMais();mostrarPortaria()">Trocar de pessoa</button>
   </div>
 </div>
 
 <main class="tela">
+  <div class="busca-fixa">
   <div class="busca">
     <span class="lupa" aria-hidden="true">⌕</span>
     <input type="search" id="busca" placeholder="Buscar produto (nome ou código), lote, armazém ou linha (B1-22) · tecla /" autocomplete="off"
            role="combobox" aria-expanded="false" aria-controls="busca-sug">
     <div class="busca-sug" id="busca-sug" role="listbox" hidden></div>
   </div>
+  <div class="di-tabs" id="di-tabs" role="tablist" aria-label="Drive-in"></div>
   <div id="busca-filtro"></div>
   <div class="busca-cnt" id="busca-cnt"></div>
+  </div>
 
   <div class="stats">
     <div class="stat"><div class="stat-val" id="k-total">—</div><div class="stat-lbl">Vagas</div></div>
@@ -1010,7 +1117,13 @@ function escolherBusca(o) {
     _q = o.codigo; $('busca').value = '';
     if (o.tipo !== 'fora') trocarPavilhao(paraOndeIr(o));
   }
+  if (o.tipo === 'linha') {
+    const d = o.id.split('-')[0];
+    if (_di && _di !== d) { _di = d; $('sel-di').value = d; popularDI(); construir(); }
+  } else if (_qProd) irAteResultado((pos, itens) => itens.some(r => normalizarCodigo(r.codigo) === _qProd.codigo));
+  else irAteResultado((pos, itens) => casaTermo(pos, itens, _q));
   pintar(); gravarURL();
+  if (ehCelular()) $('busca').blur();
   document.querySelector('.linha.achou')?.scrollIntoView?.({ block:'center', behavior:'smooth' });
 }
 /* Produto que só está no outro pavilhão: troca sozinho para lá. */
@@ -1020,8 +1133,19 @@ function paraOndeIr(o) {
 }
 function trocarPavilhao(pav) {
   if (!pav || pav === _pav) return;
-  _pav = pav; _di = '';
+  _pav = pav; _di = ''; diInicialCelular();
   $('sel-pav').value = _pav; popularDI(); construir();
+}
+/* Com um drive-in só aberto (o normal no celular), o resultado pode
+   estar no outro. Vai para lá; se estiver nos dois, mostra todos. */
+function irAteResultado(casa) {
+  if (!_di) return;
+  const dis = new Set();
+  for (const [pos, itens] of Object.entries(_ocupacao))
+    if (PAV_DO_DI_MAPA[pos.split('-')[0]] === _pav && casa(pos, itens)) dis.add(pos.split('-')[0]);
+  if (!dis.size || (dis.size === 1 && dis.has(_di))) return;
+  _di = dis.size === 1 ? [...dis][0] : '';
+  $('sel-di').value = _di; popularDI(); construir();
 }
 function limparProduto() {
   _qProd = null; _q = ''; $('busca').value = '';
@@ -1371,6 +1495,8 @@ function pintarQuem() {
   $('quem-nome').textContent = QUEM || '—';
 }
 
+function fecharMais() { $('menu-mais').hidden = true; $('bt-mais').setAttribute('aria-expanded', 'false'); }
+
 /* ═══════════════════════════════════════════════════════════════
    INÍCIO
    ═══════════════════════════════════════════════════════════════ */
@@ -1380,6 +1506,20 @@ function popularDI() {
     dis.map(d => `<option value="${d}">Drive-in ${d}</option>`).join('');
   $('sel-di').value = dis.includes(_di) ? _di : '';
   _di = $('sel-di').value;
+  // No celular o drive-in é escolhido por abas, no polegar.
+  $('di-tabs').innerHTML = [['', 'Todos'], ...dis.map(d => [d, d])].map(([v, t]) =>
+    `<button role="tab" aria-selected="${v === _di}" class="${v === _di ? 'on' : ''}" onclick="escolherDI('${v}')">${t}</button>`).join('');
+}
+function escolherDI(v) {
+  _di = v; $('sel-di').value = v;
+  popularDI(); construir(); gravarURL();
+  scrollTo({ top:0 });
+}
+const ehCelular = () => matchMedia('(max-width:760px)').matches;
+/* Celular abre num drive-in só: o pavilhão inteiro empilhado vira
+   uma rolagem sem fim. As abas trocam; "Todos" continua lá. */
+function diInicialCelular() {
+  if (ehCelular() && !_di) _di = Object.keys(MAPA_POSICOES[_pav]).sort()[0];
 }
 
 const gravarURL = () => {
@@ -1399,6 +1539,8 @@ function init() {
   _q  = (p.get('q') || '').trim().toUpperCase();
   // Link com código de produto: volta com o produto escolhido.
   if (/^\d{11}$/.test(_q) && produtoPorCodigo(_q)) { _qProd = { codigo:_q, nome:produtoPorCodigo(_q).nome }; }
+  if (!p.get('di')) diInicialCelular();
+  if (ehCelular()) $('busca').placeholder = 'Produto, código, lote ou linha';
   $('sel-pav').value = _pav;
   $('busca').value = _qProd ? '' : _q;
   popularDI();
@@ -1407,7 +1549,7 @@ function init() {
   pintarQuem();
 
   $('sel-pav').addEventListener('change', e => {
-    _pav = e.target.value; _di = '';
+    _pav = e.target.value; _di = ''; diInicialCelular();
     if (_posAberta && PAV_DO_DI_MAPA[_posAberta.split('-')[0]] !== _pav) fecharLado();
     popularDI(); construir(); gravarURL();
   });
@@ -1435,6 +1577,12 @@ function init() {
 
   $('bt-atualizar').addEventListener('click', () => carregar(true));
   $('bt-tema').addEventListener('click', alternarTema);
+  $('bt-mais').addEventListener('click', e => {
+    e.stopPropagation();
+    const m = $('menu-mais'); m.hidden = !m.hidden;
+    $('bt-mais').setAttribute('aria-expanded', String(!m.hidden));
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('#menu-mais')) fecharMais(); });
   $('bt-quem').addEventListener('click', mostrarPortaria);
   $('bt-imprimir').addEventListener('click', abrirDialogoImpressao);
 
