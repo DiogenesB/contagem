@@ -454,14 +454,36 @@ function calcularSaldoCompleto() {
       m.vagas.forEach(v => j.vagas.add(v)); j.itens.push(...m.itens);
       m.armsMapa.forEach(a => j.armsMapa.includes(a) || j.armsMapa.push(a));
     }
+    /* Só a parte do sistema que o mapa cobre entra na troca. Ex.: mapa
+       com 260 no D4, sistema com 3.805 no D7 → a troca é de 260 (D4 × D7)
+       e os 3.545 que sobram continuam na linha do D7, onde é a conta
+       deles. Antes o D7 inteiro vinha junto e parecia faltar 3.545. */
+    let resta = j.mapa;
+    j.partes = [];
+    const pegar = (qtd) => { const t = Math.max(0, Math.min(qtd, resta)); resta -= t; return t; };
     for (const s of ss) {
-      linhas.delete(s.k);
-      j.sistema = (j.sistema ?? 0) + s.sistema; j.empenho += s.empenho;
+      const t = pegar(s.sistema);
+      if (!t) continue;
+      j.sistema = (j.sistema ?? 0) + t;
       s.armsSis.forEach(a => j.armsSis.includes(a) || j.armsSis.push(a));
       if (s.produto) j.produto = s.produto;
       j.unSis = j.unSis || s.unSis;
+      if (s.foto && (!j.foto || s.foto < j.foto)) j.foto = s.foto;
+      j.partes.push({ arm:s.armsSis[0], total:s.sistema, usado:t });
+      if (t >= s.sistema - 0.001) { linhas.delete(s.k); j.empenho += s.empenho; }
+      else s.sistema = arred(s.sistema - t);          // o resto fica na linha dele
     }
-    for (const s of fs) { foraSis.delete(s.k); somaSis(j, s); }
+    for (const s of fs) {
+      const t = pegar(s.saldo);
+      if (!t) continue;
+      j.partes.push({ arm:s.arm, total:s.saldo, usado:t });
+      if (t >= s.saldo - 0.001) { foraSis.delete(s.k); somaSis(j, s); }
+      else {
+        somaSis(j, { ...s, saldo:t, empenho:0 });
+        s.saldo = arred(s.saldo - t);                 // o resto continua fora da conta
+      }
+    }
+    if (j.sistema === null) { for (const m of ms) linhas.set(m.k, m); continue; }   // nada para trocar
     j.trocado = true;
     linhas.set(j.k, j);
   }
@@ -567,6 +589,10 @@ function calcularSaldoCompleto() {
       l.dicas.push({ t:'Mapa diz <b>' + l.armsMapa.map(esc).join(', ') + '</b>, sistema diz <b>' +
         l.armsSis.map(a => esc(a) + (nomeArmazem(a) ? ` (${esc(nomeArmazem(a))})` : '')).join(', ') + '</b>.' +
         (Math.abs(l.mapa - (l.sistema || 0)) > 0.001 ? ` E ainda sobra/falta ${sQtd(l.mapa - (l.sistema || 0), un)}.` : ' A quantidade bate.'), c:'alt' });
+      for (const p of l.partes || []) if (p.total - p.usado > 0.001)
+        l.dicas.push({ t:`O sistema tem ${sQtd(p.total, un)} deste lote no <b>${esc(p.arm)}</b>; só ${sQtd(p.usado, un)} estão no mapa como ${esc(l.armsMapa.join(', '))}. ` +
+          `Os outros ${sQtd(p.total - p.usado, un)} continuam na conta do ${esc(p.arm)}` +
+          (dentro(p.arm) ? ' — aparece em linha própria.' : ' (armazém fora da conta).'), c:'info' });
     }
     for (const a of l.armsMapa) {
       if (!armazemConhecido(a)) l.dicas.push({ t:`O armazém <b>${esc(a || 'vazio')}</b> não existe na lista física — provável digitação.`, c:'neg' });
