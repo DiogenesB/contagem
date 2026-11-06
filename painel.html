@@ -2398,9 +2398,10 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="./comum.js?v=7"></script>
-<script src="./saldo-mapeado.js?v=6"></script>
+<script src="./saldo-mapeado.js?v=7"></script>
 <script src="./inicio.js?v=1"></script>
 <script src="./impressao.js?v=3"></script>
+<script src="./identificacao.js?v=2"></script>
 <script>
 'use strict';
 
@@ -4901,6 +4902,7 @@ function abrirVaga(pos) {
             <div class="section-note">${esc(r.codigo)} ${badgeFilial(r.filial, r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')} · ${qtdUn(r.quantidade, r.codigo, r.produto_nome)}</div>
           </div>
           <div class="btn-row">
+            <button class="btn btn-sm" onclick="identificacaoVaga('${esc(pos)}','${esc(r.id)}','${esc(r._tab)}')">⎙ Identificação</button>
             <button class="btn btn-sm" onclick="fecharModal('modal-vaga-lista');editarVaga('${esc(pos)}','${esc(r.id)}','${esc(r._tab)}')">Editar</button>
             <button class="btn btn-sm btn-danger" onclick="fecharModal('modal-vaga-lista');liberar('${esc(r.id)}','${esc(r._tab)}','${esc(pos)}')">Liberar</button>
           </div>
@@ -4909,6 +4911,12 @@ function abrirVaga(pos) {
     </div>`).join('');
   $('mvl-add').onclick = () => { fecharModal('modal-vaga-lista'); abrirModalVaga(null, pos); };
   abrirModal('modal-vaga-lista');
+}
+
+/* Identificação do palete (identificacao.js) do item da vaga. */
+function identificacaoVaga(pos, id, tab) {
+  const r = (_ocupacao[pos] || []).find(x => String(x.id) === String(id) && x._tab === tab);
+  if (r) abrirIdentificacao(r);
 }
 
 function editarVaga(pos, id, tab) {
