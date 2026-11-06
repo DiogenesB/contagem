@@ -736,9 +736,12 @@ table.k-rg tfoot td { font-weight:600; border-top:1px solid var(--line-2); backg
 .mlinha.tem-hit { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent-ln); }
 
 .ml-head {
-  display:flex; align-items:baseline; justify-content:space-between;
-  gap:6px; margin-bottom:7px;
+  display:flex; align-items:center; flex-wrap:wrap;
+  gap:2px 6px; margin-bottom:7px; min-width:0;
 }
+/* Imprimir e limpar ficam sempre dentro do cartão: se não couber
+   ao lado do total, descem para a linha de baixo, à direita. */
+.ml-acoes { margin-left:auto; display:flex; align-items:center; gap:2px; flex-shrink:0; }
 .ml-nome { font-family:var(--mono); font-size:.8125rem; font-weight:600; color:var(--text); white-space:nowrap; }
 .ml-ocup { font-family:var(--mono); font-size:.6875rem; color:var(--text-3); }
 .mlinha.cheia .ml-ocup { color:var(--warn); }
@@ -1032,7 +1035,7 @@ table.mini .acao { text-align:right; }
 .ml-limpar:hover { color:var(--neg); background:var(--neg-sf); }
 .mlinha.vazia .ml-limpar { visibility:hidden; }
 .ml-qtd {
-  margin-left:auto; font-family:var(--mono); font-size:.6875rem; font-weight:600;
+  font-family:var(--mono); font-size:.6875rem; font-weight:600;
   color:var(--text); background:var(--surface-3); border-radius:4px; padding:0 5px;
 }
 .ml-qtd:empty { display:none; }
@@ -4507,10 +4510,10 @@ function montarDrivein(pav, di, alvo) {
     head.className = 'ml-head';
     head.innerHTML = `<span class="ml-nome">${di}-${ln}</span>
       <span class="ml-qtd"></span><span class="ml-ocup"></span>
-      <button class="ml-imp" title="Imprimir só esta linha"
+      <span class="ml-acoes"><button class="ml-imp" title="Imprimir só esta linha"
               onclick="event.stopPropagation();imprimirLinha('${di}','${ln}','${pav}')">⎙</button>
       <button class="ml-limpar" title="Limpar a linha inteira" aria-label="Limpar a linha ${di}-${ln}"
-              onclick="event.stopPropagation();limparLinha('${di}','${ln}','${pav}',{extra:carimbo(),aoTerminar:carregarMapa})"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>`;
+              onclick="event.stopPropagation();limparLinha('${di}','${ln}','${pav}',{extra:carimbo(),aoTerminar:carregarMapa})"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button></span>`;
     bloco.appendChild(head);
 
     const corpoGrade = document.createElement('div');
