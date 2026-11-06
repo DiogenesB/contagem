@@ -173,6 +173,9 @@ async function lerPlanilhaRef(file) {
       saldo:     paraNumero(l.saldo) ?? 0,
       empenho:   paraNumero(l.empenho),
       filial:    String(l.filial || '').trim(),
+      // Para a identificação do palete (coluna nova: migracao-identificacao.sql).
+      dt_fabricacao: paraData(l.dt_fabricacao),
+      dt_validade:   paraData(l.dt_validade),
       importado_por: GESTOR || 'painel',
     }));
     if (!todas.length) throw new Error('nenhuma linha com código');
@@ -192,7 +195,20 @@ async function lerPlanilhaRef(file) {
          Apaga todo o saldo antigo do ${esc(_importAlvo)}${antigas ? ` (${num(antigas)} linha(s), de qualquer filial)` : ''} e grava este no lugar; os outros armazéns não mudam.`
       : `<b>Geral — todos os armazéns</b>${num(_registrosRef.length)} linha(s).
          Troca a foto inteira ${filiais.length > 1 ? 'dessas filiais' : 'dessa filial'}, inclusive armazéns importados um a um antes.`;
-    status.innerHTML = `
+    // As datas (fabricação e validade) só são gravadas se o banco já tem
+    // as colunas. Sem elas o import passa calado e a identificação do
+    // palete fica sem data — então avisa ANTES de gravar.
+    const comDatas = _registrosRef.some(r => r.dt_fabricacao || r.dt_validade);
+    let semColunaData = false;
+    if (comDatas) {
+      try { const { error } = await sb.from('estoque_ref').select('dt_fabricacao, dt_validade').limit(1); semColunaData = !!error; }
+      catch { semColunaData = true; }
+    }
+    const avisoDatas = semColunaData
+      ? `<div class="aviso a-warn" style="margin-top:10px"><span class="aviso-ico">!</span><div><b>As datas não vão ser gravadas</b>
+           O banco ainda não tem as colunas de fabricação e validade. Rode o <b>sql/migracao-identificacao.sql</b> no Supabase e solte a planilha de novo — senão a identificação do palete sai sem data.</div></div>`
+      : comDatas ? '' : `<div class="aviso a-info" style="margin-top:10px"><span class="aviso-ico">i</span><div>A planilha não tem as colunas “data de fabricação” e “data de validade” — a identificação do palete vai sair sem data.</div></div>`;
+    status.innerHTML = `${avisoDatas}
       <div class="aviso ${_importAlvo ? 'a-info' : 'a-warn'}" style="margin-top:12px">
         <span class="aviso-ico">▤</span>
         <div><b>${esc(file.name)}</b>
