@@ -346,7 +346,11 @@ async function abrirIdentificacao(r) {
   if (!cat && d.descricao && vazio('idp-produto')) set('idp-produto', d.descricao);
   const faltam = [!d.tipo && 'tipo', !d.fabricacao && 'fabricação', !d.validade && 'validade'].filter(Boolean);
   if (!faltam.length) { aviso.className = 'idp-aviso ok'; aviso.textContent = `Tipo e datas vieram da ${d.origem}. Confira antes de imprimir.`; }
-  else if (faltam.length < 3) { aviso.className = 'idp-aviso falta'; aviso.textContent = `Veio da ${d.origem}, mas sem ${faltam.join(' e ')}. Preencha à mão se precisar.`; }
+  else if (faltam.length < 3) {
+    aviso.className = 'idp-aviso falta';
+    aviso.textContent = `Veio da ${d.origem}, mas sem ${faltam.join(' e ')}. Preencha à mão.` +
+      (!d.fabricacao && !d.validade ? ' Se a planilha do ERP tem as datas: rode o migracao-identificacao.sql e importe o armazém de novo no Saldo mapeado.' : '');
+  }
   else { aviso.className = 'idp-aviso falta'; aviso.textContent = 'Este lote não está na planilha do ERP nem no saldo da contagem. Preencha tipo e datas à mão.'; }
   pintarIdentificacao();
 }
