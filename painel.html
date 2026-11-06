@@ -2398,10 +2398,10 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="./comum.js?v=7"></script>
-<script src="./saldo-mapeado.js?v=7"></script>
+<script src="./saldo-mapeado.js?v=8"></script>
 <script src="./inicio.js?v=1"></script>
 <script src="./impressao.js?v=3"></script>
-<script src="./identificacao.js?v=2"></script>
+<script src="./identificacao.js?v=3"></script>
 <script>
 'use strict';
 
@@ -2428,6 +2428,10 @@ function daFilial(v) {
 function avisoColunasIgnoradas(tabela) {
   const c = _colunasIgnoradas[tabela];
   if (!c?.size) return '';
+  if (tabela === 'estoque_ref' && (c.has('dt_fabricacao') || c.has('dt_validade')))
+    return `<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Fabricação e validade não foram gravadas</b>
+      O banco não tem essas colunas. Rode o <b>sql/migracao-identificacao.sql</b> no Supabase e importe de novo.
+      ${[...c].filter(x => !/^dt_/.test(x)).length ? `Outras colunas ignoradas: ${[...c].filter(x => !/^dt_/.test(x)).map(esc).join(', ')}.` : ''}</div></div>`;
   return `<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Colunas ignoradas em ${esc(tabela)}</b>${[...c].map(esc).join(', ')} — não existem no banco. Os dados foram gravados sem elas.</div></div>`;
 }
 
