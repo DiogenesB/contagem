@@ -233,7 +233,7 @@ select:hover, .bt:hover { border-color:var(--line-2); }
 .ficha-qtd small { font-size:.625rem; font-weight:400; color:var(--text-3); margin-left:4px; }
 .ficha-acoes { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
 .ficha-acoes .bt { flex:1; text-align:center; }
-.ficha-acoes .bt-idp { flex-basis:100%; }
+.ficha-acoes .quebra { flex-basis:100%; height:0; }
 
 .cp { display:block; margin-bottom:13px; }
 .cp > span { display:block; font-size:.75rem; font-weight:600; color:var(--text-2); margin-bottom:5px; }
@@ -534,6 +534,10 @@ body.com-lado .tela { max-width:none; margin:0 calc(var(--lado) + 28px) 0 0; }
 
 <main class="tela">
   <div class="busca-fixa">
+  <div class="vistas" role="tablist" aria-label="O que ver">
+    <button id="vt-drive" class="on" role="tab" aria-selected="true" onclick="trocarVista('drive')">Drive-in</button>
+    <button id="vt-sep" role="tab" aria-selected="false" onclick="trocarVista('sep')">Pedidos separados <span class="vt-n" id="vt-n"></span></button>
+  </div>
   <div class="busca">
     <span class="lupa" aria-hidden="true">⌕</span>
     <input type="search" id="busca" placeholder="Buscar produto (nome ou código), lote, armazém ou linha (B1-22) · tecla /" autocomplete="off"
@@ -562,6 +566,15 @@ body.com-lado .tela { max-width:none; margin:0 calc(var(--lado) + 28px) 0 0; }
   </div>
 
   <div id="lista"></div>
+
+  <section id="separados" aria-label="Pedidos separados">
+    <div class="sep-topo">
+      <div class="sep-busca"><input type="search" id="sep-busca" placeholder="Buscar produto, lote ou pedido" autocomplete="off"></div>
+      <div class="seg2" id="sep-filtro"></div>
+    </div>
+    <div class="sep-resumo" id="sep-resumo"></div>
+    <div id="sep-lista"><div class="esqueleto"></div></div>
+  </section>
 </main>
 
 <aside class="lado" id="lado" hidden aria-live="polite"></aside>
@@ -638,6 +651,7 @@ body.com-lado .tela { max-width:none; margin:0 calc(var(--lado) + 28px) 0 0; }
 <script src="./comum.js?v=7"></script>
 <script src="./impressao.js?v=4"></script>
 <script src="./identificacao.js?v=3"></script>
+<script src="./separacao.js?v=4"></script>
 <script>
 let sb = null;
 let _ocupacao = {};
@@ -670,6 +684,8 @@ async function carregar(silencioso = false) {
 
     construir();
     if (_posAberta) renderLado();
+    // separacao.js: se o arquivo não subir, o mapa continua funcionando.
+    if (typeof carregarSeparacao === 'function') await carregarSeparacao();
   } catch (e) {
     $('mapa').innerHTML = `<div class="vazio"><div class="vazio-t">O mapa não carregou</div>
       <div class="vazio-s">${esc(e.message)}</div></div>`;
@@ -888,7 +904,9 @@ function fichaHTML(pos, r) {
       <button class="bt destaque" onclick="abrirExpedicao('${esc(pos)}','${esc(r.id)}','${r._tab}')">Expedir</button>
       <button class="bt" onclick="iniciarMover('${esc(pos)}','${esc(r.id)}','${r._tab}')">Mover</button>
       <button class="bt" onclick="editarItem('${esc(pos)}','${esc(r.id)}','${r._tab}')">Editar</button>
-      <button class="bt bt-idp" onclick="identificacaoItem('${esc(pos)}','${esc(r.id)}','${r._tab}')">⎙ Identificação do palete</button>
+      <span class="quebra"></span>
+      <button class="bt bt-sep" onclick="abrirSeparar('${esc(pos)}','${esc(r.id)}','${r._tab}')">→ Separação</button>
+      <button class="bt bt-idp" onclick="identificacaoItem('${esc(pos)}','${esc(r.id)}','${r._tab}')">⎙ Identificação</button>
     </div>
   </div>`;
 }
@@ -956,11 +974,13 @@ function renderSelbar() {
   if (!_sel) { bar.hidden = true; return; }
   const r = _sel.item;
   bar.hidden = false;
+  if (_sel.modo === 'retornar' && typeof selbarRetornoHTML === 'function') { bar.innerHTML = selbarRetornoHTML(); return; }
   bar.innerHTML = `<div class="txt"><b>Movendo ${esc(nomeCurto(r.produto_nome || r.codigo))}</b> · lote ${esc(r.lote || '—')} · ${num(r.quantidade)} ${esc(unDe(r))}
       <small>Saindo de ${esc(_sel.de)}. Toque na vaga de destino.</small></div>
     <button class="bt" onclick="cancelarMover()">Cancelar</button>`;
 }
 async function moverPara(dest) {
+  if (_sel?.modo === 'retornar' && typeof retornarPara === 'function') return retornarPara(dest);
   const { item:r, de } = _sel;
   if (dest === de) { toast('Essa é a vaga de origem. Toque em outra.', 'err'); return; }
   const ja = _ocupacao[dest] || [];
@@ -1536,6 +1556,7 @@ const gravarURL = () => {
   p.set('pav', _pav);
   if (_di) p.set('di', _di);
   if (_q)  p.set('q', _q);
+  if (typeof _vista !== 'undefined' && _vista === 'sep') p.set('vista', 'sep');
   history.replaceState(null, '', '?' + p.toString());
 };
 
@@ -1642,7 +1663,7 @@ function init() {
     if (e.target.matches('input, select') && e.key !== 'Escape') return;
     if (e.key === '/') { e.preventDefault(); $('busca').focus(); }
     if (e.key === 'Escape') {
-      const ab = ['dlg-exp', 'dlg-form', 'modal-imp']
+      const ab = ['dlg-exp', 'dlg-form', 'modal-imp', 'dlg-sep', 'idp-bg']
         .map(id => document.getElementById(id)).find(el => el && !el.hidden);
       if (ab) ab.hidden = true;
       else if (_sel) cancelarMover();
@@ -1666,10 +1687,16 @@ function init() {
   });
 
   // Sem nome, ninguém entra: é o que dá dono a cada alteração.
+  // Pedidos separados: busca própria e link direto (?vista=sep).
+  if (typeof trocarVista === 'function') {
+    $('sep-busca').addEventListener('input', debounce(e => { _sepQ = e.target.value; renderSeparados(); }, 120));
+    if (p.get('vista') === 'sep') trocarVista('sep');
+  } else $('vt-sep').hidden = true;
+
   if (QUEM) carregar(); else mostrarPortaria();
 
   // Atualiza sozinho, mas não no meio de um formulário ou de um mover.
-  setInterval(() => { if (!document.hidden && !_sel && $('dlg-form').hidden && $('dlg-exp').hidden) carregar(true); }, 90000);
+  setInterval(() => { if (!document.hidden && !_sel && $('dlg-form').hidden && $('dlg-exp').hidden && ($('dlg-sep')?.hidden ?? true)) carregar(true); }, 90000);
 }
 
 window.addEventListener('DOMContentLoaded', init);
