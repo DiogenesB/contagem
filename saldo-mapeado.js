@@ -20,6 +20,12 @@
    kpi, irPara, abrirVaga, setEscopoMapa, imprimirTabela...
    ═══════════════════════════════════════════════════════════════ */
 
+/* Rótulos das ações da separação na trilha de alterações. */
+if (typeof ACOES === 'object') Object.assign(ACOES, {
+  separou:  { rot:'Mandou para a separação', cor:'warn' },
+  retornou: { rot:'Voltou da separação',     cor:'pos'  },
+});
+
 /* ── planilha de referência ── */
 let _refInfo        = null;       // { linhas, porArm:{arm:{quando,quem,linhas}}, de, ate }
 let _registrosRef   = null;       // planilha lida, esperando "Usar esta planilha"
@@ -290,8 +296,20 @@ async function carregarOcupacaoSaldo() {
   const m = {};
   comFilial(hist);
   for (const r of hist) (m[r.posicao] ||= []).push({ ...r, _tab:'historico' });
+  // Pedidos separados (mapa.html → aba Pedidos separados): saíram do
+  // drive-in mas continuam no armazém do ERP até faturar — contam como
+  // mapeados, num lugar só chamado SEPARAÇÃO.
+  try {
+    const { data, error } = await sb.from('separacao')
+      .select('id, codigo, produto_nome, lote, armazem, quantidade, filial, pedido, separado_em').eq('status', 'separado');
+    if (!error && data?.length) {
+      comFilial(data);
+      m[SALDO_SEP] = data.map(r => ({ ...r, posicao:SALDO_SEP, origem:r.pedido ? `pedido ${r.pedido}` : 'separado', created_at:r.separado_em, _tab:'separacao', sep:true }));
+    }
+  } catch { /* tabela ainda não criada */ }
   _sOcup = m;
 }
+const SALDO_SEP = 'SEPARAÇÃO';
 
 /* Mexidas no mapa por produto+lote, com a data de cada uma. Cada
    lote compara com a data da SUA planilha — com importação por
@@ -979,6 +997,7 @@ function linhaLote(l, sub = false) {
         <span class="seta">${aberta ? '▾' : '▸'}</span>${esc(sub ? '' : l.produto)}
         <span class="est-rot c-${s.cor}">${s.rot}</span>
         ${l.estado !== 'ok' && l.dicas.some(d => d.mexida) ? '<span class="tag t-warn" title="Mexeram no mapa depois da planilha deste armazém">mexido</span>' : ''}
+        ${l.itens.some(r => r.sep) ? `<span class="tag t-info" title="Parte do mapeado está na área de separação (pedido separado, ainda não faturado)">separado</span>` : ''}
       </td>
       <td class="mono">${l.estado === 'codigo'
         ? `<span class="s-troca">${esc(l.codMapa)}<i>→</i>${esc(l.codSis)}</span><div class="s-fils">${seloFilial(l.filMapa || l.codMapa)} → ${seloFilial(l.filSis || l.codSis)}</div>`
@@ -1034,7 +1053,9 @@ function detalheLote(l, i) {
             <td class="mono">${sQtd(r.quantidade, l.un)}</td>
             <td><span class="tag t-mute">${esc(r.origem || 'manual')}</span></td>
             <td class="mono">${fmtDia(r.created_at)}</td>
-            <td class="acao"><button class="btn btn-sm" onclick="event.stopPropagation();irParaVaga('${esc(r.pos)}')">Ver no mapa</button></td>
+            <td class="acao">${r.sep
+              ? `<a class="btn btn-sm" href="./mapa.html?vista=sep" target="_blank" rel="noopener" onclick="event.stopPropagation()">Ver separados</a>`
+              : `<button class="btn btn-sm" onclick="event.stopPropagation();irParaVaga('${esc(r.pos)}')">Ver no mapa</button>`}</td>
           </tr>`).join('')}
         </tbody>
       </table>` : `<div class="det-vazio-s">Nenhuma vaga no mapa com este lote. Ou não foi guardado no drive, ou saiu sem baixar aqui.</div>`}
@@ -1239,7 +1260,8 @@ function transferenciaSaldo(i) {
 function imprimirGrupo(i) {
   const l = _sReg[i];
   if (!l?.itens.length) return;
-  const linhas = [...new Set(l.itens.map(r => r.pos.split('-').slice(0, 2).join('-')))].sort();
+  const linhas = [...new Set(l.itens.filter(r => !r.sep).map(r => r.pos.split('-').slice(0, 2).join('-')))].sort();
+  if (!linhas.length) { toast('Este lote está só na área de separação — não há linha do drive para imprimir.', 'warn', 5000); return; }
   const alvos = linhas.map(id => { const [di, ln] = id.split('-'); return alvoDaLinha(di, ln); });
   const n = paginarLinhas(caixaImpressao(), alvos, 'Espelho do drive-in', `${l.produto} · lote ${l.lote || '—'}`, 1);
   dispararImpressao(n);
