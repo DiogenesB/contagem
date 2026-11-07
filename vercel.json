@@ -8,7 +8,7 @@
   ],
   "headers": [
     {
-      "source": "/(comum|fila|impressao).js",
+      "source": "/(comum|fila|impressao|identificacao|saldo-mapeado|inicio|separacao).js",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     },
     {
