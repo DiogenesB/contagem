@@ -1,0 +1,19 @@
+{
+  "id": "/mapa",
+  "name": "Mapa do drive-in · Simbiose",
+  "short_name": "Mapa",
+  "description": "Onde está cada palete no drive-in: guardar, mover, expedir e separar.",
+  "start_url": "./mapa.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F6F7F9",
+  "theme_color": "#14171C",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "./icones/mapa-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icones/mapa-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icones/mapa-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "categories": ["productivity", "utilities"]
+}
