@@ -531,7 +531,7 @@ body.com-lado .tela { max-width:none; margin:0 calc(var(--lado) + 28px) 0 0; }
     <a class="bt" href="./layout.html" title="Ver o pavilhão em 3D" style="text-decoration:none">3D</a>
     <button class="bt" id="bt-imprimir" title="Imprimir (P)">⎙ Imprimir</button>
     <button class="bt" id="bt-atualizar" title="Atualizar (R)">↻</button>
-    <button class="bt quem-chip" id="bt-quem" title="Trocar de pessoa">
+    <button class="bt quem-chip" id="bt-quem" title="Trocar de usuário">
       <span class="quem-ini" id="quem-ini">?</span><span id="quem-nome">—</span>
     </button>
     <button class="bt" id="bt-tema" title="Tema (T)">◐</button>
@@ -542,7 +542,7 @@ body.com-lado .tela { max-width:none; margin:0 calc(var(--lado) + 28px) 0 0; }
     <button class="mm" onclick="fecharMais();abrirDialogoImpressao()">Imprimir</button>
     <a class="mm" href="./layout.html">Ver o pavilhão em 3D</a>
     <button class="mm" onclick="fecharMais();alternarTema()">Trocar o tema</button>
-    <button class="mm" onclick="fecharMais();mostrarPortaria()">Trocar de pessoa</button>
+    <button class="mm" onclick="fecharMais();trocarPessoa()">Trocar de usuário</button>
     <button class="mm" id="mm-instalar" onclick="fecharMais();instalarApp()" hidden>Instalar o app no celular</button>
   </div>
 </div>
@@ -664,6 +664,7 @@ body.com-lado .tela { max-width:none; margin:0 calc(var(--lado) + 28px) 0 0; }
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="./comum.js?v=7"></script>
+<script src="./usuarios.js?v=1"></script>
 <script src="./impressao.js?v=4"></script>
 <script src="./identificacao.js?v=3"></script>
 <script src="./leitor.js?v=1"></script>
@@ -1516,6 +1517,10 @@ function nomesRecentes() {
   try { return JSON.parse(localStorage.getItem('quem-recentes') || '[]'); } catch (e) { return []; }
 }
 
+function trocarPessoa() {
+  if (confirm(`Sair de ${QUEM || 'este usuário'} e entrar com outro?`)) sairUsuario();
+}
+
 function mostrarPortaria() {
   $('port-recentes').innerHTML = nomesRecentes()
     .map(n => `<button type="button" data-nome="${esc(n)}">${esc(n)}</button>`).join('');
@@ -1659,7 +1664,7 @@ function init() {
     $('bt-mais').setAttribute('aria-expanded', String(!m.hidden));
   });
   document.addEventListener('click', e => { if (!e.target.closest('#menu-mais')) fecharMais(); });
-  $('bt-quem').addEventListener('click', mostrarPortaria);
+  $('bt-quem').addEventListener('click', trocarPessoa);
   $('bt-imprimir').addEventListener('click', abrirDialogoImpressao);
 
   $('df-x').addEventListener('click', () => { $('dlg-form').hidden = true; });
@@ -1739,7 +1744,8 @@ function init() {
     if (p.get('vista') === 'sep') trocarVista('sep');
   } else $('vt-sep').hidden = true;
 
-  if (QUEM) carregar(); else mostrarPortaria();
+  // Sem usuário, ninguém entra: é o que dá dono a cada alteração.
+  exigirUsuario({ app:'mapa', aoEntrar:() => { pintarQuem(); carregar(); } });
 
   // Atualiza sozinho, mas não no meio de um formulário ou de um mover.
   setInterval(() => { if (!document.hidden && !_sel && $('dlg-form').hidden && $('dlg-exp').hidden && ($('dlg-sep')?.hidden ?? true)) carregar(true); }, 90000);
