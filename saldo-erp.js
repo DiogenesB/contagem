@@ -1,10 +1,14 @@
 /* ═══════════════════════════════════════════════════════════════
    SIMBIOSE · SALDO-ERP.JS
-   Tela "Saldo" do painel: o saldo do ERP (estoque_ref, a planilha
-   SB8_SALDOS_LOTES que o robô ou a importação manual mandam) visto
-   por filial, armazém, tipo e validade, mais o histórico
-   (estoque_ref_dia e estoque_ref_lote — sql/migracao-saldo-historico.sql).
-   Só lê. Quem grava a foto é o Saldo mapeado / o robô.
+   Tela "Saldo" do painel. Junta duas coisas:
+     · o saldo do ERP (estoque_ref — a planilha SB8_SALDOS_LOTES que o
+       robô manda) em forma de planilha, com filtro em cada coluna como
+       no Excel, cruzado com o mapa (quanto do lote está nas vagas);
+     · as análises (totais, validade, lotes divididos, armazém ×
+       validade, evolução e parados) e a aba Divergências, que é o
+       antigo Saldo mapeado (saldo-mapeado.js, sem mudança de regra).
+   Histórico: estoque_ref_dia e estoque_ref_lote
+   (sql/migracao-saldo-historico.sql). Esta tela só lê.
    ═══════════════════════════════════════════════════════════════ */
 
 const SA_UNS = ['L', 'KG', 'DS'];
@@ -33,19 +37,30 @@ const SA_REGRAS = [
 ];
 
 const SA_ABAS = [
-  ['totais',    'Totais'],
-  ['validade',  'Validade'],
-  ['divididos', 'Lote em 2+ armazéns'],
-  ['armazem',   'Armazém × validade'],
-  ['evolucao',  'Evolução'],
-  ['parados',   'Parados'],
+  ['planilha',     'Planilha'],
+  ['divergencias', 'Divergências'],
+  ['totais',       'Totais'],
+  ['validade',     'Validade'],
+  ['divididos',    'Lote em 2+ armazéns'],
+  ['armazem',      'Armazém × validade'],
+  ['evolucao',     'Evolução'],
+  ['parados',      'Parados'],
 ];
 
+/* Situação do lote na planilha, a partir do cálculo do Saldo mapeado. */
+const SA_SIT_COR = { pos:'t-ok', neg:'t-neg', warn:'t-warn', info:'t-info', alt:'t-alt' };
+const SA_NAO_MAPEAVEL = 'Armazém não mapeado';
+
 const _sa = {
-  ref:[], dia:null, lotes:null, erroDia:null, erroLotes:null, vagas:{},
+  ref:[], dia:null, lotes:null, erroDia:null, erroLotes:null,
   ok:false, foto:null,
-  aba:'totais', grupo:'armazem', faixa:'venc', regra:'', periodo:90, parado:30, semD7:true,
+  aba:'planilha', grupo:'armazem', faixa:'venc', regra:'', periodo:90, parado:30, semD7:true,
   inicioHist:null, graf:{},
+  f:{},                          // filtros por coluna (como o filtro do Excel)
+  ord:{ col:'desc', asc:true },  // ordenação da planilha
+  visao:'lotes',                 // lotes | produtos
+  abertos:new Set(),             // produtos abertos na visão por produto
+  mapaDe:null,                   // de qual cálculo/ocupação veio o cruzamento
 };
 
 const dSaldoErp = debounce(() => renderSaldoErp(), 140);
@@ -62,12 +77,9 @@ function saHoje() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+const saUTC = iso => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d); };
 /* Dias entre hoje e a data (AAAA-MM-DD), sem fuso: 0 = vence hoje. */
-function saDias(iso) {
-  const [y, m, d] = iso.split('-').map(Number);
-  const [hy, hm, hd] = saHoje().split('-').map(Number);
-  return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(hy, hm - 1, hd)) / 864e5);
-}
+function saDias(iso) { return Math.round((saUTC(iso) - saUTC(saHoje())) / 864e5); }
 const saData = iso => iso ? iso.slice(0, 10).split('-').reverse().join('/') : '—';
 const saQ = n => num(Math.round((Number(n) || 0) * 100) / 100);
 const saPl = n => n == null ? '—' : num1(n);
@@ -75,13 +87,14 @@ function saOrdUn(a, b) {
   const ia = SA_UNS.indexOf(a), ib = SA_UNS.indexOf(b);
   return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || String(a).localeCompare(String(b));
 }
-/* { L:{saldo,emp,lotes,pl}, KG:… } da lista. */
+/* { L:{saldo,emp,lotes,pl,mapa,falta}, KG:… } da lista. */
 function saPorUn(lista) {
   const o = {};
   for (const l of lista) {
-    const u = o[l.un] ||= { saldo:0, emp:0, lotes:0, pl:0, temPl:false };
+    const u = o[l.un] ||= { saldo:0, emp:0, lotes:0, pl:0, temPl:false, mapa:0, falta:0, mapeavel:0 };
     u.saldo += l.saldo; u.emp += l.emp; u.lotes++;
     if (l.pl != null) { u.pl += l.pl; u.temPl = true; }
+    if (l.falta != null) { u.mapeavel += Math.max(0, l.saldo); u.mapa += Math.min(l.noMapa || 0, Math.max(0, l.saldo)); u.falta += l.falta; }
   }
   return o;
 }
@@ -93,7 +106,8 @@ function saTxtUn(lista, campo = 'saldo') {
 }
 function saArm(a) {
   const nome = nomeArmazem(a);
-  return `<span class="tag t-mute t-mono" title="${esc(nome || 'armazém fora da lista')}">${esc(a)}</span>`;
+  const mapeado = typeof armMapeado === 'function' ? armMapeado(a) : true;
+  return `<span class="tag ${mapeado ? 't-mute' : 't-mute sa-nmap'} t-mono" title="${esc((nome || 'armazém fora da lista') + (mapeado ? '' : ' · não fica no mapa'))}">${esc(a)}</span>`;
 }
 function saDiasTxt(d) {
   if (d === null) return '<span class="num-zero">—</span>';
@@ -104,22 +118,68 @@ function saDiasTxt(d) {
 function saProd(l) {
   return `<div>${esc(l.desc)}</div><div class="sub mono">${esc(l.cod)}${l.tipo !== '—' ? ` · ${esc(l.tipo)}` : ''}</div>`;
 }
-/* Vagas do mapa (drive-in e separação) onde o lote está. */
-function saVagas(l) {
-  const v = _sa.vagas[`${l.cod}|${l.lote}`];
-  if (!v?.length) return '<span class="num-zero">—</span>';
-  const mostra = v.slice(0, 3).map(p => `<span class="tag t-info t-mono">${esc(p)}</span>`).join('');
-  return `<div class="chips">${mostra}${v.length > 3 ? `<span class="tag t-mute" title="${esc(v.slice(3).join(', '))}">+${v.length - 3}</span>` : ''}</div>`;
+/* Vagas do mapa (drive-in e separação) onde o produto+lote está. */
+function saVagas(l, max = 2) {
+  const v = l.vagas || [];
+  if (!v.length) return '<span class="num-zero">—</span>';
+  const mostra = v.slice(0, max).map(p => `<span class="tag t-info t-mono">${esc(p)}</span>`).join('');
+  return `<div class="chips sa-vagas">${mostra}${v.length > max ? `<span class="tag t-mute" title="${esc(v.slice(max).join(', '))}">+${v.length - max}</span>` : ''}</div>`;
+}
+function saSitTag(l) {
+  if (!l.sitRot) return '<span class="num-zero">—</span>';
+  return `<span class="tag ${l.sitCls}" title="${esc(l.sitExpl || '')}">${esc(l.sitRot)}</span>`;
 }
 
-/* ═══════════ CARGA ═══════════ */
+/* ═══════════ COLUNAS DA PLANILHA ═══════════
+   tipo: cat (lista de valores com caixinhas) · num · data
+   v(): valor para filtrar/ordenar · td(): o que aparece na célula */
+const SA_COLS = [
+  // Ocultas por padrão as que já aparecem dentro de outra célula
+  // (código, filial e tipo embaixo do produto; UM junto do saldo).
+  { id:'filial', rot:'Filial',      tipo:'cat',  v:l => filialCurta(l.filial), td:l => badgeFilial(l.filial, l.cod), oculta:true },
+  { id:'tipo',   rot:'Tipo',        tipo:'cat',  v:l => l.tipo, oculta:true },
+  { id:'cod',    rot:'Código',      tipo:'cat',  v:l => l.cod, cls:'mono', oculta:true },
+  { id:'desc',   rot:'Produto',     tipo:'cat',  v:l => l.desc, cls:'nome',
+    td:l => `${esc(l.desc)}<div class="sub mono">${esc(l.cod)} · ${esc(filialCurta(l.filial))}${l.tipo !== '—' ? ` · ${esc(l.tipo)}` : ''}</div>` },
+  { id:'un',     rot:'UM',          tipo:'cat',  v:l => l.un, oculta:true },
+  { id:'lote',   rot:'Lote',        tipo:'cat',  v:l => l.lote || '(vazio)', cls:'mono' },
+  { id:'fab',    rot:'Fabricação',  tipo:'data', v:l => l.fab, cls:'mono', td:l => saData(l.fab), oculta:true },
+  { id:'val',    rot:'Validade',    tipo:'data', v:l => l.val, cls:'mono', faixas:true,
+    td:l => `${l.dias !== null && l.dias < 0 ? `<span class="num-neg">${saData(l.val)}</span>` : l.dias !== null && l.dias <= 30 ? `<span class="sa-warn">${saData(l.val)}</span>` : saData(l.val)}` +
+            (l.dias !== null ? `<div class="sub">${saDiasTxt(l.dias)}</div>` : '') },
+  { id:'vida',   rot:'Dias de vida', tipo:'num', v:l => l.dias, td:l => saDiasTxt(l.dias), oculta:true },
+  { id:'pvida',  rot:'% de vida',   tipo:'num',  v:l => l.pvida, td:l => l.pvida == null ? '—' : `${num1(l.pvida)}%`, oculta:true },
+  { id:'arm',    rot:'Armazém',     tipo:'cat',  v:l => l.arm, td:l => saArm(l.arm) },
+  { id:'saldo',  rot:'Saldo',       tipo:'num',  v:l => l.saldo, td:l => `<b>${saQ(l.saldo)}</b> <small class="sa-un">${esc(l.un)}</small>` },
+  { id:'emp',    rot:'Empenho',     tipo:'num',  v:l => l.emp, td:l => l.emp ? saQ(l.emp) : '<span class="num-zero">—</span>', oculta:true },
+  { id:'livre',  rot:'Livre',       tipo:'num',  v:l => l.saldo - l.emp, td:l => saQ(l.saldo - l.emp), oculta:true },
+  { id:'pl',     rot:'Paletes',     tipo:'num',  v:l => l.pl, td:l => saPl(l.pl), oculta:true },
+  { id:'cx',     rot:'Caixas',      tipo:'num',  v:l => l.cx, td:l => l.cx == null ? '—' : saQ(l.cx), oculta:true },
+  { id:'mapa',   rot:'No mapa',     tipo:'num',  v:l => l.noMapa, td:l => l.falta == null && !l.noMapa ? '<span class="num-zero">—</span>' : saQ(l.noMapa) },
+  { id:'falta',  rot:'Falta mapear', tipo:'num', v:l => l.falta,
+    td:l => l.falta == null ? '<span class="num-zero" title="Armazém que não fica no mapa">n/a</span>' : l.falta > 0 ? `<span class="sa-warn">${saQ(l.falta)}</span>` : '<span class="num-pos">0</span>' },
+  { id:'sit',    rot:'Situação',    tipo:'cat',  v:l => l.sitRot || '—', td:saSitTag },
+  { id:'vagas',  rot:'Vagas',       tipo:'cat',  v:l => (l.vagas || []).length ? l.vagas : ['(nenhuma)'], td:l => saVagas(l), multi:true },
+];
+const SA_COL = Object.fromEntries(SA_COLS.map(c => [c.id, c]));
+const LS_COLS = 'saldo.colunas';
+let _saVisiveis = (() => {
+  try { const v = JSON.parse(localStorage.getItem(LS_COLS) || 'null'); if (Array.isArray(v) && v.length) return new Set(v); } catch { /* sem storage */ }
+  return new Set(SA_COLS.filter(c => !c.oculta).map(c => c.id));
+})();
+function saGravarColunas() { try { localStorage.setItem(LS_COLS, JSON.stringify([..._saVisiveis])); } catch { /* sem storage */ } }
+
+/* ═══════════ CARGA ═══════════
+   O saldo do ERP e o mapa vêm do mesmo carregamento do Saldo mapeado
+   (carregarSaldoMapa), assim a planilha e as Divergências usam a
+   mesma foto e o mesmo cálculo. */
 async function carregarSaldoErp(forcar = false) {
   if (_sa.ok && !forcar && cacheValido('saldo-erp', 120)) { renderSaldoErp(); return; }
   if (!_sa.ok) $('sa-corpo').innerHTML = '<div class="skeleton">carregando o saldo…</div>';
   const tenta = p => p.then(d => ({ d }), e => ({ e }));
   const desde = new Date(Date.now() - 400 * 864e5).toISOString().slice(0, 10);
-  const [ref, dia, lotes] = await Promise.all([
-    tenta(buscarTudo(() => sb.from('estoque_ref').select('*').order('id'))),
+  const [, dia, lotes] = await Promise.all([
+    carregarSaldoMapa(forcar || !_sa.ok),
     tenta(buscarTudo(() => sb.from('estoque_ref_dia')
       .select('dia, filial, armazem, unidade, tipo, saldo, empenho, vencido, paletes, lotes')
       .gte('dia', desde).order('dia').order('filial').order('armazem').order('unidade').order('tipo'))),
@@ -127,12 +187,11 @@ async function carregarSaldoErp(forcar = false) {
       .select('filial, codigo, lote, armazem, primeiro_visto, ultima_mudanca')
       .order('filial').order('codigo').order('lote').order('armazem'))),
   ]);
-  if (ref.e) { erro('Falha ao carregar o saldo', ref.e); $('sa-corpo').innerHTML = ''; return; }
 
   // Uma linha por filial + código + lote + armazém (a planilha pode repetir).
   const m = new Map();
   let de = null, ate = null, quem = null;
-  for (const r of ref.d) {
+  for (const r of (typeof linhasDeReferencia === 'function' ? linhasDeReferencia() : [])) {
     if (r.importado_em) {
       if (!de || r.importado_em < de) de = r.importado_em;
       if (!ate || r.importado_em > ate) { ate = r.importado_em; quem = r.importado_por; }
@@ -146,20 +205,24 @@ async function carregarSaldoErp(forcar = false) {
     let l = m.get(k);
     if (!l) {
       const val = r.dt_validade ? String(r.dt_validade).slice(0, 10) : null;
+      const fab = r.dt_fabricacao ? String(r.dt_fabricacao).slice(0, 10) : null;
+      const dias = val ? saDias(val) : null;
+      const vida = val && fab ? (saUTC(val) - saUTC(fab)) / 864e5 : null;
       l = { k, filial:fil, cod, lote, arm,
-            desc:String(r.descricao || '').trim() || produtoPorCodigo(cod)?.nome || cod,
+            desc:String(r.descricao || '').replace(/\s+/g, ' ').trim() || produtoPorCodigo(cod)?.nome || cod,
             un:saUn(r.unidade || produtoPorCodigo(cod)?.unidade), tipo:String(r.tipo || '').trim().toUpperCase() || '—',
-            val, fab:r.dt_fabricacao ? String(r.dt_fabricacao).slice(0, 10) : null,
-            dias:val ? saDias(val) : null, saldo:0, emp:0, pl:null };
-      l._busca = `${cod} ${l.desc} ${lote}`.toUpperCase();
+            val, fab, dias, pvida:vida > 0 ? Math.max(0, dias / vida * 100) : null,
+            saldo:0, emp:0, pl:null, cx:null };
       m.set(k, l);
     }
     l.saldo += Number(r.saldo) || 0;
     l.emp   += Number(r.empenho) || 0;
     if (r.paletes != null && r.paletes !== '') l.pl = (l.pl || 0) + Number(r.paletes);
+    if (r.caixas  != null && r.caixas  !== '') l.cx = (l.cx || 0) + Number(r.caixas);
   }
   _sa.ref = [...m.values()].filter(l => l.saldo !== 0 || l.emp !== 0);
   _sa.foto = de ? { de, ate, quem } : null;
+  _sa.mapaDe = null;
 
   _sa.dia = dia.e ? null : dia.d;
   _sa.erroDia = dia.e || null;
@@ -176,47 +239,141 @@ async function carregarSaldoErp(forcar = false) {
     _sa.inicioHist = [ini?.slice(0, 10), dIni].filter(Boolean).sort()[0] || null;
   }
 
-  // Onde está no mapa: mesma ocupação que o Saldo mapeado usa.
-  try {
-    if (typeof carregarOcupacaoSaldo === 'function') await carregarOcupacaoSaldo();
-    const vg = {};
-    for (const [pos, itens] of Object.entries(typeof _sOcup === 'object' && _sOcup ? _sOcup : {}))
-      for (const it of itens) {
-        const k = `${normalizarCodigo(it.codigo)}|${String(it.lote || '').trim().toUpperCase()}`;
-        const a = vg[k] ||= [];
-        if (!a.includes(pos)) a.push(pos);
-      }
-    for (const a of Object.values(vg)) a.sort();
-    _sa.vagas = vg;
-  } catch { _sa.vagas = {}; }
-
   _sa.ok = true;
   cacheGravar('saldo-erp', true);
-  preencherSelect('sa-arm', _sa.ref.map(l => l.arm), 'Todos');
-  preencherSelect('sa-tipo', _sa.ref.map(l => l.tipo), 'Todos');
-  preencherSelect('sa-un', _sa.ref.map(l => l.un), 'Todas');
   renderSaldoErp();
 }
 
-/* Filtros da página. `sem` tira um deles (lote dividido precisa ver
-   os outros armazéns mesmo com um armazém escolhido). */
+/* Cruza cada linha do ERP com o mapa: quanto do lote está nas vagas
+   do mesmo armazém, quais vagas, e a situação que as Divergências dão.
+   Refaz só quando o cálculo do Saldo mapeado ou o mapa mudaram. */
+function saCruzarMapa() {
+  const calc = typeof _sCalc !== 'undefined' ? _sCalc : null;
+  const ocup = typeof _sOcup !== 'undefined' ? _sOcup : null;
+  if (_sa.mapaDe && _sa.mapaDe.calc === calc && _sa.mapaDe.ocup === ocup) return;
+  _sa.mapaDe = { calc, ocup };
+
+  const kc = (cod, lote) => `${chave(normalizarCodigo(cod))}|${chave(lote)}`;
+  // mapa: produto+lote+armazém → quantidade; produto+lote → vagas
+  const qtd = new Map(), vagas = new Map();
+  for (const [pos, itens] of Object.entries(ocup || {}))
+    for (const it of itens) {
+      const k = kc(it.codigo, it.lote);
+      const ka = `${k}|${normalizarArmazem(it.armazem)}`;
+      qtd.set(ka, (qtd.get(ka) || 0) + (Number(it.quantidade) || 0));
+      const v = vagas.get(k) || vagas.set(k, []).get(k);
+      if (!v.includes(pos)) v.push(pos);
+    }
+  for (const v of vagas.values()) v.sort();
+
+  // situação: a linha das Divergências que tem este lote+armazém do sistema
+  const sit = new Map();
+  for (const l of calc?.lista || []) {
+    if (l.sistema === null) continue;
+    for (const a of l.armsSis) {
+      const k = `${l.kc}|${a}`;
+      const normal = l.k === k;
+      if (!sit.has(k) || normal) sit.set(k, l);
+    }
+  }
+
+  for (const r of _sa.ref) {
+    const k = kc(r.cod, r.lote), ka = `${k}|${r.arm}`;
+    r.vagas = vagas.get(k) || [];
+    r._busca = null;                       // a busca também acha pela vaga
+    r.noMapa = qtd.get(ka) || 0;
+    const mapeavel = typeof armMapeado === 'function' ? armMapeado(r.arm) : true;
+    if (!mapeavel) {
+      r.falta = null; r.sitRot = SA_NAO_MAPEAVEL; r.sitCls = 't-mute';
+      r.sitExpl = 'Este armazém não fica no drive-in; o saldo dele não precisa estar no mapa.';
+      r.sitId = 'nmap';
+      continue;
+    }
+    r.falta = Math.max(0, r.saldo - r.noMapa);
+    const l = sit.get(ka);
+    const id = l?.estado || (r.saldo <= 0 ? null : r.noMapa ? (r.falta > 0.001 ? 'falta' : 'ok') : 'nao-mapeado');
+    const s = id && typeof SITUACOES === 'object' ? SITUACOES[id] : null;
+    r.sitId = id;
+    r.sitRot = s?.rot || (id ? id : '');
+    r.sitCls = SA_SIT_COR[s?.cor] || 't-mute';
+    r.sitExpl = s?.expl || '';
+  }
+}
+
+/* ═══════════ FILTROS (como o filtro do Excel) ═══════════
+   _sa.f[col] =
+     cat:  { vals:Set }                    só os valores marcados
+     num:  { min, max, zero:'nz'|'z'|'' }
+     data: { faixas:Set, de, ate }
+   Um filtro vale em todas as abas (menos Divergências, que tem os dela). */
+function saTemFiltro(id) { return !!_sa.f[id]; }
+function saPassaCol(l, id) {
+  const f = _sa.f[id]; if (!f) return true;
+  const c = SA_COL[id], v = c.v(l);
+  if (c.tipo === 'cat') return c.multi ? v.some(x => f.vals.has(String(x))) : f.vals.has(String(v ?? '—'));
+  if (c.tipo === 'num') {
+    if (f.zero === 'nz' && !(v != null && Math.abs(v) > 1e-9)) return false;
+    if (f.zero === 'z'  && v != null && Math.abs(v) > 1e-9) return false;
+    if (f.min !== null && f.min !== undefined && !(v != null && v >= f.min)) return false;
+    if (f.max !== null && f.max !== undefined && !(v != null && v <= f.max)) return false;
+    return true;
+  }
+  if (c.tipo === 'data') {
+    if (f.faixas?.size) {
+      const d = v ? saDias(v) : null;
+      if (![...f.faixas].some(id2 => SA_FAIXAS.find(x => x.id === id2)?.t(d))) return false;
+    }
+    if (f.de  && !(v && v >= f.de))  return false;
+    if (f.ate && !(v && v <= f.ate)) return false;
+    return true;
+  }
+  return true;
+}
+function saBuscaTxt(l) {
+  return l._busca ??= `${l.cod} ${l.desc} ${l.lote} ${l.arm} ${(l.vagas || []).join(' ')}`.toUpperCase();
+}
+/* Linhas que passam na filial do topo, na busca e nos filtros de coluna.
+   `sem` ignora o filtro de uma coluna (para a lista de valores dela e
+   para o lote dividido ver os outros armazéns). */
 function saFiltradas(sem = '') {
-  const arm = $('sa-arm').value, tipo = $('sa-tipo').value, un = $('sa-un').value;
-  const ts = termos($('sa-busca').value);
+  saCruzarMapa();
+  const ts = termos($('sa-busca')?.value || '');
+  const cols = Object.keys(_sa.f).filter(id => id !== sem);
   return _sa.ref.filter(l =>
     daFilial(l.filial) &&
-    (sem === 'arm' || !arm || l.arm === arm) &&
-    (!tipo || l.tipo === tipo) &&
-    (!un || l.un === un) &&
-    casa(l, ts));
+    (!ts.length || ts.some(t => saBuscaTxt(l).includes(t))) &&
+    cols.every(id => saPassaCol(l, id)));
 }
 function saAssin() {
-  return [$('filtro-filial').value, $('sa-arm').value, $('sa-tipo').value, $('sa-un').value, $('sa-busca').value].join('|');
+  return [$('filtro-filial').value, $('sa-busca')?.value, JSON.stringify(_sa.f, (k, v) => v instanceof Set ? [...v] : v)].join('|');
+}
+function saChips() {
+  const out = [];
+  const q = $('sa-busca')?.value.trim();
+  if (q) out.push(`<span class="fchip">busca: <b>${esc(q)}</b><button onclick="$('sa-busca').value='';renderSaldoErp()" aria-label="Tirar a busca">×</button></span>`);
+  for (const [id, f] of Object.entries(_sa.f)) {
+    const c = SA_COL[id];
+    let txt;
+    if (c.tipo === 'cat') { const v = [...f.vals]; txt = v.length <= 3 ? v.join(', ') : `${v.slice(0, 2).join(', ')} +${v.length - 2}`; }
+    else if (c.tipo === 'num') txt = [f.zero === 'nz' ? '≠ 0' : f.zero === 'z' ? '= 0' : '', f.min != null ? `≥ ${num(f.min)}` : '', f.max != null ? `≤ ${num(f.max)}` : ''].filter(Boolean).join(' e ');
+    else txt = [[...(f.faixas || [])].map(x => SA_FAIXAS.find(y => y.id === x)?.rot).join(', '), f.de ? `de ${saData(f.de)}` : '', f.ate ? `até ${saData(f.ate)}` : ''].filter(Boolean).join(' · ');
+    out.push(`<span class="fchip">${esc(c.rot)}: <b>${esc(txt)}</b><button onclick="saTirarFiltro('${id}')" aria-label="Tirar o filtro de ${esc(c.rot)}">×</button></span>`);
+  }
+  if (out.length > 1) out.push(`<button class="btn btn-ghost btn-sm" onclick="saLimparFiltros()">Limpar filtros</button>`);
+  $('sa-chips').innerHTML = out.join('');
+}
+function saTirarFiltro(id) { delete _sa.f[id]; renderSaldoErp(); }
+function saLimparFiltros() { _sa.f = {}; if ($('sa-busca')) $('sa-busca').value = ''; renderSaldoErp(); }
+/* Atalho das análises: clicar num armazém, tipo ou filial filtra a tela. */
+function saFiltrarValor(id, v) {
+  _sa.f[id] = { vals:new Set([String(v)]) };
+  renderSaldoErp();
+  toast(`Filtrando ${SA_COL[id].rot}: ${v}.`);
 }
 
 /* Lotes em mais de um armazém (mesma filial, código e lote). */
 function saDivididos() {
-  const arm = $('sa-arm').value;
+  const fArm = _sa.f.arm;
   const g = new Map();
   for (const l of saFiltradas('arm')) {
     if (l.saldo <= 0) continue;
@@ -224,7 +381,7 @@ function saDivididos() {
     (g.get(k) || g.set(k, []).get(k)).push(l);
   }
   return [...g.values()]
-    .filter(ls => ls.length > 1 && (!arm || ls.some(l => l.arm === arm)))
+    .filter(ls => ls.length > 1 && (!fArm || ls.some(l => saPassaCol(l, 'arm'))))
     .map(ls => ({ ls:ls.sort((a, b) => b.saldo - a.saldo), l:ls[0], total:ls.reduce((s, l) => s + l.saldo, 0) }))
     .sort((a, b) => b.ls.length - a.ls.length || a.l.desc.localeCompare(b.l.desc) || a.l.lote.localeCompare(b.l.lote));
 }
@@ -252,23 +409,25 @@ function saParados(lista) {
 
 /* ═══════════ RENDER ═══════════ */
 function renderSaldoErp() {
-  if (!_sa.ok || !$('page-saldo-erp')) return;
+  if (!_sa.ok || !$('page-saldo')) return;
+  saFecharPop();
   const lista = saFiltradas();
+  const naDiv = _sa.aba === 'divergencias';
 
   // Cabeçalho: de quando é a foto.
   const f = _sa.foto;
   $('sa-foto').innerHTML = f
     ? `Foto do ERP de <b>${esc(fmtTS(f.ate))}</b>${f.quem ? ` · ${esc(f.quem)}` : ''}` +
       (new Date(f.ate) - new Date(f.de) > 36e5 ? ` <span class="sa-mute">(algum armazém é de ${esc(fmtTS(f.de))})</span>` : '')
-    : 'Nenhuma foto do ERP importada ainda.';
+    : 'Nenhuma foto do ERP ainda.';
 
   // Avisos
   const av = [];
   if (!_sa.ref.length) av.push(`<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>Sem saldo do ERP</b>
-    Importe a planilha em <a href="#saldo">Saldo mapeado</a> ou ligue o robô do Excel.</div></div>`);
+    O robô do Excel ainda não mandou a foto. Para mandar à mão: menu ⋯ → Importar planilha do ERP.</div></div>`);
   if (_sa.erroDia || _sa.erroLotes) av.push(`<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Histórico ainda não ligado</b>
     Rode o <b>sql/migracao-saldo-historico.sql</b> no Supabase. Sem ele não aparecem a evolução diária e os lotes parados; o resto da tela funciona.</div></div>`);
-  $('sa-avisos').innerHTML = av.join('');
+  $('sa-avisos').innerHTML = naDiv ? '' : av.join('');
 
   // KPIs: uma unidade por cartão — litro, quilo e dose não se somam.
   const pu = saPorUn(lista);
@@ -276,35 +435,334 @@ function renderSaldoErp() {
   const v90  = lista.filter(l => l.dias !== null && l.dias >= 0 && l.dias <= 90 && l.saldo > 0);
   const div = saDivididos().length;
   const fora = saForaDaRegra(lista).length;
+  const mapeaveis = lista.filter(l => l.falta != null && l.saldo > 0);
+  const completos = mapeaveis.filter(l => l.sitId === 'ok').length;
+  const semMapa = mapeaveis.filter(l => !l.noMapa).length;
   const cards = Object.keys(pu).sort(saOrdUn).map(u => {
     const x = pu[u];
     return kpi(`Saldo em ${u}`, saQ(x.saldo),
       `livre ${saQ(x.saldo - x.emp)} · empenhado ${saQ(x.emp)}${x.temPl ? ` · ${num1(x.pl)} pl` : ''}`);
   });
+  cards.push(kpi('Lotes conferindo com o mapa', mapeaveis.length ? `${num1(completos / mapeaveis.length * 100)}%` : '—',
+    `${num(completos)} de ${num(mapeaveis.length)} · ${num(semMapa)} fora do mapa`, completos === mapeaveis.length ? 'is-pos' : 'is-info'));
   cards.push(kpi('Lotes vencidos', num(venc.length), venc.length ? saTxtUn(venc) : 'nenhum lote vencido', venc.length ? 'is-neg' : 'is-pos'));
   cards.push(kpi('Vencem em 90 dias', num(v90.length), v90.length ? saTxtUn(v90) : 'nenhum', v90.length ? 'is-warn' : ''));
   cards.push(kpi('Para arrumar', num(div + fora), `${num(div)} lote(s) em 2+ armazéns · ${num(fora)} no armazém errado`, div + fora ? 'is-alt' : 'is-pos'));
   $('sa-kpis').innerHTML = cards.join('');
 
   // Abas com contagem
+  const nDiv = (typeof _sCalc !== 'undefined' && _sCalc?.lista) ? _sCalc.lista.filter(l => l.estado !== 'ok' && l.estado !== 'nao-mapeado').length : 0;
   const n = {
-    validade: venc.length, divididos: div, armazem: fora,
+    divergencias: nDiv, validade: venc.length, divididos: div, armazem: fora,
     parados: _sa.lotes ? saParados(lista).filter(p => p.dias >= _sa.parado && !(_sa.semD7 && p.l.arm === 'D7')).length : null,
   };
   $('sa-abas').innerHTML = SA_ABAS.map(([id, rot]) =>
     `<button role="tab" aria-selected="${_sa.aba === id}" class="${_sa.aba === id ? 'active' : ''}" onclick="saAba('${id}')">${esc(rot)}` +
-    `${n[id] ? ` <span class="sa-n${id === 'validade' ? ' neg' : ''}">${num(n[id])}</span>` : ''}</button>`).join('');
+    `${n[id] ? ` <span class="sa-n${id === 'validade' || id === 'divergencias' ? ' neg' : ''}">${num(n[id])}</span>` : ''}</button>`).join('');
   $('sa-abas').querySelector('.active')?.scrollIntoView({ block:'nearest', inline:'nearest' });
 
-  ({ totais:saTotais, validade:saValidade, divididos:saDivTab, armazem:saArmTab, evolucao:saEvolucao, parados:saParadosTab })[_sa.aba](lista);
+  // Divergências: a tela antiga do Saldo mapeado, com os filtros dela.
+  $('sa-geral').hidden = naDiv;
+  $('sa-div').hidden = !naDiv;
+  $('sa-filtros').hidden = naDiv;
+  $('sa-kpis').hidden = naDiv;
+  if (naDiv) return;
+  saChips();
+
+  ({ planilha:saPlanilha, totais:saTotais, validade:saValidade, divididos:saDivTab, armazem:saArmTab, evolucao:saEvolucao, parados:saParadosTab })[_sa.aba](lista);
 }
 
-function saAba(id) { _sa.aba = id; renderSaldoErp(); }
+function saAba(id) { _sa.aba = id; _sa.export = null; renderSaldoErp(); }
 function saSet(campo, v) { _sa[campo] = v; renderSaldoErp(); }
 
 function saCtrlSeg(campo, opcoes, rotulo) {
   return `<div class="sa-ctrl"><span>${esc(rotulo)}</span><div class="seg">${opcoes.map(([v, t]) =>
     `<button class="${String(_sa[campo]) === String(v) ? 'active' : ''}" onclick="saSet('${campo}', ${typeof v === 'number' ? v : `'${v}'`})">${esc(t)}</button>`).join('')}</div></div>`;
+}
+
+/* ═══════════ PLANILHA ═══════════ */
+function saOrdenarLista(ls) {
+  const c = SA_COL[_sa.ord.col] || SA_COL.desc, dir = _sa.ord.asc ? 1 : -1;
+  const val = l => { const v = c.v(l); return Array.isArray(v) ? v.length : v; };
+  return [...ls].sort((a, b) => {
+    const va = val(a), vb = val(b);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;                    // vazio vai para o fim nos dois sentidos
+    if (vb == null) return -1;
+    const r = typeof va === 'number' && typeof vb === 'number' ? va - vb
+      : String(va).localeCompare(String(vb), 'pt-BR', { numeric:true });
+    return r * dir || a.desc.localeCompare(b.desc) || a.lote.localeCompare(b.lote) || a.arm.localeCompare(b.arm);
+  });
+}
+function saOrdenar(id, asc) {
+  if (asc === undefined) asc = _sa.ord.col === id ? !_sa.ord.asc : SA_COL[id].tipo !== 'num';
+  _sa.ord = { col:id, asc };
+  saFecharPop();
+  renderSaldoErp();
+}
+function saTh(c) {
+  const ord = _sa.ord.col === c.id ? (_sa.ord.asc ? ' ↑' : ' ↓') : '';
+  return `<th class="sa-th${c.tipo === 'num' ? ' num' : ''}${saTemFiltro(c.id) ? ' filtrado' : ''}">
+    <div class="sa-th-in">
+      <button class="sa-th-rot" onclick="saOrdenar('${c.id}')" title="Ordenar por ${esc(c.rot)}">${esc(c.rot)}${ord}</button>
+      <button class="sa-th-f" onclick="saAbrirFiltro(event, '${c.id}')" aria-label="Filtrar ${esc(c.rot)}" title="Filtrar ${esc(c.rot)}">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11l-4.2 5v4l-2.6 1.2V8.5z" fill="${saTemFiltro(c.id) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+      </button>
+    </div></th>`;
+}
+function saTotaisLinha(ls) {
+  const o = saPorUn(ls);
+  const uns = Object.keys(o).sort(saOrdUn);
+  if (!uns.length) return '';
+  return `<div class="sa-somas">${uns.map(u => { const x = o[u];
+    return `<div class="sa-soma"><span class="tag t-mute">${esc(u)}</span>
+      <span>saldo <b>${saQ(x.saldo)}</b></span><span>empenho <b>${saQ(x.emp)}</b></span><span>livre <b>${saQ(x.saldo - x.emp)}</b></span>
+      ${x.mapeavel ? `<span>no mapa <b>${saQ(x.mapa)}</b> (${num1(x.mapa / x.mapeavel * 100)}%)</span><span>falta mapear <b class="${x.falta > 0 ? 'sa-warn' : ''}">${saQ(x.falta)}</b></span>` : ''}
+      ${x.temPl ? `<span><b>${num1(x.pl)}</b> pl</span>` : ''}</div>`; }).join('')}</div>`;
+}
+function saPlanilha(lista) {
+  $('sa-ctrl').innerHTML = saCtrlSeg('visao', [['lotes', 'Lotes'], ['produtos', 'Produtos']], 'Ver por') +
+    `<div class="sa-cols-wrap"><button class="btn btn-ghost btn-sm" onclick="saAbrirColunas(event)">Colunas</button></div>`;
+  const cols = SA_COLS.filter(c => _saVisiveis.has(c.id));
+  if (_sa.visao === 'produtos') return saPlanilhaProdutos(lista);
+
+  const ls = saOrdenarLista(lista);
+  _sa.export = () => ls.map(l => Object.fromEntries(cols.map(c => {
+    const v = c.v(l);
+    return [c.rot, Array.isArray(v) ? (l.vagas || []).join(' ') : c.tipo === 'data' ? saData(v).replace('—', '') : v ?? ''];
+  })));
+  const p = fatiar('sa-pla', ls, saAssin() + JSON.stringify(_sa.ord));
+  $('sa-corpo').innerHTML = `${saTotaisLinha(ls)}
+    <div class="tbl-wrap"><table class="sa-grade">
+      <thead><tr>${cols.map(saTh).join('')}</tr></thead>
+      <tbody>${p.itens.map(l => `<tr>${cols.map(c => `<td class="${c.tipo === 'num' ? 'num' : c.cls || ''}">${c.td ? c.td(l) : esc(c.v(l) ?? '—')}</td>`).join('')}</tr>`).join('')
+        || vazio('Nenhum lote com esses filtros', Object.keys(_sa.f).length ? 'Tire algum filtro ali em cima.' : '', cols.length)}</tbody>
+    </table></div>${barraPag('sa-pla', p, 'lote(s)')}`;
+}
+
+/* Uma linha por produto (filial + código), com os lotes embaixo. */
+function saPlanilhaProdutos(lista) {
+  const g = new Map();
+  for (const l of lista) {
+    const k = `${l.filial}|${l.cod}`;
+    let x = g.get(k);
+    if (!x) g.set(k, x = { k, l, ls:[], saldo:0, emp:0, pl:null, mapa:0, falta:0, mapeavel:0, venc:0 });
+    x.ls.push(l); x.saldo += l.saldo; x.emp += l.emp;
+    if (l.pl != null) x.pl = (x.pl || 0) + l.pl;
+    if (l.falta != null) { x.mapeavel += Math.max(0, l.saldo); x.mapa += Math.min(l.noMapa, Math.max(0, l.saldo)); x.falta += l.falta; }
+    if (l.dias !== null && l.dias < 0 && l.saldo > 0) x.venc++;
+  }
+  const c = _sa.ord.col, dir = _sa.ord.asc ? 1 : -1;
+  const chaveP = { saldo:x => x.saldo, emp:x => x.emp, livre:x => x.saldo - x.emp, pl:x => x.pl ?? -1, mapa:x => x.mapa, falta:x => x.falta,
+                   cod:x => x.l.cod, filial:x => filialCurta(x.l.filial), tipo:x => x.l.tipo, un:x => x.l.un }[c];
+  const gs = [...g.values()].sort((a, b) => {
+    const r = chaveP ? (typeof chaveP(a) === 'number' ? chaveP(a) - chaveP(b) : String(chaveP(a)).localeCompare(String(chaveP(b)), 'pt-BR')) : a.l.desc.localeCompare(b.l.desc, 'pt-BR');
+    return (chaveP ? r * dir : (c === 'desc' ? r * dir : r)) || a.l.desc.localeCompare(b.l.desc, 'pt-BR');
+  });
+  _sa.export = () => gs.map(x => ({ Filial:filialCurta(x.l.filial), Tipo:x.l.tipo, Codigo:x.l.cod, Produto:x.l.desc, UM:x.l.un, Lotes:x.ls.length,
+    Saldo:x.saldo, Empenho:x.emp, Livre:x.saldo - x.emp, Paletes:x.pl ?? '', 'No mapa':x.mapa, 'Falta mapear':x.falta,
+    '% no mapa':x.mapeavel ? Math.round(x.mapa / x.mapeavel * 1000) / 10 : '' }));
+  const p = fatiar('sa-pla', gs, saAssin() + 'prod' + JSON.stringify(_sa.ord));
+  _sa.regProd = p.itens;
+  const th = (id, rot, num = false) => `<th class="${num ? 'num' : ''}"><button class="sa-th-rot" onclick="saOrdenar('${id}')">${esc(rot)}${_sa.ord.col === id ? (_sa.ord.asc ? ' ↑' : ' ↓') : ''}</button></th>`;
+  const linhas = p.itens.map((x, i) => {
+    const aberto = _sa.abertos.has(x.k);
+    const pc = x.mapeavel ? Math.min(100, x.mapa / x.mapeavel * 100) : null;
+    const sub = aberto ? `<tr class="sa-sub"><td colspan="11"><table class="sa-sub-t">
+      <thead><tr><th>Lote</th><th>Armazém</th><th>Validade</th><th class="num">Saldo</th><th class="num">Empenho</th><th class="num">No mapa</th><th class="num">Falta</th><th>Situação</th><th>Vagas</th></tr></thead>
+      <tbody>${saOrdenarLista(x.ls).map(l => `<tr><td class="mono">${esc(l.lote || '—')}</td><td>${saArm(l.arm)}</td><td class="mono">${SA_COL.val.td(l)}</td>
+        <td class="num">${saQ(l.saldo)}</td><td class="num">${l.emp ? saQ(l.emp) : '—'}</td><td class="num">${SA_COL.mapa.td(l)}</td><td class="num">${SA_COL.falta.td(l)}</td>
+        <td>${saSitTag(l)}</td><td>${saVagas(l)}</td></tr>`).join('')}</tbody></table></td></tr>` : '';
+    return `<tr class="sa-prod${aberto ? ' aberto' : ''}" onclick="saAbrirProduto(${i})">
+      <td class="nome"><span class="sa-seta">${aberto ? '▾' : '▸'}</span>${esc(x.l.desc)}<div class="sub mono">${esc(x.l.cod)} · ${esc(x.l.tipo)}</div></td>
+      <td>${badgeFilial(x.l.filial, x.l.cod)}</td><td>${esc(x.l.un)}</td>
+      <td class="num">${num(x.ls.length)}${x.venc ? `<div class="sub num-neg">${num(x.venc)} vencido(s)</div>` : ''}</td>
+      <td class="num"><b>${saQ(x.saldo)}</b></td><td class="num">${x.emp ? saQ(x.emp) : '—'}</td><td class="num">${saQ(x.saldo - x.emp)}</td>
+      <td class="num">${saPl(x.pl)}</td><td class="num">${x.mapeavel ? saQ(x.mapa) : '—'}</td>
+      <td class="num">${x.mapeavel ? (x.falta > 0.001 ? `<span class="sa-warn">${saQ(x.falta)}</span>` : '<span class="num-pos">0</span>') : '<span class="num-zero">n/a</span>'}</td>
+      <td>${pc === null ? '<span class="num-zero">—</span>' : `<div class="k-pbar"><div class="bar ${pc >= 99.98 ? 'pos' : ''}"><i style="width:${pc.toFixed(1)}%"></i></div><span>${num1(pc)}%</span></div>`}</td>
+    </tr>${sub}`;
+  }).join('');
+  $('sa-corpo').innerHTML = `${saTotaisLinha(lista)}
+    <div class="tbl-wrap"><table class="sa-grade sa-prods">
+      <thead><tr>${th('desc', 'Produto')}${th('filial', 'Filial')}${th('un', 'UM')}<th class="num">Lotes</th>${th('saldo', 'Saldo', true)}${th('emp', 'Empenho', true)}${th('livre', 'Livre', true)}${th('pl', 'Paletes', true)}${th('mapa', 'No mapa', true)}${th('falta', 'Falta mapear', true)}<th>% no mapa</th></tr></thead>
+      <tbody>${linhas || vazio('Nenhum produto com esses filtros', '', 11)}</tbody>
+    </table></div>${barraPag('sa-pla', p, 'produto(s)')}`;
+}
+function saAbrirProduto(i) {
+  const x = _sa.regProd?.[i]; if (!x) return;
+  _sa.abertos.has(x.k) ? _sa.abertos.delete(x.k) : _sa.abertos.add(x.k);
+  renderSaldoErp();
+}
+
+/* ── janelinha de filtro da coluna ── */
+let _saPop = null;   // { id, sel:Set, busca }
+function saFecharPop() {
+  $('sa-pop')?.remove();
+  _saPop = null;
+}
+function saPosicionar(pop, ancora) {
+  document.body.appendChild(pop);
+  if (innerWidth <= 640) { pop.classList.add('folha'); return; }
+  const r = ancora.getBoundingClientRect();
+  const w = pop.offsetWidth, h = pop.offsetHeight;
+  let x = r.left, y = r.bottom + 6;
+  if (x + w > innerWidth - 8) x = innerWidth - w - 8;
+  if (y + h > innerHeight - 8) y = Math.max(8, r.top - h - 6);
+  pop.style.left = `${Math.max(8, x)}px`; pop.style.top = `${y}px`;
+}
+function saAbrirFiltro(ev, id) {
+  ev.stopPropagation();
+  const ja = _saPop?.id === id;
+  saFecharPop();
+  if (ja) return;
+  const c = SA_COL[id], f = _sa.f[id];
+  const pop = document.createElement('div');
+  pop.id = 'sa-pop'; pop.className = 'sa-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', `Filtro de ${c.rot}`);
+  const ordTxt = c.tipo === 'num' ? ['Menor → maior', 'Maior → menor'] : c.tipo === 'data' ? ['Mais antiga primeiro', 'Mais nova primeiro'] : ['A → Z', 'Z → A'];
+  let corpo = '';
+  if (c.tipo === 'cat') {
+    _saPop = { id, busca:'' };
+    // Valores possíveis com os OUTROS filtros aplicados (como no Excel).
+    const cont = new Map();
+    for (const l of saFiltradas(id)) { const v = c.v(l); for (const x of (Array.isArray(v) ? v : [v ?? '—'])) cont.set(String(x), (cont.get(String(x)) || 0) + 1); }
+    if (f) for (const v of f.vals) if (!cont.has(v)) cont.set(v, 0);
+    _saPop.vals = [...cont.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR', { numeric:true }));
+    _saPop.sel = new Set(f ? f.vals : _saPop.vals.map(v => v[0]));
+    corpo = `<input type="search" class="sa-pop-busca" placeholder="Buscar valor" oninput="saPopBusca(this.value)" aria-label="Buscar valor">
+      <label class="sa-pop-tudo"><input type="checkbox" id="sa-pop-tudo" onchange="saPopTudo(this.checked)"> <span>Selecionar tudo</span></label>
+      <div class="sa-pop-lista" id="sa-pop-lista"></div>`;
+  } else if (c.tipo === 'num') {
+    _saPop = { id };
+    corpo = `<div class="sa-pop-num">
+        <label>Mínimo<input type="number" id="sa-pop-min" step="any" value="${f?.min ?? ''}"></label>
+        <label>Máximo<input type="number" id="sa-pop-max" step="any" value="${f?.max ?? ''}"></label>
+      </div>
+      <div class="sa-pop-op">
+        <label><input type="radio" name="sa-pop-z" value="" ${!f?.zero ? 'checked' : ''}> Todos</label>
+        <label><input type="radio" name="sa-pop-z" value="nz" ${f?.zero === 'nz' ? 'checked' : ''}> Diferente de zero</label>
+        <label><input type="radio" name="sa-pop-z" value="z" ${f?.zero === 'z' ? 'checked' : ''}> Zero ou vazio</label>
+      </div>`;
+  } else {
+    _saPop = { id };
+    corpo = `${c.faixas ? `<div class="sa-pop-op">${SA_FAIXAS.map(x => `<label><input type="checkbox" class="sa-pop-fx" value="${x.id}" ${f?.faixas?.has(x.id) ? 'checked' : ''}> ${esc(x.rot)}</label>`).join('')}</div>` : ''}
+      <div class="sa-pop-num">
+        <label>De<input type="date" id="sa-pop-de" value="${f?.de || ''}"></label>
+        <label>Até<input type="date" id="sa-pop-ate" value="${f?.ate || ''}"></label>
+      </div>`;
+  }
+  pop.innerHTML = `<div class="sa-pop-cab"><b>${esc(c.rot)}</b><button class="ico-btn" onclick="saFecharPop()" aria-label="Fechar">×</button></div>
+    <div class="sa-pop-ord"><button class="btn btn-ghost btn-sm" onclick="saOrdenar('${id}', true)">${ordTxt[0]}</button><button class="btn btn-ghost btn-sm" onclick="saOrdenar('${id}', false)">${ordTxt[1]}</button></div>
+    <div class="sa-pop-corpo">${corpo}</div>
+    <div class="sa-pop-pe"><button class="btn btn-ghost btn-sm" onclick="saTirarFiltro('${id}')" ${f ? '' : 'disabled'}>Limpar</button>
+      <button class="btn btn-primary btn-sm" onclick="saPopAplicar()">Aplicar</button></div>`;
+  pop.addEventListener('click', e => e.stopPropagation());
+  pop.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.type !== 'checkbox') saPopAplicar(); });
+  saPosicionar(pop, ev.currentTarget.closest('th') || ev.currentTarget);
+  if (c.tipo === 'cat') { saPopLista(); pop.querySelector('.sa-pop-busca').focus(); }
+  else pop.querySelector('input')?.focus();
+}
+const SA_POP_MAX = 300;
+function saPopVisiveis() {
+  const q = (_saPop.busca || '').toUpperCase();
+  return _saPop.vals.filter(([v]) => !q || v.toUpperCase().includes(q));
+}
+function saPopLista() {
+  const vis = saPopVisiveis();
+  $('sa-pop-lista').innerHTML = vis.slice(0, SA_POP_MAX).map(([v, n], i) =>
+    `<label><input type="checkbox" data-i="${i}" ${_saPop.sel.has(v) ? 'checked' : ''} onchange="saPopMarca(this)"> <span>${esc(v)}</span><small>${num(n)}</small></label>`).join('')
+    + (vis.length > SA_POP_MAX ? `<div class="sa-pop-mais">mostrando ${SA_POP_MAX} de ${num(vis.length)} — busque para achar o resto</div>` : '')
+    + (!vis.length ? '<div class="sa-pop-mais">nenhum valor</div>' : '');
+  const t = $('sa-pop-tudo');
+  const marcados = vis.filter(([v]) => _saPop.sel.has(v)).length;
+  t.checked = vis.length > 0 && marcados === vis.length;
+  t.indeterminate = marcados > 0 && marcados < vis.length;
+}
+function saPopBusca(q) {
+  _saPop.busca = q;
+  // Como no Excel: buscar já deixa marcado só o que aparece.
+  if (q) _saPop.sel = new Set(saPopVisiveis().map(([v]) => v));
+  saPopLista();
+}
+function saPopMarca(el) {
+  const v = saPopVisiveis()[Number(el.dataset.i)]?.[0];
+  if (v === undefined) return;
+  el.checked ? _saPop.sel.add(v) : _saPop.sel.delete(v);
+  saPopLista();
+}
+function saPopTudo(on) {
+  for (const [v] of saPopVisiveis()) on ? _saPop.sel.add(v) : _saPop.sel.delete(v);
+  saPopLista();
+}
+function saPopAplicar() {
+  const { id } = _saPop || {}; if (!id) return;
+  const c = SA_COL[id];
+  if (c.tipo === 'cat') {
+    const todos = _saPop.vals.every(([v]) => _saPop.sel.has(v));
+    if (!_saPop.sel.size) { toast('Marque pelo menos um valor.', 'warn'); return; }
+    if (todos && !_saPop.busca) delete _sa.f[id]; else _sa.f[id] = { vals:new Set(_saPop.sel) };
+  } else if (c.tipo === 'num') {
+    const lido = x => { const v = $(x).value; return v === '' ? null : Number(v); };
+    const min = lido('sa-pop-min'), max = lido('sa-pop-max');
+    const zero = document.querySelector('input[name="sa-pop-z"]:checked')?.value || '';
+    if (min === null && max === null && !zero) delete _sa.f[id]; else _sa.f[id] = { min, max, zero };
+  } else {
+    const faixas = new Set([...document.querySelectorAll('.sa-pop-fx:checked')].map(x => x.value));
+    const de = $('sa-pop-de').value || null, ate = $('sa-pop-ate').value || null;
+    if (!faixas.size && !de && !ate) delete _sa.f[id]; else _sa.f[id] = { faixas, de, ate };
+  }
+  saFecharPop();
+  renderSaldoErp();
+}
+/* Mostrar / esconder colunas. */
+function saAbrirColunas(ev) {
+  ev.stopPropagation();
+  const ja = _saPop?.id === '__cols';
+  saFecharPop();
+  if (ja) return;
+  _saPop = { id:'__cols' };
+  const pop = document.createElement('div');
+  pop.id = 'sa-pop'; pop.className = 'sa-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Colunas');
+  pop.innerHTML = `<div class="sa-pop-cab"><b>Colunas</b><button class="ico-btn" onclick="saFecharPop()" aria-label="Fechar">×</button></div>
+    <div class="sa-pop-corpo"><div class="sa-pop-lista">${SA_COLS.map(c => `<label><input type="checkbox" ${_saVisiveis.has(c.id) ? 'checked' : ''} onchange="saColuna('${c.id}', this.checked)"> <span>${esc(c.rot)}</span></label>`).join('')}</div></div>
+    <div class="sa-pop-pe"><button class="btn btn-ghost btn-sm" onclick="saColunasPadrao()">Voltar ao padrão</button></div>`;
+  pop.addEventListener('click', e => e.stopPropagation());
+  saPosicionar(pop, ev.currentTarget);
+}
+function saColuna(id, on) {
+  on ? _saVisiveis.add(id) : _saVisiveis.delete(id);
+  if (!_saVisiveis.size) _saVisiveis.add('desc');
+  saGravarColunas();
+  const pop = $('sa-pop'); if (pop) pop.remove();
+  renderSaldoErp();
+  // reabre a lista de colunas no mesmo lugar para marcar várias seguidas
+  const bt = document.querySelector('#sa-ctrl .sa-cols-wrap button');
+  if (bt) { _saPop = null; bt.click(); }
+}
+function saColunasPadrao() {
+  _saVisiveis = new Set(SA_COLS.filter(c => !c.oculta).map(c => c.id));
+  saGravarColunas();
+  saFecharPop();
+  renderSaldoErp();
+}
+document.addEventListener('click', () => { if (_saPop) saFecharPop(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && _saPop) saFecharPop(); });
+
+/* ── menu ⋯ e importação manual (reserva para quando o robô parar) ── */
+function saMenu(ev) {
+  ev.stopPropagation();
+  const dd = $('sa-dd-mais'), bt = $('sa-bt-mais');
+  const abre = !dd.classList.contains('open');
+  dd.classList.toggle('open', abre);
+  bt.setAttribute('aria-expanded', String(abre));
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#sa-menu')) { $('sa-dd-mais')?.classList.remove('open'); $('sa-bt-mais')?.setAttribute('aria-expanded', 'false'); }
+});
+function saAbrirImport() {
+  $('sa-dd-mais').classList.remove('open');
+  if (typeof renderInfoRef === 'function') renderInfoRef();
+  abrirModal('modal-sa-import');
 }
 
 /* ── Totais por filial / armazém / tipo, com empenhado × livre ── */
@@ -324,7 +782,7 @@ function saTotais(lista) {
     if (_sa.grupo === 'armazem') return `<b class="mono-b">${esc(k)}</b><div class="sub">${esc(nomeArmazem(k) || 'fora da lista de armazéns')}</div>`;
     return `<b class="mono-b">${esc(k)}</b><div class="sub">${esc(SA_TIPOS[k] || '')}</div>`;
   };
-  const filtro = { filial:null, armazem:'sa-arm', tipo:'sa-tipo' }[_sa.grupo];
+  const filtro = { filial:'filial', armazem:'arm', tipo:'tipo' }[_sa.grupo];
 
   const linhas = [];
   for (const k of [...g.keys()].sort(ordem)) {
@@ -332,7 +790,7 @@ function saTotais(lista) {
     const uns = Object.keys(pu).sort(saOrdUn);
     uns.forEach((u, i) => {
       const x = pu[u], p = x.saldo ? Math.max(0, Math.min(100, x.emp / x.saldo * 100)) : 0;
-      const clique = filtro && i === 0 ? ` class="sa-clica" title="Filtrar por ${esc(k)}" onclick="saFiltrar('${filtro}', '${esc(k)}')"` : '';
+      const clique = filtro && i === 0 ? ` class="sa-clica" title="Filtrar por ${esc(k)}" onclick="saFiltrarValor('${filtro}', '${esc(k)}')"` : '';
       linhas.push(`<tr${i === 0 ? ' class="sa-g1"' : ''}>
         ${i === 0 ? `<td rowspan="${uns.length}"${clique}>${rotulo(k)}</td>` : ''}
         <td><span class="tag t-mute">${esc(u)}</span></td>
@@ -363,9 +821,6 @@ function saTotais(lista) {
       ${linhas.length ? `<tfoot>${pe}</tfoot>` : ''}
     </table></div>`;
 }
-function saFiltrar(sel, v) {
-  if ($(sel)) { $(sel).value = v; renderSaldoErp(); toast(`Filtrando por ${v}.`); }
-}
 
 /* ── Validade: vencidos e vencendo, com quantidade e onde estão ── */
 function saValidade(lista) {
@@ -384,7 +839,7 @@ function saValidade(lista) {
     .sort((a, b) => (a.dias ?? 1e9) - (b.dias ?? 1e9) || a.desc.localeCompare(b.desc));
   _sa.export = () => ls.map(l => ({ Produto:l.desc, Codigo:l.cod, Tipo:l.tipo, Lote:l.lote, Filial:l.filial, Armazem:l.arm,
     Fabricacao:saData(l.fab), Validade:saData(l.val), Dias:l.dias ?? '', Saldo:l.saldo, Unidade:l.un, Empenho:l.emp, Paletes:l.pl ?? '',
-    Vagas:(_sa.vagas[`${l.cod}|${l.lote}`] || []).join(' ') }));
+    Vagas:(l.vagas || []).join(' ') }));
   const p = fatiar('sa-val', ls, saAssin() + fx.id);
 
   $('sa-corpo').innerHTML = `
@@ -430,7 +885,7 @@ function saArmTab(lista) {
   const ls = todos.filter(x => !_sa.regra || x.r.id === _sa.regra)
     .sort((a, b) => SA_REGRAS.indexOf(a.r) - SA_REGRAS.indexOf(b.r) || (a.l.dias ?? 0) - (b.l.dias ?? 0));
   _sa.export = () => ls.map(({ l, r }) => ({ Situacao:r.rot, Produto:l.desc, Codigo:l.cod, Lote:l.lote, Filial:l.filial,
-    Armazem:l.arm, Validade:saData(l.val), Dias:l.dias ?? '', Saldo:l.saldo, Unidade:l.un, Vagas:(_sa.vagas[`${l.cod}|${l.lote}`] || []).join(' ') }));
+    Armazem:l.arm, Validade:saData(l.val), Dias:l.dias ?? '', Saldo:l.saldo, Unidade:l.un, Vagas:(l.vagas || []).join(' ') }));
   const p = fatiar('sa-reg', ls, saAssin() + _sa.regra);
   $('sa-corpo').innerHTML = `
     <div class="sa-resumo">Regra: lote vencido fica no <b>D7</b>, e o D7 é só para vencido. Para mudar a regra, fale com quem cuida do sistema (SA_REGRAS no saldo-erp.js).</div>
@@ -485,23 +940,28 @@ function saEvolucao() {
       Rode o <b>sql/migracao-saldo-historico.sql</b> no Supabase. A partir daí, cada dia com foto do ERP vira um ponto aqui.</div></div></div>`;
     return;
   }
-  const arm = $('sa-arm').value, tipo = $('sa-tipo').value, un = $('sa-un').value;
+  // Os filtros de Filial, Armazém, Tipo e UM valem aqui; os outros não
+  // (o histórico é guardado por armazém, unidade e tipo, não por lote).
+  const fv = id => _sa.f[id]?.vals || null;
+  const fArm = fv('arm'), fTipo = fv('tipo'), fUn = fv('un'), fFil = fv('filial');
   const corte = new Date(Date.now() - _sa.periodo * 864e5).toISOString().slice(0, 10);
   // dia → unidade → {saldo, emp, venc}
   const porDia = new Map();
   for (const r of _sa.dia) {
     const d = String(r.dia).slice(0, 10);
-    if (d < corte || !daFilial(r.filial) || (arm && r.armazem !== arm) || (tipo && (r.tipo || '—') !== tipo)) continue;
+    if (d < corte || !daFilial(r.filial) || (fArm && !fArm.has(r.armazem)) || (fTipo && !fTipo.has(r.tipo || '—'))
+        || (fFil && !fFil.has(filialCurta(r.filial)))) continue;
     const u = saUn(r.unidade);
-    if (un && u !== un) continue;
+    if (fUn && !fUn.has(u)) continue;
     const o = porDia.get(d) || porDia.set(d, {}).get(d);
     const x = o[u] ||= { saldo:0, emp:0, venc:0 };
     x.saldo += Number(r.saldo) || 0; x.emp += Number(r.empenho) || 0; x.venc += Number(r.vencido) || 0;
   }
   const dias = [...porDia.keys()].sort();
   const uns = [...new Set(dias.flatMap(d => Object.keys(porDia.get(d))))].sort(saOrdUn);
-  const busca = $('sa-busca').value.trim()
-    ? '<div class="sa-resumo">A busca por produto não vale aqui: o histórico é guardado por armazém, unidade e tipo.</div>' : '';
+  const outros = Object.keys(_sa.f).filter(id => !['arm', 'tipo', 'un', 'filial'].includes(id));
+  const busca = $('sa-busca').value.trim() || outros.length
+    ? `<div class="sa-resumo">Aqui só valem os filtros de filial, armazém, tipo e UM: o histórico é guardado por armazém, unidade e tipo, não por lote.${outros.length ? ` Ignorados: ${outros.map(id => esc(SA_COL[id].rot)).join(', ')}${$('sa-busca').value.trim() ? ' e a busca' : ''}.` : ' A busca foi ignorada.'}</div>` : '';
 
   if (dias.length < 2) {
     $('sa-corpo').innerHTML = `${busca}<div class="panel-body"><div class="aviso a-info" style="margin:0"><span class="aviso-ico">◔</span><div>
@@ -597,7 +1057,7 @@ function saDesenharGraficos() {
   });
 }
 addEventListener('resize', debounce(() => {
-  if ($('page-saldo-erp')?.classList.contains('active') && _sa.aba === 'evolucao') saDesenharGraficos();
+  if ($('page-saldo')?.classList.contains('active') && _sa.aba === 'evolucao') saDesenharGraficos();
 }, 150));
 
 function saHover(el) {
@@ -630,8 +1090,10 @@ function saHover(el) {
   el.addEventListener('pointerleave', sair);
 }
 
-/* ═══════════ EXPORTAR ═══════════ */
+/* ═══════════ EXPORTAR ═══════════
+   O que está na tela, com os filtros. Em .xlsx (abre direto no Excel). */
 function exportarSaldoErp() {
+  if (_sa.aba === 'divergencias') { baixarCSV(); return; }
   if (_sa.aba === 'totais') {
     const ls = saFiltradas(), chaveG = { filial:l => filialCurta(l.filial), armazem:l => l.arm, tipo:l => l.tipo }[_sa.grupo];
     const g = {};
@@ -641,15 +1103,22 @@ function exportarSaldoErp() {
   }
   const dados = _sa.export ? _sa.export() : [];
   if (!dados.length) { toast('Nada para exportar.', 'warn'); return; }
-  const cab = Object.keys(dados[0]);
-  const fmt = v => typeof v === 'number' ? String(Math.round(v * 1e4) / 1e4).replace('.', ',') : String(v ?? '');
-  const txt = [cab, ...dados.map(d => cab.map(c => fmt(d[c])))]
-    .map(l => l.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
-  const url = URL.createObjectURL(new Blob(['﻿' + txt], { type:'text/csv;charset=utf-8' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `saldo-${_sa.aba}-${saHoje()}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const nome = `saldo-${_sa.aba}${_sa.aba === 'planilha' && _sa.visao === 'produtos' ? '-produtos' : ''}-${saHoje()}`;
+  if (typeof XLSX !== 'undefined') {
+    const ws = XLSX.utils.json_to_sheet(dados);
+    const cab = Object.keys(dados[0]);
+    ws['!cols'] = cab.map(c => ({ wch:Math.min(48, Math.max(c.length + 2, ...dados.slice(0, 200).map(d => String(d[c] ?? '').length + 1))) }));
+    ws['!autofilter'] = { ref:XLSX.utils.encode_range({ s:{ r:0, c:0 }, e:{ r:dados.length, c:cab.length - 1 } }) };
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Saldo');
+    XLSX.writeFile(wb, `${nome}.xlsx`);
+  } else {
+    const cab = Object.keys(dados[0]);
+    const fmt = v => typeof v === 'number' ? String(Math.round(v * 1e4) / 1e4).replace('.', ',') : String(v ?? '');
+    const txt = [cab, ...dados.map(d => cab.map(c => fmt(d[c])))]
+      .map(l => l.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+    const url = URL.createObjectURL(new Blob(['\uFEFF' + txt], { type:'text/csv;charset=utf-8' }));
+    const a = document.createElement('a'); a.href = url; a.download = `${nome}.csv`; a.click(); URL.revokeObjectURL(url);
+  }
   toast(`${num(dados.length)} linha(s) exportada(s).`);
 }
