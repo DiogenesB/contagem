@@ -40,7 +40,7 @@ let _referencia     = null;       // marca que a fonte já foi carregada
 
 /* ── tela ── */
 let _sVisao     = 'lote';         // lote | produto
-let _situacao   = 'todas';
+let _situacao   = 'divergentes';   // a aba Mapa × sistema abre no que precisa corrigir
 let _ordem      = 'gravidade';
 let _ordemAsc   = false;
 let _sArmFiltro = '';             // armazém clicado no card
@@ -1189,7 +1189,7 @@ function ordemSaldoSelect() {
 function limparFiltrosSaldo() {
   $('s-busca').value = '';
   if ($('s-tipo')) $('s-tipo').value = '';
-  _situacao = 'todas'; _sArmFiltro = '';
+  _situacao = 'divergentes'; _sArmFiltro = '';
   _ordem = 'gravidade'; _ordemAsc = false;
   _abertas.clear();
   renderSaldo();
