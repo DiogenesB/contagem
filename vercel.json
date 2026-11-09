@@ -1,19 +1,44 @@
 {
   "rewrites": [
-    { "source": "/",        "destination": "/painel.html" },
-    { "source": "/painel",  "destination": "/painel.html" },
-    { "source": "/mobile",  "destination": "/mobile.html" },
-    { "source": "/mapa",    "destination": "/mapa.html" },
-    { "source": "/layout",  "destination": "/layout.html" }
+    {
+      "source": "/",
+      "destination": "/painel.html"
+    },
+    {
+      "source": "/painel",
+      "destination": "/painel.html"
+    },
+    {
+      "source": "/mobile",
+      "destination": "/mobile.html"
+    },
+    {
+      "source": "/mapa",
+      "destination": "/mapa.html"
+    },
+    {
+      "source": "/layout",
+      "destination": "/layout.html"
+    }
   ],
   "headers": [
     {
-      "source": "/(comum|fila|impressao|identificacao|saldo-mapeado|inicio|separacao).js",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+      "source": "/(comum|fila|impressao|identificacao|saldo-mapeado|saldo-erp|inicio|separacao|leitor).js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/sw.js",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     }
   ]
 }
