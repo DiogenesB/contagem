@@ -38,7 +38,7 @@ const SA_REGRAS = [
 
 const SA_ABAS = [
   ['planilha',     'Planilha'],
-  ['divergencias', 'Divergências'],
+  ['divergencias', 'Mapa × sistema'],
   ['totais',       'Totais'],
   ['validade',     'Validade'],
   ['divididos',    'Lote em 2+ armazéns'],
@@ -60,6 +60,7 @@ const _sa = {
   ord:{ col:'desc', asc:true },  // ordenação da planilha
   visao:'lotes',                 // lotes | produtos
   abertos:new Set(),             // produtos abertos na visão por produto
+  abertosL:new Set(),            // lotes abertos (onde está no mapa)
   mapaDe:null,                   // de qual cálculo/ocupação veio o cruzamento
 };
 
@@ -133,7 +134,21 @@ function saSitTag(l) {
 /* ═══════════ COLUNAS DA PLANILHA ═══════════
    tipo: cat (lista de valores com caixinhas) · num · data
    v(): valor para filtrar/ordenar · td(): o que aparece na célula */
+const SA_MAPA_EST = {
+  ok:      { rot:'No mapa',         cls:'ok'      },
+  parcial: { rot:'Em parte',        cls:'parcial' },
+  fora:    { rot:'Fora do mapa',    cls:'fora'    },
+  na:      { rot:'Não se aplica',   cls:'na'      },
+};
+function saMapaInd(l) {
+  const e = SA_MAPA_EST[l.mapaEst] || SA_MAPA_EST.fora;
+  const pc = l.mapaEst === 'na' || l.pctMapa == null ? '' : `${num(Math.floor(l.pctMapa))}%`;
+  const deg = l.mapaEst === 'parcial' ? Math.round((l.pctMapa || 0) * 3.6) : 0;
+  return `<span class="sa-ind ${e.cls}" title="${esc(e.rot)}${l.vagas?.length ? ' · ' + esc(l.vagas.join(', ')) : ''}">` +
+    `<i style="--g:${deg}deg"></i><span>${pc || '—'}</span></span>`;
+}
 const SA_COLS = [
+  { id:'mapaind', rot:'Mapa',       tipo:'cat',  v:l => (SA_MAPA_EST[l.mapaEst] || SA_MAPA_EST.fora).rot, td:saMapaInd, cls:'sa-c-ind' },
   // Ocultas por padrão as que já aparecem dentro de outra célula
   // (código, filial e tipo embaixo do produto; UM junto do saldo).
   { id:'filial', rot:'Filial',      tipo:'cat',  v:l => filialCurta(l.filial), td:l => badgeFilial(l.filial, l.cod), oculta:true },
@@ -155,7 +170,7 @@ const SA_COLS = [
   { id:'livre',  rot:'Livre',       tipo:'num',  v:l => l.saldo - l.emp, td:l => saQ(l.saldo - l.emp), oculta:true },
   { id:'pl',     rot:'Paletes',     tipo:'num',  v:l => l.pl, td:l => saPl(l.pl), oculta:true },
   { id:'cx',     rot:'Caixas',      tipo:'num',  v:l => l.cx, td:l => l.cx == null ? '—' : saQ(l.cx), oculta:true },
-  { id:'mapa',   rot:'No mapa',     tipo:'num',  v:l => l.noMapa, td:l => l.falta == null && !l.noMapa ? '<span class="num-zero">—</span>' : saQ(l.noMapa) },
+  { id:'mapa',   rot:'No mapa',     tipo:'num',  v:l => l.noMapa, td:l => l.falta == null && !l.noMapa ? '<span class="num-zero">—</span>' : saQ(l.noMapa), oculta:true },
   { id:'falta',  rot:'Falta mapear', tipo:'num', v:l => l.falta,
     td:l => l.falta == null ? '<span class="num-zero" title="Armazém que não fica no mapa">n/a</span>' : l.falta > 0 ? `<span class="sa-warn">${saQ(l.falta)}</span>` : '<span class="num-pos">0</span>' },
   { id:'sit',    rot:'Situação',    tipo:'cat',  v:l => l.sitRot || '—', td:saSitTag },
@@ -255,7 +270,7 @@ function saCruzarMapa() {
 
   const kc = (cod, lote) => `${chave(normalizarCodigo(cod))}|${chave(lote)}`;
   // mapa: produto+lote+armazém → quantidade; produto+lote → vagas
-  const qtd = new Map(), vagas = new Map();
+  const qtd = new Map(), vagas = new Map(), itensK = new Map();
   for (const [pos, itens] of Object.entries(ocup || {}))
     for (const it of itens) {
       const k = kc(it.codigo, it.lote);
@@ -263,8 +278,11 @@ function saCruzarMapa() {
       qtd.set(ka, (qtd.get(ka) || 0) + (Number(it.quantidade) || 0));
       const v = vagas.get(k) || vagas.set(k, []).get(k);
       if (!v.includes(pos)) v.push(pos);
+      (itensK.get(k) || itensK.set(k, []).get(k)).push({ pos, qtd:Number(it.quantidade) || 0,
+        arm:normalizarArmazem(it.armazem) || '—', desde:it.created_at, sep:!!it.sep });
     }
   for (const v of vagas.values()) v.sort();
+  for (const v of itensK.values()) v.sort((a, b) => a.pos.localeCompare(b.pos, 'pt-BR', { numeric:true }));
 
   // situação: a linha das Divergências que tem este lote+armazém do sistema
   const sit = new Map();
@@ -280,23 +298,30 @@ function saCruzarMapa() {
   for (const r of _sa.ref) {
     const k = kc(r.cod, r.lote), ka = `${k}|${r.arm}`;
     r.vagas = vagas.get(k) || [];
+    r.itensMapa = itensK.get(k) || [];
     r._busca = null;                       // a busca também acha pela vaga
     r.noMapa = qtd.get(ka) || 0;
+    r.pctMapa = r.saldo > 0 ? Math.min(100, r.noMapa / r.saldo * 100) : null;
     const mapeavel = typeof armMapeado === 'function' ? armMapeado(r.arm) : true;
+    r.linhaDiv = null;
     if (!mapeavel) {
-      r.falta = null; r.sitRot = SA_NAO_MAPEAVEL; r.sitCls = 't-mute';
+      r.falta = null; r.sitRot = SA_NAO_MAPEAVEL; r.sitCls = 't-mute'; r.mapaEst = 'na';
       r.sitExpl = 'Este armazém não fica no drive-in; o saldo dele não precisa estar no mapa.';
       r.sitId = 'nmap';
       continue;
     }
     r.falta = Math.max(0, r.saldo - r.noMapa);
     const l = sit.get(ka);
+    r.linhaDiv = l || null;
     const id = l?.estado || (r.saldo <= 0 ? null : r.noMapa ? (r.falta > 0.001 ? 'falta' : 'ok') : 'nao-mapeado');
     const s = id && typeof SITUACOES === 'object' ? SITUACOES[id] : null;
     r.sitId = id;
     r.sitRot = s?.rot || (id ? id : '');
     r.sitCls = SA_SIT_COR[s?.cor] || 't-mute';
     r.sitExpl = s?.expl || '';
+    // Resumo para o indicador: está no mapa, em parte ou não está.
+    // (pela quantidade: sobra no mapa também é "no mapa"; a Situação avisa da sobra)
+    r.mapaEst = r.saldo <= 0 ? 'ok' : r.noMapa >= r.saldo - Math.max(0.001, r.saldo * 0.0002) ? 'ok' : r.noMapa > 0.001 ? 'parcial' : 'fora';
   }
 }
 
@@ -363,6 +388,44 @@ function saChips() {
   $('sa-chips').innerHTML = out.join('');
 }
 function saTirarFiltro(id) { delete _sa.f[id]; renderSaldoErp(); }
+
+/* ── filtros rápidos: atalhos que preenchem o filtro de uma coluna ── */
+const SA_DIVERG = () => ['armazem', 'codigo', 'produto', 'sobra', 'lote']
+  .map(id => typeof SITUACOES === 'object' ? SITUACOES[id]?.rot : null).filter(Boolean);
+const SA_RAPIDOS = [
+  { id:'venc',   grupo:'Validade', rot:'Vencidos',          col:'val',     f:() => ({ faixas:new Set(['venc']) }) },
+  { id:'v30',    grupo:'Validade', rot:'Vencem em 30 dias', col:'val',     f:() => ({ faixas:new Set(['30']) }) },
+  { id:'v60',    grupo:'Validade', rot:'em 60 dias',        col:'val',     f:() => ({ faixas:new Set(['30', '60']) }) },
+  { id:'v90',    grupo:'Validade', rot:'em 90 dias',        col:'val',     f:() => ({ faixas:new Set(['30', '60', '90']) }) },
+  { id:'faltam', grupo:'Mapa',     rot:'Falta mapear',      col:'mapaind', f:() => ({ vals:new Set([SA_MAPA_EST.fora.rot, SA_MAPA_EST.parcial.rot]) }) },
+  { id:'fora',   grupo:'Mapa',     rot:'Fora do mapa',      col:'mapaind', f:() => ({ vals:new Set([SA_MAPA_EST.fora.rot]) }) },
+  { id:'parte',  grupo:'Mapa',     rot:'Mapeado em parte',  col:'mapaind', f:() => ({ vals:new Set([SA_MAPA_EST.parcial.rot]) }) },
+  { id:'nomapa', grupo:'Mapa',     rot:'Tudo no mapa',      col:'mapaind', f:() => ({ vals:new Set([SA_MAPA_EST.ok.rot]) }) },
+  { id:'diverg', grupo:'Mapa',     rot:'Com divergência',   col:'sit',     f:() => ({ vals:new Set(SA_DIVERG()) }) },
+  { id:'emp',    grupo:'Outros',   rot:'Com empenho',       col:'emp',     f:() => ({ min:null, max:null, zero:'nz' }) },
+  { id:'livre0', grupo:'Outros',   rot:'Todo empenhado',    col:'livre',   f:() => ({ min:null, max:0, zero:'' }) },
+];
+const saSerial = f => JSON.stringify(f, (k, v) => v instanceof Set ? [...v].sort() : v);
+function saRapidoAtivo(id) {
+  const r = SA_RAPIDOS.find(x => x.id === id);
+  return !!r && !!_sa.f[r.col] && saSerial(_sa.f[r.col]) === saSerial(r.f());
+}
+function saRapido(id) {
+  const r = SA_RAPIDOS.find(x => x.id === id); if (!r) return;
+  if (saRapidoAtivo(id)) delete _sa.f[r.col]; else _sa.f[r.col] = r.f();
+  if (_sa.aba === 'divergencias') _sa.aba = 'planilha';
+  renderSaldoErp();
+}
+function saCartao(id) {
+  if (id === 'arrumar') { saAba('armazem'); return; }
+  _sa.aba = 'planilha';
+  saRapido(id);
+}
+function saRapidosHTML() {
+  const grupos = [...new Set(SA_RAPIDOS.map(r => r.grupo))];
+  $('sa-rapidos').innerHTML = grupos.map(g => `<div class="sa-rap-g"><span>${esc(g)}</span>${SA_RAPIDOS.filter(r => r.grupo === g).map(r =>
+    `<button class="sa-rap${saRapidoAtivo(r.id) ? ' on' : ''}" aria-pressed="${saRapidoAtivo(r.id)}" onclick="saRapido('${r.id}')">${esc(r.rot)}</button>`).join('')}</div>`).join('');
+}
 function saLimparFiltros() { _sa.f = {}; if ($('sa-busca')) $('sa-busca').value = ''; renderSaldoErp(); }
 /* Atalho das análises: clicar num armazém, tipo ou filial filtra a tela. */
 function saFiltrarValor(id, v) {
@@ -417,7 +480,7 @@ function renderSaldoErp() {
   // Cabeçalho: de quando é a foto.
   const f = _sa.foto;
   $('sa-foto').innerHTML = f
-    ? `Foto do ERP de <b>${esc(fmtTS(f.ate))}</b>${f.quem ? ` · ${esc(f.quem)}` : ''}` +
+    ? `Foto do ERP de <b>${esc(fmtTS(f.ate))}</b> <span class="sa-mute">(${esc(haQuanto(new Date(f.ate).getTime()))})</span>${f.quem ? ` · ${esc(f.quem)}` : ''}` +
       (new Date(f.ate) - new Date(f.de) > 36e5 ? ` <span class="sa-mute">(algum armazém é de ${esc(fmtTS(f.de))})</span>` : '')
     : 'Nenhuma foto do ERP ainda.';
 
@@ -429,29 +492,45 @@ function renderSaldoErp() {
     Rode o <b>sql/migracao-saldo-historico.sql</b> no Supabase. Sem ele não aparecem a evolução diária e os lotes parados; o resto da tela funciona.</div></div>`);
   $('sa-avisos').innerHTML = naDiv ? '' : av.join('');
 
-  // KPIs: uma unidade por cartão — litro, quilo e dose não se somam.
+  // Resumo: o saldo por unidade numa tabela (litro, quilo e dose não se
+  // somam) e, ao lado, os cartões que viram filtro quando clicados.
   const pu = saPorUn(lista);
   const venc = lista.filter(l => l.dias !== null && l.dias < 0 && l.saldo > 0);
   const v90  = lista.filter(l => l.dias !== null && l.dias >= 0 && l.dias <= 90 && l.saldo > 0);
   const div = saDivididos().length;
   const fora = saForaDaRegra(lista).length;
   const mapeaveis = lista.filter(l => l.falta != null && l.saldo > 0);
-  const completos = mapeaveis.filter(l => l.sitId === 'ok').length;
-  const semMapa = mapeaveis.filter(l => !l.noMapa).length;
-  const cards = Object.keys(pu).sort(saOrdUn).map(u => {
-    const x = pu[u];
-    return kpi(`Saldo em ${u}`, saQ(x.saldo),
-      `livre ${saQ(x.saldo - x.emp)} · empenhado ${saQ(x.emp)}${x.temPl ? ` · ${num1(x.pl)} pl` : ''}`);
-  });
-  cards.push(kpi('Lotes conferindo com o mapa', mapeaveis.length ? `${num1(completos / mapeaveis.length * 100)}%` : '—',
-    `${num(completos)} de ${num(mapeaveis.length)} · ${num(semMapa)} fora do mapa`, completos === mapeaveis.length ? 'is-pos' : 'is-info'));
-  cards.push(kpi('Lotes vencidos', num(venc.length), venc.length ? saTxtUn(venc) : 'nenhum lote vencido', venc.length ? 'is-neg' : 'is-pos'));
-  cards.push(kpi('Vencem em 90 dias', num(v90.length), v90.length ? saTxtUn(v90) : 'nenhum', v90.length ? 'is-warn' : ''));
-  cards.push(kpi('Para arrumar', num(div + fora), `${num(div)} lote(s) em 2+ armazéns · ${num(fora)} no armazém errado`, div + fora ? 'is-alt' : 'is-pos'));
-  $('sa-kpis').innerHTML = cards.join('');
+  const completos = mapeaveis.filter(l => l.mapaEst === 'ok').length;
+  const faltam = mapeaveis.filter(l => l.mapaEst !== 'ok');
+  const filtrando = Object.keys(_sa.f).length || $('sa-busca').value.trim() || $('filtro-filial').value;
+  const uns = Object.keys(pu).sort(saOrdUn);
+  const linhaUn = u => { const x = pu[u], pc = x.mapeavel ? Math.min(100, x.mapa / x.mapeavel * 100) : null;
+    return `<tr><td><span class="tag t-mute">${esc(u)}</span></td><td class="num"><b>${saQ(x.saldo)}</b></td>
+      <td class="num">${saQ(x.saldo - x.emp)}</td><td class="num">${x.emp ? saQ(x.emp) : '—'}</td><td class="num">${x.temPl ? num1(x.pl) : '—'}</td>
+      <td>${pc === null ? '<span class="num-zero">n/a</span>' : `<div class="k-pbar"><div class="bar ${pc >= 99.98 ? 'pos' : ''}"><i style="width:${pc.toFixed(1)}%"></i></div><span>${num1(pc)}%</span></div>`}</td></tr>`; };
+  const cartao = (id, rot, valor, pe, cls, ativo) =>
+    `<button class="kpi sa-kpi ${cls}${ativo ? ' sel' : ''}" onclick="saCartao('${id}')" aria-pressed="${!!ativo}">
+      <div class="kpi-label">${esc(rot)}</div><div class="kpi-value">${valor}</div><div class="kpi-foot">${pe}</div></button>`;
+  $('sa-kpis').innerHTML = `
+    <div class="panel sa-res-un">
+      <div class="sa-res-tit">Saldo${filtrando ? ' <span>com os filtros</span>' : ''}<small>${num(lista.length)} lote(s)</small></div>
+      <div class="sa-res-scroll"><table class="sa-res-t">
+        <thead><tr><th>UM</th><th class="num">Saldo</th><th class="num">Livre</th><th class="num">Empenhado</th><th class="num">Paletes</th><th>No mapa</th></tr></thead>
+        <tbody>${uns.map(linhaUn).join('') || '<tr><td colspan="6" class="num-zero">sem saldo</td></tr>'}</tbody>
+      </table></div>
+    </div>
+    <div class="sa-cartoes">
+      ${cartao('faltam', 'Lotes no mapa', mapeaveis.length ? `${num1(completos / mapeaveis.length * 100)}<small>%</small>` : '—',
+        faltam.length ? `${num(completos)} de ${num(mapeaveis.length)} · <b>${num(faltam.length)} faltam mapear</b>` : 'todo o saldo está no mapa',
+        faltam.length ? 'is-info' : 'is-pos', saRapidoAtivo('faltam'))}
+      ${cartao('venc', 'Lotes vencidos', num(venc.length), venc.length ? saTxtUn(venc) : 'nenhum lote vencido', venc.length ? 'is-neg' : 'is-pos', saRapidoAtivo('venc'))}
+      ${cartao('v90', 'Vencem em 90 dias', num(v90.length), v90.length ? saTxtUn(v90) : 'nenhum', v90.length ? 'is-warn' : '', saRapidoAtivo('v90'))}
+      ${cartao('arrumar', 'Para arrumar', num(div + fora), `${num(div)} em 2+ armazéns · ${num(fora)} no armazém errado`, div + fora ? 'is-alt' : 'is-pos', false)}
+    </div>`;
+  saRapidosHTML();
 
   // Abas com contagem
-  const nDiv = (typeof _sCalc !== 'undefined' && _sCalc?.lista) ? _sCalc.lista.filter(l => l.estado !== 'ok' && l.estado !== 'nao-mapeado').length : 0;
+  const nDiv = (typeof _sCalc !== 'undefined' && _sCalc?.lista) ? _sCalc.lista.filter(l => l.estado !== 'ok').length : 0;   // = o botão Divergentes da aba
   const n = {
     divergencias: nDiv, validade: venc.length, divididos: div, armazem: fora,
     parados: _sa.lotes ? saParados(lista).filter(p => p.dias >= _sa.parado && !(_sa.semD7 && p.l.arm === 'D7')).length : null,
@@ -470,6 +549,18 @@ function renderSaldoErp() {
   saChips();
 
   ({ planilha:saPlanilha, totais:saTotais, validade:saValidade, divididos:saDivTab, armazem:saArmTab, evolucao:saEvolucao, parados:saParadosTab })[_sa.aba](lista);
+}
+
+/* "Atualizar" relê do banco tudo o que a tela mostra (saldo, mapa e
+   histórico), sem esperar o cache. Quem traz saldo novo do ERP para o
+   banco é o robô do Excel, no horário dele. */
+async function saAtualizar() {
+  busy('sa-bt-atu', 'sa-spin-atu', true);
+  try {
+    if (typeof cacheInvalidar === 'function') cacheInvalidar('saldo-erp');
+    await carregarSaldoErp(true);
+    toast(_sa.foto ? `Recarregado. A foto mais nova do ERP é de ${fmtTS(_sa.foto.ate)}.` : 'Recarregado.');
+  } finally { busy('sa-bt-atu', 'sa-spin-atu', false); }
 }
 
 function saAba(id) { _sa.aba = id; _sa.export = null; renderSaldoErp(); }
@@ -532,11 +623,16 @@ function saPlanilha(lista) {
     return [c.rot, Array.isArray(v) ? (l.vagas || []).join(' ') : c.tipo === 'data' ? saData(v).replace('—', '') : v ?? ''];
   })));
   const p = fatiar('sa-pla', ls, saAssin() + JSON.stringify(_sa.ord));
-  $('sa-corpo').innerHTML = `${saTotaisLinha(ls)}
+  _sa.regLote = p.itens;
+  $('sa-corpo').innerHTML = `
     <div class="tbl-wrap"><table class="sa-grade">
       <thead><tr>${cols.map(saTh).join('')}</tr></thead>
-      <tbody>${p.itens.map(l => `<tr>${cols.map(c => `<td class="${c.tipo === 'num' ? 'num' : c.cls || ''}">${c.td ? c.td(l) : esc(c.v(l) ?? '—')}</td>`).join('')}</tr>`).join('')
-        || vazio('Nenhum lote com esses filtros', Object.keys(_sa.f).length ? 'Tire algum filtro ali em cima.' : '', cols.length)}</tbody>
+      <tbody>${p.itens.map((l, i) => {
+        const aberto = _sa.abertosL.has(l.k);
+        return `<tr class="sa-lin${aberto ? ' aberto' : ''}" onclick="saAbrirLote(${i})" title="Clique para ver onde está no mapa">${cols.map(c =>
+          `<td class="${c.tipo === 'num' ? 'num' : c.cls || ''}">${c.td ? c.td(l) : esc(c.v(l) ?? '—')}</td>`).join('')}</tr>` +
+          (aberto ? `<tr class="sa-det"><td colspan="${cols.length}">${saDetalheLote(l)}</td></tr>` : '');
+      }).join('') || vazio('Nenhum lote com esses filtros', Object.keys(_sa.f).length ? 'Tire algum filtro ali em cima.' : '', cols.length)}</tbody>
     </table></div>${barraPag('sa-pla', p, 'lote(s)')}`;
 }
 
@@ -569,8 +665,8 @@ function saPlanilhaProdutos(lista) {
     const aberto = _sa.abertos.has(x.k);
     const pc = x.mapeavel ? Math.min(100, x.mapa / x.mapeavel * 100) : null;
     const sub = aberto ? `<tr class="sa-sub"><td colspan="11"><table class="sa-sub-t">
-      <thead><tr><th>Lote</th><th>Armazém</th><th>Validade</th><th class="num">Saldo</th><th class="num">Empenho</th><th class="num">No mapa</th><th class="num">Falta</th><th>Situação</th><th>Vagas</th></tr></thead>
-      <tbody>${saOrdenarLista(x.ls).map(l => `<tr><td class="mono">${esc(l.lote || '—')}</td><td>${saArm(l.arm)}</td><td class="mono">${SA_COL.val.td(l)}</td>
+      <thead><tr><th>Mapa</th><th>Lote</th><th>Armazém</th><th>Validade</th><th class="num">Saldo</th><th class="num">Empenho</th><th class="num">No mapa</th><th class="num">Falta</th><th>Situação</th><th>Vagas</th></tr></thead>
+      <tbody>${saOrdenarLista(x.ls).map(l => `<tr><td>${saMapaInd(l)}</td><td class="mono">${esc(l.lote || '—')}</td><td>${saArm(l.arm)}</td><td class="mono">${SA_COL.val.td(l)}</td>
         <td class="num">${saQ(l.saldo)}</td><td class="num">${l.emp ? saQ(l.emp) : '—'}</td><td class="num">${SA_COL.mapa.td(l)}</td><td class="num">${SA_COL.falta.td(l)}</td>
         <td>${saSitTag(l)}</td><td>${saVagas(l)}</td></tr>`).join('')}</tbody></table></td></tr>` : '';
     return `<tr class="sa-prod${aberto ? ' aberto' : ''}" onclick="saAbrirProduto(${i})">
@@ -583,11 +679,52 @@ function saPlanilhaProdutos(lista) {
       <td>${pc === null ? '<span class="num-zero">—</span>' : `<div class="k-pbar"><div class="bar ${pc >= 99.98 ? 'pos' : ''}"><i style="width:${pc.toFixed(1)}%"></i></div><span>${num1(pc)}%</span></div>`}</td>
     </tr>${sub}`;
   }).join('');
-  $('sa-corpo').innerHTML = `${saTotaisLinha(lista)}
+  $('sa-corpo').innerHTML = `
     <div class="tbl-wrap"><table class="sa-grade sa-prods">
       <thead><tr>${th('desc', 'Produto')}${th('filial', 'Filial')}${th('un', 'UM')}<th class="num">Lotes</th>${th('saldo', 'Saldo', true)}${th('emp', 'Empenho', true)}${th('livre', 'Livre', true)}${th('pl', 'Paletes', true)}${th('mapa', 'No mapa', true)}${th('falta', 'Falta mapear', true)}<th>% no mapa</th></tr></thead>
       <tbody>${linhas || vazio('Nenhum produto com esses filtros', '', 11)}</tbody>
     </table></div>${barraPag('sa-pla', p, 'produto(s)')}`;
+}
+function saAbrirLote(i) {
+  const l = _sa.regLote?.[i]; if (!l) return;
+  if (getSelection()?.toString()) return;      // estava selecionando texto
+  _sa.abertosL.has(l.k) ? _sa.abertosL.delete(l.k) : _sa.abertosL.add(l.k);
+  renderSaldoErp();
+}
+/* Onde o lote está: as vagas com a quantidade de cada uma e o que as
+   Divergências dizem dele. */
+function saDetalheLote(l) {
+  const itens = l.itensMapa || [];
+  const total = itens.reduce((s, x) => s + x.qtd, 0);
+  const vagas = itens.length ? `<div class="sa-det-vagas">${itens.map(x => `
+      <div class="sa-vaga">
+        <div class="sa-vaga-pos">${esc(x.pos)}</div>
+        <div class="sa-vaga-q"><b>${saQ(x.qtd)}</b> ${esc(l.un)} · arm. ${esc(x.arm)}${x.arm !== l.arm && l.arm !== '—' ? ' <span class="tag t-alt">outro armazém</span>' : ''}</div>
+        <div class="sa-vaga-d">${x.sep ? 'área de separação' : x.desde ? `desde ${fmtDia(x.desde)}` : ''}</div>
+        ${x.sep ? '' : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();irParaVaga('${esc(x.pos)}')">Ver no mapa</button>`}
+      </div>`).join('')}</div>`
+    : `<div class="sa-det-vazio">Este lote não está em nenhuma vaga do mapa.</div>`;
+  const resumo = l.mapaEst === 'na'
+    ? `O armazém <b>${esc(l.arm)}</b> não fica no drive-in, então este saldo não precisa estar no mapa.`
+    : `Sistema <b>${saQ(l.saldo)} ${esc(l.un)}</b> no ${esc(l.arm)} · no mapa neste armazém <b>${saQ(l.noMapa)}</b>` +
+      (l.falta > 0.001 ? ` · <span class="sa-warn">falta mapear <b>${saQ(l.falta)}</b></span>` : ' · <span class="num-pos">tudo mapeado</span>') +
+      (total - l.noMapa > 0.001 ? ` · mais <b>${saQ(total - l.noMapa)}</b> do mesmo lote em outro armazém do mapa` : '');
+  const dicas = (l.linhaDiv?.dicas || []).slice(0, 4).map(d => `<li class="d-${d.c}">${d.t}</li>`).join('');
+  return `<div class="sa-det-in" onclick="event.stopPropagation()">
+    <div class="sa-det-top"><div>${resumo}</div>${saSitTag(l)}</div>
+    ${vagas}
+    ${dicas ? `<ul class="sa-dicas">${dicas}</ul>` : ''}
+    ${l.mapaEst !== 'na' && l.mapaEst !== 'ok' ? `<div class="sa-det-pe"><button class="btn btn-ghost btn-sm" onclick="saVerNasDivergencias('${esc(l.lote)}')">Corrigir em Mapa × sistema</button></div>` : ''}
+  </div>`;
+}
+function saVerNasDivergencias(lote) {
+  _sa.aba = 'divergencias';
+  if ($('s-busca')) { $('s-busca').value = lote; }
+  // O lote pode estar só "fora do mapa": mostra todas as situações dele.
+  if (typeof setSituacaoSaldo === 'function') _situacao = 'todas';
+  renderSaldoErp();
+  if (typeof renderSaldo === 'function') renderSaldo();
+  $('sa-div')?.scrollIntoView({ block:'start', behavior:'smooth' });
 }
 function saAbrirProduto(i) {
   const x = _sa.regProd?.[i]; if (!x) return;
