@@ -699,7 +699,6 @@ table.sa-tot td[rowspan] { vertical-align:top; min-width:170px; }
 table.sa-tot td.sa-clica { cursor:pointer; }
 table.sa-tot td.sa-clica:hover { background:var(--surface-2); }
 table.sa-tot tfoot td { font-weight:600; background:var(--surface-2); padding:9px 14px; border-top:1px solid var(--line-2); }
-#sa-kpis { grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); }
 #sa-corpo td.num, #sa-corpo td.mono { white-space:nowrap; }
 .sa-arms { display:flex; flex-wrap:wrap; gap:5px; }
 .sa-arm-q { display:inline-flex; align-items:baseline; gap:6px; padding:2px 8px; border-radius:var(--r-xs);
@@ -732,6 +731,75 @@ table.sa-tot tfoot td { font-weight:600; background:var(--surface-2); padding:9p
   .sa-faixas, .sa-graficos { padding-left:14px; padding-right:14px; }
   .sa-graficos { grid-template-columns:1fr; }
   .sa-resumo { padding-left:14px; padding-right:14px; }
+}
+
+/* ── Saldo: planilha com filtro por coluna ── */
+.sa-filtros { margin-bottom:16px; }
+.sa-filtros-in { padding:14px 20px; display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; }
+.sa-busca { flex:1 1 320px; max-width:560px; }
+.sa-chips { margin-top:0; flex:1 1 260px; align-items:center; min-height:34px; }
+.sa-chips:empty { display:none; }
+.sa-abas-bar { margin:4px 0 12px; }
+.sa-abas-bar .seg { display:flex; width:max-content; max-width:100%; }
+.sa-mais-bt { font-size:1.1rem; line-height:1; padding-left:12px; padding-right:12px; }
+.sa-dd { width:280px; }
+.sa-nmap { opacity:.6; border-style:dashed; }
+.sa-somas { display:flex; flex-direction:column; gap:6px; padding:12px 20px; border-bottom:1px solid var(--line); background:var(--surface-2); }
+.sa-soma { display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px; font-size:.8125rem; color:var(--text-2); }
+.sa-soma b { color:var(--text); font-variant-numeric:tabular-nums; font-weight:600; }
+.sa-soma b.sa-warn { color:var(--warn); }
+table.sa-grade thead th.sa-th { padding:0; }
+.sa-th-in { display:flex; align-items:center; gap:2px; padding:6px 4px 6px 10px; }
+th.num .sa-th-in { justify-content:flex-end; }
+.sa-th-rot { border:0; background:none; color:inherit; font:inherit; font-weight:inherit; text-transform:inherit; letter-spacing:inherit;
+  cursor:pointer; padding:4px 2px; white-space:nowrap; text-align:inherit; }
+.sa-th-rot:hover { color:var(--text); }
+table.sa-grade thead th:not(.sa-th) .sa-th-rot { padding:0; }
+.sa-th-f { border:0; background:none; color:var(--text-3); cursor:pointer; width:26px; height:26px; border-radius:var(--r-xs);
+  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+.sa-th-f svg { width:14px; height:14px; }
+.sa-th-f:hover { background:var(--surface-3); color:var(--text); }
+th.filtrado .sa-th-f { color:var(--accent); background:var(--accent-sf); }
+th.filtrado .sa-th-rot { color:var(--accent); }
+table.sa-grade td { white-space:nowrap; padding:9px 10px; }
+table.sa-grade td:first-child, table.sa-grade th:first-child .sa-th-in { padding-left:16px; }
+.sa-un { color:var(--text-3); font-size:.6875rem; }
+.sa-vagas { flex-wrap:nowrap; }
+#sa-kpis { grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); }
+table.sa-grade td.nome { white-space:normal; min-width:220px; }
+tr.sa-prod { cursor:pointer; }
+tr.sa-prod:hover td { background:var(--surface-2); }
+tr.sa-prod.aberto td { background:var(--surface-2); border-bottom-color:transparent; }
+.sa-seta { display:inline-block; width:16px; color:var(--text-3); }
+tr.sa-sub > td { background:var(--bg) !important; padding:6px 14px 12px 30px !important; }
+table.sa-sub-t { font-size:.75rem; }
+table.sa-sub-t thead th { padding:6px 10px; background:transparent; }
+table.sa-sub-t td { padding:6px 10px; background:transparent; white-space:nowrap; }
+.sa-pop { position:fixed; z-index:300; width:300px; max-width:calc(100vw - 16px);
+  background:var(--surface); border:1px solid var(--line-2); border-radius:var(--r); box-shadow:var(--sh);
+  display:flex; flex-direction:column; max-height:min(520px, calc(100vh - 16px)); }
+.sa-pop.folha { left:0 !important; right:0; bottom:0; top:auto !important; width:100%; max-width:none;
+  border-radius:14px 14px 0 0; max-height:80vh; }
+.sa-pop-cab { display:flex; align-items:center; justify-content:space-between; padding:10px 10px 8px 14px; border-bottom:1px solid var(--line); }
+.sa-pop-cab b { font-size:.875rem; }
+.sa-pop-ord { display:flex; gap:6px; padding:8px 10px; border-bottom:1px solid var(--line); }
+.sa-pop-ord .btn { flex:1; }
+.sa-pop-corpo { padding:10px 12px; overflow:auto; min-height:0; flex:1; display:flex; flex-direction:column; gap:8px; }
+.sa-pop-busca { width:100%; }
+.sa-pop-tudo, .sa-pop-lista label, .sa-pop-op label { display:flex; align-items:center; gap:8px; font-size:.8125rem; cursor:pointer; padding:4px 2px; }
+.sa-pop-tudo { font-weight:600; border-bottom:1px solid var(--line); padding-bottom:7px; }
+.sa-pop-lista { display:flex; flex-direction:column; overflow:auto; max-height:280px; }
+.sa-pop-lista span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sa-pop-lista small { color:var(--text-3); font-variant-numeric:tabular-nums; }
+.sa-pop-mais { font-size:.75rem; color:var(--text-3); padding:6px 2px; }
+.sa-pop-num { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.sa-pop-num label { display:flex; flex-direction:column; gap:4px; font-size:.75rem; color:var(--text-2); }
+.sa-pop-op { display:flex; flex-direction:column; }
+.sa-pop-pe { display:flex; justify-content:space-between; gap:8px; padding:10px 12px; border-top:1px solid var(--line); background:var(--surface-2); border-radius:0 0 var(--r) var(--r); }
+.sa-pop.folha .sa-pop-pe { border-radius:0; padding-bottom:max(10px, env(safe-area-inset-bottom)); }
+@media (max-width:760px) {
+  .sa-filtros-in { padding:12px 14px; }
+  .sa-somas { padding:10px 14px; }
 }
 
 /* ═══════════ KPI DA CONTAGEM ═══════════ */
@@ -1446,13 +1514,9 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3"/><path d="M20 16H7l3 3"/></svg>
       <span>Transferências</span><span class="nav-count" id="nc-transferencias">0</span>
     </button>
-    <button class="nav-item" data-page="saldo-erp" onclick="irPara('saldo-erp')" title="Saldo">
+    <button class="nav-item" data-page="saldo" onclick="irPara('saldo')" title="Saldo">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 16l9 5 9-5"/></svg>
       <span>Saldo</span>
-    </button>
-    <button class="nav-item" data-page="saldo" onclick="irPara('saldo')" title="Saldo mapeado">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7l-3 7a4 4 0 006 0L5 7z"/><path d="M19 7l-3 7a4 4 0 006 0l-3-7z"/><path d="M5 7h14"/></svg>
-      <span>Saldo mapeado</span>
     </button>
     <button class="nav-item" data-page="alteracoes" onclick="irPara('alteracoes')" title="Alterações">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
@@ -2138,146 +2202,149 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
   </div>
 </section>
 
-<!-- ══════════════════ SALDO (ERP) ══════════════════ -->
-<section id="page-saldo-erp" class="page">
+<!-- ══════════════════ SALDO ══════════════════
+     Saldo do ERP + mapa numa tela só. A aba Divergências é o antigo
+     "Saldo mapeado" (saldo-mapeado.js), com os mesmos ids. -->
+<section id="page-saldo" class="page">
   <div class="page-head com-acoes">
     <div>
       <h1 class="page-title">Saldo</h1>
-      <p class="page-sub">O saldo do ERP por filial, armazém e tipo: o que vence, o que está dividido, o que está no armazém errado e o que não mexe. <span id="sa-foto"></span></p>
+      <p class="page-sub">O saldo do ERP lote a lote, cruzado com o mapa. <span id="sa-foto"></span></p>
     </div>
     <div class="btn-row">
       <button class="btn btn-ghost btn-sm" onclick="carregarSaldoErp(true)">Atualizar</button>
-      <button class="btn btn-sm" onclick="exportarSaldoErp()">Exportar CSV</button>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-body">
-      <div class="filters">
-        <div class="field grow"><label for="sa-busca">Buscar</label>
-          <input type="search" id="sa-busca" placeholder="produto, código ou lote" oninput="dSaldoErp()"></div>
-        <div class="field"><label for="sa-arm">Armazém</label><select id="sa-arm" onchange="renderSaldoErp()"><option value="">Todos</option></select></div>
-        <div class="field"><label for="sa-tipo">Tipo</label><select id="sa-tipo" onchange="renderSaldoErp()"><option value="">Todos</option></select></div>
-        <div class="field"><label for="sa-un">Unidade</label><select id="sa-un" onchange="renderSaldoErp()"><option value="">Todas</option></select></div>
+      <button class="btn btn-sm" onclick="exportarSaldoErp()">Exportar</button>
+      <div class="menu-wrap" id="sa-menu">
+        <button class="btn btn-ghost btn-sm sa-mais-bt" id="sa-bt-mais" aria-haspopup="true" aria-expanded="false" onclick="saMenu(event)" title="Mais opções" aria-label="Mais opções">⋯</button>
+        <div class="dropdown sa-dd" id="sa-dd-mais">
+          <div class="dd-grupo">
+            <button class="dd-op" onclick="saAbrirImport()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+              Importar planilha do ERP<span class="dd-val">reserva</span></button>
+            <button class="dd-op" onclick="$('sa-dd-mais').classList.remove('open');imprimirSaldo()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M7 14h10v7H7z"/></svg>
+              Imprimir divergências</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
+  <div class="panel sa-filtros" id="sa-filtros">
+    <div class="sa-filtros-in">
+      <div class="field sa-busca"><label for="sa-busca">Buscar</label>
+        <input type="search" id="sa-busca" placeholder="produto, código, lote ou vaga · separe por vírgula" autocomplete="off" oninput="dSaldoErp()"></div>
+      <div class="fchips sa-chips" id="sa-chips"></div>
+    </div>
+  </div>
   <div id="sa-avisos"></div>
   <div class="kpis" id="sa-kpis"></div>
 
-  <div class="panel">
-    <div class="panel-head sa-head">
-      <div class="seg" id="sa-abas" role="tablist" aria-label="Análises do saldo"></div>
-      <div class="btn-row" id="sa-ctrl"></div>
-    </div>
+  <div class="sa-abas-bar"><div class="seg" id="sa-abas" role="tablist" aria-label="Partes da tela Saldo"></div></div>
+
+  <div class="panel" id="sa-geral">
+    <div class="panel-head sa-head"><div class="btn-row" id="sa-ctrl"></div></div>
     <div id="sa-corpo"><div class="skeleton">carregando…</div></div>
+  </div>
+
+  <div id="sa-div" hidden>
+    <div class="kpi-row" id="s-kpis"></div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="section-title">Armazéns</div>
+          <div class="section-note" id="s-arm-nota">—</div>
+        </div>
+      </div>
+      <div class="panel-body"><div class="s-arms" id="s-arms"></div></div>
+    </div>
+
+    <div id="s-avisos"></div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="section-title">Lotes</div>
+          <div class="section-note" id="s-cnt">—</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost btn-sm" onclick="limparFiltrosSaldo()">Limpar filtros</button>
+          <button class="btn btn-ghost btn-sm" onclick="carregarSaldoMapa(true)">Atualizar</button>
+          <button class="btn btn-ghost btn-sm" onclick="baixarCSV()">Baixar CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="imprimirSaldo()">&#9113; Imprimir</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="s-sits" id="s-sits"></div>
+        <div class="filters">
+          <div class="field grow">
+            <label for="s-busca">Buscar</label>
+            <input type="search" id="s-busca" placeholder="produto, código, lote, armazém ou vaga · separe por vírgula" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="s-visao">Ver por</label>
+            <select id="s-visao">
+              <option value="lote">Lote</option>
+              <option value="produto">Produto (abre os lotes)</option>
+            </select>
+          </div>
+          <div class="field" hidden>
+            <label for="s-tipo">Tipo</label>
+            <select id="s-tipo"><option value="">Todos</option></select>
+          </div>
+          <div class="field">
+            <label for="s-ordem">Ordenar por</label>
+            <select id="s-ordem">
+              <option value="gravidade">Gravidade</option>
+              <option value="paletes">Diferença em paletes</option>
+              <option value="produto">Produto</option>
+              <option value="codigo">Código</option>
+              <option value="lote">Lote</option>
+              <option value="armazem">Armazém</option>
+              <option value="vagas">Vagas</option>
+              <option value="mapeado">Mapeado</option>
+              <option value="sistema">Sistema</option>
+              <option value="dias">Tempo parado</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="s-dir">Sentido</label>
+            <select id="s-dir">
+              <option value="desc">Maior primeiro</option>
+              <option value="asc">Menor primeiro</option>
+            </select>
+          </div>
+        </div>
+        <div class="fchips" id="s-chips"></div>
+      </div>
+      <div class="tbl-wrap" id="s-tabela"></div>
+      <div id="s-pag"></div>
+    </div>
   </div>
 </section>
 
-<!-- ══════════════════ SALDO MAPEADO ══════════════════ -->
-<section id="page-saldo" class="page">
-  <div class="page-head">
-    <div>
-      <h1 class="page-title">Saldo mapeado × sistema</h1>
-      <p class="page-sub">O que está ocupando vaga no mapa contra a planilha do ERP importada aqui, só nos armazéns físicos. Lançamento de contagem ainda não validado não entra. Clique num lote para ver as vagas e corrigir.</p>
+<!-- Importação manual (reserva para quando o robô do Excel estiver parado) -->
+<div class="modal-bg" id="modal-sa-import" onclick="if(event.target===this)fecharModal('modal-sa-import')">
+  <div class="modal wide">
+    <div class="modal-head">
+      <div class="modal-title">Importar planilha do ERP</div>
+      <div class="modal-sub">Use quando o robô estiver parado. Foto atual: <span id="s-ref-info">—</span></div>
     </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-head">
-      <div class="section-title">Planilha de referência <span class="section-note" id="s-ref-info">—</span></div>
-      <div class="btn-row">
-        <select id="s-imp-arm" style="width:auto;min-width:260px" aria-label="O que importar">
-          <option value="">Geral — todos os armazéns</option>
-        </select>
-      </div>
-    </div>
-    <div class="panel-body">
+    <div class="modal-body">
+      <div class="field" style="margin-bottom:14px"><label for="s-imp-arm">O que importar</label>
+        <select id="s-imp-arm"><option value="">Geral — todos os armazéns</option></select></div>
       <div class="drop" id="s-drop" onclick="document.getElementById('s-file').click()">
         <div class="drop-ico">▤</div>
         <div class="drop-tit" id="s-drop-tit">Solte a planilha para atualizar todos os armazéns</div>
         <div class="drop-sub" id="s-drop-sub">Troca a foto inteira da filial que vier na planilha. Não abre ciclo nem mexe na contagem.</div>
       </div>
-      <input type="file" id="s-file" accept=".xlsx,.xls" hidden onchange="aoEscolherPlanilhaRef(event)">
-      <div id="s-import-status"></div>
+      <input type="file" id="s-file" accept=".xlsx,.xls,.xlsm" hidden onchange="aoEscolherPlanilhaRef(event)">
+      <div id="s-import-status" style="margin-top:14px"></div>
     </div>
+    <div class="modal-foot"><button class="btn btn-ghost btn-sm" onclick="fecharModal('modal-sa-import')">Fechar</button></div>
   </div>
-
-  <div class="kpi-row" id="s-kpis"></div>
-
-  <div class="panel">
-    <div class="panel-head">
-      <div>
-        <div class="section-title">Armazéns</div>
-        <div class="section-note" id="s-arm-nota">—</div>
-      </div>
-    </div>
-    <div class="panel-body"><div class="s-arms" id="s-arms"></div></div>
-  </div>
-
-  <div id="s-avisos"></div>
-
-  <div class="panel">
-    <div class="panel-head">
-      <div>
-        <div class="section-title">Lotes</div>
-        <div class="section-note" id="s-cnt">—</div>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-ghost btn-sm" onclick="limparFiltrosSaldo()">Limpar filtros</button>
-        <button class="btn btn-ghost btn-sm" onclick="carregarSaldoMapa(true)">Atualizar</button>
-        <button class="btn btn-ghost btn-sm" onclick="baixarCSV()">Baixar CSV</button>
-        <button class="btn btn-ghost btn-sm" onclick="imprimirSaldo()">&#9113; Imprimir</button>
-      </div>
-    </div>
-    <div class="panel-body">
-      <div class="s-sits" id="s-sits"></div>
-      <div class="filters">
-        <div class="field grow">
-          <label for="s-busca">Buscar</label>
-          <input type="search" id="s-busca" placeholder="produto, código, lote, armazém ou vaga · separe por vírgula" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="s-visao">Ver por</label>
-          <select id="s-visao">
-            <option value="lote">Lote</option>
-            <option value="produto">Produto (abre os lotes)</option>
-          </select>
-        </div>
-        <div class="field" hidden>
-          <label for="s-tipo">Tipo</label>
-          <select id="s-tipo"><option value="">Todos</option></select>
-        </div>
-        <div class="field">
-          <label for="s-ordem">Ordenar por</label>
-          <select id="s-ordem">
-            <option value="gravidade">Gravidade</option>
-            <option value="paletes">Diferença em paletes</option>
-            <option value="produto">Produto</option>
-            <option value="codigo">Código</option>
-            <option value="lote">Lote</option>
-            <option value="armazem">Armazém</option>
-            <option value="vagas">Vagas</option>
-            <option value="mapeado">Mapeado</option>
-            <option value="sistema">Sistema</option>
-            <option value="dias">Tempo parado</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="s-dir">Sentido</label>
-          <select id="s-dir">
-            <option value="desc">Maior primeiro</option>
-            <option value="asc">Menor primeiro</option>
-          </select>
-        </div>
-      </div>
-      <div class="fchips" id="s-chips"></div>
-    </div>
-    <div class="tbl-wrap" id="s-tabela"></div>
-    <div id="s-pag"></div>
-  </div>
-</section>
+</div>
 
 <!-- ══════════════════ ALTERAÇÕES ══════════════════ -->
 <section id="page-alteracoes" class="page">
@@ -2501,8 +2568,8 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="./comum.js?v=7"></script>
-<script src="./saldo-mapeado.js?v=11"></script>
-<script src="./saldo-erp.js?v=1"></script>
+<script src="./saldo-mapeado.js?v=12"></script>
+<script src="./saldo-erp.js?v=2"></script>
 <script src="./inicio.js?v=1"></script>
 <script src="./impressao.js?v=3"></script>
 <script src="./identificacao.js?v=3"></script>
@@ -2624,6 +2691,7 @@ const PAG_RENDER = {
   transfer:   () => renderTransferencias(),
   kpi:        () => renderKpi(),
   vkpi:       () => renderProntosKpi(),
+  'sa-pla':   () => renderSaldoErp(),
   'sa-val':   () => renderSaldoErp(),
   'sa-div':   () => renderSaldoErp(),
   'sa-reg':   () => renderSaldoErp(),
@@ -2634,7 +2702,7 @@ const PAG_RENDER = {
 const PAG_ALVO = {
   validacao:'v-tbody', registros:'r-tbody', historico:'h-tbody', acuracia:'a-tbody',
   saldo:'s-tabela', alteracoes:'alt-lista', mapa:'m-tbody', transfer:'t-tbody', kpi:'k-tbody', vkpi:'v-kpi-tbody',
-  'sa-val':'sa-corpo', 'sa-div':'sa-corpo', 'sa-reg':'sa-corpo', 'sa-par':'sa-corpo', 'sa-evo':'sa-corpo',
+  'sa-pla':'sa-corpo', 'sa-val':'sa-corpo', 'sa-div':'sa-corpo', 'sa-reg':'sa-corpo', 'sa-par':'sa-corpo', 'sa-evo':'sa-corpo',
 };
 
 function pagEstado(k) {
@@ -2835,12 +2903,12 @@ async function init() {
   // A aba fica na URL: dá para mandar link e o F5 não volta ao início.
   window.addEventListener('hashchange', () => {
     const p = location.hash.replace('#', '');
-    if (p && $('page-' + p)) irPara(p);
+    if (p && ($('page-' + p) || p === 'saldo-erp')) irPara(p);
   });
 
   await carregarCiclo();
   const inicial = location.hash.replace('#', '');
-  if (inicial && $('page-' + inicial)) irPara(inicial); else irPara('inicio');
+  if (inicial && ($('page-' + inicial) || inicial === 'saldo-erp')) irPara(inicial); else irPara('inicio');
   carregarTransferencias();
 }
 
@@ -2866,6 +2934,7 @@ async function carregarCiclo() {
    NAVEGAÇÃO
    ═══════════════════════════════════════════════════════════════ */
 function irPara(pagina) {
+  if (pagina === 'saldo-erp') pagina = 'saldo';   // link da tela Saldo antiga
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.page === pagina));
   $('page-' + pagina).classList.add('active');
@@ -2883,8 +2952,7 @@ function irPara(pagina) {
     transferencias: carregarTransferencias,
     performance:    carregarPerformance,
     acuracia:       carregarAcuracia,
-    saldo:          carregarSaldoMapa,
-    'saldo-erp':    carregarSaldoErp,
+    saldo:          carregarSaldoErp,
     alteracoes:     carregarAlteracoes,
     kpi:            carregarKpi,
   })[pagina]?.();
@@ -2893,8 +2961,7 @@ function irPara(pagina) {
 function aoTrocarFilial() {
   renderValidacao(); renderRegistros(); renderHistorico(); renderAcuracia();
   if ($('page-mapa').classList.contains('active')) renderMapa();
-  if ($('page-saldo').classList.contains('active') && _referencia) renderSaldo();
-  if ($('page-saldo-erp').classList.contains('active')) renderSaldoErp();
+  if ($('page-saldo').classList.contains('active') && _referencia) { renderSaldo(); renderSaldoErp(); }
   if ($('page-kpi').classList.contains('active')) renderKpi();
 }
 
