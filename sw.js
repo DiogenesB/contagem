@@ -3,8 +3,8 @@
         cache-first no resto, API nunca passa pelo cache,
         e Background Sync para esvaziar a fila de lançamentos
         mesmo com o app fechado. */
-const CACHE = 'simbiose-v38';
-const ESSENCIAIS = ['./mobile.html', './mapa.html', './comum.js', './fila.js', './impressao.js', './leitor.js', './manifest.json', './manifest-mapa.json'];
+const CACHE = 'simbiose-v39';
+const ESSENCIAIS = ['./mobile.html', './mapa.html', './comum.js', './usuarios.js', './fila.js', './impressao.js', './leitor.js', './manifest.json', './manifest-mapa.json'];
 
 const SUPABASE_URL = 'https://yuaboypybjqxxgntfyrq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_IbvCmbnbazxMGcQTF9-mRg_Tt2RkAng';
