@@ -672,6 +672,68 @@ textarea { resize:vertical; min-height:56px; font-family:var(--sans); }
 .bar.warn > i { background:var(--warn); }
 .bar.neg  > i { background:var(--neg); }
 
+/* ═══════════ SALDO (ERP) ═══════════ */
+.sa-head { align-items:center; }
+.sa-n { display:inline-block; min-width:18px; padding:0 6px; margin-left:4px; border-radius:100px; line-height:17px;
+  font-size:.6875rem; font-weight:600; background:var(--surface-3); color:var(--text-2); font-variant-numeric:tabular-nums; }
+.sa-n.neg { background:var(--neg-sf); color:var(--neg); }
+.sa-ctrl { display:flex; align-items:center; gap:8px; }
+.sa-ctrl > span { font-size:.8125rem; color:var(--text-3); }
+.sa-check { display:inline-flex; align-items:center; gap:7px; font-size:.8125rem; color:var(--text-2); cursor:pointer; }
+.sa-mute { color:var(--text-3); }
+.sa-warn { color:var(--warn); }
+.sa-resumo { padding:12px 20px 0; font-size:.8125rem; color:var(--text-2); }
+.sa-resumo + .tbl-wrap, .sa-resumo + .sa-resumo { margin-top:10px; }
+.sa-resumo b { color:var(--text); font-variant-numeric:tabular-nums; }
+.mono-b { font-family:var(--mono); font-weight:600; }
+.sa-faixas { display:grid; gap:10px; padding:16px 20px 4px; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); }
+.kpi.sa-faixa { font:inherit; color:inherit; text-align:left; cursor:pointer; padding:12px 14px 11px;
+  background:var(--surface-2); transition:border-color .12s, background .12s; }
+.kpi.sa-faixa::before { left:14px; }
+.kpi.sa-faixa:hover { border-color:var(--line-2); }
+.kpi.sa-faixa.sel { background:var(--surface); border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+.kpi.sa-faixa .kpi-value { font-size:1.375rem; margin-top:4px; }
+.kpi.sa-faixa .kpi-value small { font-size:.75rem; font-weight:500; color:var(--text-3); letter-spacing:0; }
+table.sa-tot tbody tr.sa-g1 td { border-top:1px solid var(--line-2); }
+table.sa-tot td[rowspan] { vertical-align:top; min-width:170px; }
+table.sa-tot td.sa-clica { cursor:pointer; }
+table.sa-tot td.sa-clica:hover { background:var(--surface-2); }
+table.sa-tot tfoot td { font-weight:600; background:var(--surface-2); padding:9px 14px; border-top:1px solid var(--line-2); }
+#sa-kpis { grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); }
+#sa-corpo td.num, #sa-corpo td.mono { white-space:nowrap; }
+.sa-arms { display:flex; flex-wrap:wrap; gap:5px; }
+.sa-arm-q { display:inline-flex; align-items:baseline; gap:6px; padding:2px 8px; border-radius:var(--r-xs);
+  background:var(--surface-2); border:1px solid var(--line); font-size:.75rem; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.sa-arm-q b { font-family:var(--mono); }
+.sa-graficos { display:grid; gap:14px; padding:16px 20px; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); border-bottom:1px solid var(--line); }
+.sa-graf { border:1px solid var(--line); border-radius:var(--r-sm); padding:14px 14px 8px; min-width:0; }
+.sa-graf-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px; }
+.sa-graf-un { font-size:.8125rem; color:var(--text-2); font-weight:500; }
+.sa-graf-v { font-size:1.375rem; font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+.sa-graf-dif { text-align:right; font-size:.8125rem; font-weight:600; font-variant-numeric:tabular-nums; }
+.sa-graf-dif .sub { font-weight:400; color:var(--text-3); font-size:.6875rem; }
+.sa-plot { position:relative; touch-action:pan-y; }
+.sa-svg svg { display:block; overflow:visible; }
+.sa-grade { stroke:var(--line); stroke-width:1; }
+.sa-eixo { fill:var(--text-3); font-size:11px; font-family:var(--sans); font-variant-numeric:tabular-nums; }
+.sa-linha { fill:none; stroke:var(--accent); stroke-width:2; stroke-linejoin:round; stroke-linecap:round; }
+.sa-ponto { fill:var(--accent); stroke:var(--surface); stroke-width:2; }
+.sa-cruz { stroke:var(--text-3); stroke-width:1; stroke-dasharray:3 3; }
+.sa-tip { position:absolute; top:4px; z-index:3; pointer-events:none; min-width:150px;
+  background:var(--surface); border:1px solid var(--line-2); border-radius:var(--r-sm); box-shadow:var(--sh);
+  padding:8px 10px; font-size:.75rem; color:var(--text-2); }
+.sa-tip b { display:block; color:var(--text); margin-bottom:3px; }
+.sa-tip div { display:flex; justify-content:space-between; gap:12px; }
+.sa-tip span { color:var(--text); font-variant-numeric:tabular-nums; font-weight:600; }
+@media (max-width:760px) {
+  .sa-head { align-items:stretch; }
+  .sa-head > .seg, .sa-head > .btn-row { width:100%; }
+  .sa-ctrl { flex-wrap:wrap; }
+  .sa-faixas, .sa-graficos { padding-left:14px; padding-right:14px; }
+  .sa-graficos { grid-template-columns:1fr; }
+  .sa-resumo { padding-left:14px; padding-right:14px; }
+}
+
 /* ═══════════ KPI DA CONTAGEM ═══════════ */
 .k-hero {
   display:grid; gap:18px; align-items:center; grid-template-columns:auto 1fr;
@@ -1384,6 +1446,10 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3"/><path d="M20 16H7l3 3"/></svg>
       <span>Transferências</span><span class="nav-count" id="nc-transferencias">0</span>
     </button>
+    <button class="nav-item" data-page="saldo-erp" onclick="irPara('saldo-erp')" title="Saldo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 16l9 5 9-5"/></svg>
+      <span>Saldo</span>
+    </button>
     <button class="nav-item" data-page="saldo" onclick="irPara('saldo')" title="Saldo mapeado">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7l-3 7a4 4 0 006 0L5 7z"/><path d="M19 7l-3 7a4 4 0 006 0l-3-7z"/><path d="M5 7h14"/></svg>
       <span>Saldo mapeado</span>
@@ -2072,6 +2138,43 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
   </div>
 </section>
 
+<!-- ══════════════════ SALDO (ERP) ══════════════════ -->
+<section id="page-saldo-erp" class="page">
+  <div class="page-head com-acoes">
+    <div>
+      <h1 class="page-title">Saldo</h1>
+      <p class="page-sub">O saldo do ERP por filial, armazém e tipo: o que vence, o que está dividido, o que está no armazém errado e o que não mexe. <span id="sa-foto"></span></p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="carregarSaldoErp(true)">Atualizar</button>
+      <button class="btn btn-sm" onclick="exportarSaldoErp()">Exportar CSV</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-body">
+      <div class="filters">
+        <div class="field grow"><label for="sa-busca">Buscar</label>
+          <input type="search" id="sa-busca" placeholder="produto, código ou lote" oninput="dSaldoErp()"></div>
+        <div class="field"><label for="sa-arm">Armazém</label><select id="sa-arm" onchange="renderSaldoErp()"><option value="">Todos</option></select></div>
+        <div class="field"><label for="sa-tipo">Tipo</label><select id="sa-tipo" onchange="renderSaldoErp()"><option value="">Todos</option></select></div>
+        <div class="field"><label for="sa-un">Unidade</label><select id="sa-un" onchange="renderSaldoErp()"><option value="">Todas</option></select></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sa-avisos"></div>
+  <div class="kpis" id="sa-kpis"></div>
+
+  <div class="panel">
+    <div class="panel-head sa-head">
+      <div class="seg" id="sa-abas" role="tablist" aria-label="Análises do saldo"></div>
+      <div class="btn-row" id="sa-ctrl"></div>
+    </div>
+    <div id="sa-corpo"><div class="skeleton">carregando…</div></div>
+  </div>
+</section>
+
 <!-- ══════════════════ SALDO MAPEADO ══════════════════ -->
 <section id="page-saldo" class="page">
   <div class="page-head">
@@ -2398,7 +2501,8 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="./comum.js?v=7"></script>
-<script src="./saldo-mapeado.js?v=10"></script>
+<script src="./saldo-mapeado.js?v=11"></script>
+<script src="./saldo-erp.js?v=1"></script>
 <script src="./inicio.js?v=1"></script>
 <script src="./impressao.js?v=3"></script>
 <script src="./identificacao.js?v=3"></script>
@@ -2432,6 +2536,9 @@ function avisoColunasIgnoradas(tabela) {
     return `<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Fabricação e validade não foram gravadas</b>
       O banco não tem essas colunas. Rode o <b>sql/migracao-identificacao.sql</b> no Supabase e importe de novo.
       ${[...c].filter(x => !/^dt_/.test(x)).length ? `Outras colunas ignoradas: ${[...c].filter(x => !/^dt_/.test(x)).map(esc).join(', ')}.` : ''}</div></div>`;
+  if (tabela === 'estoque_ref' && [...c].every(x => x === 'paletes' || x === 'caixas'))
+    return `<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>Paletes e caixas não foram gravados</b>
+      O saldo entrou certo. Para a tela Saldo somar paletes, rode o <b>sql/migracao-saldo-historico.sql</b> no Supabase.</div></div>`;
   return `<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>Colunas ignoradas em ${esc(tabela)}</b>${[...c].map(esc).join(', ')} — não existem no banco. Os dados foram gravados sem elas.</div></div>`;
 }
 
@@ -2517,11 +2624,17 @@ const PAG_RENDER = {
   transfer:   () => renderTransferencias(),
   kpi:        () => renderKpi(),
   vkpi:       () => renderProntosKpi(),
+  'sa-val':   () => renderSaldoErp(),
+  'sa-div':   () => renderSaldoErp(),
+  'sa-reg':   () => renderSaldoErp(),
+  'sa-par':   () => renderSaldoErp(),
+  'sa-evo':   () => renderSaldoErp(),
 };
 /* De quem é a rolagem que precisa voltar ao topo ao virar a página. */
 const PAG_ALVO = {
   validacao:'v-tbody', registros:'r-tbody', historico:'h-tbody', acuracia:'a-tbody',
   saldo:'s-tabela', alteracoes:'alt-lista', mapa:'m-tbody', transfer:'t-tbody', kpi:'k-tbody', vkpi:'v-kpi-tbody',
+  'sa-val':'sa-corpo', 'sa-div':'sa-corpo', 'sa-reg':'sa-corpo', 'sa-par':'sa-corpo', 'sa-evo':'sa-corpo',
 };
 
 function pagEstado(k) {
@@ -2771,6 +2884,7 @@ function irPara(pagina) {
     performance:    carregarPerformance,
     acuracia:       carregarAcuracia,
     saldo:          carregarSaldoMapa,
+    'saldo-erp':    carregarSaldoErp,
     alteracoes:     carregarAlteracoes,
     kpi:            carregarKpi,
   })[pagina]?.();
@@ -2780,6 +2894,7 @@ function aoTrocarFilial() {
   renderValidacao(); renderRegistros(); renderHistorico(); renderAcuracia();
   if ($('page-mapa').classList.contains('active')) renderMapa();
   if ($('page-saldo').classList.contains('active') && _referencia) renderSaldo();
+  if ($('page-saldo-erp').classList.contains('active')) renderSaldoErp();
   if ($('page-kpi').classList.contains('active')) renderKpi();
 }
 
@@ -2797,6 +2912,7 @@ const COL_MAP = {
   '% dias de vida':'pct_vida', '% de vida':'pct_vida',
   'b8_saldo':'saldo',        'b8_empenho':'empenho',
   'b8_local':'armazem',
+  'paletes':'paletes',       'cxs':'caixas',
 };
 
 /* O ERP entrega número de verdade nas células; texto só aparece
