@@ -733,13 +733,84 @@ table.sa-tot tfoot td { font-weight:600; background:var(--surface-2); padding:9p
   .sa-resumo { padding-left:14px; padding-right:14px; }
 }
 
-/* ── Saldo: planilha com filtro por coluna ── */
-.sa-filtros { margin-bottom:16px; }
-.sa-filtros-in { padding:14px 20px; display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; }
-.sa-busca { flex:1 1 320px; max-width:560px; }
-.sa-chips { margin-top:0; flex:1 1 260px; align-items:center; min-height:34px; }
+/* ── Saldo: resumo, filtros rápidos e planilha com filtro por coluna ── */
+.sa-resumo-g { display:grid; gap:14px; margin-bottom:16px; grid-template-columns:minmax(0, 1.25fr) minmax(0, 1fr); align-items:stretch; }
+.sa-res-un { margin:0; padding:14px 0 6px; min-width:0; }
+.sa-res-tit { display:flex; align-items:baseline; gap:8px; padding:0 18px 8px; font-size:.9375rem; font-weight:600; }
+.sa-res-tit span { font-weight:400; color:var(--text-3); font-size:.8125rem; }
+.sa-res-tit small { margin-left:auto; font-size:.75rem; font-weight:400; color:var(--text-3); }
+.sa-res-scroll { overflow-x:auto; }
+table.sa-res-t thead th { position:static; background:transparent; padding:6px 12px; border-bottom:1px solid var(--line); }
+table.sa-res-t thead th:first-child, table.sa-res-t td:first-child { padding-left:18px; }
+table.sa-res-t td { padding:8px 12px; white-space:nowrap; background:transparent; }
+table.sa-res-t tbody tr:last-child td { border-bottom:0; }
+table.sa-res-t td.num b { font-size:.9375rem; }
+table.sa-res-t .k-pbar { min-width:150px; }
+.sa-cartoes { display:grid; gap:14px; grid-template-columns:repeat(2, minmax(0, 1fr)); }
+.kpi.sa-kpi { margin:0; font:inherit; color:inherit; text-align:left; cursor:pointer; padding:14px 16px 13px; min-width:0;
+  transition:border-color .12s, box-shadow .12s; }
+.kpi.sa-kpi::before { left:16px; }
+.kpi.sa-kpi:hover { border-color:var(--line-2); }
+.kpi.sa-kpi.sel { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+.kpi.sa-kpi .kpi-value { font-size:1.5rem; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kpi.sa-kpi .kpi-value small { font-size:.9rem; font-weight:500; }
+.kpi.sa-kpi .kpi-foot b { color:var(--text-2); font-weight:600; }
+.sa-filtros { margin-bottom:14px; }
+.sa-filtros-in { padding:14px 18px; display:flex; flex-direction:column; gap:12px; }
+.sa-busca { position:relative; max-width:640px; }
+.sa-busca svg { position:absolute; left:11px; top:50%; width:16px; height:16px; transform:translateY(-50%); color:var(--text-3); pointer-events:none; }
+.sa-busca input { padding-left:34px; width:100%; }
+.sa-rapidos { display:flex; flex-wrap:wrap; gap:10px 22px; }
+.sa-rap-g { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+.sa-rap-g > span { font-size:.75rem; color:var(--text-3); margin-right:2px; }
+.sa-rap { border:1px solid var(--line-2); background:var(--surface); color:var(--text-2); font:inherit; font-size:.8125rem; font-weight:500;
+  padding:4px 11px; border-radius:100px; cursor:pointer; white-space:nowrap; transition:background .12s, border-color .12s, color .12s; }
+.sa-rap:hover { border-color:var(--text-3); color:var(--text); }
+.sa-rap.on { background:var(--accent-sf); border-color:var(--accent); color:var(--accent); }
+.sa-chips { margin:0; padding:10px 18px; border-top:1px solid var(--line); align-items:center; }
 .sa-chips:empty { display:none; }
-.sa-abas-bar { margin:4px 0 12px; }
+.sa-abas-bar { margin:0 0 12px; }
+/* indicador do mapa: anel cheio, em parte ou vazio */
+.sa-ind { display:inline-flex; align-items:center; gap:7px; font-size:.75rem; font-variant-numeric:tabular-nums; color:var(--text-2); }
+.sa-ind i { width:16px; height:16px; border-radius:50%; flex-shrink:0; box-sizing:border-box; }
+.sa-ind.ok i { background:var(--pos); box-shadow:inset 0 0 0 3px var(--pos), inset 0 0 0 5px var(--surface); }
+.sa-ind.ok span { color:var(--pos); font-weight:600; }
+.sa-ind.parcial i { background:conic-gradient(var(--warn) var(--g), var(--surface-3) 0); }
+.sa-ind.parcial span { color:var(--warn); font-weight:600; }
+.sa-ind.fora i { border:2px solid var(--info); }
+.sa-ind.fora span { color:var(--info); }
+.sa-ind.na i { border:2px dashed var(--line-2); }
+.sa-ind.na span { color:var(--text-3); }
+td.sa-c-ind { width:1%; }
+tr.sa-lin { cursor:pointer; }
+tr.sa-lin:hover td { background:var(--surface-2); }
+tr.sa-lin.aberto td { background:var(--surface-2); border-bottom-color:transparent; }
+tr.sa-det > td { background:var(--bg) !important; padding:4px 16px 16px !important; white-space:normal !important; }
+.sa-det-in { display:flex; flex-direction:column; gap:12px; padding:12px 14px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm); }
+.sa-det-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; font-size:.8125rem; color:var(--text-2); }
+.sa-det-top b { color:var(--text); font-variant-numeric:tabular-nums; }
+.sa-det-vagas { display:grid; gap:8px; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); }
+.sa-vaga { display:grid; grid-template-columns:1fr auto; gap:2px 10px; align-items:center; padding:9px 10px 9px 12px;
+  border:1px solid var(--line); border-left:3px solid var(--info); border-radius:var(--r-xs); background:var(--surface-2); }
+.sa-vaga-pos { font-family:var(--mono); font-weight:600; font-size:.8125rem; }
+.sa-vaga-q { grid-column:1; font-size:.75rem; color:var(--text-2); }
+.sa-vaga-q b { color:var(--text); }
+.sa-vaga-d { grid-column:1; font-size:.6875rem; color:var(--text-3); }
+.sa-vaga .btn { grid-column:2; grid-row:1 / span 3; }
+.sa-det-vazio { font-size:.8125rem; color:var(--text-3); padding:6px 0; }
+.sa-dicas { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:4px; font-size:.75rem; color:var(--text-2); }
+.sa-dicas li.d-neg::marker { color:var(--neg); } .sa-dicas li.d-alt::marker { color:var(--alt); }
+.sa-dicas li.d-warn::marker { color:var(--warn); } .sa-dicas li.d-info::marker { color:var(--info); }
+.sa-det-pe { display:flex; justify-content:flex-end; }
+@media (max-width:1100px) { .sa-resumo-g { grid-template-columns:1fr; } }
+@media (max-width:640px) {
+  .sa-cartoes { gap:10px; }
+  .kpi.sa-kpi { padding:12px 13px; }
+  .kpi.sa-kpi .kpi-value { font-size:1.25rem; }
+  .sa-filtros-in { padding:12px 14px; }
+  .sa-rapidos { gap:10px; }
+  .sa-chips { padding:10px 14px; }
+}
 .sa-abas-bar .seg { display:flex; width:max-content; max-width:100%; }
 .sa-mais-bt { font-size:1.1rem; line-height:1; padding-left:12px; padding-right:12px; }
 .sa-dd { width:280px; }
@@ -765,7 +836,6 @@ table.sa-grade td { white-space:nowrap; padding:9px 10px; }
 table.sa-grade td:first-child, table.sa-grade th:first-child .sa-th-in { padding-left:16px; }
 .sa-un { color:var(--text-3); font-size:.6875rem; }
 .sa-vagas { flex-wrap:nowrap; }
-#sa-kpis { grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); }
 table.sa-grade td.nome { white-space:normal; min-width:220px; }
 tr.sa-prod { cursor:pointer; }
 tr.sa-prod:hover td { background:var(--surface-2); }
@@ -801,6 +871,15 @@ table.sa-sub-t td { padding:6px 10px; background:transparent; white-space:nowrap
   .sa-filtros-in { padding:12px 14px; }
   .sa-somas { padding:10px 14px; }
 }
+
+/* ═══════════ USUÁRIOS ═══════════ */
+.usu-tab td { padding:7px 10px; }
+.usu-tab td input[type=text], .usu-tab td select { min-width:120px; }
+.usu-tab tr.usu-inativo td { opacity:.55; }
+.usu-ativo { display:inline-flex; align-items:center; gap:6px; font-size:.8125rem; white-space:nowrap; }
+.usu-novo { margin-top:18px; padding-top:16px; border-top:1px solid var(--line); }
+.usu-novo-g { display:grid; gap:10px; align-items:end; grid-template-columns:1.4fr 1.2fr 1fr 1fr auto; }
+@media (max-width:760px) { .usu-novo-g { grid-template-columns:1fr 1fr; } }
 
 /* ═══════════ KPI DA CONTAGEM ═══════════ */
 .k-hero {
@@ -1616,22 +1695,25 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
     <div class="menu-wrap">
       <button class="usuario" id="usuario-btn" onclick="abrirMenuTopo('usuario')" aria-expanded="false" title="Quem está usando o painel">
         <span class="avatar" id="usuario-av">?</span>
-        <span class="usuario-txt"><b id="gestor-nome">definir</b><small>Gestor</small></span>
+        <span class="usuario-txt"><b id="gestor-nome">definir</b><small id="usuario-perfil">—</small></span>
       </button>
       <div class="dropdown" id="dd-usuario" role="dialog" aria-label="Gestor" style="width:290px">
         <div class="dd-head">
           <div style="display:flex;align-items:center;gap:11px">
             <span class="avatar" id="usuario-av2">?</span>
-            <div><div class="dd-tit" id="usuario-nome2">—</div><div class="dd-sub">Gestor do painel</div></div>
+            <div><div class="dd-tit" id="usuario-nome2">—</div><div class="dd-sub" id="usuario-perfil2">—</div></div>
           </div>
         </div>
         <div class="dd-grupo">
           <div style="padding:6px 10px 8px;font-size:.75rem;color:var(--text-3);line-height:1.45">
-            Sem login: o nome fica salvo neste navegador e assina as validações e alterações.
+            Sem senha: o usuário fica salvo neste navegador e assina as validações e alterações.
           </div>
+          <button class="dd-op" id="dd-usuarios" onclick="fecharMenusTopo();abrirUsuarios()" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><path d="M16 4.5a3.5 3.5 0 010 7"/><path d="M18 14a6 6 0 013.5 6"/></svg>
+            Usuários do sistema</button>
           <button class="dd-op" onclick="fecharMenusTopo();definirGestor()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
-            Trocar o nome</button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+            Trocar de usuário</button>
         </div>
       </div>
     </div>
@@ -2212,8 +2294,8 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
       <p class="page-sub">O saldo do ERP lote a lote, cruzado com o mapa. <span id="sa-foto"></span></p>
     </div>
     <div class="btn-row">
-      <button class="btn btn-ghost btn-sm" onclick="carregarSaldoErp(true)">Atualizar</button>
-      <button class="btn btn-sm" onclick="exportarSaldoErp()">Exportar</button>
+      <button class="btn btn-ghost btn-sm" id="sa-bt-atu" onclick="saAtualizar()" title="Relê do banco o saldo, o mapa e o histórico. O saldo do ERP chega pelo robô do Excel."><span class="spin" id="sa-spin-atu"></span>Atualizar</button>
+      <button class="btn btn-sm" onclick="exportarSaldoErp()">Exportar Excel</button>
       <div class="menu-wrap" id="sa-menu">
         <button class="btn btn-ghost btn-sm sa-mais-bt" id="sa-bt-mais" aria-haspopup="true" aria-expanded="false" onclick="saMenu(event)" title="Mais opções" aria-label="Mais opções">⋯</button>
         <div class="dropdown sa-dd" id="sa-dd-mais">
@@ -2230,15 +2312,19 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
     </div>
   </div>
 
+  <div id="sa-avisos"></div>
+  <div class="sa-resumo-g" id="sa-kpis"></div>
+
   <div class="panel sa-filtros" id="sa-filtros">
     <div class="sa-filtros-in">
-      <div class="field sa-busca"><label for="sa-busca">Buscar</label>
-        <input type="search" id="sa-busca" placeholder="produto, código, lote ou vaga · separe por vírgula" autocomplete="off" oninput="dSaldoErp()"></div>
-      <div class="fchips sa-chips" id="sa-chips"></div>
+      <div class="sa-busca">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="search" id="sa-busca" placeholder="Buscar produto, código, lote ou vaga · separe por vírgula" autocomplete="off" oninput="dSaldoErp()" aria-label="Buscar">
+      </div>
+      <div class="sa-rapidos" id="sa-rapidos"></div>
     </div>
+    <div class="fchips sa-chips" id="sa-chips"></div>
   </div>
-  <div id="sa-avisos"></div>
-  <div class="kpis" id="sa-kpis"></div>
 
   <div class="sa-abas-bar"><div class="seg" id="sa-abas" role="tablist" aria-label="Partes da tela Saldo"></div></div>
 
@@ -2323,6 +2409,34 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
     </div>
   </div>
 </section>
+
+<!-- Usuários do sistema (só gestor) -->
+<div class="modal-bg" id="modal-usuarios" onclick="if(event.target===this)fecharModal('modal-usuarios')">
+  <div class="modal wide">
+    <div class="modal-head">
+      <div class="modal-title">Usuários do sistema</div>
+      <div class="modal-sub">Sem senha: cada pessoa escolhe o próprio usuário ao entrar. "Só o mapa" entra apenas no mapa.html.</div>
+    </div>
+    <div class="modal-body">
+      <div id="usu-aviso"></div>
+      <div class="tbl-wrap usu-tab"><table>
+        <thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Acesso</th><th></th><th></th></tr></thead>
+        <tbody id="usu-tbody"></tbody>
+      </table></div>
+      <div class="usu-novo">
+        <div class="section-title" style="margin-bottom:10px">Novo usuário</div>
+        <div class="usu-novo-g">
+          <div class="field"><label for="usu-novo-nome">Nome</label><input type="text" id="usu-novo-nome" maxlength="40" placeholder="Maria Souza"></div>
+          <div class="field"><label for="usu-novo-login">Usuário</label><input type="text" id="usu-novo-login" maxlength="40" placeholder="maria.souza" autocapitalize="none" spellcheck="false"></div>
+          <div class="field"><label for="usu-novo-perfil">Perfil</label><select id="usu-novo-perfil"><option value="assistente">Assistente</option><option value="gestor">Gestor</option></select></div>
+          <div class="field"><label for="usu-novo-acesso">Acesso</label><select id="usu-novo-acesso"><option value="total">Acesso total</option><option value="mapa">Só o mapa</option></select></div>
+          <button class="btn btn-primary btn-sm" onclick="novoUsuario()">Criar</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost btn-sm" onclick="fecharModal('modal-usuarios')">Fechar</button></div>
+  </div>
+</div>
 
 <!-- Importação manual (reserva para quando o robô do Excel estiver parado) -->
 <div class="modal-bg" id="modal-sa-import" onclick="if(event.target===this)fecharModal('modal-sa-import')">
@@ -2568,6 +2682,7 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="./comum.js?v=7"></script>
+<script src="./usuarios.js?v=1"></script>
 <script src="./saldo-mapeado.js?v=12"></script>
 <script src="./saldo-erp.js?v=2"></script>
 <script src="./inicio.js?v=1"></script>
@@ -2803,19 +2918,64 @@ function barraPag(k, p, rotulo = 'linha(s)') {
    o histórico registrar quem validou e quem liberou vaga.
    ═══════════════════════════════════════════════════════════════ */
 let GESTOR = '';
+/* O nome vem do usuário escolhido na entrada (usuarios.js). */
 function carregarGestor() {
-  try { GESTOR = localStorage.getItem('gestor') || ''; } catch (e) { GESTOR = ''; }
+  GESTOR = USUARIO?.nome || '';
   QUEM = GESTOR;
   const el = $('gestor-nome');
   if (el) el.textContent = GESTOR || 'definir';
+  const perfil = USUARIO ? PERFIS[USUARIO.perfil] || USUARIO.perfil : '—';
+  if ($('usuario-perfil'))  $('usuario-perfil').textContent = perfil;
+  if ($('usuario-perfil2')) $('usuario-perfil2').textContent = USUARIO ? `${perfil} · ${ACESSOS[USUARIO.acesso] || ''} · ${USUARIO.login}` : '—';
+  if ($('dd-usuarios')) $('dd-usuarios').hidden = !ehGestor();
 }
 function definirGestor() {
-  const v = prompt('Seu nome (aparece no histórico das validações):', GESTOR || '');
-  if (v === null) return;
-  GESTOR = v.trim();
-  QUEM = GESTOR;
-  try { localStorage.setItem('gestor', GESTOR); } catch (e) { /* modo privado */ }
-  carregarGestor();
+  if (confirm(`Sair de ${GESTOR || 'este usuário'} e entrar com outro?`)) sairUsuario();
+}
+
+/* ── Usuários do sistema (só gestor) ── */
+function abrirUsuarios() {
+  if (!ehGestor()) { toast('Só gestor mexe nos usuários.', 'warn'); return; }
+  renderUsuarios();
+  abrirModal('modal-usuarios');
+  carregarUsuarios().then(renderUsuarios);
+}
+function renderUsuarios() {
+  const sel = (nome, valor, ops) => `<select data-campo="${nome}">${Object.entries(ops).map(([v, t]) => `<option value="${v}" ${v === valor ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+  $('usu-aviso').innerHTML = _usuSemTabela ? `<div class="aviso a-warn"><span class="aviso-ico">!</span><div><b>A tabela de usuários ainda não existe</b>
+    Rode o <b>sql/migracao-usuarios.sql</b> no Supabase. Até lá vale a lista padrão e não dá para salvar mudanças.</div></div>` : '';
+  $('usu-tbody').innerHTML = todosUsuarios().slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map(u => `
+    <tr data-login="${esc(u.login)}" class="${u.ativo === false ? 'usu-inativo' : ''}">
+      <td><input type="text" data-campo="nome" value="${esc(u.nome)}" maxlength="40"></td>
+      <td class="mono">${esc(u.login)}</td>
+      <td>${sel('perfil', u.perfil, PERFIS)}</td>
+      <td>${sel('acesso', u.acesso, ACESSOS)}</td>
+      <td><label class="usu-ativo"><input type="checkbox" data-campo="ativo" ${u.ativo === false ? '' : 'checked'}> ativo</label></td>
+      <td class="acao"><button class="btn btn-sm" onclick="salvarLinhaUsuario(this)">Salvar</button></td>
+    </tr>`).join('');
+}
+async function salvarLinhaUsuario(bt) {
+  const tr = bt.closest('tr'), v = c => tr.querySelector(`[data-campo="${c}"]`);
+  if (tr.dataset.login === USUARIO?.login && (v('perfil').value !== 'gestor' || !v('ativo').checked)) {
+    if (!confirm('Você está tirando o seu próprio acesso de gestor. Continuar?')) return;
+  }
+  bt.disabled = true;
+  try {
+    await salvarUsuario({ login:tr.dataset.login, nome:v('nome').value, perfil:v('perfil').value, acesso:v('acesso').value, ativo:v('ativo').checked });
+    toast('Usuário salvo.');
+    renderUsuarios();
+  } catch (e) { erro('Não salvou', e); }
+  finally { bt.disabled = false; }
+}
+async function novoUsuario() {
+  const login = $('usu-novo-login').value, nome = $('usu-novo-nome').value;
+  try {
+    if (todosUsuarios().some(u => usuNorm(u.login) === usuNorm(login))) throw new Error('esse usuário já existe');
+    await salvarUsuario({ login, nome, perfil:$('usu-novo-perfil').value, acesso:$('usu-novo-acesso').value });
+    $('usu-novo-login').value = ''; $('usu-novo-nome').value = '';
+    toast(`Usuário ${login} criado.`);
+    renderUsuarios();
+  } catch (e) { erro('Não criou', e); }
 }
 /* Carimbo de auditoria. As colunas podem não existir ainda no
    banco — quem grava é o atualizarResiliente, que descarta o que
@@ -2859,6 +3019,8 @@ async function init() {
     }
   }
 
+  // Ninguém usa o painel sem escolher o usuário (e quem é só do mapa vai para o mapa).
+  await new Promise(ok => exigirUsuario({ app:'painel', aoEntrar:ok }));
   carregarGestor();
   QUEM = GESTOR;
   ligarSugestoes();   // a trilha de alterações usa o mesmo nome do topo
