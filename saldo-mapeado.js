@@ -26,6 +26,12 @@ if (typeof ACOES === 'object') Object.assign(ACOES, {
   retornou: { rot:'Voltou da separação',     cor:'pos'  },
 });
 
+/* Armazéns que ficam no drive-in e por isso têm de estar no mapa.
+   48 (descarte) e CE (estoque de clientes) existem, mas não são
+   mapeados: o saldo deles não entra na comparação. */
+const ARM_MAPEADOS = ['42', '49', '85', '91', '94', '98', 'D2', 'D4', 'D5', 'D6', 'D7', 'D8'];
+const armMapeado = a => ARM_MAPEADOS.includes(normalizarArmazem(a));
+
 /* ── planilha de referência ── */
 let _refInfo        = null;       // { linhas, porArm:{arm:{quando,quem,linhas}}, de, ate }
 let _registrosRef   = null;       // planilha lida, esperando "Usar esta planilha"
@@ -155,7 +161,15 @@ async function lerPlanilhaRef(file) {
   status.innerHTML = '<div class="skeleton">lendo a planilha…</div>';
   try {
     const wb = XLSX.read(await file.arrayBuffer(), { cellDates:true });
-    const brutas = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { raw:true, defval:'' });
+    // A planilha do ERP tem várias abas (SB5, SB8…): usa a SB8_SALDOS_LOTES,
+    // ou a primeira que tenha B8_PRODUTO no cabeçalho, ou a primeira.
+    const cabDe = n => { const ws = wb.Sheets[n], r = ws?.['!ref'] && XLSX.utils.decode_range(ws['!ref']);
+      if (!r) return []; r.e.r = r.s.r;   // só a primeira linha
+      return (XLSX.utils.sheet_to_json(ws, { header:1, range:r })[0] || []).map(c => String(c).trim().toUpperCase()); };
+    const aba = wb.SheetNames.find(n => n.trim().toUpperCase() === 'SB8_SALDOS_LOTES')
+             || wb.SheetNames.find(n => { const c = cabDe(n); return ['B8_PRODUTO', 'B8_LOTECTL', 'B8_SALDO', 'B8_LOCAL'].every(x => c.includes(x)); })
+             || wb.SheetNames[0];
+    const brutas = XLSX.utils.sheet_to_json(wb.Sheets[aba], { raw:true, defval:'' });
     if (!brutas.length) throw new Error('a planilha está vazia');
 
     const linhas = brutas.map(bruta => {
@@ -169,6 +183,7 @@ async function lerPlanilhaRef(file) {
     const faltando = ['codigo','lote','saldo','armazem'].filter(c => linhas.every(l => l[c] === undefined));
     if (faltando.length) throw new Error(`colunas não encontradas: ${faltando.join(', ')}`);
 
+    const temPl = linhas.some(l => l.paletes !== undefined), temCx = linhas.some(l => l.caixas !== undefined);
     const todas = linhas.filter(l => l.codigo).map(l => ({
       codigo:    normalizarCodigo(l.codigo),
       descricao: String(l.descricao || '').trim(),
@@ -182,6 +197,9 @@ async function lerPlanilhaRef(file) {
       // Para a identificação do palete (coluna nova: migracao-identificacao.sql).
       dt_fabricacao: paraData(l.dt_fabricacao),
       dt_validade:   paraData(l.dt_validade),
+      // Tela Saldo (migracao-saldo-historico.sql). Só vai se a planilha tiver a coluna.
+      ...(temPl ? { paletes:paraNumero(l.paletes) } : {}),
+      ...(temCx ? { caixas:paraNumero(l.caixas) } : {}),
       importado_por: GESTOR || 'painel',
     }));
     if (!todas.length) throw new Error('nenhuma linha com código');
@@ -258,7 +276,12 @@ async function importarRef() {
                       : `Todos os armazéns atualizados: ${num(linhas.length)} linha(s).`, 'ok', 4500);
     _registrosRef = null;
     $('s-import-status').innerHTML = avisoColunasIgnoradas('estoque_ref');
-    await carregarSaldoMapa(true);
+    // Histórico da tela Saldo. Sem a migração, a função não existe — segue.
+    try { await sb.rpc('registrar_saldo_diario'); } catch { /* sem histórico */ }
+    if (typeof carregarSaldoErp === 'function') {
+      if (!$('s-import-status').innerHTML.trim()) fecharModal('modal-sa-import');
+      await carregarSaldoErp(true);
+    } else await carregarSaldoMapa(true);
   } catch (e) {
     erro('Falha ao importar', e);
   } finally {
@@ -429,7 +452,7 @@ function calcularSaldoCompleto() {
     naoConf.set(k, g);
   }
 
-  const dentro = arm => armazemConhecido(arm) && !_armFora.has(arm);
+  const dentro = arm => armMapeado(arm) && !_armFora.has(arm);
 
   // ── junta os dois lados ──
   const linhas = new Map();
@@ -456,7 +479,7 @@ function calcularSaldoCompleto() {
   };
 
   for (const m of mapa.values()) {
-    if (armazemConhecido(m.arm) && _armFora.has(m.arm)) { foraMapa.push(m); continue; }
+    if (armMapeado(m.arm) && _armFora.has(m.arm)) { foraMapa.push(m); continue; }
     const l = nova(m); somaMapa(l, m); linhas.set(m.k, l);
   }
   for (const s of sis.values()) {
@@ -730,7 +753,7 @@ function calcularSaldoCompleto() {
 
   // ── armazéns: cobertura e o que ficou fora ──
   const arms = {};
-  const armDe = a => arms[a] ||= { arm:a, nome:nomeArmazem(a), fisico:armazemConhecido(a), fora:_armFora.has(a),
+  const armDe = a => arms[a] ||= { arm:a, nome:nomeArmazem(a), fisico:armMapeado(a), fora:_armFora.has(a),
                                    lotes:0, ok:0, div:0, sisPl:0, achPl:0, mapPl:0, semPl:0, porUn:{} };
   for (const a of Object.keys(ARMAZENS)) armDe(a);
   for (const l of lista) {
@@ -875,10 +898,10 @@ function renderArmazensSaldo(calc) {
     const resumo = !a.lotes ? 'sem saldo nem mapa'
       : a.fora || !a.fisico ? `${num(a.lotes)} lote(s) · ${num1(a.sisPl)} pl no sistema${a.mapPl ? ` · ${num1(a.mapPl)} pl mapeados` : ''}`
       : `${num(a.ok)}/${num(a.lotes)} lotes ok · ${num1(a.achPl)} de ${num1(a.sisPl)} pl`;
-    return `<div class="${cls}" ${a.lotes && !a.fora && a.fisico ? `onclick="filtrarArmSaldo('${esc(a.arm)}')"` : ''} title="${esc(a.nome || 'Armazém fora da lista física')}">
+    return `<div class="${cls}" ${a.lotes && !a.fora && a.fisico ? `onclick="filtrarArmSaldo('${esc(a.arm)}')"` : ''} title="${esc((a.nome || 'Armazém fora da lista') + (a.fisico ? '' : ' · não fica no mapa'))}">
       <div class="s-arm-top">
         <span class="s-arm-cod">${esc(a.arm)}</span>
-        <span class="s-arm-nome">${esc(a.nome || 'fora da lista física')}</span>
+        <span class="s-arm-nome">${esc(a.nome || 'fora da lista')}${!a.fisico && a.nome ? ' · não mapeado' : ''}</span>
         ${a.fisico ? `<label class="s-arm-tg" onclick="event.stopPropagation()" title="Contar este armazém na comparação">
           <input type="checkbox" ${a.fora ? '' : 'checked'} onchange="alternarArmSaldo('${esc(a.arm)}', this.checked)"></label>` : ''}
       </div>
@@ -894,7 +917,7 @@ function renderArmazensSaldo(calc) {
   $('s-arm-nota').textContent =
     `${lista.filter(a => a.fisico && !a.fora).length} armazém(ns) na conta` +
     (fora.length ? ` · ${fora.length} desligado(s)` : '') +
-    (naoFis.length ? ` · ${naoFis.length} do ERP fora da lista física (não entram)` : '') +
+    (naoFis.length ? ` · ${naoFis.length} do ERP em armazém não mapeado (não entram)` : '') +
     ' · clique para filtrar, a caixinha tira da conta';
 }
 
@@ -906,7 +929,7 @@ function renderAvisosSaldo(calc) {
   }
   // Velha é por armazém: importar só o D7 hoje não deixa o 42 em dia.
   const velhos = Object.entries(_refInfo?.porArm || {})
-    .filter(([a, p]) => armazemConhecido(a) && !_armFora.has(a) && p.quando && diasDesde(p.quando) >= 2)
+    .filter(([a, p]) => armMapeado(a) && !_armFora.has(a) && p.quando && diasDesde(p.quando) >= 2)
     .sort((x, y) => String(x[1].quando).localeCompare(String(y[1].quando)));
   if (velhos.length) {
     av.push(`<div class="aviso a-warn"><span class="aviso-ico">◔</span><div><b>${velhos.length === 1 ? `A planilha do ${esc(velhos[0][0])} tem ${diasDesde(velhos[0][1].quando)} dia(s)` : `${velhos.length} armazéns com planilha de 2 dias ou mais`}</b>
