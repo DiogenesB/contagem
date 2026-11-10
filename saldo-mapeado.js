@@ -43,7 +43,6 @@ let _sVisao     = 'lote';         // lote | produto
 let _situacao   = 'divergentes';   // a aba Mapa × sistema abre no que precisa corrigir
 let _ordem      = 'gravidade';
 let _ordemAsc   = false;
-let _sArmFiltro = '';             // armazém clicado no card
 let _abertas    = new Set();
 let _saldoMapa  = [];             // o que está na tabela agora (para CSV/impressão)
 let _sCalc      = null;           // último cálculo completo
@@ -52,14 +51,13 @@ let _movFoto    = null;           // Map cod|lote → nº de mexidas no mapa dep
 
 /* Quais armazéns físicos ficam FORA da conta — por navegador.
    Padrão: todos dentro. */
-const LS_ARM_FORA = 'saldo.armazensFora.v2';   // v2: zera quem tinha tudo desligado
-let _armFora = (() => {
-  try { return new Set(JSON.parse(localStorage.getItem(LS_ARM_FORA) || '[]')); }
-  catch { return new Set(); }
-})();
-function gravarArmFora() {
-  try { localStorage.setItem(LS_ARM_FORA, JSON.stringify([..._armFora])); } catch { /* sem storage: só não lembra */ }
-}
+/* Armazéns marcados nos cards: filtram a tela (um ou vários). Sem
+   nenhum marcado, mostra todos. Todos os armazéns mapeados entram
+   sempre na comparação — _armFora fica vazio (era o "tirar da conta",
+   que confundia com filtro). */
+const _armFora = new Set();
+function gravarArmFora() { /* não guarda mais */ }
+const _sArmSel = new Set();
 
 const SITUACOES = {
   'sem-saldo':   { rot:'Sem saldo no sistema',      cor:'neg',  peso:0,
@@ -815,7 +813,7 @@ function filtrarSaldo(calc) {
   const ts   = termos($('s-busca')?.value.trim().toUpperCase() || '');
   const tipo = $('s-tipo')?.value || '';
   let base = calc.lista;
-  if (_sArmFiltro) base = base.filter(l => l.arm === _sArmFiltro || l.armsMapa.includes(_sArmFiltro) || l.armsSis.includes(_sArmFiltro));
+  if (_sArmSel.size) base = base.filter(l => [l.arm, ...l.armsMapa, ...l.armsSis].some(a => _sArmSel.has(a)));
   if (tipo)        base = base.filter(l => l.tipo === tipo);
   if (ts.length)   base = base.filter(l => ts.some(x =>
     [l.produto, l.cod, l.lote, ...l.armsMapa, ...l.armsSis, ...l.vagas].join(' ').toUpperCase().includes(x)));
@@ -909,7 +907,7 @@ function renderResumoSaldo(base) {
     `achados no mapa · ${num1(difPl)} pl de diferença somada`, difPl > 0.05 ? 'is-warn' : 'is-pos'));
   const ok = base.filter(l => l.estado === 'ok').length;
   cards.push(kpi('Lotes conferindo', `${num(ok)} <small>de ${num(base.length)}</small>`,
-    base.length ? `${pct(ok, base.length)} dos lotes na conta` : 'nada na conta', ok === base.length && base.length ? 'is-pos' : ''));
+    base.length ? `${pct(ok, base.length)} dos lotes` : 'nenhum lote', ok === base.length && base.length ? 'is-pos' : ''));
   $('s-kpis').innerHTML = cards.join('');
 }
 
@@ -920,16 +918,17 @@ function renderArmazensSaldo(calc) {
 
   const card = a => {
     const p = a.sisPl ? a.achPl / a.sisPl * 100 : (a.lotes ? 0 : null);
-    const cls = ['s-arm', a.fora ? 'fora' : '', !a.fisico ? 'nfis' : '', _sArmFiltro === a.arm ? 'sel' : '', !a.lotes ? 'vazio' : ''].join(' ');
+    const marc = _sArmSel.has(a.arm);
+    const cls = ['s-arm', !a.fisico ? 'nfis' : '', marc ? 'sel' : '', _sArmSel.size && !marc ? 'apagado' : '', !a.lotes ? 'vazio' : ''].join(' ');
     const resumo = !a.lotes ? 'sem saldo nem mapa'
       : a.fora || !a.fisico ? `${num(a.lotes)} lote(s) · ${num1(a.sisPl)} pl no sistema${a.mapPl ? ` · ${num1(a.mapPl)} pl mapeados` : ''}`
       : `${num(a.ok)}/${num(a.lotes)} lotes ok · ${num1(a.achPl)} de ${num1(a.sisPl)} pl`;
-    return `<div class="${cls}" ${a.lotes && !a.fora && a.fisico ? `onclick="filtrarArmSaldo('${esc(a.arm)}')"` : ''} title="${esc((a.nome || 'Armazém fora da lista') + (a.fisico ? '' : ' · não fica no mapa'))}">
+    return `<div class="${cls}" ${a.lotes ? `onclick="filtrarArmSaldo('${esc(a.arm)}')"` : ''} title="${esc((a.nome || 'Armazém fora da lista') + (a.fisico ? '' : ' · não fica no mapa') + ' · clique para filtrar')}">
       <div class="s-arm-top">
         <span class="s-arm-cod">${esc(a.arm)}</span>
         <span class="s-arm-nome">${esc(a.nome || 'fora da lista')}${!a.fisico && a.nome ? ' · não mapeado' : ''}</span>
-        ${a.fisico ? `<label class="s-arm-tg" onclick="event.stopPropagation()" title="Contar este armazém na comparação">
-          <input type="checkbox" ${a.fora ? '' : 'checked'} onchange="alternarArmSaldo('${esc(a.arm)}', this.checked)"></label>` : ''}
+        ${a.lotes ? `<label class="s-arm-tg" onclick="event.stopPropagation()" title="Mostrar este armazém (marque um ou vários)">
+          <input type="checkbox" ${marc ? 'checked' : ''} onchange="alternarArmSaldo('${esc(a.arm)}', this.checked)"></label>` : ''}
       </div>
       ${!a.fora && a.fisico && p !== null ? `<div class="s-barra"><i style="width:${Math.min(100, p).toFixed(1)}%"></i></div>` : ''}
       <div class="s-arm-pe">${!a.fora && a.fisico && p !== null ? `<b>${num1(p)}%</b> · ` : ''}${resumo}${a.div && !a.fora && a.fisico ? ` · <span class="s-neg">${num(a.div)} div.</span>` : ''}</div>
@@ -941,10 +940,10 @@ function renderArmazensSaldo(calc) {
   const naoFis = lista.filter(a => !a.fisico && a.lotes);
   const fora   = lista.filter(a => a.fisico && a.fora && a.lotes);
   $('s-arm-nota').innerHTML =
-    `${lista.filter(a => a.fisico && !a.fora).length} armazém(ns) na conta` +
-    (fora.length ? ` · ${fora.length} desligado(s) <a href="#" onclick="ligarTodosArmSaldo();return false">ligar todos</a>` : '') +
+    `${lista.filter(a => a.fisico && !a.fora).length} armazém(ns) mapeado(s)` +
+    (_sArmSel.size ? ` · mostrando ${[..._sArmSel].sort().join(', ')} <a href="#" onclick="ligarTodosArmSaldo();return false">mostrar todos</a>` : ' · mostrando todos') +
     (naoFis.length ? ` · ${naoFis.length} do ERP em armazém não mapeado (não entram)` : '') +
-    ' · clique para filtrar, a caixinha tira da conta';
+    ' · marque um ou vários para filtrar';
 }
 
 function renderAvisosSaldo(calc) {
@@ -993,7 +992,7 @@ function chipsSaldo() {
   const q = $('s-busca').value.trim();
   if (q) c.push(chip('busca', q, `$('s-busca').value='';renderSaldo()`));
   if (_situacao !== 'todas') c.push(chip('situação', SITUACOES[_situacao]?.rot || 'Divergentes', `setSituacaoSaldo('todas')`));
-  if (_sArmFiltro) c.push(chip('armazém', `${_sArmFiltro} ${nomeArmazem(_sArmFiltro)}`, `filtrarArmSaldo('')`));
+  if (_sArmSel.size) c.push(chip('armazém', [..._sArmSel].sort().map(a => `${a} ${nomeArmazem(a) || ''}`.trim()).join(', '), `ligarTodosArmSaldo()`));
   const t = $('s-tipo')?.value;
   if (t) c.push(chip('tipo', t, `$('s-tipo').value='';renderSaldo()`));
   $('s-chips').innerHTML = c.join('');
@@ -1002,7 +1001,7 @@ function chipsSaldo() {
 /* ── tabela por lote ── */
 function renderTabelaLote(tab) {
   _saldoMapa = tab;
-  const p = fatiar('saldo', tab, [$('s-busca').value, _situacao, _sArmFiltro, $('s-tipo')?.value, _sVisao,
+  const p = fatiar('saldo', tab, [$('s-busca').value, _situacao, [..._sArmSel].join(), $('s-tipo')?.value, _sVisao,
     $('filtro-filial').value, [..._armFora].join()].join('|'));
   $('s-cnt').textContent = tab.length ? `${num(tab.length)} lote(s) no filtro` : 'nenhum lote no filtro atual';
   $('s-pag').innerHTML = barraPag('saldo', p, 'lote(s)');
@@ -1142,7 +1141,7 @@ function renderTabelaProduto(tabLotes) {
   });
   _saldoMapa = tabLotes;
 
-  const p = fatiar('saldo', lista, ['produto', $('s-busca').value, _situacao, _sArmFiltro, $('s-tipo')?.value,
+  const p = fatiar('saldo', lista, ['produto', $('s-busca').value, _situacao, [..._sArmSel].join(), $('s-tipo')?.value,
     $('filtro-filial').value, [..._armFora].join()].join('|'));
   $('s-cnt').textContent = lista.length ? `${num(lista.length)} produto(s) · ${num(tabLotes.length)} lote(s) no filtro` : 'nenhum produto no filtro atual';
   $('s-pag').innerHTML = barraPag('saldo', p, 'produto(s)');
@@ -1198,12 +1197,10 @@ function alternarLinhaSaldo(i) {
   renderSaldo();
 }
 function setSituacaoSaldo(s) { _situacao = s; renderSaldo(); }
-function filtrarArmSaldo(a) { _sArmFiltro = _sArmFiltro === a ? '' : a; renderSaldo(); }
-function ligarTodosArmSaldo() { _armFora.clear(); gravarArmFora(); renderSaldo(); }
-function alternarArmSaldo(a, ligado) {
-  if (ligado) _armFora.delete(a); else _armFora.add(a);
-  if (!ligado && _sArmFiltro === a) _sArmFiltro = '';
-  gravarArmFora();
+function filtrarArmSaldo(a) { if (!a) _sArmSel.clear(); else if (_sArmSel.has(a)) _sArmSel.delete(a); else _sArmSel.add(a); renderSaldo(); }
+function ligarTodosArmSaldo() { _sArmSel.clear(); renderSaldo(); }
+function alternarArmSaldo(a, marcado) {
+  if (marcado) _sArmSel.add(a); else _sArmSel.delete(a);
   renderSaldo();
 }
 function ordenarSaldo(campo) {
@@ -1219,7 +1216,7 @@ function ordemSaldoSelect() {
 function limparFiltrosSaldo() {
   $('s-busca').value = '';
   if ($('s-tipo')) $('s-tipo').value = '';
-  _situacao = 'divergentes'; _sArmFiltro = '';
+  _situacao = 'divergentes'; _sArmSel.clear();
   _ordem = 'gravidade'; _ordemAsc = false;
   _abertas.clear();
   renderSaldo();
