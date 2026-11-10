@@ -52,7 +52,7 @@ let _movFoto    = null;           // Map cod|lote → nº de mexidas no mapa dep
 
 /* Quais armazéns físicos ficam FORA da conta — por navegador.
    Padrão: todos dentro. */
-const LS_ARM_FORA = 'saldo.armazensFora';
+const LS_ARM_FORA = 'saldo.armazensFora.v2';   // v2: zera quem tinha tudo desligado
 let _armFora = (() => {
   try { return new Set(JSON.parse(localStorage.getItem(LS_ARM_FORA) || '[]')); }
   catch { return new Set(); }
@@ -914,9 +914,9 @@ function renderArmazensSaldo(calc) {
 
   const naoFis = lista.filter(a => !a.fisico && a.lotes);
   const fora   = lista.filter(a => a.fisico && a.fora && a.lotes);
-  $('s-arm-nota').textContent =
+  $('s-arm-nota').innerHTML =
     `${lista.filter(a => a.fisico && !a.fora).length} armazém(ns) na conta` +
-    (fora.length ? ` · ${fora.length} desligado(s)` : '') +
+    (fora.length ? ` · ${fora.length} desligado(s) <a href="#" onclick="ligarTodosArmSaldo();return false">ligar todos</a>` : '') +
     (naoFis.length ? ` · ${naoFis.length} do ERP em armazém não mapeado (não entram)` : '') +
     ' · clique para filtrar, a caixinha tira da conta';
 }
@@ -1170,6 +1170,7 @@ function alternarLinhaSaldo(i) {
 }
 function setSituacaoSaldo(s) { _situacao = s; renderSaldo(); }
 function filtrarArmSaldo(a) { _sArmFiltro = _sArmFiltro === a ? '' : a; renderSaldo(); }
+function ligarTodosArmSaldo() { _armFora.clear(); gravarArmFora(); renderSaldo(); }
 function alternarArmSaldo(a, ligado) {
   if (ligado) _armFora.delete(a); else _armFora.add(a);
   if (!ligado && _sArmFiltro === a) _sArmFiltro = '';
