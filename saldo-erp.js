@@ -830,6 +830,7 @@ function saVerNasDivergencias(lote) {
   if ($('s-busca')) { $('s-busca').value = lote; }
   // O lote pode estar só "fora do mapa": mostra todas as situações dele.
   if (typeof setSituacaoSaldo === 'function') _situacao = 'todas';
+  if (typeof _sArmSel !== 'undefined') _sArmSel.clear();      // o lote pode estar num armazém que não está marcado
   renderSaldoErp();
   if (typeof renderSaldo === 'function') renderSaldo();
   $('sa-div')?.scrollIntoView({ block:'start', behavior:'smooth' });
