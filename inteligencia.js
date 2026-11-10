@@ -20,7 +20,7 @@
    vira erro.
    ═══════════════════════════════════════════════════════════════ */
 
-const _intel = { mov:null, alt:null, dec:null, erroMov:null, erroDec:null, carregando:null, achados:[], quando:0, filtro:'' };
+const _intel = { mov:null, alt:null, dec:null, erp:null, erroMov:null, erroDec:null, erroErp:null, carregando:null, achados:[], quando:0, filtro:'' };
 
 const INTEL_TIPOS = {
   'lote-digitado':   { rot:'Lote digitado errado',          cor:'neg',  peso:1.2 },
@@ -33,9 +33,10 @@ const INTEL_TIPOS = {
   'erp-nao-baixou':  { rot:'Saiu do mapa, ERP não baixou',  cor:'info', peso:1.0 },
   'producao-nova':   { rot:'Entrou e não foi mapeado',      cor:'info', peso:1.0 },
   'empenhado':       { rot:'Pode estar separado',           cor:'info', peso:0.6 },
+  'sep-faturado':    { rot:'Faturado, expedir da separação', cor:'warn', peso:1.3 },
+  'sep-sem-nf':      { rot:'Separado sem nota',             cor:'info', peso:0.9 },
   'fefo':            { rot:'FEFO',                          cor:'warn', peso:0.8 },
   'regra-validade':  { rot:'Armazém × validade',            cor:'neg',  peso:0.7 },
-  'palete-acima':    { rot:'Palete acima do máximo',        cor:'warn', peso:0.8 },
   'parado':          { rot:'Parado ocupando vaga',          cor:'mute', peso:0.5 },
 };
 const INTEL_COR = { neg:'t-neg', warn:'t-warn', info:'t-info', alt:'t-alt', pos:'t-ok', mute:'t-mute' };
@@ -76,14 +77,19 @@ async function intelCarregarDados(forcar = false) {
     const desde = new Date(Date.now() - 45 * 864e5).toISOString();
     const desdeDec = new Date(Date.now() - 180 * 864e5).toISOString();
     const tenta = p => p.then(d => ({ d }), e => ({ e }));
-    const [mov, alt, dec] = await Promise.all([
+    const [mov, alt, dec, erp] = await Promise.all([
       tenta(buscarTudo(() => sb.from('estoque_ref_mov')
         .select('quando, filial, codigo, lote, armazem, saldo_antes, saldo_depois, delta, tipo').gte('quando', desde).order('quando'))),
       tenta(buscarTudo(() => sb.from('alteracoes')
         .select('quem, acao, posicao, codigo, lote, armazem, qtd_antes, qtd_depois, created_at').gte('created_at', desde).order('created_at'))),
       tenta(buscarTudo(() => sb.from('inteligencia_decisao')
         .select('id, quando, quem, chave, tipo, decisao, ate, detalhes').gte('quando', desdeDec).order('quando'))),
+      tenta(buscarTudo(() => sb.from('erp_mov')
+        .select('filial, sequencia, tipo_mov, codigo, descricao, quantidade, um, lote, armazem, nf, emissao, tes_desc, usuario, pedido, cli_nome, cli_uf, movest')
+        .gte('emissao', desde.slice(0, 10)).order('emissao').order('id'))),
     ]);
+    _intel.erroErp = erp.e || null;
+    _intel.erp = erp.e ? [] : erp.d;
     _intel.erroMov = mov.e || null;
     _intel.erroDec = dec.e || null;
     _intel.mov = mov.e ? [] : mov.d;
@@ -116,7 +122,71 @@ function intelIndexar() {
     if (d.decisao === 'aplicou') t.a++;
     if (d.decisao === 'recusou') t.r++;
   }
-  Object.assign(_intel, { porKa, porKc, altKc, ocupou, ultima, porTipo });
+  // Movimentos do ERP (notas, transferências, fracionamento).
+  const erpKa = new Map(), erpKc = new Map(), erpSeq = new Map(), erpPed = new Map();
+  for (const e of _intel.erp || []) {
+    if (e.movest === false) continue;                     // não mexe no estoque
+    e.arm = normalizarArmazem(e.armazem); e.kc = iKc(e.codigo, e.lote);
+    (erpKa.get(`${e.kc}|${e.arm}`) || erpKa.set(`${e.kc}|${e.arm}`, []).get(`${e.kc}|${e.arm}`)).push(e);
+    (erpKc.get(e.kc) || erpKc.set(e.kc, []).get(e.kc)).push(e);
+    if (e.sequencia) { const k = `${e.filial}|${e.sequencia}`; (erpSeq.get(k) || erpSeq.set(k, []).get(k)).push(e); }
+    const p = iPed(e.pedido);
+    if (p && e.tipo_mov === 'Saída') (erpPed.get(p) || erpPed.set(p, []).get(p)).push(e);
+  }
+  Object.assign(_intel, { porKa, porKc, altKc, ocupou, ultima, porTipo, erpKa, erpKc, erpSeq, erpPed });
+}
+
+/* ── leitura dos movimentos do ERP ── */
+const iPed = p => String(p || '').replace(/\D/g, '').replace(/^0+/, '');
+// Só tem a data (sem hora): conta como o fim do expediente daquele dia.
+const iErpTs = e => new Date(`${String(e.emissao).slice(0, 10)}T18:00:00`).getTime();
+const iDia = e => typeof saData === 'function' ? saData(String(e.emissao).slice(0, 10)) : String(e.emissao).slice(0, 10);
+// O par da transferência: mesma sequência, tipo oposto.
+function iPar(e) {
+  const oposto = e.tipo_mov === 'Saída Interna' ? 'Entrada Interna' : e.tipo_mov === 'Entrada Interna' ? 'Saída Interna' : null;
+  if (!oposto || !e.sequencia) return null;
+  return (_intel.erpSeq?.get(`${e.filial}|${e.sequencia}`) || []).find(x => x.tipo_mov === oposto) || null;
+}
+function iRota(de, para, codDif) {
+  if (codDif) return 'fracionamento';
+  if (de === '98' && para !== '98') return 'liberação da quarentena';
+  if (para === 'D7') return 'para vencidos';
+  if (para === '88' || para === '48') return 'descarte/avaria';
+  if (para === 'D4') return 'avaria';
+  return 'transferência';
+}
+// Uma frase sobre o movimento: nota, transferência ou fracionamento.
+function iErpTxt(e) {
+  const q = iQ(e.quantidade, e.um);
+  if (e.tipo_mov === 'Saída')
+    return `${iDia(e)}: saiu ${q} na NF <b>${esc(e.nf || '—')}</b> (${esc((e.tes_desc || 'saída').toLowerCase())}${e.pedido ? `, pedido ${esc(e.pedido)}` : ''}${e.cli_nome ? `, ${esc(e.cli_nome)}${e.cli_uf ? '/' + esc(e.cli_uf) : ''}` : ''})`;
+  if (e.tipo_mov === 'Entrada')
+    return `${iDia(e)}: entrou ${q} na NF <b>${esc(e.nf || '—')}</b> (${esc((e.tes_desc || 'entrada').toLowerCase())})`;
+  const par = iPar(e);
+  const sai = e.tipo_mov === 'Saída Interna';
+  const de = sai ? e.arm : par?.arm, para = sai ? par?.arm : e.arm;
+  const codDif = par && normalizarCodigo(par.codigo) !== normalizarCodigo(e.codigo);
+  const rota = iRota(de, para, codDif);
+  return `${iDia(e)}: ${rota} ${q} <b>${esc(de || '?')} → ${esc(para || '?')}</b>${codDif ? ` (vira ${esc(sai ? par.descricao : e.descricao || '')})` : ''} · doc ${esc(e.nf || '—')}${e.usuario ? ` por ${esc(e.usuario)}` : ''}`;
+}
+/* História do lote: ERP + mapa + filme, do mais novo para o mais velho. */
+function intelHistoria(l) {
+  if (!l) return [];
+  const ev = [];
+  for (const e of _intel.erpKc?.get(l.kc) || []) {
+    if (e.tipo_mov === 'Entrada Interna' && iPar(e)) continue;      // a transferência já aparece pela saída
+    ev.push({ t:iErpTs(e) - 1, txt:iErpTxt(e), o:'ERP' });
+  }
+  for (const a of _intel.altKc?.get(l.kc) || []) {
+    const q = (Number(a.qtd_depois) || 0) - (Number(a.qtd_antes) || 0);
+    ev.push({ t:iTs(a.created_at), o:'mapa', txt:`${fmtTS(a.created_at)}: ${esc(a.acao)} ${a.posicao ? esc(a.posicao) : ''}${q ? ` (${q > 0 ? '+' : ''}${num(Math.round(q * 1000) / 1000)})` : ''}${a.quem ? ` por ${esc(a.quem)}` : ''}` });
+  }
+  return ev.sort((a, b) => b.t - a.t).slice(0, 14);
+}
+function intelHistoriaHTML(l) {
+  const h = intelHistoria(l);
+  if (!h.length) return '';
+  return `<details class="iv-hist"><summary>História do lote (${h.length})</summary><ol>${h.map(x => `<li><span class="tag ${x.o === 'ERP' ? 't-info' : 't-mute'}">${x.o}</span> ${x.txt}</li>`).join('')}</ol></details>`;
 }
 
 // Tipo que você costuma recusar perde certeza; o que aceita, mantém.
@@ -186,7 +256,21 @@ function intelAnalisarLinha(l) {
       const par = ent.find(e => sai.some(s => Math.abs(iTs(s.quando) - iTs(e.quando)) < 3 * 3600e3 && iPerto(-s.delta, e.delta, 0.05)));
       if (par) { prova = { para:aS, quando:par.quando, qtd:par.delta }; break; }
     }
+    // Prova melhor: o par Saída Interna (armazém do mapa) + Entrada Interna (armazém do ERP).
+    let docErp = null;
+    for (const s of (_intel.erpKa?.get(`${l.kc}|${armM}`) || []).filter(e => e.tipo_mov === 'Saída Interna')) {
+      const par = iPar(s);
+      if (par && l.armsSis.includes(par.arm)) { docErp = s; prova = { para:par.arm, quando:new Date(iErpTs(s)).toISOString(), qtd:s.quantidade }; }
+    }
     const destino = l.armsSis.length === 1 ? l.armsSis[0] : null;
+    if (docErp) {
+      const rota = iRota(armM, prova.para, false);
+      const a = base('armazem-erp', 97, rota === 'liberação da quarentena' ? `Liberado da quarentena no ERP, o mapa ficou no 98` : `Transferido no ERP (${esc(rota)}), o mapa ficou no ${esc(armM)}`,
+        `${iErpTxt(docErp)}. O mapa continua com ${esc(armM)} nas vagas ${vagasTxt}.`, { quando:prova.quando });
+      a.pistas.push('A transferência está lançada no ERP; o mapa é que não acompanhou.');
+      if (destino) a.acoes.push({ rot:`Mudar o mapa para ${destino}`, op:'campo', campo:'armazem', novo:destino, primaria:true });
+      return a;
+    }
     if (prova) {
       const a = base('armazem-erp', 95, `Transferido no ERP, o mapa ficou no ${esc(armM)}`,
         `Em <b>${fmtTS(prova.quando)}</b> o ERP tirou ${iQ(prova.qtd, un)} do <b>${esc(armM)}</b> e pôs no <b>${esc(prova.para)}</b>. O mapa continua com ${esc(armM)} nas vagas ${vagasTxt}.`,
@@ -227,6 +311,26 @@ function intelAnalisarLinha(l) {
     const somaSai = saidas.reduce((s, m) => s - m.delta, 0);
     const baixavel = l.itens.filter(r => !r.sep).reduce((s, r) => s + (Number(r.quantidade) || 0), 0);
     const separado = l.itens.some(r => r.sep);
+    const diaMapa = new Date(desdeMapa); diaMapa.setHours(0, 0, 0, 0);
+    const erpSai = l.armsMapa.flatMap(a => _intel.erpKa?.get(`${l.kc}|${a}`) || [])
+      .filter(e => (e.tipo_mov === 'Saída' || e.tipo_mov === 'Saída Interna') && iErpTs(e) >= diaMapa.getTime());
+    if (erpSai.length) {
+      const somaE = erpSai.reduce((s, e) => s + (Number(e.quantidade) || 0), 0);
+      const ultT = Math.max(...erpSai.map(iErpTs), ...saidas.map(m => iTs(m.quando)));
+      const qtdB = Math.min(sobraQ, somaE, baixavel);
+      const dentro = !iPassouTolerancia(ultT);
+      const nf = erpSai.every(e => e.tipo_mov === 'Saída');
+      const a = base('saiu-nao-baixou', iPerto(somaE, sobraQ, 0.05) ? 96 : 85,
+        dentro ? `${nf ? 'Faturado' : 'Transferido no ERP'} ${haQuanto(ultT)}, esperando baixar no mapa` : `${nf ? 'Faturado' : 'Transferido no ERP'} e continua no mapa`,
+        `O mapa continua com ${iQ(l.mapa, un)} em ${vagasTxt}${l.sistema ? `, e o ERP tem ${iQ(l.sistema, un)}` : ''}.`,
+        { quando:new Date(ultT).toISOString(), grupo:dentro ? 'aguardando' : 'arrumar' });
+      a.pistas.push(...erpSai.slice(-3).map(iErpTxt));
+      a.pistas.push(iPerto(somaE, sobraQ, 0.05) ? 'A quantidade que saiu no ERP é a mesma que sobra no mapa.' : `Sobra no mapa ${iQ(sobraQ, un)}; saiu no ERP ${iQ(somaE, un)}.`);
+      if (separado) a.pistas.push('Parte está na área de separação — expedir por lá (mapa → Pedidos separados).');
+      if (qtdB > 0.001) a.acoes.push({ rot:`Baixar ${num(Math.round(qtdB * 1000) / 1000)} ${un} do mapa`, op:'baixar', qtd:qtdB, primaria:true });
+      a.acoes.push({ rot:'Pedir recontagem', op:'recontagem' });
+      return a;
+    }
     if (saidas.length) {
       const ult = saidas[saidas.length - 1].quando;
       const qtdB = Math.min(sobraQ, somaSai, baixavel);
@@ -266,7 +370,9 @@ function intelAnalisarLinha(l) {
     const qtdExp = exps.reduce((s, x) => s + Math.max(0, (Number(x.qtd_antes) || 0) - (Number(x.qtd_depois) || 0)), 0);
     if (exps.length && qtdExp > 0.001) {
       const ult = exps[exps.length - 1].created_at;
-      const saiuDepois = l.armsSis.flatMap(a => _intel.porKa?.get(`${l.kc}|${a}`) || []).some(m => m.delta < 0 && iTs(m.quando) > iTs(ult));
+      const diaExp = new Date(ult); diaExp.setHours(0, 0, 0, 0);
+      const saiuDepois = l.armsSis.flatMap(a => _intel.porKa?.get(`${l.kc}|${a}`) || []).some(m => m.delta < 0 && iTs(m.quando) > iTs(ult))
+        || l.armsSis.flatMap(a => _intel.erpKa?.get(`${l.kc}|${a}`) || []).some(e => e.tipo_mov === 'Saída' && iErpTs(e) >= diaExp.getTime());
       if (!saiuDepois) {
         const dentro = !iPassouTolerancia(iTs(ult));
         const a = base('erp-nao-baixou', iPerto(qtdExp, faltaQ, 0.05) ? 88 : 70,
@@ -289,6 +395,23 @@ function intelAnalisarLinha(l) {
         dentro ? `Entrou no ERP ${haQuanto(iTs(ult))}, ainda sem vaga` : `Entrou no ERP e ninguém mapeou`,
         `Em <b>${fmtTS(ult)}</b> entrou ${iQ(somaEnt, un)} deste lote no ${esc(l.armsSis.join(', '))}. Falta mapear ${iQ(faltaQ, un)}.`,
         { quando:ult, grupo:dentro ? 'aguardando' : 'arrumar' });
+      const erpEnt = l.armsSis.flatMap(x => _intel.erpKa?.get(`${l.kc}|${x}`) || []).filter(e => e.tipo_mov === 'Entrada' || e.tipo_mov === 'Entrada Interna');
+      a.pistas.push(...erpEnt.slice(-3).map(iErpTxt));
+      a.acoes.push({ rot:'Abrir o mapa', op:'mapa', primaria:!dentro });
+      a.acoes.push({ rot:'Pedir recontagem', op:'recontagem' });
+      return a;
+    }
+    // B2) só pelo ERP (sem filme): entrada/liberação recente
+    const erpEnt = l.armsSis.flatMap(x => _intel.erpKa?.get(`${l.kc}|${x}`) || []).filter(e => e.tipo_mov === 'Entrada' || e.tipo_mov === 'Entrada Interna');
+    const somaEE = erpEnt.reduce((s, e) => s + (Number(e.quantidade) || 0), 0);
+    if (erpEnt.length && somaEE >= faltaQ * 0.5) {
+      const ultT = Math.max(...erpEnt.map(iErpTs));
+      const dentro = !iPassouTolerancia(ultT);
+      const a = base('producao-nova', iPerto(somaEE, faltaQ, 0.05) ? 88 : 72,
+        dentro ? `Entrou no ERP ${haQuanto(ultT)}, ainda sem vaga` : `Entrou no ERP e ninguém mapeou`,
+        `Entrou ${iQ(somaEE, un)} deste lote no ${esc(l.armsSis.join(', '))}. Falta mapear ${iQ(faltaQ, un)}.`,
+        { quando:new Date(ultT).toISOString(), grupo:dentro ? 'aguardando' : 'arrumar' });
+      a.pistas.push(...erpEnt.slice(-3).map(iErpTxt));
       a.acoes.push({ rot:'Abrir o mapa', op:'mapa', primaria:!dentro });
       a.acoes.push({ rot:'Pedir recontagem', op:'recontagem' });
       return a;
@@ -362,21 +485,6 @@ function intelRegras() {
     }
   }
 
-  // Vaga com mais do que cabe num palete.
-  for (const [pos, itens] of Object.entries(typeof _sOcup !== 'undefined' && _sOcup || {})) {
-    for (const it of itens) {
-      if (it.sep) continue;
-      const max = Number(produtoPorCodigo(normalizarCodigo(it.codigo))?.palete) || 0;
-      const q = Number(it.quantidade) || 0;
-      if (!max || q <= max * 1.05) continue;
-      const un = unidadeDe(it.codigo, it.produto_nome) || '';
-      out.push({ tipo:'palete-acima', grupo:'regras', conf:85, titulo:`${esc(pos)}: ${iQ(q, un)} numa vaga onde cabe ${iQ(max, un)}`,
-        txt:`${esc(it.produto_nome || it.codigo)} · lote ${esc(it.lote || '—')}. Ou a quantidade foi digitada errada, ou são ${num1(q / max)} paletes na mesma vaga.`,
-        pistas:[], impactoBase:q / max - 1, chaveExtra:`${pos}|${it.id}|${q}`,
-        acoes:[{ rot:'Abrir a vaga', op:'vaga', pos, primaria:true }] });
-    }
-  }
-
   // FEFO: saiu um lote mais novo enquanto um mais velho do mesmo produto ficou parado.
   if (_intel.porKc?.size) {
     const desde = Date.now() - 30 * 864e5;
@@ -420,6 +528,39 @@ function intelRegras() {
   return out;
 }
 
+/* ═══════════ SEPARAÇÃO × NOTA FISCAL ═══════════
+   O pedido separado já foi faturado? Então pode expedir da separação.
+   Separado há mais de 1 dia útil e sem nota: avisa. */
+function intelSeparacao() {
+  const out = [];
+  if (!_intel.erp?.length) return out;                     // sem movimentos do ERP não dá para saber
+  const itens = (typeof _sOcup !== 'undefined' && typeof SALDO_SEP !== 'undefined' && _sOcup?.[SALDO_SEP]) || [];
+  for (const r of itens) {
+    const p = iPed(r.pedido);
+    const desde = iTs(r.created_at || r.separado_em);
+    const un = unidadeDe(r.codigo, r.produto_nome) || '';
+    const prod = `${esc(r.produto_nome || r.codigo)} · lote ${esc(r.lote || '—')} · ${iQ(r.quantidade, un)}`;
+    const palete = Number(produtoPorCodigo(normalizarCodigo(r.codigo))?.palete) || 0;
+    const imp = palete ? Number(r.quantidade) / palete : 1;
+    const nfs = p ? (_intel.erpPed?.get(p) || []).filter(e => normalizarCodigo(e.codigo) === normalizarCodigo(r.codigo) && iErpTs(e) >= desde - 864e5) : [];
+    if (nfs.length) {
+      const loteBate = nfs.some(e => chave(e.lote) === chave(r.lote));
+      out.push({ tipo:'sep-faturado', grupo:'arrumar', conf:loteBate ? 97 : 85, titulo:`Pedido ${esc(r.pedido)} faturado: expedir da separação`,
+        txt:`${prod} está na área de separação desde ${fmtTS(r.created_at || r.separado_em)}.`,
+        pistas:[...nfs.slice(0, 3).map(iErpTxt), ...(loteBate ? [] : ['A nota saiu com outro lote — confira a etiqueta.'])],
+        impactoBase:imp, chaveExtra:`${r.id}|${r.quantidade}`, sep:r,
+        acoes:[{ rot:'Expedir da separação', op:'expedir-sep', primaria:true }] });
+    } else if (iPassouTolerancia(desde)) {
+      const dias = Math.floor((Date.now() - desde) / 864e5);
+      out.push({ tipo:'sep-sem-nf', grupo:'arrumar', conf:p ? 75 : 55, titulo:`Separado há ${num(dias)} dia(s) e sem nota`,
+        txt:`${prod}${r.pedido ? ` · pedido ${esc(r.pedido)}` : ' · sem número de pedido'}. Nenhuma NF ${p ? 'deste pedido ' : ''}apareceu no ERP.`,
+        pistas:p ? [] : ['Sem o número do pedido o sistema não consegue casar com a nota.'], impactoBase:imp, chaveExtra:`${r.id}|${r.quantidade}`, sep:r,
+        acoes:[{ rot:'Abrir separados', op:'url', url:'./mapa.html?vista=sep', primaria:true }] });
+    }
+  }
+  return out;
+}
+
 /* ═══════════ TODOS OS ACHADOS ═══════════ */
 function intelChave(a) {
   const l = a.l;
@@ -438,7 +579,7 @@ function intelCalcular() {
   const lista = (_sCalc?.lista || []).filter(l => l.estado !== 'ok');
   const out = [];
   for (const l of lista) { const a = intelAnalisarLinha(l); if (a) out.push(a); }
-  out.push(...intelRegras());
+  out.push(...intelRegras(), ...intelSeparacao());
   const agora = Date.now();
   for (const a of out) {
     a.id = intelChave(a);
@@ -471,6 +612,7 @@ function intelVereditoHTML(l) {
     <div class="iv-tit">${a.titulo}</div>
     <div class="iv-txt">${a.txt}</div>
     ${a.pistas.length ? `<ul class="iv-pistas">${a.pistas.map(p => `<li>${p}</li>`).join('')}</ul>` : ''}
+    ${intelHistoriaHTML(l)}
     ${a.acoes.length ? `<div class="iv-acoes">${a.acoes.map((x, i) => `<button class="btn btn-sm${x.primaria ? ' btn-primary' : ''}" onclick="intelAcao('${intelAttr(a.id)}', ${i})">${esc(x.rot)}</button>`).join('')}
       <button class="btn btn-sm btn-ghost" onclick="intelRecusar('${intelAttr(a.id)}')" title="Não é isso — não sugerir de novo enquanto os números forem os mesmos">Não é isso</button></div>` : ''}
   </div>`;
@@ -495,6 +637,8 @@ async function intelAcao(id, i) {
   if (x.op === 'vaga')         return irParaVaga(x.pos);
   if (x.op === 'mapa')         return irPara('mapa');
   if (x.op === 'aba')          { irPara('saldo'); saAba(x.aba); return; }
+  if (x.op === 'url')          { window.open(x.url, '_blank', 'noopener'); return; }
+  if (x.op === 'expedir-sep')  return intelExpedirSep(a);
 }
 
 async function intelRegistrar(a, decisao, detalhes = {}, ate = null) {
@@ -595,6 +739,23 @@ async function intelBaixar(a, x) {
     if (mudancas.length) await intelRegistrar(a, 'aplicou', { acao:x.rot + ' (parcial)', mudancas });
     erro('Não consegui baixar tudo', e);
   }
+  await intelDepois();
+}
+
+async function intelExpedirSep(a) {
+  const r = a.sep;
+  if (!r) return;
+  const un = unidadeDe(r.codigo, r.produto_nome) || '';
+  if (!confirm(`Expedir da separação: ${r.produto_nome || r.codigo} · lote ${r.lote || '—'} · ${num(r.quantidade)} ${un}${r.pedido ? ` · pedido ${r.pedido}` : ''}?\n\nSai do mapa e do saldo mapeado. Fica em Alterações e dá para desfazer na tela Hoje.`)) return;
+  const agora = new Date().toISOString();
+  try {
+    await atualizarResiliente('separacao', { status:'expedido', finalizado_por:QUEM, finalizado_em:agora, updated_at:agora }, q => q.eq('id', r.id));
+    await registrarAlteracao({ acao:'expediu', posicao:SALDO_SEP, codigo:r.codigo, produto_nome:r.produto_nome, lote:r.lote, armazem:r.armazem,
+      qtd_antes:r.quantidade, qtd_depois:0, tabela_ref:'separacao', ref_id:r.id, obs:`expedido da separação${r.pedido ? ` · pedido ${r.pedido}` : ''} (Hoje · faturado)` });
+    await intelRegistrar(a, 'aplicou', { acao:'Expedir da separação', lote:r.lote, codigo:normalizarCodigo(r.codigo), armazem:r.armazem,
+      mudancas:[{ tab:'separacao', id:r.id, pos:SALDO_SEP, antes:{ status:'separado', finalizado_por:null, finalizado_em:null }, depois:{ status:'expedido' } }] });
+    toast('Expedido da separação.', 'ok', 4000);
+  } catch (e) { erro('Não consegui expedir', e); }
   await intelDepois();
 }
 
@@ -702,6 +863,7 @@ function hjCard(a) {
     ${cab}
     <p class="hj-txt">${a.txt}</p>
     ${a.pistas.length ? `<ul class="iv-pistas">${a.pistas.map(p => `<li>${p}</li>`).join('')}</ul>` : ''}
+    ${l ? intelHistoriaHTML(l) : ''}
     <div class="iv-acoes">
       ${a.acoes.map((x, i) => `<button class="btn btn-sm${x.primaria ? ' btn-primary' : ''}" onclick="intelAcao('${id}', ${i})">${esc(x.rot)}</button>`).join('')}
       ${l ? `<button class="btn btn-sm btn-ghost" onclick="hjVerLinha('${intelAttr(l.lote || '')}')">Ver no Mapa × sistema</button>` : ''}
@@ -734,6 +896,7 @@ function renderHoje() {
   const avisos = [];
   if (_intel.erroMov) avisos.push('O sistema ainda não grava o que muda no ERP a cada envio — rode o <code>sql/migracao-inteligencia.sql</code> no Supabase. Sem ele, as causas "saiu e não foi baixado" e "entrou e não foi mapeado" não aparecem.');
   else if (!(_intel.mov || []).length) avisos.push('O "filme" do ERP começa a partir do próximo envio do robô. Até lá, as causas de entrada e saída ainda não aparecem.');
+  if (_intel.erroErp) avisos.push('As movimentações do ERP (notas, transferências) ainda não chegam — rode o <code>sql/migracao-movimentos.sql</code> e instale o robô das movimentações.');
   if (_intel.erroDec) avisos.push('As decisões (recusar, adiar, desfazer) não estão sendo guardadas — rode o <code>sql/migracao-inteligencia.sql</code>.');
 
   // Filtro por tipo (só dos que estão para arrumar).
