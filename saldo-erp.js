@@ -31,8 +31,11 @@ const SA_FAIXAS = [
 
 /* Armazém que não combina com a validade. Para mudar a regra
    (por exemplo, aceitar vencido no 48 — descarte), é aqui. */
+/* Armazéns onde a validade não importa: o lote pode estar lá vencido ou
+   não (retrabalho, revalidação, avaria, descarte). */
+const SA_ARM_LIVRE_VALIDADE = ['91', '94', 'D4', '88', '48'];
 const SA_REGRAS = [
-  { id:'venc-fora', rot:'Vencido fora do D7',      cls:'t-neg',  t:l => l.dias !== null && l.dias < 0 && l.arm !== 'D7' },
+  { id:'venc-fora', rot:'Vencido fora do D7',      cls:'t-neg',  t:l => l.dias !== null && l.dias < 0 && l.arm !== 'D7' && !SA_ARM_LIVRE_VALIDADE.includes(l.arm) },
   { id:'d7-valido', rot:'No D7 sem estar vencido', cls:'t-warn', t:l => l.arm === 'D7' && l.dias !== null && l.dias >= 0 },
 ];
 
