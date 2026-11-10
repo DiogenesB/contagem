@@ -630,6 +630,10 @@ function calcularSaldoCompleto() {
     (lotesPorCod.get(c) || lotesPorCod.set(c, []).get(c)).push(s);
   }
 
+  // Saldo do sistema por lote, de qualquer produto e armazém.
+  const sisPorLoteTodos = new Map();
+  for (const s of sis.values()) { const k = chave(s.lote); (sisPorLoteTodos.get(k) || sisPorLoteTodos.set(k, []).get(k)).push(s); }
+
   // Saldo do sistema por lote+armazém, de qualquer produto (dica de produto trocado).
   const sisLoteArm = new Map();
   for (const s of sis.values()) { const k = chave(s.lote) + '|' + s.arm; (sisLoteArm.get(k) || sisLoteArm.set(k, []).get(k)).push(s); }
@@ -655,7 +659,15 @@ function calcularSaldoCompleto() {
       l.estado = 'armazem';
     } else if (l.sistema === null) {
       const doProduto = lotesPorCod.get(chave(l.cod)) || [];
-      if (doProduto.length) {
+      // O lote EXISTE no sistema, só que em outro armazém (e lá já confere
+      // com o mapa, senão teria virado "armazém trocado"). Neste armazém o
+      // saldo é zero: sobra no mapa, não lote digitado errado.
+      const mesmoLote = doProduto.filter(s => chave(s.lote) === chave(l.lote));
+      if (mesmoLote.length) {
+        l.estado = 'sobra';
+        l.sistema = 0;
+        l.loteEmOutroArm = mesmoLote;
+      } else if (doProduto.length) {
         l.estado = 'lote';
         l.sug = doProduto.filter(s => lotesParecidos(s.lote, l.lote))
           .sort((a, b) => b.saldo - a.saldo).slice(0, 3);
@@ -711,6 +723,20 @@ function calcularSaldoCompleto() {
     }
     for (const a of l.armsMapa) {
       if (!armazemConhecido(a)) l.dicas.push({ t:`O armazém <b>${esc(a || 'vazio')}</b> não existe na lista física — provável digitação.`, c:'neg' });
+    }
+    if (l.loteEmOutroArm) {
+      l.dicas.push({ t:`O lote existe no sistema, mas não no ${esc(l.armsMapa.join(', '))}: está no ` +
+        l.loteEmOutroArm.map(s => `<b>${esc(s.arm)}</b>${nomeArmazem(s.arm) ? ` (${esc(nomeArmazem(s.arm))})` : ''} com ${sQtd(s.saldo, un)}`).join(' e ') +
+        `. No ${esc(l.armsMapa.join(', '))} o saldo é zero — provavelmente saiu (faturado ou transferido) e a vaga não foi baixada no mapa.`, c:'warn' });
+    }
+    // O mesmo número de lote em OUTRO produto, em qualquer armazém (no
+    // mesmo armazém já foi avisado acima).
+    if (l.estado === 'lote' || l.estado === 'sem-saldo') {
+      const outros = (sisPorLoteTodos.get(chave(l.lote)) || [])
+        .filter(s => chave(s.cod) !== chave(l.cod) && !l.armsMapa.includes(s.arm)).slice(0, 3);
+      if (outros.length) l.dicas.push({ t:`O lote <b>${esc(l.lote)}</b> existe no sistema em outro produto: ` +
+        outros.map(s => `<b>${esc(s.desc || s.cod)}</b> (${esc(s.cod)}) no ${esc(s.arm)} com ${sQtd(s.saldo, unidadeDe(s.cod, s.desc) || s.unSis)}`).join(' · ') +
+        '. Confira a etiqueta do palete: pode ser o produto errado na vaga.', c:'neg' });
     }
     if (l.estado === 'lote') {
       l.dicas.push(l.sug.length
@@ -991,7 +1017,7 @@ function renderTabelaLote(tab) {
     <table class="tbl saldo">
       <thead><tr>
         ${th('produto', 'Produto')}${th('codigo', 'Código', 'mono')}${th('lote', 'Lote', 'mono')}${th('armazem', 'Arm.', 'mono')}
-        ${th('vagas', 'Vagas', 'num')}${th('mapeado', 'Mapeado', 'num')}${th('sistema', 'Sistema', 'num')}
+        ${th('vagas', 'Vagas', 'num')}${th('mapeado', 'Mapeado', 'num')}${th('sistema', 'Sistema', 'num')}<th class="num">Empenhado</th>
         ${th('gravidade', 'Diferença', 'num')}${th('paletes', 'Paletes', 'num')}
       </tr></thead>
       <tbody>${p.itens.map(l => linhaLote(l)).join('')}</tbody>
@@ -1032,10 +1058,11 @@ function linhaLote(l, sub = false) {
       <td class="num mono">${l.vagas.size || '—'}</td>
       <td class="num mono strong">${num(arred(l.mapa))}</td>
       <td class="num mono">${l.sistema === null ? '—' : num(arred(l.sistema))}</td>
+      <td class="num mono">${l.empenho > 0 ? `<span class="s-emp" title="Empenhado no ERP — pode já estar separado fora do drive">${num(arred(l.empenho))}</span>` : '<span class="s-mute">—</span>'}</td>
       <td class="num">${celDif(l)}</td>
       <td class="num mono">${l.estado === 'ok' ? '<span class="s-mute">0</span>' : (l.difPl == null ? '<span class="s-mute" title="Produto sem máximo por palete">—</span>' : (l.difPl > 0 ? '+' : '') + sPl(l.difPl))}</td>
     </tr>
-    ${aberta ? `<tr class="detalhe-saldo"><td colspan="9">${detalheLote(l, i)}</td></tr>` : ''}`;
+    ${aberta ? `<tr class="detalhe-saldo"><td colspan="10">${detalheLote(l, i)}</td></tr>` : ''}`;
 }
 
 function detalheLote(l, i) {
@@ -1091,9 +1118,9 @@ function renderTabelaProduto(tabLotes) {
   for (const l of tabLotes) {
     const c = chave(l.cod);
     let g = grupos.get(c);
-    if (!g) grupos.set(c, g = { k:'P|' + c, cod:l.cod, produto:l.produto, un:l.un, palete:l.palete, lotes:[], mapa:0, sistema:0, vagas:new Set(), pior:'ok' });
+    if (!g) grupos.set(c, g = { k:'P|' + c, cod:l.cod, produto:l.produto, un:l.un, palete:l.palete, lotes:[], mapa:0, sistema:0, empenho:0, vagas:new Set(), pior:'ok' });
     g.lotes.push(l);
-    g.mapa += l.mapa; g.sistema += l.sistema || 0;
+    g.mapa += l.mapa; g.sistema += l.sistema || 0; g.empenho += l.empenho || 0;
     l.vagas.forEach(v => g.vagas.add(v));
     if (SITUACOES[l.estado].peso < SITUACOES[g.pior].peso) g.pior = l.estado;
   }
@@ -1128,7 +1155,7 @@ function renderTabelaProduto(tabLotes) {
     <table class="tbl saldo">
       <thead><tr>
         ${th('produto', 'Produto')}${th('codigo', 'Código', 'mono')}<th class="mono">Lotes</th><th class="mono">Arm.</th>
-        ${th('vagas', 'Vagas', 'num')}${th('mapeado', 'Mapeado', 'num')}${th('sistema', 'Sistema', 'num')}
+        ${th('vagas', 'Vagas', 'num')}${th('mapeado', 'Mapeado', 'num')}${th('sistema', 'Sistema', 'num')}<th class="num">Empenhado</th>
         ${th('gravidade', 'Diferença', 'num')}${th('paletes', 'Paletes', 'num')}
       </tr></thead>
       <tbody>${p.itens.map(g => linhaProduto(g)).join('')}</tbody>
@@ -1153,6 +1180,7 @@ function linhaProduto(g) {
       <td class="num mono">${g.vagas.size || '—'}</td>
       <td class="num mono strong">${num(arred(g.mapa))}</td>
       <td class="num mono">${num(arred(g.sistema))}</td>
+      <td class="num mono">${g.empenho > 0 ? `<span class="s-emp">${num(arred(g.empenho))}</span>` : '<span class="s-mute">—</span>'}</td>
       <td class="num">${g.pior === 'ok' ? '<span class="dif d-ok">0</span>' : `<span class="dif d-${Math.abs(g.dif) < 0.001 ? 'alt' : s.cor}">${g.dif > 0 ? '+' : ''}${num(g.dif)}</span><span class="s-un-tx">${esc(g.un)}</span>`}</td>
       <td class="num mono">${g.difPl == null ? '—' : (g.difPl > 0 ? '+' : '') + sPl(g.difPl)}</td>
     </tr>
