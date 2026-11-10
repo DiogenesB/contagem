@@ -477,6 +477,8 @@ function renderSaldoErp() {
   const lista = saFiltradas();
   const naDiv = _sa.aba === 'divergencias';
 
+  saRoboLer(false).then(r => { if (r && (r.rodando || r.aguardando) && !_roboTimer) saRoboVigiar(); }).catch(() => {});
+
   // Cabeçalho: de quando é a foto.
   const f = _sa.foto;
   $('sa-foto').innerHTML = f
@@ -554,11 +556,69 @@ function renderSaldoErp() {
 /* "Atualizar" relê do banco tudo o que a tela mostra (saldo, mapa e
    histórico), sem esperar o cache. Quem traz saldo novo do ERP para o
    banco é o robô do Excel, no horário dele. */
+/* ═══════════ ROBÔ ═══════════ */
+let _roboTimer = null;
+let _roboLido = 0, _roboUlt = null;
+async function saRoboLer(forcar = true) {
+  const el = $('sa-robo');
+  if (!el) return null;
+  if (!forcar && Date.now() - _roboLido < 15000) return _roboUlt;
+  _roboLido = Date.now();
+  const { data, error } = await sb.from('robo_controle').select('*').eq('id', 1).maybeSingle();
+  if (error || !data) {
+    el.className = 'sa-robo warn';
+    el.innerHTML = 'Robô: rode o <b>sql/migracao-robo-pedido.sql</b> no Supabase para ligar o pedido manual.';
+    return null;
+  }
+  // relógio do PC e do banco podem diferir uns segundos: nunca "há -3s"
+  const t = x => x ? Math.min(new Date(x).getTime(), Date.now()) : 0;
+  const visto = t(data.visto_em), pedido = t(data.pedido_em), ini = t(data.ultimo_inicio);
+  const rodando = !!data.rodando_desde && Date.now() - t(data.rodando_desde) < 40 * 60e3;
+  const semSinal = !visto || Date.now() - visto > 20 * 60e3;
+  const aguardando = pedido && pedido > ini;
+  let txt;
+  if (rodando) txt = `<b>Robô atualizando agora</b> (começou ${esc(haQuanto(t(data.rodando_desde)))}${data.ultimo_motivo === 'pedido' ? ', a pedido' : ''}). Leva uns 8 a 10 min.`;
+  else if (aguardando) txt = `<b>Pedido enviado</b>${data.pedido_por ? ` por ${esc(data.pedido_por)}` : ''} ${esc(haQuanto(pedido))} — o robô pega em até 5 min.`;
+  else txt = `Robô: última rodada ${data.ultimo_fim ? esc(haQuanto(t(data.ultimo_fim))) : '—'}${data.ultimo_status === 'erro' ? ` · <b>deu erro</b>: ${esc(data.ultimo_msg || '')}` : ''}`;
+  txt += visto ? ` · visto ${esc(haQuanto(visto))}` : ' · nunca deu sinal';
+  if (semSinal && !rodando) txt += ' — <b>sem sinal do robô</b>: confira se o computador dele está ligado.';
+  el.className = 'sa-robo' + ((semSinal && !rodando) || data.ultimo_status === 'erro' ? ' warn' : '');
+  el.innerHTML = txt;
+  return (_roboUlt = { rodando, aguardando, fim: t(data.ultimo_fim), status: data.ultimo_status, msg: data.ultimo_msg });
+}
+async function saPedirRobo() {
+  busy('sa-bt-robo', 'sa-spin-robo', true);
+  try {
+    const { error } = await sb.rpc('pedir_atualizacao_robo', { p_por: (typeof USUARIO !== 'undefined' && USUARIO?.nome) || null });
+    if (error) { toast('Não consegui pedir: rode o sql/migracao-robo-pedido.sql no Supabase. (' + error.message + ')'); return; }
+    toast('Pedido enviado. O robô confere a cada 5 min e leva uns 8 a 10 min para terminar.');
+    await saRoboLer();
+    saRoboVigiar();
+  } finally { busy('sa-bt-robo', 'sa-spin-robo', false); }
+}
+// Depois do pedido, olha a cada 20 s e recarrega o saldo quando o robô terminar.
+function saRoboVigiar() {
+  clearInterval(_roboTimer);
+  const t0 = Date.now() - 60e3;            // folga para relógios diferentes
+  const parar = () => { clearInterval(_roboTimer); _roboTimer = null; };
+  _roboTimer = setInterval(async () => {
+    if (Date.now() - t0 > 25 * 60e3 || !$('sa-robo')) { parar(); return; }
+    const r = await saRoboLer();
+    if (r && !r.rodando && !r.aguardando && r.fim > t0) {
+      parar();
+      if (r.status === 'erro') { toast('O robô terminou com erro: ' + (r.msg || 'veja o log no computador do robô.')); return; }
+      if (typeof cacheInvalidar === 'function') cacheInvalidar('saldo-erp');
+      await carregarSaldoErp(true);
+      toast('O robô terminou: saldo do ERP atualizado.');
+    }
+  }, 20000);
+}
+
 async function saAtualizar() {
   busy('sa-bt-atu', 'sa-spin-atu', true);
   try {
     if (typeof cacheInvalidar === 'function') cacheInvalidar('saldo-erp');
-    await carregarSaldoErp(true);
+    await Promise.all([carregarSaldoErp(true), saRoboLer()]);
     toast(_sa.foto ? `Recarregado. A foto mais nova do ERP é de ${fmtTS(_sa.foto.ate)}.` : 'Recarregado.');
   } finally { busy('sa-bt-atu', 'sa-spin-atu', false); }
 }
