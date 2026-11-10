@@ -682,6 +682,9 @@ textarea { resize:vertical; min-height:56px; font-family:var(--sans); }
 .sa-check { display:inline-flex; align-items:center; gap:7px; font-size:.8125rem; color:var(--text-2); cursor:pointer; }
 .sa-mute { color:var(--text-3); }
 .sa-warn { color:var(--warn); }
+.sa-robo { margin:4px 0 0; font-size:.8125rem; color:var(--text-3); }
+.sa-robo b { color:var(--text-2); font-weight:600; }
+.sa-robo.warn, .sa-robo.warn b { color:var(--warn); }
 .sa-resumo { padding:12px 20px 0; font-size:.8125rem; color:var(--text-2); }
 .sa-resumo + .tbl-wrap, .sa-resumo + .sa-resumo { margin-top:10px; }
 .sa-resumo b { color:var(--text); font-variant-numeric:tabular-nums; }
@@ -2292,8 +2295,10 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
     <div>
       <h1 class="page-title">Saldo</h1>
       <p class="page-sub">O saldo do ERP lote a lote, cruzado com o mapa. <span id="sa-foto"></span></p>
+      <p class="sa-robo" id="sa-robo"></p>
     </div>
     <div class="btn-row">
+      <button class="btn btn-sm" id="sa-bt-robo" onclick="saPedirRobo()" title="Pede ao robô do Excel para atualizar o saldo do ERP agora. Ele confere a cada 5 minutos e leva uns 8 a 10 minutos para terminar."><span class="spin" id="sa-spin-robo"></span>Pedir ao robô</button>
       <button class="btn btn-ghost btn-sm" id="sa-bt-atu" onclick="saAtualizar()" title="Relê do banco o saldo, o mapa e o histórico. O saldo do ERP chega pelo robô do Excel."><span class="spin" id="sa-spin-atu"></span>Atualizar</button>
       <button class="btn btn-sm" onclick="exportarSaldoErp()">Exportar Excel</button>
       <div class="menu-wrap" id="sa-menu">
@@ -2683,8 +2688,8 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="./comum.js?v=7"></script>
 <script src="./usuarios.js?v=1"></script>
-<script src="./saldo-mapeado.js?v=13"></script>
-<script src="./saldo-erp.js?v=3"></script>
+<script src="./saldo-mapeado.js?v=14"></script>
+<script src="./saldo-erp.js?v=5"></script>
 <script src="./inicio.js?v=1"></script>
 <script src="./impressao.js?v=3"></script>
 <script src="./identificacao.js?v=3"></script>
