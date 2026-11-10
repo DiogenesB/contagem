@@ -1091,6 +1091,7 @@ function detalheLote(l, i) {
         <span><b class="c-${s.cor}">${s.rot}.</b> ${s.expl}</span>
         <span class="s-mute">${l.vagas.size} vaga(s) · mapa ${sQtd(l.mapa, l.un)} · sistema ${l.sistema === null ? '—' : sQtd(l.sistema, l.un)}${l.empenho ? ` (empenho ${sQtd(l.empenho, l.un)})` : ''}${unPl}${l.dias ? ` · parado há até ${l.dias} dia(s)` : ''}</span>
       </div>
+      ${typeof intelVereditoHTML === 'function' ? intelVereditoHTML(l) : ''}
       ${l.dicas.length ? `<ul class="s-dicas">${l.dicas.map(d => `<li class="c-${d.c}">${d.t}</li>`).join('')}</ul>` : ''}
       ${acoes.length ? `<div class="s-acoes">${acoes.join('')}</div>` : ''}
       ${l.itens.length ? `
