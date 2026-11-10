@@ -782,6 +782,9 @@ table.sa-res-t .k-pbar { min-width:150px; }
 .sa-ind.parcial span { color:var(--warn); font-weight:600; }
 .sa-ind.fora i { border:2px solid var(--info); }
 .sa-ind.fora span { color:var(--info); }
+.sa-ind.mais i { background:var(--neg); box-shadow:inset 0 0 0 3px var(--neg), inset 0 0 0 5px var(--surface); }
+.sa-ind.mais span { color:var(--neg); font-weight:600; }
+.sa-emp, .s-emp { color:var(--text); font-weight:600; }
 .sa-ind.na i { border:2px dashed var(--line-2); }
 .sa-ind.na span { color:var(--text-3); }
 td.sa-c-ind { width:1%; }
@@ -823,23 +826,27 @@ tr.sa-det > td { background:var(--bg) !important; padding:4px 16px 16px !importa
 .sa-soma b { color:var(--text); font-variant-numeric:tabular-nums; font-weight:600; }
 .sa-soma b.sa-warn { color:var(--warn); }
 table.sa-grade thead th.sa-th { padding:0; }
-.sa-th-in { display:flex; align-items:center; gap:2px; padding:6px 4px 6px 10px; }
+.sa-th-in { display:flex; align-items:center; gap:0; padding:6px 2px 6px 8px; }
 th.num .sa-th-in { justify-content:flex-end; }
 .sa-th-rot { border:0; background:none; color:inherit; font:inherit; font-weight:inherit; text-transform:inherit; letter-spacing:inherit;
   cursor:pointer; padding:4px 2px; white-space:nowrap; text-align:inherit; }
 .sa-th-rot:hover { color:var(--text); }
+/* Rótulo de número quebra em 2 linhas ("Saldo / mapeado") para a grade caber sem rolar de lado. */
+th.num .sa-th-rot { white-space:normal; max-width:80px; text-align:right; line-height:1.2; }
 table.sa-grade thead th:not(.sa-th) .sa-th-rot { padding:0; }
-.sa-th-f { border:0; background:none; color:var(--text-3); cursor:pointer; width:26px; height:26px; border-radius:var(--r-xs);
+.sa-th-f { border:0; background:none; color:var(--text-3); cursor:pointer; width:22px; height:24px; border-radius:var(--r-xs);
   display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
 .sa-th-f svg { width:14px; height:14px; }
 .sa-th-f:hover { background:var(--surface-3); color:var(--text); }
 th.filtrado .sa-th-f { color:var(--accent); background:var(--accent-sf); }
 th.filtrado .sa-th-rot { color:var(--accent); }
-table.sa-grade td { white-space:nowrap; padding:9px 10px; }
+table.sa-grade td { white-space:nowrap; padding:9px 8px; }
+/* situação longa ("Armazém não mapeado") quebra em vez de alargar a grade */
+table.sa-grade td .tag { white-space:normal; line-height:1.25; }
 table.sa-grade td:first-child, table.sa-grade th:first-child .sa-th-in { padding-left:16px; }
 .sa-un { color:var(--text-3); font-size:.6875rem; }
 .sa-vagas { flex-wrap:nowrap; }
-table.sa-grade td.nome { white-space:normal; min-width:220px; }
+table.sa-grade td.nome { white-space:normal; min-width:200px; }
 tr.sa-prod { cursor:pointer; }
 tr.sa-prod:hover td { background:var(--surface-2); }
 tr.sa-prod.aberto td { background:var(--surface-2); border-bottom-color:transparent; }
@@ -873,6 +880,51 @@ table.sa-sub-t td { padding:6px 10px; background:transparent; white-space:nowrap
 @media (max-width:760px) {
   .sa-filtros-in { padding:12px 14px; }
   .sa-somas { padding:10px 14px; }
+}
+
+/* ═══════════ INTELIGÊNCIA (tela Hoje e veredito) ═══════════ */
+.iv { margin:0 0 12px; padding:12px 14px; border:1px solid var(--line-2); border-left:3px solid var(--accent); border-radius:var(--r); background:var(--surface-2); }
+.iv-neg { border-left-color:var(--neg); } .iv-warn { border-left-color:var(--warn); } .iv-info { border-left-color:var(--info); } .iv-alt { border-left-color:var(--alt); }
+.iv-cab { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px; }
+.iv-rot { font-size:.6875rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-3); font-weight:600; }
+.iv-tit { font-weight:600; font-size:.9375rem; margin-bottom:4px; }
+.iv-txt, .hj-txt { font-size:.8125rem; color:var(--text-2); line-height:1.5; margin:0; }
+.iv-pistas { margin:8px 0 0; padding-left:18px; font-size:.78rem; color:var(--text-2); line-height:1.5; }
+.iv-pistas li::marker { color:var(--text-3); }
+.iv-acoes { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; align-items:center; }
+.iv-conf { display:inline-flex; align-items:center; gap:6px; font-size:.75rem; color:var(--text-3); white-space:nowrap; }
+.iv-conf i { display:inline-block; width:46px; height:5px; border-radius:3px; background:var(--surface-3); overflow:hidden; }
+.iv-conf i u { display:block; height:100%; border-radius:3px; background:var(--text-3); }
+.iv-conf b { color:var(--text-2); font-variant-numeric:tabular-nums; }
+.iv-conf.c-alta i u { background:var(--pos); } .iv-conf.c-alta b { color:var(--pos); }
+.iv-conf.c-media i u { background:var(--warn); } .iv-conf.c-media b { color:var(--warn); }
+.hj-resumo { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; margin-bottom:14px; }
+.hj-n { display:flex; flex-direction:column; gap:2px; padding:14px 16px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface);
+  text-align:left; font:inherit; color:var(--text-2); cursor:pointer; text-decoration:none; }
+.hj-n b { font-size:1.5rem; color:var(--text); font-variant-numeric:tabular-nums; }
+.hj-n span { font-size:.8125rem; }
+.hj-n.on { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
+.hj-tipos { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.hj-tipos .sa-rap b { margin-left:4px; font-variant-numeric:tabular-nums; }
+.hj-sec { margin:22px 0 0; }
+.hj-sec h2 { font-size:1rem; font-weight:600; margin:0 0 10px; display:flex; align-items:baseline; gap:10px; }
+.hj-sec h2 small { font-size:.75rem; font-weight:400; color:var(--text-3); }
+.hj-sec details summary { cursor:pointer; list-style:none; }
+.hj-sec details summary h2 { display:inline-flex; }
+.hj-lista { display:grid; grid-template-columns:repeat(auto-fill, minmax(420px, 1fr)); gap:12px; }
+.hj-card { padding:14px 16px; border:1px solid var(--line); border-left:3px solid var(--line-2); border-radius:var(--r); background:var(--surface);
+  display:flex; flex-direction:column; min-width:0; }
+.hj-neg { border-left-color:var(--neg); } .hj-warn { border-left-color:var(--warn); } .hj-info { border-left-color:var(--info); } .hj-alt { border-left-color:var(--alt); }
+.hj-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+.hj-tit { font-size:.9375rem; font-weight:600; margin:0 0 2px; line-height:1.35; }
+.hj-prod { font-size:.78rem; color:var(--text-3); margin-bottom:6px; }
+.hj-prod .mono { font-family:var(--mono); }
+.hj-card .iv-acoes { margin-top:auto; padding-top:12px; }
+.hj-esp { flex:1; }
+.hj-vazio { font-size:.8125rem; color:var(--text-3); padding:10px 0; }
+@media (max-width:760px) {
+  .hj-resumo { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .hj-lista { grid-template-columns:1fr; }
 }
 
 /* ═══════════ USUÁRIOS ═══════════ */
@@ -1568,6 +1620,10 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
   </div>
 
   <nav class="side-nav">
+    <button class="nav-item" data-page="hoje" onclick="irPara('hoje')" title="Hoje">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L19 8.3l-3.8 3.3 1.1 5L12 14l-4.3 2.6 1.1-5L5 8.3l5.1-.7z"/></svg>
+      <span>Hoje</span><span class="nav-count" id="nc-hoje" hidden>0</span>
+    </button>
     <button class="nav-item" data-page="inicio" onclick="irPara('inicio')" title="Visão geral">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9v11h14V9"/><path d="M10 20v-6h4v6"/></svg>
       <span>Visão geral</span>
@@ -1726,6 +1782,23 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 <main class="main">
 
 <!-- ══════════════════ VISÃO GERAL ══════════════════ -->
+<!-- ══════════════════ HOJE ══════════════════
+     A fila do dia: cada divergência com a causa provável, a certeza e
+     a correção em um clique (inteligencia.js). -->
+<section id="page-hoje" class="page">
+  <div class="page-head com-acoes">
+    <div>
+      <h1 class="page-title" id="hj-ola">Hoje</h1>
+      <p class="page-sub" id="hj-sub">Olhando o saldo, o mapa e o que mudou…</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-sm" onclick="carregarHoje(true)">Atualizar</button>
+      <button class="btn btn-sm" onclick="irPara('saldo')">Abrir o Saldo</button>
+    </div>
+  </div>
+  <div id="hj-corpo"></div>
+</section>
+
 <section id="page-inicio" class="page active">
   <div class="page-head com-acoes">
     <div>
@@ -2688,8 +2761,9 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="./comum.js?v=7"></script>
 <script src="./usuarios.js?v=1"></script>
-<script src="./saldo-mapeado.js?v=14"></script>
-<script src="./saldo-erp.js?v=5"></script>
+<script src="./saldo-mapeado.js?v=17"></script>
+<script src="./saldo-erp.js?v=8"></script>
+<script src="./inteligencia.js?v=1"></script>
 <script src="./inicio.js?v=1"></script>
 <script src="./impressao.js?v=3"></script>
 <script src="./identificacao.js?v=3"></script>
@@ -2817,12 +2891,13 @@ const PAG_RENDER = {
   'sa-reg':   () => renderSaldoErp(),
   'sa-par':   () => renderSaldoErp(),
   'sa-evo':   () => renderSaldoErp(),
+  hoje:       () => renderHoje(),
 };
 /* De quem é a rolagem que precisa voltar ao topo ao virar a página. */
 const PAG_ALVO = {
   validacao:'v-tbody', registros:'r-tbody', historico:'h-tbody', acuracia:'a-tbody',
   saldo:'s-tabela', alteracoes:'alt-lista', mapa:'m-tbody', transfer:'t-tbody', kpi:'k-tbody', vkpi:'v-kpi-tbody',
-  'sa-pla':'sa-corpo', 'sa-val':'sa-corpo', 'sa-div':'sa-corpo', 'sa-reg':'sa-corpo', 'sa-par':'sa-corpo', 'sa-evo':'sa-corpo',
+  'sa-pla':'sa-corpo', 'sa-val':'sa-corpo', 'sa-div':'sa-corpo', 'sa-reg':'sa-corpo', 'sa-par':'sa-corpo', 'sa-evo':'sa-corpo', hoje:'hj-corpo',
 };
 
 function pagEstado(k) {
@@ -3077,6 +3152,7 @@ async function init() {
   const inicial = location.hash.replace('#', '');
   if (inicial && ($('page-' + inicial) || inicial === 'saldo-erp')) irPara(inicial); else irPara('inicio');
   carregarTransferencias();
+  if (typeof intelIniciarSegundoPlano === 'function') intelIniciarSegundoPlano();   // contador do "Hoje" no menu
 }
 
 function setConn(ok, txt) {
@@ -3111,6 +3187,7 @@ function irPara(pagina) {
   atualizarCabecalho(pagina);
 
   ({
+    hoje:           carregarHoje,
     inicio:         carregarInicio,
     validacao:      carregarValidacao,
     registros:      carregarRegistros,
