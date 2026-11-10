@@ -137,12 +137,14 @@ function saSitTag(l) {
 const SA_MAPA_EST = {
   ok:      { rot:'No mapa',         cls:'ok'      },
   parcial: { rot:'Em parte',        cls:'parcial' },
+  mais:    { rot:'A mais no mapa',  cls:'mais'    },
   fora:    { rot:'Fora do mapa',    cls:'fora'    },
   na:      { rot:'Não se aplica',   cls:'na'      },
 };
 function saMapaInd(l) {
   const e = SA_MAPA_EST[l.mapaEst] || SA_MAPA_EST.fora;
-  const pc = l.mapaEst === 'na' || l.pctMapa == null ? '' : `${num(Math.floor(l.pctMapa))}%`;
+  const pc = l.mapaEst === 'mais' ? (l.soMapa ? 'só mapa' : `+${num(Math.floor(l.pctMais))}%`)
+    : l.mapaEst === 'na' || l.pctMapa == null ? '' : `${num(Math.floor(l.pctMapa))}%`;
   const deg = l.mapaEst === 'parcial' ? Math.round((l.pctMapa || 0) * 3.6) : 0;
   return `<span class="sa-ind ${e.cls}" title="${esc(e.rot)}${l.vagas?.length ? ' · ' + esc(l.vagas.join(', ')) : ''}">` +
     `<i style="--g:${deg}deg"></i><span>${pc || '—'}</span></span>`;
@@ -165,19 +167,21 @@ const SA_COLS = [
   { id:'vida',   rot:'Dias de vida', tipo:'num', v:l => l.dias, td:l => saDiasTxt(l.dias), oculta:true },
   { id:'pvida',  rot:'% de vida',   tipo:'num',  v:l => l.pvida, td:l => l.pvida == null ? '—' : `${num1(l.pvida)}%`, oculta:true },
   { id:'arm',    rot:'Armazém',     tipo:'cat',  v:l => l.arm, td:l => saArm(l.arm) },
-  { id:'saldo',  rot:'Saldo',       tipo:'num',  v:l => l.saldo, td:l => `<b>${saQ(l.saldo)}</b> <small class="sa-un">${esc(l.un)}</small>` },
-  { id:'emp',    rot:'Empenho',     tipo:'num',  v:l => l.emp, td:l => l.emp ? saQ(l.emp) : '<span class="num-zero">—</span>', oculta:true },
+  { id:'saldo',  rot:'Sistema', tipo:'num', v:l => l.saldo, td:l => l.soMapa ? '<span class="num-zero" title="Sem saldo no sistema neste armazém">0</span>' : `<b>${saQ(l.saldo)}</b> <small class="sa-un">${esc(l.un)}</small>` },
+  { id:'mapa',   rot:'Mapeado', tipo:'num', v:l => l.noMapa, td:l => l.falta == null && !l.noMapa ? '<span class="num-zero">—</span>' : `<b>${saQ(l.noMapa)}</b>${l.soMapa ? ` <small class="sa-un">${esc(l.un)}</small>` : ''}` },
+  { id:'emp',    rot:'Empenhado',   tipo:'num',  v:l => l.emp, td:l => l.emp ? `<span class="sa-emp">${saQ(l.emp)}</span>` : '<span class="num-zero">—</span>' },
   { id:'livre',  rot:'Livre',       tipo:'num',  v:l => l.saldo - l.emp, td:l => saQ(l.saldo - l.emp), oculta:true },
   { id:'pl',     rot:'Paletes',     tipo:'num',  v:l => l.pl, td:l => saPl(l.pl), oculta:true },
   { id:'cx',     rot:'Caixas',      tipo:'num',  v:l => l.cx, td:l => l.cx == null ? '—' : saQ(l.cx), oculta:true },
-  { id:'mapa',   rot:'No mapa',     tipo:'num',  v:l => l.noMapa, td:l => l.falta == null && !l.noMapa ? '<span class="num-zero">—</span>' : saQ(l.noMapa), oculta:true },
   { id:'falta',  rot:'Falta mapear', tipo:'num', v:l => l.falta,
-    td:l => l.falta == null ? '<span class="num-zero" title="Armazém que não fica no mapa">n/a</span>' : l.falta > 0 ? `<span class="sa-warn">${saQ(l.falta)}</span>` : '<span class="num-pos">0</span>' },
+    td:l => l.falta == null ? '<span class="num-zero" title="Armazém que não fica no mapa">n/a</span>' : l.soMapa ? '<span class="num-zero">—</span>' : l.falta > 0 ? `<span class="sa-warn">${saQ(l.falta)}</span>` : '<span class="num-pos">0</span>' },
+  { id:'mais',   rot:'A mais no mapa', tipo:'num', v:l => l.mais,
+    td:l => l.mais == null ? '<span class="num-zero" title="Armazém que não fica no mapa">n/a</span>' : l.mais > 0.001 ? `<span class="num-neg" title="O mapa tem mais do que o sistema neste armazém">+${saQ(l.mais)}</span>` : '<span class="num-zero">0</span>' },
   { id:'sit',    rot:'Situação',    tipo:'cat',  v:l => l.sitRot || '—', td:saSitTag },
-  { id:'vagas',  rot:'Vagas',       tipo:'cat',  v:l => (l.vagas || []).length ? l.vagas : ['(nenhuma)'], td:l => saVagas(l), multi:true },
+  { id:'vagas',  rot:'Vagas',       tipo:'cat',  v:l => (l.vagas || []).length ? l.vagas : ['(nenhuma)'], td:l => saVagas(l), multi:true, oculta:true },   // as vagas aparecem ao clicar no lote
 ];
 const SA_COL = Object.fromEntries(SA_COLS.map(c => [c.id, c]));
-const LS_COLS = 'saldo.colunas';
+const LS_COLS = 'saldo.colunas.v2';   // v2: sistema × mapeado, empenhado e "a mais" visíveis
 let _saVisiveis = (() => {
   try { const v = JSON.parse(localStorage.getItem(LS_COLS) || 'null'); if (Array.isArray(v) && v.length) return new Set(v); } catch { /* sem storage */ }
   return new Set(SA_COLS.filter(c => !c.oculta).map(c => c.id));
@@ -236,6 +240,15 @@ async function carregarSaldoErp(forcar = false) {
     if (r.caixas  != null && r.caixas  !== '') l.cx = (l.cx || 0) + Number(r.caixas);
   }
   _sa.ref = [...m.values()].filter(l => l.saldo !== 0 || l.emp !== 0);
+  // Paletes: a quantidade por palete do catálogo manda. A coluna PALETES da
+  // planilha erra em produto DM e amostra (BIOMA PHOS 1 L, saldo 9 → "90
+  // paletes"). Sem catálogo, fica a da planilha — menos quando dá mais
+  // paletes que unidades, que é conta errada.
+  for (const l of _sa.ref) {
+    const pp = Number(produtoPorCodigo(l.cod)?.palete) || 0;
+    if (pp > 0) l.pl = l.saldo / pp;
+    else if (l.pl != null && Math.abs(l.pl) > Math.abs(l.saldo)) l.pl = null;
+  }
   _sa.foto = de ? { de, ate, quem } : null;
   _sa.mapaDe = null;
 
@@ -285,6 +298,10 @@ function saCruzarMapa() {
   for (const v of itensK.values()) v.sort((a, b) => a.pos.localeCompare(b.pos, 'pt-BR', { numeric:true }));
 
   // situação: a linha das Divergências que tem este lote+armazém do sistema
+  // (e, para o que só está no mapa, a que tem este lote+armazém do mapa)
+  const sitMapa = new Map();
+  for (const l of calc?.lista || []) if (l.mapa > 0)
+    for (const a of l.armsMapa) { const k = `${l.kc}|${a}`; if (!sitMapa.has(k) || !l.sistema) sitMapa.set(k, l); }
   const sit = new Map();
   for (const l of calc?.lista || []) {
     if (l.sistema === null) continue;
@@ -295,7 +312,24 @@ function saCruzarMapa() {
     }
   }
 
-  for (const r of _sa.ref) {
+  // Mapeado sem saldo no sistema naquele armazém: vira linha da planilha
+  // (saldo 0), senão o "a mais" do mapa nunca aparece.
+  const temRef = new Set(_sa.ref.map(r => `${kc(r.cod, r.lote)}|${r.arm}`));
+  _sa.soMapa = [];
+  for (const [ka, q] of qtd) {
+    if (temRef.has(ka) || !(q > 0)) continue;
+    const [c, , arm] = ka.split('|');
+    const l = sitMapa.get(ka);
+    const it = (itensK.get(ka.split('|').slice(0, 2).join('|')) || [])[0];
+    const cod = l?.cod || normalizarCodigo(it?.codigo || c) || c;
+    const prod = produtoPorCodigo(cod);
+    const lote = l?.lote || it?.lote || ka.split('|')[1];
+    _sa.soMapa.push({ k:`mapa|${ka}`, soMapa:true, filial:String(l?.filial || codigoFilialDoProduto(cod) || '').trim(), cod, lote,
+      arm:arm || '—', desc:l?.produto || prod?.nome || cod, un:saUn(l?.un || prod?.unidade), tipo:(l?.tipo || '—'),
+      val:null, fab:null, dias:null, pvida:null, saldo:0, emp:0, pl:null, cx:null });
+  }
+
+  for (const r of [..._sa.ref, ..._sa.soMapa]) {
     const k = kc(r.cod, r.lote), ka = `${k}|${r.arm}`;
     r.vagas = vagas.get(k) || [];
     r.itensMapa = itensK.get(k) || [];
@@ -305,15 +339,18 @@ function saCruzarMapa() {
     const mapeavel = typeof armMapeado === 'function' ? armMapeado(r.arm) : true;
     r.linhaDiv = null;
     if (!mapeavel) {
-      r.falta = null; r.sitRot = SA_NAO_MAPEAVEL; r.sitCls = 't-mute'; r.mapaEst = 'na';
+      r.falta = null; r.mais = null; r.sitRot = SA_NAO_MAPEAVEL; r.sitCls = 't-mute'; r.mapaEst = 'na';
       r.sitExpl = 'Este armazém não fica no drive-in; o saldo dele não precisa estar no mapa.';
       r.sitId = 'nmap';
       continue;
     }
     r.falta = Math.max(0, r.saldo - r.noMapa);
-    const l = sit.get(ka);
+    const tolM = Math.max(0.001, Math.abs(r.saldo) * 0.0002);
+    r.mais = r.noMapa - Math.max(0, r.saldo) > tolM ? r.noMapa - Math.max(0, r.saldo) : 0;
+    r.pctMais = r.saldo > 0 ? r.mais / r.saldo * 100 : null;
+    const l = sit.get(ka) || (r.soMapa ? sitMapa.get(ka) : null);
     r.linhaDiv = l || null;
-    const id = l?.estado || (r.saldo <= 0 ? null : r.noMapa ? (r.falta > 0.001 ? 'falta' : 'ok') : 'nao-mapeado');
+    const id = l?.estado || (r.soMapa ? 'sobra' : r.saldo <= 0 ? null : r.noMapa ? (r.falta > 0.001 ? 'falta' : r.mais ? 'sobra' : 'ok') : 'nao-mapeado');
     const s = id && typeof SITUACOES === 'object' ? SITUACOES[id] : null;
     r.sitId = id;
     r.sitRot = s?.rot || (id ? id : '');
@@ -321,7 +358,7 @@ function saCruzarMapa() {
     r.sitExpl = s?.expl || '';
     // Resumo para o indicador: está no mapa, em parte ou não está.
     // (pela quantidade: sobra no mapa também é "no mapa"; a Situação avisa da sobra)
-    r.mapaEst = r.saldo <= 0 ? 'ok' : r.noMapa >= r.saldo - Math.max(0.001, r.saldo * 0.0002) ? 'ok' : r.noMapa > 0.001 ? 'parcial' : 'fora';
+    r.mapaEst = r.mais ? 'mais' : r.saldo <= 0 ? 'ok' : r.noMapa >= r.saldo - tolM ? 'ok' : r.noMapa > 0.001 ? 'parcial' : 'fora';
   }
 }
 
@@ -360,11 +397,11 @@ function saBuscaTxt(l) {
 /* Linhas que passam na filial do topo, na busca e nos filtros de coluna.
    `sem` ignora o filtro de uma coluna (para a lista de valores dela e
    para o lote dividido ver os outros armazéns). */
-function saFiltradas(sem = '') {
+function saFiltradas(sem = '', comMapa = false) {
   saCruzarMapa();
   const ts = termos($('sa-busca')?.value || '');
   const cols = Object.keys(_sa.f).filter(id => id !== sem);
-  return _sa.ref.filter(l =>
+  return (comMapa ? [..._sa.ref, ...(_sa.soMapa || [])] : _sa.ref).filter(l =>
     daFilial(l.filial) &&
     (!ts.length || ts.some(t => saBuscaTxt(l).includes(t))) &&
     cols.every(id => saPassaCol(l, id)));
@@ -401,6 +438,7 @@ const SA_RAPIDOS = [
   { id:'fora',   grupo:'Mapa',     rot:'Fora do mapa',      col:'mapaind', f:() => ({ vals:new Set([SA_MAPA_EST.fora.rot]) }) },
   { id:'parte',  grupo:'Mapa',     rot:'Mapeado em parte',  col:'mapaind', f:() => ({ vals:new Set([SA_MAPA_EST.parcial.rot]) }) },
   { id:'nomapa', grupo:'Mapa',     rot:'Tudo no mapa',      col:'mapaind', f:() => ({ vals:new Set([SA_MAPA_EST.ok.rot]) }) },
+  { id:'mais',   grupo:'Mapa',     rot:'Mapeado a mais',    col:'mapaind', f:() => ({ vals:new Set([SA_MAPA_EST.mais.rot]) }) },
   { id:'diverg', grupo:'Mapa',     rot:'Com divergência',   col:'sit',     f:() => ({ vals:new Set(SA_DIVERG()) }) },
   { id:'emp',    grupo:'Outros',   rot:'Com empenho',       col:'emp',     f:() => ({ min:null, max:null, zero:'nz' }) },
   { id:'livre0', grupo:'Outros',   rot:'Todo empenhado',    col:'livre',   f:() => ({ min:null, max:0, zero:'' }) },
@@ -502,8 +540,8 @@ function renderSaldoErp() {
   const div = saDivididos().length;
   const fora = saForaDaRegra(lista).length;
   const mapeaveis = lista.filter(l => l.falta != null && l.saldo > 0);
-  const completos = mapeaveis.filter(l => l.mapaEst === 'ok').length;
-  const faltam = mapeaveis.filter(l => l.mapaEst !== 'ok');
+  const completos = mapeaveis.filter(l => l.mapaEst === 'ok' || l.mapaEst === 'mais').length;
+  const faltam = mapeaveis.filter(l => l.mapaEst === 'parcial' || l.mapaEst === 'fora');
   const filtrando = Object.keys(_sa.f).length || $('sa-busca').value.trim() || $('filtro-filial').value;
   const uns = Object.keys(pu).sort(saOrdUn);
   const linhaUn = u => { const x = pu[u], pc = x.mapeavel ? Math.min(100, x.mapa / x.mapeavel * 100) : null;
@@ -550,7 +588,9 @@ function renderSaldoErp() {
   if (naDiv) return;
   saChips();
 
-  ({ planilha:saPlanilha, totais:saTotais, validade:saValidade, divididos:saDivTab, armazem:saArmTab, evolucao:saEvolucao, parados:saParadosTab })[_sa.aba](lista);
+  // A planilha mostra também o que só está no mapa (saldo 0 no sistema).
+  ({ planilha:saPlanilha, totais:saTotais, validade:saValidade, divididos:saDivTab, armazem:saArmTab, evolucao:saEvolucao, parados:saParadosTab })[_sa.aba](
+    _sa.aba === 'planilha' ? saFiltradas('', true) : lista);
 }
 
 /* "Atualizar" relê do banco tudo o que a tela mostra (saldo, mapa e
@@ -702,47 +742,49 @@ function saPlanilhaProdutos(lista) {
   for (const l of lista) {
     const k = `${l.filial}|${l.cod}`;
     let x = g.get(k);
-    if (!x) g.set(k, x = { k, l, ls:[], saldo:0, emp:0, pl:null, mapa:0, falta:0, mapeavel:0, venc:0 });
+    if (!x) g.set(k, x = { k, l, ls:[], saldo:0, emp:0, pl:null, mapa:0, falta:0, mais:0, mapeavel:0, venc:0 });
     x.ls.push(l); x.saldo += l.saldo; x.emp += l.emp;
     if (l.pl != null) x.pl = (x.pl || 0) + l.pl;
-    if (l.falta != null) { x.mapeavel += Math.max(0, l.saldo); x.mapa += Math.min(l.noMapa, Math.max(0, l.saldo)); x.falta += l.falta; }
+    if (l.falta != null) { x.mapeavel += Math.max(0, l.saldo); x.mapa += l.noMapa; x.falta += l.falta; x.mais += l.mais || 0; }
     if (l.dias !== null && l.dias < 0 && l.saldo > 0) x.venc++;
   }
   const c = _sa.ord.col, dir = _sa.ord.asc ? 1 : -1;
-  const chaveP = { saldo:x => x.saldo, emp:x => x.emp, livre:x => x.saldo - x.emp, pl:x => x.pl ?? -1, mapa:x => x.mapa, falta:x => x.falta,
+  const chaveP = { saldo:x => x.saldo, emp:x => x.emp, livre:x => x.saldo - x.emp, pl:x => x.pl ?? -1, mapa:x => x.mapa, falta:x => x.falta, mais:x => x.mais,
                    cod:x => x.l.cod, filial:x => filialCurta(x.l.filial), tipo:x => x.l.tipo, un:x => x.l.un }[c];
   const gs = [...g.values()].sort((a, b) => {
     const r = chaveP ? (typeof chaveP(a) === 'number' ? chaveP(a) - chaveP(b) : String(chaveP(a)).localeCompare(String(chaveP(b)), 'pt-BR')) : a.l.desc.localeCompare(b.l.desc, 'pt-BR');
     return (chaveP ? r * dir : (c === 'desc' ? r * dir : r)) || a.l.desc.localeCompare(b.l.desc, 'pt-BR');
   });
   _sa.export = () => gs.map(x => ({ Filial:filialCurta(x.l.filial), Tipo:x.l.tipo, Codigo:x.l.cod, Produto:x.l.desc, UM:x.l.un, Lotes:x.ls.length,
-    Saldo:x.saldo, Empenho:x.emp, Livre:x.saldo - x.emp, Paletes:x.pl ?? '', 'No mapa':x.mapa, 'Falta mapear':x.falta,
+    Saldo:x.saldo, Empenho:x.emp, Livre:x.saldo - x.emp, Paletes:x.pl ?? '', 'Saldo mapeado':x.mapa, 'Falta mapear':x.falta, 'Mapeado a mais':x.mais,
     '% no mapa':x.mapeavel ? Math.round(x.mapa / x.mapeavel * 1000) / 10 : '' }));
   const p = fatiar('sa-pla', gs, saAssin() + 'prod' + JSON.stringify(_sa.ord));
   _sa.regProd = p.itens;
   const th = (id, rot, num = false) => `<th class="${num ? 'num' : ''}"><button class="sa-th-rot" onclick="saOrdenar('${id}')">${esc(rot)}${_sa.ord.col === id ? (_sa.ord.asc ? ' ↑' : ' ↓') : ''}</button></th>`;
   const linhas = p.itens.map((x, i) => {
     const aberto = _sa.abertos.has(x.k);
-    const pc = x.mapeavel ? Math.min(100, x.mapa / x.mapeavel * 100) : null;
-    const sub = aberto ? `<tr class="sa-sub"><td colspan="11"><table class="sa-sub-t">
-      <thead><tr><th>Mapa</th><th>Lote</th><th>Armazém</th><th>Validade</th><th class="num">Saldo</th><th class="num">Empenho</th><th class="num">No mapa</th><th class="num">Falta</th><th>Situação</th><th>Vagas</th></tr></thead>
+    const pc = x.mapeavel ? Math.min(100, (x.mapa - x.mais) / x.mapeavel * 100) : null;
+    const sub = aberto ? `<tr class="sa-sub"><td colspan="12"><table class="sa-sub-t">
+      <thead><tr><th>Mapa</th><th>Lote</th><th>Armazém</th><th>Validade</th><th class="num">Sistema</th><th class="num">Mapeado</th><th class="num">Empenhado</th><th class="num">Falta</th><th class="num">A mais</th><th>Situação</th><th>Vagas</th></tr></thead>
       <tbody>${saOrdenarLista(x.ls).map(l => `<tr><td>${saMapaInd(l)}</td><td class="mono">${esc(l.lote || '—')}</td><td>${saArm(l.arm)}</td><td class="mono">${SA_COL.val.td(l)}</td>
-        <td class="num">${saQ(l.saldo)}</td><td class="num">${l.emp ? saQ(l.emp) : '—'}</td><td class="num">${SA_COL.mapa.td(l)}</td><td class="num">${SA_COL.falta.td(l)}</td>
+        <td class="num">${SA_COL.saldo.td(l)}</td><td class="num">${SA_COL.mapa.td(l)}</td><td class="num">${SA_COL.emp.td(l)}</td><td class="num">${SA_COL.falta.td(l)}</td><td class="num">${SA_COL.mais.td(l)}</td>
         <td>${saSitTag(l)}</td><td>${saVagas(l)}</td></tr>`).join('')}</tbody></table></td></tr>` : '';
     return `<tr class="sa-prod${aberto ? ' aberto' : ''}" onclick="saAbrirProduto(${i})">
       <td class="nome"><span class="sa-seta">${aberto ? '▾' : '▸'}</span>${esc(x.l.desc)}<div class="sub mono">${esc(x.l.cod)} · ${esc(x.l.tipo)}</div></td>
       <td>${badgeFilial(x.l.filial, x.l.cod)}</td><td>${esc(x.l.un)}</td>
       <td class="num">${num(x.ls.length)}${x.venc ? `<div class="sub num-neg">${num(x.venc)} vencido(s)</div>` : ''}</td>
-      <td class="num"><b>${saQ(x.saldo)}</b></td><td class="num">${x.emp ? saQ(x.emp) : '—'}</td><td class="num">${saQ(x.saldo - x.emp)}</td>
-      <td class="num">${saPl(x.pl)}</td><td class="num">${x.mapeavel ? saQ(x.mapa) : '—'}</td>
-      <td class="num">${x.mapeavel ? (x.falta > 0.001 ? `<span class="sa-warn">${saQ(x.falta)}</span>` : '<span class="num-pos">0</span>') : '<span class="num-zero">n/a</span>'}</td>
+      <td class="num"><b>${saQ(x.saldo)}</b></td><td class="num">${x.mapeavel || x.mapa ? `<b>${saQ(x.mapa)}</b>` : '—'}</td>
+      <td class="num">${x.emp ? `<span class="sa-emp">${saQ(x.emp)}</span>` : '—'}</td><td class="num">${saQ(x.saldo - x.emp)}</td>
+      <td class="num">${saPl(x.pl)}</td>
+      <td class="num">${x.mapeavel || x.mapa ? (x.falta > 0.001 ? `<span class="sa-warn">${saQ(x.falta)}</span>` : '<span class="num-pos">0</span>') : '<span class="num-zero">n/a</span>'}</td>
+      <td class="num">${x.mais > 0.001 ? `<span class="num-neg">+${saQ(x.mais)}</span>` : '<span class="num-zero">0</span>'}</td>
       <td>${pc === null ? '<span class="num-zero">—</span>' : `<div class="k-pbar"><div class="bar ${pc >= 99.98 ? 'pos' : ''}"><i style="width:${pc.toFixed(1)}%"></i></div><span>${num1(pc)}%</span></div>`}</td>
     </tr>${sub}`;
   }).join('');
   $('sa-corpo').innerHTML = `
     <div class="tbl-wrap"><table class="sa-grade sa-prods">
-      <thead><tr>${th('desc', 'Produto')}${th('filial', 'Filial')}${th('un', 'UM')}<th class="num">Lotes</th>${th('saldo', 'Saldo', true)}${th('emp', 'Empenho', true)}${th('livre', 'Livre', true)}${th('pl', 'Paletes', true)}${th('mapa', 'No mapa', true)}${th('falta', 'Falta mapear', true)}<th>% no mapa</th></tr></thead>
-      <tbody>${linhas || vazio('Nenhum produto com esses filtros', '', 11)}</tbody>
+      <thead><tr>${th('desc', 'Produto')}${th('filial', 'Filial')}${th('un', 'UM')}<th class="num">Lotes</th>${th('saldo', 'Sistema', true)}${th('mapa', 'Mapeado', true)}${th('emp', 'Empenhado', true)}${th('livre', 'Livre', true)}${th('pl', 'Paletes', true)}${th('falta', 'Falta mapear', true)}${th('mais', 'A mais no mapa', true)}<th>% no mapa</th></tr></thead>
+      <tbody>${linhas || vazio('Nenhum produto com esses filtros', '', 12)}</tbody>
     </table></div>${barraPag('sa-pla', p, 'produto(s)')}`;
 }
 function saAbrirLote(i) {
@@ -767,14 +809,16 @@ function saDetalheLote(l) {
   const resumo = l.mapaEst === 'na'
     ? `O armazém <b>${esc(l.arm)}</b> não fica no drive-in, então este saldo não precisa estar no mapa.`
     : `Sistema <b>${saQ(l.saldo)} ${esc(l.un)}</b> no ${esc(l.arm)} · no mapa neste armazém <b>${saQ(l.noMapa)}</b>` +
-      (l.falta > 0.001 ? ` · <span class="sa-warn">falta mapear <b>${saQ(l.falta)}</b></span>` : ' · <span class="num-pos">tudo mapeado</span>') +
+      (l.falta > 0.001 ? ` · <span class="sa-warn">falta mapear <b>${saQ(l.falta)}</b></span>`
+        : l.mais ? ` · <span class="num-neg">mapeado a mais <b>+${saQ(l.mais)}</b></span>` : ' · <span class="num-pos">tudo mapeado</span>') +
+      (l.emp ? ` · empenhado <b>${saQ(l.emp)}</b>` : '') +
       (total - l.noMapa > 0.001 ? ` · mais <b>${saQ(total - l.noMapa)}</b> do mesmo lote em outro armazém do mapa` : '');
   const dicas = (l.linhaDiv?.dicas || []).slice(0, 4).map(d => `<li class="d-${d.c}">${d.t}</li>`).join('');
   return `<div class="sa-det-in" onclick="event.stopPropagation()">
     <div class="sa-det-top"><div>${resumo}</div>${saSitTag(l)}</div>
     ${vagas}
     ${dicas ? `<ul class="sa-dicas">${dicas}</ul>` : ''}
-    ${l.mapaEst !== 'na' && l.mapaEst !== 'ok' ? `<div class="sa-det-pe"><button class="btn btn-ghost btn-sm" onclick="saVerNasDivergencias('${esc(l.lote)}')">Corrigir em Mapa × sistema</button></div>` : ''}
+    ${l.mapaEst !== 'na' && (l.mapaEst !== 'ok' || l.sitId !== 'ok') ? `<div class="sa-det-pe"><button class="btn btn-ghost btn-sm" onclick="saVerNasDivergencias('${esc(l.lote)}')">Corrigir em Mapa × sistema</button></div>` : ''}
   </div>`;
 }
 function saVerNasDivergencias(lote) {
@@ -798,16 +842,37 @@ function saFecharPop() {
   $('sa-pop')?.remove();
   _saPop = null;
 }
+let _saPopAnc = null;
 function saPosicionar(pop, ancora) {
-  document.body.appendChild(pop);
+  if (!pop.isConnected) document.body.appendChild(pop);
+  _saPopAnc = ancora;
   if (innerWidth <= 640) { pop.classList.add('folha'); return; }
-  const r = ancora.getBoundingClientRect();
-  const w = pop.offsetWidth, h = pop.offsetHeight;
-  let x = r.left, y = r.bottom + 6;
+  pop.style.maxHeight = '';
+  const alvo = Math.min(pop.offsetHeight, 460);
+  let r = ancora.getBoundingClientRect();
+  // Pouco espaço embaixo do cabeçalho: rola a página para caber, em vez
+  // de abrir por cima (cobria a coluna e os filtros).
+  const baixo = innerHeight - r.bottom - 14;
+  if (baixo < alvo && r.top > 90) {
+    scrollBy({ top: Math.min(alvo - baixo, r.top - 90), behavior: 'instant' });
+    r = ancora.getBoundingClientRect();
+  }
+  const cabe = Math.max(200, innerHeight - r.bottom - 14);
+  pop.style.maxHeight = `${cabe}px`;
+  const w = pop.offsetWidth;
+  let x = r.left;
   if (x + w > innerWidth - 8) x = innerWidth - w - 8;
-  if (y + h > innerHeight - 8) y = Math.max(8, r.top - h - 6);
-  pop.style.left = `${Math.max(8, x)}px`; pop.style.top = `${y}px`;
+  pop.style.left = `${Math.max(8, x)}px`;
+  pop.style.top = `${Math.min(r.bottom + 6, innerHeight - cabe - 8)}px`;
 }
+// Acompanha o cabeçalho quando a página rola; fecha se ele sumir da tela.
+addEventListener('scroll', () => {
+  const pop = $('sa-pop');
+  if (!pop || pop.classList.contains('folha') || !_saPopAnc?.isConnected) return;
+  const r = _saPopAnc.getBoundingClientRect();
+  if (r.bottom < 0 || r.top > innerHeight) { saFecharPop(); return; }
+  pop.style.top = `${r.bottom + 6}px`;
+}, { passive: true });
 function saAbrirFiltro(ev, id) {
   ev.stopPropagation();
   const ja = _saPop?.id === id;
@@ -822,7 +887,7 @@ function saAbrirFiltro(ev, id) {
     _saPop = { id, busca:'' };
     // Valores possíveis com os OUTROS filtros aplicados (como no Excel).
     const cont = new Map();
-    for (const l of saFiltradas(id)) { const v = c.v(l); for (const x of (Array.isArray(v) ? v : [v ?? '—'])) cont.set(String(x), (cont.get(String(x)) || 0) + 1); }
+    for (const l of saFiltradas(id, _sa.aba === 'planilha')) { const v = c.v(l); for (const x of (Array.isArray(v) ? v : [v ?? '—'])) cont.set(String(x), (cont.get(String(x)) || 0) + 1); }
     if (f) for (const v of f.vals) if (!cont.has(v)) cont.set(v, 0);
     _saPop.vals = [...cont.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR', { numeric:true }));
     _saPop.sel = new Set(f ? f.vals : _saPop.vals.map(v => v[0]));
@@ -855,9 +920,11 @@ function saAbrirFiltro(ev, id) {
       <button class="btn btn-primary btn-sm" onclick="saPopAplicar()">Aplicar</button></div>`;
   pop.addEventListener('click', e => e.stopPropagation());
   pop.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.type !== 'checkbox') saPopAplicar(); });
+  // Preenche a lista ANTES de posicionar: a altura certa decide quanto rolar.
+  document.body.appendChild(pop);
+  if (c.tipo === 'cat') saPopLista();
   saPosicionar(pop, ev.currentTarget.closest('th') || ev.currentTarget);
-  if (c.tipo === 'cat') { saPopLista(); pop.querySelector('.sa-pop-busca').focus(); }
-  else pop.querySelector('input')?.focus();
+  (c.tipo === 'cat' ? pop.querySelector('.sa-pop-busca') : pop.querySelector('input'))?.focus({ preventScroll: true });
 }
 const SA_POP_MAX = 300;
 function saPopVisiveis() {
