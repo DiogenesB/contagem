@@ -816,6 +816,7 @@ function saDetalheLote(l) {
   const dicas = (l.linhaDiv?.dicas || []).slice(0, 4).map(d => `<li class="d-${d.c}">${d.t}</li>`).join('');
   return `<div class="sa-det-in" onclick="event.stopPropagation()">
     <div class="sa-det-top"><div>${resumo}</div>${saSitTag(l)}</div>
+    ${l.linhaDiv && typeof intelVereditoHTML === 'function' ? intelVereditoHTML(l.linhaDiv) : ''}
     ${vagas}
     ${dicas ? `<ul class="sa-dicas">${dicas}</ul>` : ''}
     ${l.mapaEst !== 'na' && (l.mapaEst !== 'ok' || l.sitId !== 'ok') ? `<div class="sa-det-pe"><button class="btn btn-ghost btn-sm" onclick="saVerNasDivergencias('${esc(l.lote)}')">Corrigir em Mapa × sistema</button></div>` : ''}
