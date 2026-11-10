@@ -922,10 +922,31 @@ table.sa-sub-t td { padding:6px 10px; background:transparent; white-space:nowrap
 .hj-card .iv-acoes { margin-top:auto; padding-top:12px; }
 .hj-esp { flex:1; }
 .hj-vazio { font-size:.8125rem; color:var(--text-3); padding:10px 0; }
+.iv-hist { margin-top:8px; font-size:.78rem; color:var(--text-2); }
+.iv-hist summary { cursor:pointer; color:var(--text-3); font-weight:600; }
+.iv-hist ol { list-style:none; margin:6px 0 0; padding:0; display:flex; flex-direction:column; gap:4px; line-height:1.45; }
+.iv-hist .tag { font-size:.625rem; padding:1px 5px; vertical-align:1px; }
 @media (max-width:760px) {
   .hj-resumo { grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .hj-lista { grid-template-columns:1fr; }
 }
+
+/* ═══════════ ANALISTA ═══════════ */
+.an-ctrl { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 12px; }
+.an-grafs, .an-duas { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; }
+.an-duas { grid-template-columns:minmax(0, 2fr) minmax(0, 1fr); }
+.an-grafs .panel, .an-duas .panel { margin-bottom:20px; }
+.an-graf { width:100%; height:170px; display:block; }
+.an-graf .an-bar rect:last-of-type { fill:var(--accent); }
+.an-graf .an-bar:hover rect:last-of-type { fill:var(--accent-dk, var(--accent)); }
+.an-graf .an-bar:hover rect:first-of-type { fill:var(--surface-2); }
+.an-var { display:inline-block; font-size:.75rem; color:var(--text-3); }
+.an-var.up { color:var(--pos); } .an-var.down { color:var(--neg); }
+.kpi-value small { font-size:.8125rem; font-weight:500; color:var(--text-3); }
+.an-dest { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:6px; font-size:.875rem; color:var(--text-2); line-height:1.5; }
+.an-filtros { display:flex; flex-wrap:wrap; gap:10px; align-items:center; flex:1; }
+.an-filtros input[type=search] { max-width:360px; flex:1; min-width:200px; }
+@media (max-width:900px) { .an-grafs, .an-duas { grid-template-columns:1fr; } }
 
 /* ═══════════ USUÁRIOS ═══════════ */
 .usu-tab td { padding:7px 10px; }
@@ -1662,6 +1683,10 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
     </button>
 
     <div class="side-label">Análise</div>
+    <button class="nav-item" data-page="analista" onclick="irPara('analista')" title="Analista">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>
+      <span>Analista</span>
+    </button>
     <button class="nav-item" data-page="kpi" onclick="irPara('kpi')" title="KPI da contagem">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18a8 8 0 1116 0"/><path d="M12 18l4-6"/><path d="M4 21h16"/></svg>
       <span>KPI da contagem</span>
@@ -1797,6 +1822,24 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
     </div>
   </div>
   <div id="hj-corpo"></div>
+</section>
+
+<!-- ══════════════════ ANALISTA ══════════════════
+     Movimentações do ERP (robô das movimentações, analista.js). -->
+<section id="page-analista" class="page">
+  <div class="page-head com-acoes">
+    <div>
+      <h1 class="page-title">Analista</h1>
+      <p class="page-sub" id="an-sub">Movimentações do ERP.</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-sm" onclick="carregarAnalista(true)">Atualizar</button>
+      <button class="btn btn-sm" onclick="anExportar()">Exportar Excel</button>
+    </div>
+  </div>
+  <div class="an-ctrl" id="an-ctrl"></div>
+  <div class="sa-abas-bar"><div class="seg" id="an-abas" role="tablist" aria-label="Partes da tela Analista"></div></div>
+  <div id="an-corpo"></div>
 </section>
 
 <section id="page-inicio" class="page active">
@@ -2762,8 +2805,9 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 <script src="./comum.js?v=7"></script>
 <script src="./usuarios.js?v=1"></script>
 <script src="./saldo-mapeado.js?v=17"></script>
-<script src="./saldo-erp.js?v=8"></script>
-<script src="./inteligencia.js?v=1"></script>
+<script src="./saldo-erp.js?v=9"></script>
+<script src="./inteligencia.js?v=3"></script>
+<script src="./analista.js?v=2"></script>
 <script src="./inicio.js?v=1"></script>
 <script src="./impressao.js?v=3"></script>
 <script src="./identificacao.js?v=3"></script>
@@ -2892,12 +2936,19 @@ const PAG_RENDER = {
   'sa-par':   () => renderSaldoErp(),
   'sa-evo':   () => renderSaldoErp(),
   hoje:       () => renderHoje(),
+  'an-sai':   () => renderAnalista(),
+  'an-cli':   () => renderAnalista(),
+  'an-ent':   () => renderAnalista(),
+  'an-int':   () => renderAnalista(),
+  'an-cob':   () => renderAnalista(),
+  'an-lis':   () => renderAnalista(),
 };
 /* De quem é a rolagem que precisa voltar ao topo ao virar a página. */
 const PAG_ALVO = {
   validacao:'v-tbody', registros:'r-tbody', historico:'h-tbody', acuracia:'a-tbody',
   saldo:'s-tabela', alteracoes:'alt-lista', mapa:'m-tbody', transfer:'t-tbody', kpi:'k-tbody', vkpi:'v-kpi-tbody',
   'sa-pla':'sa-corpo', 'sa-val':'sa-corpo', 'sa-div':'sa-corpo', 'sa-reg':'sa-corpo', 'sa-par':'sa-corpo', 'sa-evo':'sa-corpo', hoje:'hj-corpo',
+  'an-sai':'an-corpo', 'an-cli':'an-corpo', 'an-ent':'an-corpo', 'an-int':'an-corpo', 'an-cob':'an-corpo', 'an-lis':'an-corpo',
 };
 
 function pagEstado(k) {
@@ -3188,6 +3239,7 @@ function irPara(pagina) {
 
   ({
     hoje:           carregarHoje,
+    analista:       carregarAnalista,
     inicio:         carregarInicio,
     validacao:      carregarValidacao,
     registros:      carregarRegistros,
@@ -3207,6 +3259,8 @@ function aoTrocarFilial() {
   if ($('page-mapa').classList.contains('active')) renderMapa();
   if ($('page-saldo').classList.contains('active') && _referencia) { renderSaldo(); renderSaldoErp(); }
   if ($('page-kpi').classList.contains('active')) renderKpi();
+  if ($('page-analista')?.classList.contains('active')) renderAnalista();
+  if ($('page-hoje')?.classList.contains('active') && typeof intelCalcular === 'function') { intelCalcular(); renderHoje(); }
 }
 
 /* ═══════════════════════════════════════════════════════════════
