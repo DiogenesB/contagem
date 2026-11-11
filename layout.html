@@ -79,6 +79,7 @@ kbd{font:500 11px var(--f-mono);border:1px solid var(--line);border-bottom-width
 .tip .tc{font:600 13px var(--f-mono)}
 .tip .ti b{display:block;font-size:12.5px;line-height:1.3}
 .tip .ti span,.tip .tl{display:block;font:11.5px var(--f-mono);color:var(--muted);margin-top:1px}
+.tip .tx{display:block;font-size:11.5px;font-weight:600;color:var(--danger);margin-top:2px}
 .measure-tag{position:absolute;top:12px;left:12px;right:12px;width:fit-content;max-width:calc(100% - 24px);background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:12px;padding:5px 10px;border-radius:6px}
 
 .side{display:flex;flex-direction:column;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
@@ -134,6 +135,83 @@ textarea{font-family:var(--f-mono);font-size:12px;resize:vertical}
 details summary{cursor:pointer;font-weight:600;font-size:13px}
 details[open] summary{margin-bottom:8px}
 
+.armk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.armk-c{border:1px solid var(--line);border-radius:8px;padding:8px 9px;display:flex;flex-direction:column;gap:2px;background:var(--surface-2);min-width:0}
+.armk-c b{font:600 18px var(--f-mono);font-variant-numeric:tabular-nums}
+.armk-c span{font-size:11.5px;color:var(--muted);line-height:1.25}
+.armk-c.err{border-color:color-mix(in srgb,var(--danger) 55%,var(--line));background:var(--danger-soft)}
+.armk-c.err b,.err{color:var(--danger)}
+.mono{font-family:var(--f-mono)}
+.armgrp{display:flex;flex-direction:column;gap:5px}
+.armgrp-h{display:flex;align-items:baseline;gap:8px;font-size:13px;flex-wrap:wrap}
+.armgrp-h>b{font-family:var(--f-mono)}
+.armgrp-h .s,.armrk .s,.armlog .s{font:11.5px var(--f-mono);color:var(--muted)}
+.lnk{border:0;background:none;color:var(--accent);cursor:pointer;font-size:12px;padding:0;margin-left:auto}
+.lnk:hover{text-decoration:underline}
+.armfaixa{display:grid;grid-template-columns:1.1fr .8fr .8fr 1fr;gap:6px;align-items:end}
+.armfaixa select{width:100%;min-width:0;border:1px solid var(--line);background:var(--surface-2);border-radius:6px;padding:6px 6px;font-size:13px}
+.armrk{border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.armrk summary{font-size:13px}
+.armrk[open] summary{margin-bottom:8px}
+.armgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px}
+.armln{display:grid;grid-template-columns:20px minmax(0,1fr) 34px;gap:6px;align-items:center}
+.armln .n{font:600 12px var(--f-mono);color:var(--muted);text-align:right}
+.armln input{width:100%;min-width:0;border:1px solid var(--line);background:var(--surface-2);border-radius:5px;padding:4px 6px;font:500 12.5px var(--f-mono);text-transform:uppercase}
+.armln.err .n,.armln.err .s{color:var(--danger);font-weight:600}
+.armln.err input{border-color:color-mix(in srgb,var(--danger) 60%,var(--line))}
+.armln.foco input{outline:2px solid var(--accent);outline-offset:1px}
+.armln .s{font:11px var(--f-mono);color:var(--muted);text-align:right}
+.armln input::placeholder{text-transform:none;font-family:var(--f-ui)}
+.armprev{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:8px}
+.armlog{font-size:12px;display:flex;flex-direction:column;gap:4px;max-height:260px;overflow:auto}
+.pill .lk{border:0;background:none;padding:0;color:var(--danger);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+#pdf{position:fixed;inset:0;z-index:70;background:#3a3f47;display:flex;flex-direction:column}
+.pdf-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.pdf-bar h2{font-size:15px;margin:0 auto 0 0}
+.pdf-area{flex:1;overflow:auto;padding:20px 16px 40px}
+.pdf-folhas{display:flex;flex-direction:column;align-items:center;gap:18px}
+.folha{background:#fff;color:#14161a;box-shadow:0 4px 24px rgba(0,0,0,.35);padding:9mm 10mm;display:flex;flex-direction:column;gap:4mm;font:10pt/1.35 'IBM Plex Sans',sans-serif;flex:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-scheme:light}
+.folha.A3{width:420mm;min-height:297mm}.folha.A4{width:297mm;min-height:210mm}
+.folha.planta.A3{height:297mm}.folha.planta.A4{height:210mm}
+.fh{display:flex;justify-content:space-between;align-items:flex-end;gap:10mm;border-bottom:.6mm solid #14161a;padding-bottom:2.5mm}
+.fh h1{font-size:18pt;margin:0;letter-spacing:-.01em}
+.fh p{margin:1mm 0 0;color:#545b67;font-size:10.5pt}
+.fmeta{text-align:right;color:#545b67;font-size:9pt}
+.fk{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm}
+.fk-c{border:.3mm solid #d5d9df;border-radius:2mm;padding:2mm 3mm;display:flex;align-items:baseline;gap:2.5mm}
+.fk-c b{font:600 16pt 'IBM Plex Mono',monospace}
+.fk-c span{color:#545b67;font-size:9pt}
+.fk-c.err{border-color:#e7a19b;background:#fdf0ef}.fk-c.err b{color:#b8322a}
+.fs{flex:1;min-height:0;display:flex}
+.fs svg{width:100%;height:100%;display:block}
+.ff{display:flex;justify-content:space-between;align-items:center;gap:6mm;border-top:.3mm solid #d5d9df;padding-top:2mm}
+.ff p{margin:0;color:#545b67;font-size:8.5pt;max-width:55%;text-align:right}
+.fleg{display:flex;flex-wrap:wrap;gap:2mm 5mm}
+.fchip{display:inline-flex;align-items:center;gap:1.5mm;font-size:9pt}
+.fchip i{width:4.5mm;height:3.4mm;border:.3mm solid;border-radius:.6mm;display:inline-block}
+.ft{border-collapse:collapse;width:100%;font-size:9pt}
+.ft th{text-align:left;font-size:8pt;text-transform:uppercase;letter-spacing:.05em;color:#545b67;border-bottom:.4mm solid #14161a;padding:1.4mm 2mm}
+.ft td{border-bottom:.2mm solid #e1e4ea;padding:1.2mm 2mm;vertical-align:top}
+.ft tr.g td{border-top:.4mm solid #9aa3ad}
+.ft .m{font-family:'IBM Plex Mono',monospace}
+.ft .n{text-align:right;font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+.ft .e{color:#b8322a;font-weight:700}
+.ft tr.x td{color:#b8322a;font-weight:600}
+.fr{display:grid;grid-template-columns:repeat(4,1fr);gap:6mm;align-items:start}
+.fr .ft{font-size:8.5pt}.fr .ft td{padding:.7mm 1.5mm}
+.fnota,.fvazio{color:#545b67;font-size:9pt;margin:0}
+@media print{
+  body>*:not(#pdf){display:none!important}
+  html,body{height:auto!important;background:#fff!important}
+  #pdf{position:static;display:block;background:none}
+  .pdf-bar{display:none}
+  .pdf-area{padding:0;overflow:visible}
+  .pdf-folhas{display:block;zoom:1!important}
+  .folha{box-shadow:none;margin:0;padding:0;break-after:page;width:auto!important;min-height:0!important}
+  .folha:last-child{break-after:auto}
+  .folha.planta.A3,.folha.planta.A4{height:calc(100vh - 4mm)}
+  .ft thead{display:table-header-group}.ft tr{break-inside:avoid}
+}
 @media (max-width:860px){
   #hint{display:none}
   html,body{height:auto}
@@ -171,6 +249,7 @@ a.btn{text-decoration:none;color:inherit}
         <button id="v-frente" data-view="frente">Frente</button>
       </div>
       <button class="btn" id="b-fit" title="Enquadrar tudo">Enquadrar</button>
+      <button class="btn" id="b-pdf" title="Planta vista de cima para imprimir ou salvar em PDF">PDF</button>
     </div>
     <div class="group">
       <button class="btn" id="t-edit" aria-pressed="false" title="Mover, redimensionar e renomear estruturas, áreas e textos">Editar layout</button>
@@ -202,6 +281,7 @@ a.btn{text-decoration:none;color:inherit}
       <div class="tabs" role="tablist">
         <button role="tab" id="tab-sel" data-tab="sel">Selecionado</button>
         <button role="tab" id="tab-itens" data-tab="itens">Itens</button>
+        <button role="tab" id="tab-arm" data-tab="arm">Armazéns</button>
         <button role="tab" id="tab-pav" data-tab="pav">Pavilhão</button>
         <button role="tab" id="tab-dados" data-tab="dados">Dados</button>
       </div>
@@ -689,7 +769,7 @@ function buildLabels(){
 /* ---------- estruturas ---------- */
 const rackObjs = new Map();
 function buildRacks(){
-  clearGroup(rackG); rackObjs.clear();
+  clearGroup(rackG); rackObjs.clear(); armRacksPend = false;
   const dm = new THREE.Object3D();
   for (const r of L.racks){
     const { W, D, H } = rackDims(r);
@@ -720,9 +800,12 @@ function buildRacks(){
     const pick = new THREE.Mesh(boxGeo(W, Math.max(H, .3), D), pickMat); pick.position.y = Math.max(H, .3) / 2; pick.userData.pick = true; g.add(pick);
     if (view.labels){
       if (!r.laneNames){ const s = sprite([rackTitle(r)], 1.15, { fg: '#fff', bg: 'rgba(29,40,52,.9)', size: 44 }); s.position.set(0, H + .9, 0); g.add(s); }
+      const arm = corModo.v === 'armazem' && temRegraRack(r);
       for (let i = 0; i < r.lanes; i++){
-        const n = flatLabel([laneLabel(r, i)], r.bayW * .85, r.laneNames ? 1.3 : .8, { fg: tok.ink, size: 48, weight: 700, mono: true }, yaw, r.laneNames ? 1.1 : .6);
-        n.position.set(-W/2 + (i + .5) * r.bayW, .02, D/2 + (r.laneNames ? .7 : .45)); g.add(n);
+        const k = arm && linhaKey(r, i), rg = arm && regras.get(k), err = arm && armCalc.linhasErr.has(k);
+        const txt = arm ? [laneLabel(r, i), rg && rg.length ? rg.join('·') : '—'] : [laneLabel(r, i)];
+        const n = flatLabel(txt, r.bayW * .85, r.laneNames ? 1.3 : arm ? 1.5 : .8, { fg: err ? tok.danger : tok.ink, size: 48, weight: 700, mono: true }, yaw, r.laneNames ? 1.1 : arm ? 1.05 : .6);
+        n.position.set(-W/2 + (i + .5) * r.bayW, .02, D/2 + (r.laneNames ? .7 : arm ? .8 : .45)); g.add(n);
       }
     }
     g.position.copy(W2(r.x, r.y)); g.rotation.y = yaw;
@@ -772,6 +855,114 @@ let _ocupacao = {}, realBySlot = new Map(), realList = [], foraDoLayout = [];
 const corModo = { v: 'produto' };
 const realG = new THREE.Group(); scene.add(realG);
 const realLoadMat = shared(new THREE.MeshStandardMaterial({ roughness: .78 }));
+
+/* ================= armazém de cada linha do drive-in =================
+   Tabela drive_armazem (sql/migracao-drive-armazem.sql): 'B1-07' → ['D7'].
+   Lista vazia = linha sem regra. Só MOSTRA o palete na linha errada; não
+   sugere para onde levar. Enquanto a tabela não existe, vale a planilha
+   de 11/11/2026 abaixo e o que mudar fica só neste navegador. */
+const ARM_PLANILHA = [
+  ['A2', 29, 30, '42'], ['A2', 31, 36, 'D2'],
+  ['A1', 1, 12, '42'], ['A1', 13, 14, 'D8'], ['A1', 15, 20, 'D2'], ['A1', 21, 21, '91 D7'], ['A1', 22, 25, 'D7'], ['A1', 26, 32, '94'],
+  ['B1', 1, 23, '42'], ['B1', 24, 24, 'D2'], ['B1', 25, 25, ''], ['B1', 26, 26, '94'], ['B1', 27, 28, '91'], ['B1', 29, 29, 'D4 D5 D6'], ['B1', 30, 36, 'D7'],
+  ['B2', 1, 7, 'D7'], ['B2', 8, 8, 'D5 D4'], ['B2', 9, 9, '91'], ['B2', 10, 10, '48'], ['B2', 11, 36, '42'],
+];
+const ARM_LOCAL = 'layout3d.armLinha';
+const lnPad = n => String(n).padStart(2, '0');
+// "D5-D4", "91/D7", "42, 48", "D5 e D4" → ['D5','D4']
+const lerArms = txt => [...new Set(String(txt ?? '').toUpperCase().split(/[\s,;\/+|-]+/).map(s => normalizarArmazem(s)).filter(s => s && s !== 'E'))];
+function regrasPlanilha(){
+  const m = new Map();
+  for (const [c, a, b, arms] of ARM_PLANILHA) for (let n = a; n <= b; n++) m.set(`${c}-${lnPad(n)}`, lerArms(arms));
+  return m;
+}
+function regrasLocais(){
+  const m = regrasPlanilha();
+  try { for (const [k, v] of Object.entries(JSON.parse(localStorage.getItem(ARM_LOCAL)) || {})) m.set(k, v); } catch(e){}
+  return m;
+}
+let regras = regrasLocais(), regrasBanco = false, regrasErro = '', regrasUlt = null, regrasT = 0;
+let armCalc = { errados: [], linhasErr: new Map(), porLinha: new Map(), ok: 0, semRegra: 0, assin: '' };
+const armTxt = a => a && a.length ? a.join(' · ') : 'sem regra';
+const linhaKey = (r, lane) => `${String(r.code).toUpperCase()}-${laneLabel(r, lane)}`;
+const temRegraRack = r => r.tipo === 'drive' && !r.laneNames;
+const regraDe = (r, lane) => temRegraRack(r) ? regras.get(linhaKey(r, lane)) : undefined;
+// Cada palete real contra a regra da linha dele.
+function calcArm(){
+  const errados = [], linhasErr = new Map(), porLinha = new Map(); let ok = 0, semRegra = 0;
+  for (const e of realList){
+    const k = temRegraRack(e.r) ? linhaKey(e.r, e.lane) : null, rg = k && regras.get(k);
+    e.arm = 'livre';
+    if (k){ const p = porLinha.get(k) || porLinha.set(k, { n: 0, err: 0 }).get(k); p.n += e.items.length; }
+    if (!rg || !rg.length){ semRegra += e.items.length; continue; }
+    for (const x of e.items){
+      if (rg.includes(normalizarArmazem(x.armazem))){ ok++; continue; }
+      errados.push({ e, x, k, rg }); linhasErr.set(k, (linhasErr.get(k) || 0) + 1); porLinha.get(k).err++;
+    }
+    e.arm = e.items.some(x => !rg.includes(normalizarArmazem(x.armazem))) ? 'errado' : 'ok';
+  }
+  errados.sort((a, b) => a.e.code.localeCompare(b.e.code, 'pt-BR', { numeric: true }));
+  const assin = [...linhasErr.keys()].sort().join(',') + '|' + [...regras].map(([k, v]) => k + v.join('')).join(',');
+  const mudou = assin !== armCalc.assin;
+  armCalc = { errados, linhasErr, porLinha, ok, semRegra, assin };
+  return mudou;
+}
+async function carregarRegras(){
+  if (!sb) return;
+  try {
+    const { data, error } = await sb.from('drive_armazem').select('linha, armazens, feito_por, updated_at');
+    if (error) throw error;
+    regras = new Map(data.map(d => [String(d.linha).trim().toUpperCase(), (d.armazens || []).map(normalizarArmazem).filter(Boolean)]));
+    regrasUlt = data.reduce((a, b) => !a || String(b.updated_at) > String(a.updated_at) ? b : a, null);
+    regrasBanco = true; regrasErro = '';
+  } catch(e){
+    regrasBanco = false; regrasErro = e.message || String(e); regras = regrasLocais();
+  }
+  aoMudarRegras();
+}
+function aoMudarRegras(){
+  const mudou = calcArm();
+  if (corModo.v === 'armazem'){ pintarReal(); if (mudou){ buildRacks(); applyHighlights(); updateSelBox(); } }
+  renderStats();
+  const digitando = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName) && panel.contains(document.activeElement);
+  if ((tab === 'arm' || sel?.kind === 'slot') && !digitando) renderPanel();
+}
+// Os números das linhas mostram a regra (e ficam vermelhos) no modo "armazém da linha".
+let armRacksPend = false;
+function armTalvezRacks(){ if (armRacksPend){ armRacksPend = false; buildRacks(); applyHighlights(); updateSelBox(); } }
+async function gravarRegras(mud){
+  mud = mud.filter(m => armTxt(regras.get(m.linha)) !== armTxt(m.arms));
+  if (!mud.length){ toast('Nada mudou'); renderPanel(); return; }
+  if (regrasBanco && !lerQuem()){ pedirNome(() => gravarRegras(mud)); return; }
+  const antes = new Map(mud.map(m => [m.linha, regras.get(m.linha)]));
+  mud.forEach(m => regras.set(m.linha, m.arms));
+  aoMudarRegras(); renderPanel();
+  const msg = mud.length === 1 ? `${mud[0].linha}: ${armTxt(mud[0].arms)}` : `${mud.length} linhas mudadas`;
+  if (!regrasBanco){
+    try { const o = JSON.parse(localStorage.getItem(ARM_LOCAL)) || {}; mud.forEach(m => o[m.linha] = m.arms); localStorage.setItem(ARM_LOCAL, JSON.stringify(o)); } catch(e){}
+    toast(msg + ' (só neste navegador)'); return;
+  }
+  const agora = new Date().toISOString();
+  const { error } = await sb.from('drive_armazem').upsert(mud.map(m => ({ linha: m.linha, armazens: m.arms, feito_por: QUEM || 'sem nome', updated_at: agora })), { onConflict: 'linha' });
+  if (error){ antes.forEach((v, k) => v === undefined ? regras.delete(k) : regras.set(k, v)); aoMudarRegras(); renderPanel(); toast('Não gravou: ' + error.message); return; }
+  regrasUlt = { linha: mud[mud.length - 1].linha, feito_por: QUEM, updated_at: agora };
+  toast(msg); renderPanel();
+}
+// Colar da planilha: acha cada "B1-07" e pega o valor da célula seguinte
+// (serve a planilha inteira, com as quatro duplas de colunas lado a lado).
+function lerColagem(txt){
+  const out = new Map(), erros = [];
+  for (const lin of String(txt || '').split(/\r?\n/)){
+    const c = lin.split('\t');
+    for (let i = 0; i < c.length; i++){
+      const m = c[i].trim().toUpperCase().match(/^([A-Z]+\d*)\s*-\s*(\d{1,2})$/); if (!m) continue;
+      const k = `${m[1]}-${lnPad(+m[2])}`;
+      if (!L.racks.some(r => temRegraRack(r) && Array.from({ length: r.lanes }, (_, j) => linhaKey(r, j)).includes(k))){ erros.push(k); continue; }
+      out.set(k, lerArms(c[i + 1] || '')); i++;
+    }
+  }
+  return { mud: [...out].map(([linha, arms]) => ({ linha, arms })), erros };
+}
 /* 'B1-22-3-4' → estrutura, linha, andar e lugar no layout. Mesmo formato de MAPA_POSICOES. */
 function slotDeCodigo(code){
   const m = String(code || '').trim().toUpperCase().match(/^([A-Z]+\d*)-(\d+)-(\d+)-(\d+)$/); if (!m) return null;
@@ -798,6 +989,7 @@ function buildReal(){
     const e = { ...s, code, items, key: `${s.r.id}|${s.lane}|${s.pos}|${s.level}` };
     realBySlot.set(e.key, e); realList.push(e);
   }
+  if (calcArm() && corModo.v === 'armazem') armRacksPend = true;
   if (!realList.length) return;
   const n = realList.length, dm = new THREE.Object3D();
   const base = new THREE.InstancedMesh(boxGeo(1, .15, 1), woodMat, n);
@@ -817,11 +1009,13 @@ function buildReal(){
 function pintarReal(){
   const load = realG.userData.load; if (!load) return;
   const ts = termos(view.q), cinza = new THREE.Color(tok.grid || '#444');
+  const armCor = { ok: new THREE.Color(tok.ok), errado: new THREE.Color(tok.danger), livre: new THREE.Color(tok.muted) };
   realList.forEach((e, i) => {
     const hit = !ts.length || ts.some(t => e.code.includes(t)) || e.items.some(r => casa(r, ts));
     e.hit = hit && ts.length > 0;
     const c = !hit ? cinza
       : corModo.v === 'situacao' ? new THREE.Color(e.items.length > 1 ? tok.warn : e.items.some(r => r.pend) ? tok.alt : tok.ok)
+      : corModo.v === 'armazem' ? armCor[e.arm || 'livre']
       : corProduto(e.items[0]);
     load.setColorAt(i, c);
   });
@@ -1076,10 +1270,12 @@ function textoHover(h){
     const r = rackById(h.rackId); if (!r) return '';
     const code = posCode(r, h.lane, h.pos, h.level);
     const real = typeof realBySlot !== 'undefined' && realBySlot.get(`${r.id}|${h.lane}|${h.pos}|${h.level}`);
-    if (real) return `<b class="tc">${esc(code)}</b>` + real.items.map(x => `<div class="ti"><b>${esc(x.produto_nome || x.codigo)}</b><span>${esc(x.codigo || '—')} · lote ${esc(x.lote || '—')} · ${num(x.quantidade)} ${esc(unidadeDe(x.codigo, x.produto_nome) || 'un')}${x.pend ? ' · aguardando validação' : ''}</span></div>`).join('');
+    const rg = regraDe(r, h.lane), linhaTxt = rg ? `<span class="tl">Linha ${esc(linhaKey(r, h.lane))}: ${esc(armTxt(rg))}</span>` : '';
+    const fora = x => rg && rg.length && !rg.includes(normalizarArmazem(x.armazem)) ? `<span class="tx">Fora da linha certa: palete no ${esc(x.armazem || '—')}</span>` : '';
+    if (real) return `<b class="tc">${esc(code)}</b>` + real.items.map(x => `<div class="ti"><b>${esc(x.produto_nome || x.codigo)}</b><span>${esc(x.codigo || '—')} · lote ${esc(x.lote || '—')} · arm. ${esc(x.armazem || '—')} · ${num(x.quantidade)} ${esc(unidadeDe(x.codigo, x.produto_nome) || 'un')}${x.pend ? ' · aguardando validação' : ''}</span>${fora(x)}</div>`).join('') + linhaTxt;
     const sims = palletAt(r, h.lane, h.pos, h.level);
     if (sims.length) return `<b class="tc">${esc(code)}</b>` + sims.map(p => `<div class="ti"><b>${esc(p.prod)}</b><span>${p.lote ? 'lote ' + esc(p.lote) + ' · ' : ''}simulação</span></div>`).join('');
-    return `<b class="tc">${esc(code)}</b><span class="tl">Livre</span>`;
+    return `<b class="tc">${esc(code)}</b><span class="tl">Livre</span>${linhaTxt}`;
   }
   if (h.kind === 'pallet'){ const p = L.pallets.find(x => x.id === h.id); return p ? `<div class="ti"><b>${esc(p.prod)}</b><span>${p.lote ? 'lote ' + esc(p.lote) + ' · ' : ''}${esc(locText(p))}</span></div>` : ''; }
   if (h.kind === 'rack'){ const r = rackById(h.id); return r ? `<b>${esc(rackTitle(r))}</b>` : ''; }
@@ -1120,7 +1316,7 @@ function selectSlot(rackId, lane, pos, level){
   updateSelBox(); drawDims(); renderTabs(); renderPanel();
 }
 function afterChange(){
-  buildReal();
+  buildReal(); armTalvezRacks();
   lastVal = validate(); refreshAllSlots(); applyHighlights(); updateSelBox(); drawDims(); renderPanel(); renderStats(); renderLaySel(); save();
 }
 let toastT; function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -1255,6 +1451,10 @@ function renderSel(){
       ${real ? `<div class="sec"><h3>No sistema agora</h3>${real.items.map(x => `<div class="ficha${x.pend ? ' pend' : ''}"><b>${esc(x.produto_nome || x.codigo)}</b>
         <div class="m">${esc(x.codigo || '—')} · lote ${esc(x.lote || '—')} · arm. ${esc(x.armazem || '—')}${x.pend ? ' · aguardando validação' : ''}</div>
         <div class="q">${num(x.quantidade)}<small>${esc(unidadeDe(x.codigo, x.produto_nome) || 'un')}</small></div></div>`).join('')}</div>` : ''}
+      ${(() => { const rg = regraDe(r, lane); if (rg === undefined) return '';
+        const k = linhaKey(r, lane), errs = real && rg.length ? real.items.filter(x => !rg.includes(normalizarArmazem(x.armazem))) : [];
+        return `<div class="sec"><h3>Armazém da linha ${esc(k)}</h3><div class="row"><span class="tag">${esc(armTxt(rg))}</span><button class="btn" data-act="armLinha" data-linha="${esc(k)}">Mudar</button></div>
+          ${errs.map(x => `<div class="issue">Fora da linha certa: esta linha é do ${esc(armTxt(rg))} e o palete está no ${esc(x.armazem || '—')}.</div>`).join('')}</div>`; })()}
       ${pavKey ? `<div class="row"><a class="btn primary" href="./mapa.html?pav=${pavKey}&q=${encodeURIComponent(code)}" target="_blank" rel="noopener">${real ? 'Expedir ou editar no mapa ↗' : 'Guardar produto no mapa ↗'}</a></div>` : ''}
       <div class="sec"><dl class="kv">
         <dt>${r.laneNames ? 'Rua' : 'Linha'}</dt><dd class="hl">${esc(laneLabel(r, lane))}</dd>
@@ -1329,8 +1529,9 @@ function renderItens(){
     ${achados.length ? `<div class="list">${achados.slice(0, 80).map(e => `<button class="item" data-go="${e.r.id}|${e.lane}|${e.pos}|${e.level}"><span class="dot" style="background:#${corProduto(e.items[0]).getHexString()}"></span><span class="t">${esc(e.items[0].produto_nome || e.items[0].codigo)}${e.items.length > 1 ? ` <span class="s">+${e.items.length - 1}</span>` : ''}</span><span class="s">${esc(e.code)}</span></button>`).join('')}</div>${achados.length > 80 ? `<p class="note">Mostrando 80 de ${achados.length}. Refine a busca.</p>` : ''}` : ''}
     ${lastHits.length && !achados.length ? `<div class="chips">${lastHits.slice(0, 60).map(h => `<button data-go="${h.r.id}|${h.lane}|${h.pos}|${h.level}">${esc(h.code)}</button>`).join('')}${lastHits.length > 60 ? `<span class="note">+${lastHits.length - 60}</span>` : ''}</div>` : ''}</div>
     <div class="sec"><h3>Cor dos paletes</h3><div class="seg" role="group" aria-label="Cor dos paletes" style="align-self:flex-start">
-      <button data-cor="produto" aria-pressed="${corModo.v === 'produto'}">Por produto</button><button data-cor="situacao" aria-pressed="${corModo.v === 'situacao'}">Por situação</button></div>
-      ${corModo.v === 'situacao' ? `<p class="note"><span style="color:var(--ok)">■</span> ocupada · <span style="color:var(--warn)">■</span> mais de um lote · <span style="color:var(--alt)">■</span> aguardando validação</p>` : '<p class="note">Cada produto tem sempre a mesma cor.</p>'}</div>
+      <button data-cor="produto" aria-pressed="${corModo.v === 'produto'}">Por produto</button><button data-cor="situacao" aria-pressed="${corModo.v === 'situacao'}">Por situação</button><button data-cor="armazem" aria-pressed="${corModo.v === 'armazem'}">Armazém da linha</button></div>
+      ${corModo.v === 'situacao' ? `<p class="note"><span style="color:var(--ok)">■</span> ocupada · <span style="color:var(--warn)">■</span> mais de um lote · <span style="color:var(--alt)">■</span> aguardando validação</p>`
+        : corModo.v === 'armazem' ? armLegenda() : '<p class="note">Cada produto tem sempre a mesma cor.</p>'}</div>
     ${foraDoLayout.length ? `<div class="sec"><h3>Fora do layout (${foraDoLayout.length})</h3><p class="note">Vagas ocupadas no sistema com código que não existe no layout: ${foraDoLayout.slice(0, 20).map(f => `<b>${esc(f.code)}</b>`).join(', ')}${foraDoLayout.length > 20 ? '…' : ''}</p></div>` : ''}
     ${lastVal.issues.length ? `<div class="sec"><h3>Alertas (${lastVal.issues.length})</h3><div class="issues">${issues}</div></div>` : ''}
     ${rackRows}
@@ -1340,6 +1541,238 @@ function renderItens(){
     <details class="sec"><summary>Simular a partir de uma lista do Excel</summary><p class="note">Copie as colunas Produto, Lote, Quantidade e, se quiser, Posição (ex.: B1-22-3-4). Com posição, o palete vai direto para a vaga; sem posição, fica no chão perto da vista.</p>
     <textarea id="f-paste" rows="6" placeholder="Maiz Líquido 100 DS&#9;L2604-031&#9;8400&#9;B1-22-1-1"></textarea><div class="row"><button class="btn primary" data-act="paste">Criar paletes</button></div></details>`;
 }
+/* ---------- aba Armazéns ---------- */
+const armUI = { q: '', foco: '', aberto: new Set(), paste: null, pasteTxt: '', rk: '', de: '', ate: '', val: '', log: null };
+function armLegenda(){
+  return `<p class="note"><span style="color:var(--danger)">■</span> fora da linha certa · <span style="color:var(--ok)">■</span> na linha certa · <span style="color:var(--muted)">■</span> linha sem regra</p>`;
+}
+const numLinha = k => +String(k).split('-').pop();
+function armChaves(r){ return Array.from({ length: r.lanes }, (_, i) => linhaKey(r, i)).sort((a, b) => numLinha(a) - numLinha(b)); }
+function renderArm(){
+  const A = armCalc, nLin = A.linhasErr.size, racks = L.racks.filter(temRegraRack);
+  const q = norm(armUI.q).trim();
+  const errs = q ? A.errados.filter(o => norm([o.k, o.e.code, o.x.produto_nome, o.x.codigo, o.x.lote, o.x.armazem, armTxt(o.rg)].join(' ')).includes(q)) : A.errados;
+  const grupos = new Map(); for (const o of errs) (grupos.get(o.k) || grupos.set(o.k, []).get(o.k)).push(o);
+  const rk = armUI.rk || racks[0]?.code || '';
+  const desconhecidos = arms => arms.filter(a => typeof armazemConhecido === 'function' && !armazemConhecido(a));
+  let colar = '';
+  if (armUI.paste){
+    const P = armUI.paste, muda = P.mud.filter(m => armTxt(regras.get(m.linha)) !== armTxt(m.arms));
+    const novos = [...new Set(P.mud.flatMap(m => desconhecidos(m.arms)))];
+    colar = `<div class="armprev"><p class="note"><b>${P.mud.length}</b> linha(s) lida(s) · <b>${muda.length}</b> muda(m).</p>
+      ${muda.length ? `<div class="armlog">${muda.slice(0, 50).map(m => `<div><b class="mono">${esc(m.linha)}</b> ${esc(armTxt(regras.get(m.linha)))} → <b>${esc(armTxt(m.arms))}</b></div>`).join('')}${muda.length > 50 ? `<div class="note">+${muda.length - 50}</div>` : ''}</div>` : ''}
+      ${novos.length ? `<div class="aviso-banco">Armazém que não está na lista do sistema: <b>${novos.map(esc).join(', ')}</b>. Confira antes de aplicar.</div>` : ''}
+      ${P.erros.length ? `<p class="note">Não existem no layout: ${P.erros.slice(0, 12).map(esc).join(', ')}.</p>` : ''}
+      <div class="row">${muda.length ? `<button class="btn primary" data-act="armColarOk">Aplicar ${muda.length} mudança(s)</button>` : ''}<button class="btn" data-act="armColarNao">Cancelar</button></div></div>`;
+  }
+  const ult = regrasUlt && regrasUlt.updated_at ? `Última mudança: <b>${esc(regrasUlt.linha || '')}</b>${regrasUlt.feito_por ? ' por ' + esc(regrasUlt.feito_por) : ''}, ${esc(new Date(regrasUlt.updated_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))}.` : '';
+  return `<div class="sec"><h3>Armazém de cada linha</h3>
+    <p class="note">Cada linha do drive-in tem os armazéns que podem ficar nela. Aqui aparece só o palete que está na linha errada; o sistema não sugere para onde levar.</p>
+    ${regrasBanco ? '' : `<div class="aviso-banco">Usando a planilha de 11/11 guardada no próprio layout${regrasErro ? ` (a tabela <b>drive_armazem</b> não respondeu: ${esc(regrasErro)})` : ''}. Rode <b>sql/migracao-drive-armazem.sql</b> no Supabase para as mudanças valerem para todo mundo. Até lá, o que mudar aqui fica só neste navegador.</div>`}
+    <div class="armk">
+      <div class="armk-c${A.errados.length ? ' err' : ''}"><b>${num(A.errados.length)}</b><span>fora da linha certa${nLin ? ` · ${nLin} linha(s)` : ''}</span></div>
+      <div class="armk-c"><b>${num(A.ok)}</b><span>na linha certa</span></div>
+      <div class="armk-c"><b>${num(A.semRegra)}</b><span>em linha sem regra</span></div>
+    </div>
+    <div class="row"><button class="btn" data-cor="armazem" data-toggle="1" aria-pressed="${corModo.v === 'armazem'}">${corModo.v === 'armazem' ? 'Pintando certo × errado' : 'Pintar certo × errado'}</button><button class="btn primary" data-act="pdf">PDF da planta</button></div>
+    ${corModo.v === 'armazem' ? armLegenda() : ''}</div>
+  <div class="sec"><h3>Fora da linha certa (${num(A.errados.length)})</h3>
+    ${A.errados.length > 6 || armUI.q ? `<label class="fld"><input id="f-armq" type="search" placeholder="Filtrar por linha, produto, lote ou armazém" value="${esc(armUI.q)}" autocomplete="off"></label>` : ''}
+    ${grupos.size ? [...grupos].slice(0, 60).map(([k, os]) => `<div class="armgrp"><div class="armgrp-h"><b>${esc(k)}</b><span>é do <b>${esc(armTxt(os[0].rg))}</b></span><span class="s">${os.length} palete(s)</span><button class="lnk" data-act="armLinha" data-linha="${esc(k)}">mudar regra</button></div>
+      <div class="list">${os.map(o => `<button class="item" data-go="${o.e.r.id}|${o.e.lane}|${o.e.pos}|${o.e.level}"><span class="dot" style="background:var(--danger)"></span><span class="t">${esc(o.x.produto_nome || o.x.codigo)} <span class="s">${esc(o.x.lote || '')}</span></span><span class="s">${esc(o.e.code)} · <b class="err">${esc(o.x.armazem || '—')}</b></span></button>`).join('')}</div></div>`).join('')
+      : `<p class="note">${armUI.q ? 'Nada com esse filtro.' : realList.length ? 'Tudo na linha certa.' : 'Carregando as vagas ocupadas…'}</p>`}
+    ${grupos.size > 60 ? `<p class="note">Mostrando 60 de ${grupos.size} linhas. Use o filtro.</p>` : ''}</div>
+  <div class="sec"><h3>Mudar as regras</h3>
+    <p class="note">Um ou mais armazéns por linha, separados por espaço ou traço (ex.: <b>D5-D4</b>). Em branco = linha sem regra. Grava ao sair do campo.</p>
+    <div class="armfaixa">
+      <label class="fld"><span>Estrutura</span><select id="arm-rk">${racks.map(r => `<option ${r.code === rk ? 'selected' : ''}>${esc(r.code)}</option>`).join('')}</select></label>
+      <label class="fld"><span>Da linha</span><input id="arm-de" inputmode="numeric" value="${esc(armUI.de)}" placeholder="01"></label>
+      <label class="fld"><span>Até</span><input id="arm-ate" inputmode="numeric" value="${esc(armUI.ate)}" placeholder="12"></label>
+      <label class="fld"><span>Armazém</span><input id="arm-val" value="${esc(armUI.val)}" placeholder="42" autocomplete="off" spellcheck="false" style="text-transform:uppercase"></label>
+    </div>
+    <div class="row"><button class="btn" data-act="armFaixa">Aplicar na faixa</button></div>
+    ${racks.map(r => { const ks = armChaves(r), nErr = ks.filter(k => A.linhasErr.has(k)).length;
+      const aberto = armUI.aberto.has(r.code) || (armUI.foco && armUI.foco.startsWith(String(r.code).toUpperCase() + '-'));
+      return `<details class="armrk" data-rk="${esc(r.code)}" ${aberto ? 'open' : ''}><summary>${esc(rackTitle(r))} <span class="s">${r.lanes} linhas${nErr ? ` · <b class="err">${nErr} com palete errado</b>` : ''}</span></summary>
+        <div class="armgrid">${ks.map(k => { const rg = regras.get(k), p = A.porLinha.get(k), e = A.linhasErr.get(k);
+          return `<label class="armln${e ? ' err' : ''}${armUI.foco === k ? ' foco' : ''}" title="${esc(k)}${p ? ` · ${p.n} palete(s)` : ''}${e ? ` · ${e} fora da linha` : ''}"><span class="n">${esc(k.split('-').pop())}</span><input id="ln-${esc(k)}" data-linha="${esc(k)}" value="${esc(rg ? rg.join(' ') : '')}" placeholder="${rg ? 'sem regra' : '—'}" autocomplete="off" spellcheck="false"><span class="s">${p ? (e ? `${e}/${p.n}` : p.n) : ''}</span></label>`; }).join('')}</div></details>`; }).join('')}
+    <p class="note">O número à direita é quantos paletes a linha tem agora (em vermelho, quantos estão fora).</p>
+    <details class="sec" id="arm-colar"${armUI.colar || armUI.paste || armUI.pasteTxt ? ' open' : ''}><summary>Colar da planilha</summary>
+      <p class="note">Copie no Excel as colunas "posição do drive in" e "armazém" (pode ser a planilha inteira, com as duplas de colunas lado a lado) e cole aqui.</p>
+      <textarea id="f-armpaste" rows="5" placeholder="B1-07&#9;D7">${esc(armUI.pasteTxt)}</textarea>
+      <div class="row"><button class="btn" data-act="armColarVer">Conferir</button></div>${colar}</details>
+    <details class="sec" id="arm-hist"${armUI.hist ? ' open' : ''}><summary data-act="armLog">Histórico de mudanças</summary><div class="armlog">${armUI.log === null ? '<span class="note">carregando…</span>'
+      : armUI.log.erro ? `<span class="note">${esc(armUI.log.erro)}</span>`
+      : armUI.log.rows.map(l => `<div><span class="s">${esc(new Date(l.quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))}</span> <b class="mono">${esc(l.linha)}</b> ${esc(armTxt(l.antes))} → <b>${l.depois ? esc(armTxt(l.depois)) : 'apagada'}</b> <span class="s">${esc(l.feito_por || '')}</span></div>`).join('') || '<span class="note">Nenhuma mudança ainda.</span>'}</div></details>
+    ${ult ? `<p class="note">${ult}</p>` : ''}</div>`;
+}
+async function carregarLogArm(){
+  if (!regrasBanco){ armUI.log = { erro: 'O histórico começa quando a tabela drive_armazem existir no Supabase.' }; renderPanel(); return; }
+  const { data, error } = await sb.from('drive_armazem_log').select('quando, linha, antes, depois, feito_por').order('quando', { ascending: false }).limit(60);
+  armUI.log = error ? { erro: error.message } : { rows: (data || []).filter(l => l.feito_por !== 'planilha 11/11/2026' || l.antes) };
+  if (tab === 'arm') renderPanel();
+}
+function armIrLinha(k){
+  armUI.foco = k; tab = 'arm'; renderTabs(); renderPanel();
+  const el = document.getElementById('ln-' + k); if (el){ el.scrollIntoView({ block: 'center' }); el.focus(); el.select(); }
+}
+function armAplicarFaixa(){
+  const r = L.racks.find(x => temRegraRack(x) && x.code === ($('#arm-rk')?.value || armUI.rk)); if (!r) return toast('Escolha a estrutura');
+  const de = parseInt(armUI.de, 10), ate = parseInt(armUI.ate || armUI.de, 10);
+  if (!isFinite(de) || !isFinite(ate)) return toast('Diga da linha até a linha');
+  const [a, b] = de <= ate ? [de, ate] : [ate, de], arms = lerArms(armUI.val);
+  const mud = armChaves(r).filter(k => numLinha(k) >= a && numLinha(k) <= b).map(linha => ({ linha, arms }));
+  if (!mud.length) return toast(`${r.code} não tem linha entre ${lnPad(a)} e ${lnPad(b)}`);
+  gravarRegras(mud);
+}
+/* ================= PDF da planta =================
+   Desenho vetorial (SVG) da planta vista de cima, na mesma orientação da
+   vista "Planta". Abre uma prévia; o botão de imprimir usa o diálogo do
+   navegador (destino "Salvar como PDF"). Cada quadrado é um lugar; o
+   número dentro é quantos andares estão ocupados. */
+const pdfOpt = { modo: 'armazem', papel: 'A3', lista: true, regras: true };
+const PDF_COR = { errado: ['#f4a8a1', '#b8322a'], ok: ['#b3e2c5', '#2f8a52'], livre: ['#d5dbe3', '#7b8794'], vazio: ['#ffffff', '#b9c0ca'] };
+const PDF_OCUP = ['#ffffff', '#d9e6fb', '#aec8f3', '#7ea6ea', '#4f83d9', '#2c61bb'];
+function pdfPlanta(){
+  const rot90 = L.pav.plantaRot === 90, T = [], bb = { x1: Infinity, y1: Infinity, x2: -Infinity, y2: -Infinity };
+  const P = (x, y) => { const a = rot90 ? -y : x, b = rot90 ? -x : -y; bb.x1 = Math.min(bb.x1, a); bb.x2 = Math.max(bb.x2, a); bb.y1 = Math.min(bb.y1, b); bb.y2 = Math.max(bb.y2, b); return [a, b]; };
+  const pts = arr => arr.map(([x, y]) => P(x, y).map(v => v.toFixed(3)).join(',')).join(' ');
+  const poly = (arr, at) => T.push(`<polygon points="${pts(arr)}" ${at}/>`);
+  const rect = (x1, y1, x2, y2, at) => poly([[x1, y1], [x2, y1], [x2, y2], [x1, y2]], at);
+  const line = (x1, y1, x2, y2, at) => { const [a, b] = P(x1, y1), [c, d] = P(x2, y2); T.push(`<line x1="${a.toFixed(3)}" y1="${b.toFixed(3)}" x2="${c.toFixed(3)}" y2="${d.toFixed(3)}" ${at}/>`); };
+  const text = (x, y, s, fs, at = '', vert = false) => { const [a, b] = P(x, y);
+    T.push(`<text x="${a.toFixed(3)}" y="${b.toFixed(3)}" font-size="${fs.toFixed(3)}" text-anchor="middle" dominant-baseline="central"${vert ? ` transform="rotate(-90 ${a.toFixed(3)} ${b.toFixed(3)})"` : ''} ${at}>${esc(s)}</text>`); };
+  const scr = (w, d) => rot90 ? [d, w] : [w, d];   // tamanho na folha de uma caixa w (x) × d (y)
+  const Pv = L.pav;
+  // prédios
+  rect(0, 0, Pv.w, Pv.l, 'fill="#fbfbfa" stroke="#4b525c" stroke-width="0.12"');
+  for (const B of Pv.extras) rect(B.x1, B.y1, B.x2, B.y2, 'fill="#fbfbfa" stroke="#4b525c" stroke-width="0.12"');
+  // áreas do piso
+  for (const z of L.zones){
+    rect(z.x - z.w / 2, z.y - z.d / 2, z.x + z.w / 2, z.y + z.d / 2, `fill="${esc(z.color)}" fill-opacity="${z.tipo === 'piso' ? .13 : .26}" stroke="${esc(z.color)}" stroke-opacity=".5" stroke-width="0.05"`);
+    const [sw, sh] = scr(z.w, z.d), nome = String(z.name || ''), fs = Math.min(.75, Math.max(.4, Math.min(sw, sh) * .22)), larg = nome.length * fs * .56;
+    if (/^Área (cinza|livre)$/i.test(nome) || Pv.docks.some(d => Math.abs(d.x + d.w / 2 - z.x) < z.w / 2 && Math.abs(d.y + d.d / 2 - z.y) < z.d / 2)) continue;
+    if (larg < sw * .92 && fs < sh * .8) text(z.x, z.y, nome, fs, 'fill="#5b636e"');
+    else if (larg < sh * .92 && fs < sw * .8) text(z.x, z.y, nome, fs, 'fill="#5b636e"', true);
+  }
+  Pv.docks.forEach((d, i) => { rect(d.x, d.y, d.x + d.w, d.y + d.d, 'fill="#f3d36b" fill-opacity=".35" stroke="#c9a227" stroke-width="0.06"'); text(d.x + d.w / 2, d.y + d.d / 2, `DOCA ${i + 1}`, .6, 'fill="#7a6512" font-weight="700"'); });
+  for (const v of Pv.walls) line(v.x1, v.y1, v.x2, v.y2, 'stroke="#4b525c" stroke-width="0.12"');
+  for (const d of Pv.doors) line(d.x, 0, d.x + d.w, 0, 'stroke="#e0a11b" stroke-width="0.35"');
+  for (const a of Pv.areas) text(a.x, a.y, a.text, Math.min(2.4, (a.size || 2.2) * .9), 'fill="#8a939e" fill-opacity=".3" font-weight="700" letter-spacing="0.08em"');
+  // estruturas: cada lugar (vaga no chão) com os andares somados
+  const arm = pdfOpt.modo === 'armazem';
+  for (const r of L.racks){
+    const { W, D } = rackDims(r), w = (lx, ly) => { const v = rot2(lx, ly, r.rot); return [r.x + v.x, r.y + v.y]; };
+    const regra = arm && temRegraRack(r);
+    for (let lane = 0; lane < r.lanes; lane++) for (let pos = 0; pos < r.deep; pos++){
+      let n = 0, est = 'vazio';
+      for (let lv = 0; lv < r.levels; lv++){
+        const e = realBySlot.get(`${r.id}|${lane}|${pos}|${lv}`); if (!e) continue; n++;
+        const s = e.arm || 'livre'; if (s === 'errado' || (s === 'ok' && est !== 'errado') || est === 'vazio') est = s;
+      }
+      const lx = -W / 2 + lane * r.bayW, ly = -D / 2 + pos * r.posD, m = .04;
+      const [fill, stroke] = arm ? PDF_COR[n ? est : 'vazio'] : [PDF_OCUP[Math.min(n, 5)], '#9aa6b5'];
+      poly([w(lx + m, ly + m), w(lx + r.bayW - m, ly + m), w(lx + r.bayW - m, ly + r.posD - m), w(lx + m, ly + r.posD - m)], `fill="${fill}" stroke="${stroke}" stroke-width="${n ? .05 : .03}"`);
+      if (n){ const [cx, cy] = w(lx + r.bayW / 2, ly + r.posD / 2); text(cx, cy, String(n), Math.min(r.bayW, r.posD) * .48, `fill="${arm && est === 'errado' ? '#7d1a14' : '#1d232b'}" font-weight="600" font-family="IBM Plex Mono, monospace"`); }
+    }
+    poly([w(-W / 2, -D / 2), w(W / 2, -D / 2), w(W / 2, D / 2), w(-W / 2, D / 2)], `fill="none" stroke="${r.tipo === 'drive' ? '#2f5fa8' : '#b58a00'}" stroke-width="0.09"`);
+    // número da linha (e o armazém dela) no corredor, do lado do lugar 1
+    for (let lane = 0; lane < r.lanes; lane++){
+      const k = linhaKey(r, lane), rg = regra ? regras.get(k) : null, err = regra && armCalc.linhasErr.has(k);
+      const fs = Math.min(.62, r.bayW * .42), cor = err ? '#b8322a' : '#2a3038';
+      if (regra){
+        const [a, b] = w(-W / 2 + (lane + .5) * r.bayW, -D / 2 - .42), [c, d] = w(-W / 2 + (lane + .5) * r.bayW, -D / 2 - 1.1);
+        text(a, b, laneLabel(r, lane), fs, `fill="${cor}" font-weight="700" font-family="IBM Plex Mono, monospace"`);
+        text(c, d, rg && rg.length ? rg.join('·') : '—', fs * .78, `fill="${err ? '#b8322a' : '#4a6fa5'}" font-weight="${err ? 700 : 600}" font-family="IBM Plex Mono, monospace"`);
+      } else {
+        const [a, b] = w(-W / 2 + (lane + .5) * r.bayW, -D / 2 - (r.laneNames ? .55 : .42));
+        text(a, b, laneLabel(r, lane), fs, `fill="${cor}" font-weight="700" font-family="IBM Plex Mono, monospace"`);
+      }
+    }
+    if (!r.laneNames) for (const s of [-1, 1]){ const [a, b] = w(s * (W / 2 + 1.1), 0); text(a, b, r.code, .95, 'fill="#2f5fa8" font-weight="700"'); }
+  }
+  for (const p of Pv.pillars) rect(p.x - PIL / 2, p.y - PIL / 2, p.x + PIL / 2, p.y + PIL / 2, 'fill="#4b524f"');
+  const M = 1.4, vb = [bb.x1 - M, bb.y1 - M, bb.x2 - bb.x1 + 2 * M, bb.y2 - bb.y1 + 2 * M].map(v => v.toFixed(2)).join(' ');
+  return `<svg viewBox="${vb}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, Segoe UI, sans-serif" role="img" aria-label="Planta do armazém vista de cima">${T.join('')}</svg>`;
+}
+function pdfQuando(){ return new Date().toLocaleString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+function pdfFolhas(){
+  const A = armCalc, arm = pdfOpt.modo === 'armazem', ocup = realBySlot.size, tot = totalSlots(), pp = pdfOpt.papel;
+  const nPal = realList.reduce((a, e) => a + e.items.length, 0);
+  const cab = (tit, sub) => `<header class="fh"><div><h1>${esc(tit)}</h1><p>${esc(sub)}</p></div><div class="fmeta">${esc(L.name)}<br>${esc(pdfQuando())}${QUEM ? ` · ${esc(QUEM)}` : ''}</div></header>`;
+  const chip = (c, t) => `<span class="fchip"><i style="background:${c[0]};border-color:${c[1]}"></i>${t}</span>`;
+  const legenda = arm
+    ? chip(PDF_COR.errado, 'tem palete fora da linha certa') + chip(PDF_COR.ok, 'na linha certa') + chip(PDF_COR.livre, 'ocupado, linha sem regra') + chip(PDF_COR.vazio, 'livre')
+    : [0, 1, 2, 3, 4].map(n => chip([PDF_OCUP[n], '#9aa6b5'], n ? `${n} andar${n > 1 ? 'es' : ''}` : 'livre')).join('');
+  const kpis = arm
+    ? `<div class="fk"><div class="fk-c err"><b>${num(A.errados.length)}</b><span>paletes fora da linha certa${A.linhasErr.size ? `, em ${A.linhasErr.size} linha(s)` : ''}</span></div><div class="fk-c"><b>${num(A.ok)}</b><span>na linha certa</span></div><div class="fk-c"><b>${num(A.semRegra)}</b><span>em linha sem regra</span></div><div class="fk-c"><b>${num(ocup)}</b><span>de ${num(tot)} posições ocupadas</span></div></div>`
+    : `<div class="fk"><div class="fk-c"><b>${num(ocup)}</b><span>posições ocupadas</span></div><div class="fk-c"><b>${num(tot - ocup)}</b><span>posições livres</span></div><div class="fk-c"><b>${num(nPal)}</b><span>paletes (lotes) no mapa</span></div><div class="fk-c"><b>${tot ? num(Math.round(ocup / tot * 100)) : 0}%</b><span>de ocupação</span></div></div>`;
+  let h = `<section class="folha planta ${pp}">${cab('Planta do armazém', arm ? 'Armazém de cada linha do drive-in: o que está fora da linha certa' : 'Ocupação das posições')}
+    ${kpis}<div class="fs">${pdfPlanta()}</div>
+    <footer class="ff"><div class="fleg">${legenda}</div><p>Cada quadrado é um lugar da linha (o lugar 1 fica no corredor, junto do número da linha); o número dentro é quantos andares estão ocupados.${arm ? ' Embaixo do número de cada linha, o armazém que pode ficar nela.' : ''}</p></footer></section>`;
+  if (arm && pdfOpt.lista){
+    const grupos = new Map(); for (const o of A.errados) (grupos.get(o.k) || grupos.set(o.k, []).get(o.k)).push(o);
+    h += `<section class="folha lista ${pp}">${cab('Paletes fora da linha certa', `${num(A.errados.length)} palete(s) em ${num(grupos.size)} linha(s)`)}
+      ${A.errados.length ? `<table class="ft"><thead><tr><th>Linha</th><th>Linha é do</th><th>Posição</th><th>Produto</th><th>Código</th><th>Lote</th><th>Palete no</th><th class="n">Quantidade</th></tr></thead><tbody>
+      ${[...grupos].map(([k, os]) => os.map((o, i) => `<tr${i === 0 ? ' class="g"' : ''}><td class="m">${i ? '' : esc(k)}</td><td class="m">${i ? '' : esc(armTxt(o.rg))}</td><td class="m">${esc(o.e.code)}</td><td>${esc(o.x.produto_nome || '')}</td><td class="m">${esc(o.x.codigo || '')}</td><td class="m">${esc(o.x.lote || '—')}</td><td class="m e">${esc(o.x.armazem || '—')}</td><td class="n">${num(o.x.quantidade)} ${esc(unidadeDe(o.x.codigo, o.x.produto_nome) || '')}${o.x.pend ? ' *' : ''}</td></tr>`).join('')).join('')}
+      </tbody></table>${A.errados.some(o => o.x.pend) ? '<p class="fnota">* aguardando validação</p>' : ''}` : '<p class="fvazio">Nenhum palete fora da linha certa.</p>'}</section>`;
+  }
+  if (arm && pdfOpt.regras){
+    const racks = L.racks.filter(temRegraRack);
+    h += `<section class="folha lista ${pp}">${cab('Armazém de cada linha', regrasBanco ? 'Regras gravadas no sistema' : 'Planilha de 11/11/2026 (a tabela do sistema ainda não foi criada)')}
+      <div class="fr">${racks.map(r => `<table class="ft"><thead><tr><th colspan="3">${esc(rackTitle(r))}</th></tr><tr><th>Linha</th><th>Armazém</th><th class="n">Paletes</th></tr></thead><tbody>
+        ${armChaves(r).map(k => { const p = A.porLinha.get(k), e = A.linhasErr.get(k); return `<tr${e ? ' class="x"' : ''}><td class="m">${esc(k.split('-').pop())}</td><td class="m">${esc(armTxt(regras.get(k)))}</td><td class="n">${p ? (e ? `${e} de ${p.n} fora` : p.n) : ''}</td></tr>`; }).join('')}</tbody></table>`).join('')}</div></section>`;
+  }
+  return h;
+}
+function pdfMontar(){
+  const box = $('#pdf');
+  box.querySelector('.pdf-folhas').innerHTML = pdfFolhas();
+  box.querySelectorAll('[data-pmodo]').forEach(b => b.setAttribute('aria-pressed', b.dataset.pmodo === pdfOpt.modo));
+  box.querySelectorAll('[data-ppapel]').forEach(b => b.setAttribute('aria-pressed', b.dataset.ppapel === pdfOpt.papel));
+  box.querySelector('#p-lista').checked = pdfOpt.lista; box.querySelector('#p-regras').checked = pdfOpt.regras;
+  box.querySelectorAll('.p-arm').forEach(x => x.hidden = pdfOpt.modo !== 'armazem');
+  $('#pdf-pag').textContent = `@page{size:${pdfOpt.papel} landscape;margin:8mm}`;
+  pdfZoom();
+}
+function pdfZoom(){
+  const box = $('#pdf'); if (!box || box.hidden) return;
+  const area = box.querySelector('.pdf-area'), f = box.querySelector('.pdf-folhas'), fo = f.querySelector('.folha'); if (!fo) return;
+  f.style.zoom = 1; const z = Math.min(1, (area.clientWidth - 32) / fo.offsetWidth); f.style.zoom = z > 0 ? z : 1;
+}
+function abrirPdf(){
+  let box = $('#pdf');
+  if (!box){
+    document.head.insertAdjacentHTML('beforeend', '<style id="pdf-pag"></style>');
+    document.body.insertAdjacentHTML('beforeend', `<div id="pdf" hidden role="dialog" aria-label="PDF da planta">
+      <div class="pdf-bar"><h2>PDF da planta</h2>
+        <div class="seg" role="group" aria-label="O que pintar"><button data-pmodo="armazem">Armazém da linha</button><button data-pmodo="ocupacao">Ocupação</button></div>
+        <div class="seg" role="group" aria-label="Papel"><button data-ppapel="A3">A3</button><button data-ppapel="A4">A4</button></div>
+        <label class="chk p-arm"><input type="checkbox" id="p-lista">Lista dos fora da linha</label>
+        <label class="chk p-arm"><input type="checkbox" id="p-regras">Tabela das linhas</label>
+        <button class="btn primary" id="p-imp">Imprimir / salvar PDF</button><button class="btn" id="p-fechar">Fechar</button></div>
+      <div class="pdf-area"><div class="pdf-folhas"></div></div></div>`);
+    box = $('#pdf');
+    box.addEventListener('click', e => {
+      const m = e.target.closest('[data-pmodo]'), p = e.target.closest('[data-ppapel]');
+      if (m){ pdfOpt.modo = m.dataset.pmodo; pdfMontar(); }
+      else if (p){ pdfOpt.papel = p.dataset.ppapel; pdfMontar(); }
+      else if (e.target.id === 'p-fechar') fecharPdf();
+      else if (e.target.id === 'p-imp'){
+        const t = document.title; document.title = `Planta ${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}`;
+        addEventListener('afterprint', () => { document.title = t; }, { once: true });
+        pdfZoomReset(); print();
+      }
+    });
+    box.addEventListener('change', e => { if (e.target.id === 'p-lista') pdfOpt.lista = e.target.checked; if (e.target.id === 'p-regras') pdfOpt.regras = e.target.checked; pdfMontar(); });
+    addEventListener('resize', pdfZoom);
+    addEventListener('afterprint', pdfZoom);
+    addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#pdf').hidden){ e.stopImmediatePropagation(); fecharPdf(); } }, true);
+  }
+  calcArm(); box.hidden = false; pdfMontar();
+}
+function pdfZoomReset(){ const f = $('#pdf .pdf-folhas'); if (f) f.style.zoom = 1; }
+function fecharPdf(){ const b = $('#pdf'); if (b){ b.hidden = true; b.querySelector('.pdf-folhas').innerHTML = ''; } }
 function renderPav(){
   const P = L.pav;
   const lays = Object.entries(store.layouts).map(([id, l]) => [id, l.name]);
@@ -1369,7 +1802,7 @@ function renderDados(){
 function renderPanel(){
   const focus = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
   const scroll = panel.scrollTop;
-  panel.innerHTML = tab === 'sel' ? renderSel() : tab === 'itens' ? renderItens() : tab === 'pav' ? renderPav() : renderDados();
+  panel.innerHTML = tab === 'sel' ? renderSel() : tab === 'itens' ? renderItens() : tab === 'arm' ? renderArm() : tab === 'pav' ? renderPav() : renderDados();
   panel.scrollTop = scroll;
   if (focus){ const el = document.getElementById(focus); if (el && panel.contains(el)){ el.focus(); try { if (selStart != null) el.setSelectionRange(selStart, selStart); } catch(e){} } }
 }
@@ -1377,7 +1810,8 @@ function renderStats(){
   const total = totalSlots(), ocup = realBySlot.size, sim = L.pallets.length;
   const vivo = erroOcup ? `<span class="warn">sem conexão</span>`
     : canalOk ? `<span class="vivo on"></span>ao vivo` : `<span class="vivo"></span>${ultimoSync ? 'atualizado ' + haQuanto(ultimoSync) : 'carregando…'}`;
-  $('#stats').innerHTML = `<b>${total.toLocaleString('pt-BR')}</b> posições · <b>${ocup.toLocaleString('pt-BR')}</b> ocupadas · <b>${(total - ocup).toLocaleString('pt-BR')}</b> livres${sim ? ` · <b>${sim}</b> em simulação` : ''}${lastVal.issues.length ? ` · <span class="warn">${lastVal.issues.length} alerta(s)</span>` : ''} · ${vivo}`;
+  const fora = armCalc.errados.length;
+  $('#stats').innerHTML = `<b>${total.toLocaleString('pt-BR')}</b> posições · <b>${ocup.toLocaleString('pt-BR')}</b> ocupadas · <b>${(total - ocup).toLocaleString('pt-BR')}</b> livres${sim ? ` · <b>${sim}</b> em simulação` : ''}${fora ? ` · <button class="lk" data-arm title="Ver na aba Armazéns">${fora.toLocaleString('pt-BR')} fora da linha certa</button>` : ''}${lastVal.issues.length ? ` · <span class="warn">${lastVal.issues.length} alerta(s)</span>` : ''} · ${vivo}`;
 }
 function renderLaySel(){
   $('#laySel').innerHTML = Object.entries(store.layouts).map(([id, l]) => `<option value="${id}" ${id === store.current ? 'selected' : ''}>${esc(l.name)}</option>`).join('');
@@ -1387,6 +1821,8 @@ const numF = new Set(['qtd','w','d','h','x','y','bayW','posD','levelH','lanes','
 const parseNum = s => parseFloat(String(s).replace(',', '.'));
 panel.addEventListener('change', e => {
   const t = e.target, f = t.dataset.f;
+  if (t.dataset.linha){ gravarRegras([{ linha: t.dataset.linha, arms: lerArms(t.value) }]); return; }
+  if (t.id === 'arm-rk'){ armUI.rk = t.value; return; }
   if (t.id === 'f-file' && t.files[0]){ const rd = new FileReader(); rd.onload = () => importText(rd.result); rd.readAsText(t.files[0]); return; }
   if (!f) return;
   if (f.startsWith('ext.')){
@@ -1433,10 +1869,18 @@ panel.addEventListener('change', e => {
   }
   afterChange();
 });
-panel.addEventListener('input', e => { if (e.target.id === 'f-q'){ view.q = e.target.value; applyHighlights(); renderPanel(); } });
+panel.addEventListener('input', e => {
+  const t = e.target;
+  if (t.id === 'f-q'){ view.q = t.value; applyHighlights(); renderPanel(); }
+  else if (t.id === 'f-armq'){ armUI.q = t.value; renderPanel(); }
+  else if (t.id === 'f-armpaste') armUI.pasteTxt = t.value;
+  else if (['arm-de', 'arm-ate', 'arm-val'].includes(t.id)) armUI[t.id.slice(4)] = t.value;
+});
+panel.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset?.linha) e.target.blur(); else if (e.key === 'Enter' && /^arm-(de|ate|val)$/.test(e.target.id)) armAplicarFaixa(); });
+panel.addEventListener('toggle', e => { const d = e.target; if (d.dataset?.rk) d.open ? armUI.aberto.add(d.dataset.rk) : armUI.aberto.delete(d.dataset.rk); else if (d.id === 'arm-hist') armUI.hist = d.open; else if (d.id === 'arm-colar') armUI.colar = d.open; }, true);
 panel.addEventListener('click', e => {
   const cb = e.target.closest('[data-cor]');
-  if (cb){ corModo.v = cb.dataset.cor; pintarReal(); renderPanel(); return; }
+  if (cb){ let v = cb.dataset.cor; if (cb.dataset.toggle && corModo.v === v) v = 'produto'; trocarCor(v); return; }
   const go = e.target.closest('[data-go]');
   if (go){ const [rid, lane, pos, lv] = go.dataset.go.split('|'); const r = rackById(rid); if (r) goToSlot(r, +lane, +pos, +lv); return; }
   const cell = e.target.closest('[data-slot]');
@@ -1446,6 +1890,13 @@ panel.addEventListener('click', e => {
     if (o){ const f = footprint(kind, o); focusOn(f.cx, f.cy); select(kind, id); } return; }
   const b = e.target.closest('[data-act]'); if (!b) return; const act = b.dataset.act;
   if (['del','delLayout'].includes(act) && !b.dataset.armed){ b.dataset.armed = '1'; const tx = b.textContent; b.textContent = 'Clique de novo para confirmar'; setTimeout(() => { if (b.isConnected){ delete b.dataset.armed; b.textContent = tx; } }, 3000); return; }
+  if (act === 'pdf'){ abrirPdf(); return; }
+  if (act === 'armLinha'){ armIrLinha(b.dataset.linha); return; }
+  if (act === 'armFaixa'){ armAplicarFaixa(); return; }
+  if (act === 'armColarVer'){ armUI.pasteTxt = $('#f-armpaste')?.value || ''; armUI.paste = lerColagem(armUI.pasteTxt); if (!armUI.paste.mud.length) toast('Não achei nenhuma posição do drive-in (ex.: B1-07) no que foi colado'); renderPanel(); return; }
+  if (act === 'armColarOk'){ const m = armUI.paste?.mud || []; armUI.paste = null; armUI.pasteTxt = ''; gravarRegras(m); return; }
+  if (act === 'armColarNao'){ armUI.paste = null; renderPanel(); return; }
+  if (act === 'armLog'){ if (!b.closest('details').open) carregarLogArm(); return; }
   if (act === 'del') deleteSel();
   else if (act === 'dup') duplicateSel();
   else if (act === 'rot') rotateSel();
@@ -1473,6 +1924,11 @@ panel.addEventListener('click', e => {
   else if (act === 'import') importText($('#f-import').value);
   else if (act === 'resetSimb'){ const id = uid(); store.layouts[id] = layoutSimbiose(); openLayout(id); toast('Planta original aberta'); }
 });
+function trocarCor(v){
+  const antes = corModo.v; corModo.v = v;
+  if ((antes === 'armazem') !== (v === 'armazem')){ buildRacks(); applyHighlights(); updateSelBox(); }
+  pintarReal(); renderPanel();
+}
 function copyText(txt, ta){
   navigator.clipboard.writeText(txt).then(() => toast('Copiado'), () => { if (ta){ ta.focus(); ta.select(); toast('Selecionei o texto: use Ctrl+C'); } else toast('Não consegui copiar daqui'); });
 }
@@ -1551,7 +2007,7 @@ async function carregarOcupacao(){
     for (const r of hist) (o[String(r.posicao).trim().toUpperCase()] ||= []).push({ ...r, pend: false });
     for (const r of pend) (o[String(r.posicao).trim().toUpperCase()] ||= []).push({ ...r, pend: true });
     _ocupacao = o; ultimoSync = Date.now(); erroOcup = '';
-    buildReal(); refreshAllSlots(); applyHighlights(); renderStats();
+    buildReal(); armTalvezRacks(); refreshAllSlots(); applyHighlights(); renderStats();
     if (tab === 'itens' || sel?.kind === 'slot' || sel?.kind === 'rack') renderPanel();
   } catch(e){
     erroOcup = e.message || String(e); console.warn('ocupação:', erroOcup); renderStats();
@@ -1580,9 +2036,11 @@ function ligarTempoReal(){
     .on('postgres_changes', { event: '*', schema: 'public', table: 'layout_pavilhao' }, aoMudarLayoutRemoto)
     .subscribe(status => { canalOk = status === 'SUBSCRIBED'; renderStats(); });
   // Rede de segurança: se o tempo real não estiver ligado no banco, a tela ainda se atualiza.
-  setInterval(() => { if (!document.hidden) carregarOcupacao(); }, 60000);
+  setInterval(() => { if (!document.hidden){ carregarOcupacao(); carregarRegras(); } }, 60000);
   setInterval(renderStats, 30000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) carregarOcupacao(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden){ carregarOcupacao(); carregarRegras(); } });
+  // Canal próprio: se a tabela ainda não existir, não derruba o tempo real do mapa.
+  let tR; sb.channel('layout-arm').on('postgres_changes', { event: '*', schema: 'public', table: 'drive_armazem' }, () => { clearTimeout(tR); tR = setTimeout(carregarRegras, 500); }).subscribe();
 }
 function pedirNome(depois){
   const d = $('#dlg-quem'); d.hidden = false; const inp = $('#quem-in'); inp.value = QUEM || ''; setTimeout(() => inp.focus(), 40);
@@ -1635,12 +2093,14 @@ new MutationObserver(onTheme).observe(document.documentElement, { attributes: tr
 document.fonts?.ready.then(() => { texCache.clear(); rebuildAll(); afterChange(); });
 
 $('#b-tema').addEventListener('click', alternarTema);
+$('#stats').addEventListener('click', e => { if (e.target.closest('[data-arm]')){ tab = 'arm'; renderTabs(); renderPanel(); } });
+$('#b-pdf').addEventListener('click', () => abrirPdf());
 $('#b-quem').addEventListener('click', () => pedirNome());
 lerQuem(); pintarQuem();
 resize(); rebuildAll(); setView('3d'); renderTabs(); afterChange(); $('#b-undo').disabled = true;
 try {
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  carregarLayoutsBanco().then(() => { carregarOcupacao(); ligarTempoReal(); });
+  carregarLayoutsBanco().then(() => { carregarRegras(); carregarOcupacao(); ligarTempoReal(); });
 } catch(e){ erroOcup = 'Supabase não carregou'; renderStats(); }
 (function loop(now){ requestAnimationFrame(loop); if (anim) anim(now); controls.update(); renderer.render(scene, cam); })(performance.now());
 })();
