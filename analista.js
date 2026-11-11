@@ -10,9 +10,9 @@
    Litro, quilo e dose nunca se somam: cada unidade tem a sua coluna.
    ═══════════════════════════════════════════════════════════════ */
 
-const _an = { rows:null, erro:null, sync:null, periodo:'30', aba:'resumo', un:'L', tipo:'', busca:'', tipoMov:'', carregado:0 };
+const _an = { rows:null, erro:null, sync:null, periodo:'30', aba:'resumo', un:'L', met:'nfs', tipo:'', busca:'', tipoMov:'', carregado:0 };
 const AN_PERIODOS = [['hoje', 'Hoje'], ['ontem', 'Ontem'], ['7', '7 dias'], ['30', '30 dias'], ['mes', 'Este mês'], ['mesant', 'Mês passado'], ['90', '90 dias']];
-const AN_ABAS = [['resumo', 'Resumo'], ['saidas', 'Saídas'], ['clientes', 'Clientes'], ['entradas', 'Entradas'], ['internos', 'Internos'], ['cobertura', 'Cobertura'], ['lista', 'Movimentos']];
+const AN_ABAS = [['resumo', 'Expedição'], ['saidas', 'Saídas'], ['clientes', 'Clientes'], ['entradas', 'Entradas'], ['internos', 'Internos'], ['cobertura', 'Cobertura'], ['lista', 'Movimentos']];
 const AN_UNS = ['L', 'KG', 'DS'];
 // Armazéns de onde o produto sai para venda (o resto é quarentena,
 // retrabalho, avaria, vencido, descarte ou bloqueado).
@@ -41,7 +41,9 @@ async function carregarAnalista(forcar = false) {
     // Período maior entre: o escolhido + o anterior (comparação) e 30 dias (cobertura).
     const { de, ate } = anJanela(_an.periodo);
     const len = anDias(de, ate);
-    const ini = new Date(Math.min(de.getTime() - len * 864e5, Date.now() - 31 * 864e5));
+    // (e o mês passado inteiro, para o "Ritmo do mês")
+    const h0 = new Date(); const iniMesAnt = new Date(h0.getFullYear(), h0.getMonth() - 1, 1);
+    const ini = new Date(Math.min(de.getTime() - len * 864e5, Date.now() - 31 * 864e5, iniMesAnt.getTime()));
     try {
       const [rows, sync] = await Promise.all([
         buscarTudo(() => sb.from('erp_mov').select('*').gte('emissao', anIso(ini)).lte('emissao', anIso(ate)).order('emissao').order('id')),
@@ -92,6 +94,8 @@ function anSoma(ls) {
 }
 const anQ = n => num(Math.round((Number(n) || 0) * 100) / 100);
 const anR = v => 'R$ ' + num(Math.round(Number(v) || 0));
+// Curto para os cartões: R$ 20,9 mi · R$ 245 mil.
+const anRc = v => { v = Number(v) || 0; return v >= 1e6 ? `R$ ${num1(v / 1e6)} mi` : v >= 1e4 ? `R$ ${num(Math.round(v / 1e3))} mil` : anR(v); };
 const anUnsDe = o => [...new Set([...AN_UNS, ...Object.keys(o.q)])].filter(u => o.q[u]);
 const anQtdTxt = o => anUnsDe(o).map(u => `${anQ(o.q[u])} ${esc(u)}`).join(' · ') || '—';
 function anVar(a, b) {
@@ -178,63 +182,209 @@ function anKpi(rot, valor, pe, cls = '') {
   return `<div class="kpi ${cls}"><div class="kpi-label">${esc(rot)}</div><div class="kpi-value">${valor}</div><div class="kpi-foot">${pe}</div></div>`;
 }
 
-/* ── Resumo ── */
+/* ═══════════ EXPEDIÇÃO (painel principal do Analista) ═══════════ */
+
+// Tipo de saída pela TES (a ordem importa: "DEVOLUCAO TRAN" é devolução).
+function anCat(r) {
+  const t = String(r.tes_desc || '');
+  if (/DEVOLU|^DEV\b/i.test(t)) return 'Devolução';
+  if (/^TRAN|TRANSFER/i.test(t)) return 'Transferência entre filiais';
+  if (/EXPORTA/i.test(t)) return 'Exportação';
+  if (/BONIFIC/i.test(t)) return 'Bonificação';
+  if (/DESCARTE/i.test(t)) return 'Descarte';
+  if (/VENDA|REVENDA/i.test(t)) return 'Venda';
+  if (/REMESSA|TESTE|AMOSTRA|RETORNO/i.test(t)) return 'Remessa / teste';
+  return 'Outros';
+}
+const anFaturado = r => ['Venda', 'Exportação'].includes(anCat(r));
+// Palete equivalente: pela quantidade por palete do cadastro. A coluna
+// "Pallets" do ERP arredonda cada linha para cima (uma caixa = 1 palete).
+function anPl(r) {
+  const p = Number(produtoPorCodigo(normalizarCodigo(r.codigo))?.palete) || 0;
+  return p ? (Number(r.quantidade) || 0) / p : (Number(r.paletes) || 0);
+}
+const AN_METRICAS = [['nfs', 'Notas'], ['pl', 'Paletes'], ['valor', 'Valor'], ['L', 'Litros'], ['KG', 'Quilos'], ['DS', 'Doses']];
+function anValorDe(met) {
+  if (met === 'pl') return r => anPl(r);
+  if (met === 'valor') return r => Number(r.valor) || 0;
+  if (AN_UNS.includes(met)) return r => r.un === met ? Number(r.quantidade) || 0 : 0;
+  return null;    // notas: conta notas distintas
+}
+function anSerie(ls, met, de, ate) {
+  const m = new Map();
+  for (let d = new Date(de); d <= ate; d.setDate(d.getDate() + 1)) m.set(anIso(d), met === 'nfs' ? new Set() : 0);
+  const val = anValorDe(met);
+  for (const r of ls) {
+    const k = String(r.emissao).slice(0, 10);
+    if (!m.has(k)) continue;
+    if (met === 'nfs') m.get(k).add(anNF(r)); else m.set(k, m.get(k) + val(r));
+  }
+  return [...m].map(([d, v]) => ({ d, v:met === 'nfs' ? v.size : v }));
+}
+const anFmtMet = met => met === 'valor' ? anR : met === 'nfs' ? (v => num(Math.round(v))) : met === 'pl' ? (v => num1(v)) : (v => `${anQ(v)} ${met}`);
+const AN_DOW = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+/* Barras por dia, com a linha da média e o melhor dia marcado. */
+function anBarrasMedia(pts, rotulo, fmt) {
+  const W = 760, H = 220, m = { l:48, r:70, t:22, b:24 };
+  const ativos = pts.filter(p => p.v > 0);
+  const media = ativos.length ? ativos.reduce((s, p) => s + p.v, 0) / ativos.length : 0;
+  const max = Math.max(1, ...pts.map(p => p.v));
+  const passo = Math.pow(10, Math.floor(Math.log10(max)));
+  const topo = Math.ceil(max / passo * 2) / 2 * passo;
+  const iw = W - m.l - m.r, ih = H - m.t - m.b, slot = iw / pts.length, bw = Math.max(2, Math.min(28, slot - 3));
+  const y = v => m.t + ih - v / topo * ih;
+  const curto = v => v >= 1e6 ? num1(v / 1e6) + ' mi' : v >= 1e4 ? num(Math.round(v / 1e3)) + ' mil' : num(Math.round(v * 10) / 10);
+  const iMax = pts.reduce((b, p, i) => p.v > pts[b].v ? i : b, 0);
+  const marcas = pts.length <= 14 ? pts.map((_, i) => i) : [...new Set([0, Math.floor(pts.length / 3), Math.floor(2 * pts.length / 3), pts.length - 1])];
+  const fimDeSemana = d => { const w = new Date(d + 'T12:00').getDay(); return w === 0 || w === 6; };
+  return `<svg class="an-graf an-graf-g" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(rotulo)}">
+    ${[0, topo / 2, topo].map(t => `<line x1="${m.l}" x2="${W - m.r}" y1="${y(t)}" y2="${y(t)}" class="sa-grade"/><text x="${m.l - 8}" y="${y(t) + 4}" text-anchor="end" class="sa-eixo">${curto(t)}</text>`).join('')}
+    ${pts.map((p, i) => { const x = m.l + i * slot + (slot - bw) / 2, h = p.v ? Math.max(2, m.t + ih - y(p.v)) : 0;
+      return `<g class="an-bar${fimDeSemana(p.d) ? ' fds' : ''}${i === iMax && p.v ? ' max' : ''}"><rect x="${m.l + i * slot}" y="${m.t}" width="${slot}" height="${ih}" fill="transparent"/>` +
+        `<rect x="${x}" y="${m.t + ih - h}" width="${bw}" height="${h}" rx="${Math.min(4, bw / 2)}"/><title>${AN_DOW[new Date(p.d + 'T12:00').getDay()]} ${saData(p.d)}: ${fmt(p.v)}</title></g>`; }).join('')}
+    ${media ? `<line x1="${m.l}" x2="${W - m.r}" y1="${y(media)}" y2="${y(media)}" class="an-media"/><text x="${W - m.r + 6}" y="${y(media) + 4}" class="an-media-t">média ${fmt(media)}</text>` : ''}
+    ${pts[iMax]?.v ? `<text x="${m.l + iMax * slot + slot / 2}" y="${y(pts[iMax].v) - 6}" text-anchor="middle" class="an-max-t">${fmt(pts[iMax].v)}</text>` : ''}
+    ${marcas.map(i => `<text x="${m.l + i * slot + slot / 2}" y="${H - 6}" text-anchor="middle" class="sa-eixo">${saData(pts[i].d).slice(0, 5)}</text>`).join('')}
+  </svg>`;
+}
+
+/* Mês atual × mês passado, acumulado dia a dia. */
+function anRitmoMes(met) {
+  const h = new Date(); h.setHours(0, 0, 0, 0);
+  const iniA = new Date(h.getFullYear(), h.getMonth(), 1), iniP = new Date(h.getFullYear(), h.getMonth() - 1, 1);
+  const fimP = new Date(h.getFullYear(), h.getMonth(), 0);
+  const base = (_an.rows || []).filter(r => r.tipo_mov === 'Saída' && (typeof daFilial !== 'function' || daFilial(r.filial)) && (!_an.tipo || r.tipo_prod === _an.tipo));
+  const acum = (de, ate) => { let s = 0; return anSerie(base, met, de, ate).map(p => (s += p.v)); };
+  const a = acum(iniA, h), p = acum(iniP, fimP);
+  if (!p.length || (_an.ini && _an.ini > iniP)) return '';
+  const n = Math.max(a.length, p.length);
+  const W = 760, H = 200, m = { l:52, r:110, t:14, b:24 };
+  const max = Math.max(1, ...a, ...p);
+  const x = i => m.l + i / Math.max(1, n - 1) * (W - m.l - m.r), y = v => m.t + (H - m.t - m.b) - v / max * (H - m.t - m.b);
+  const caminho = s => s.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  const fmt = anFmtMet(met);
+  const hojeA = a[a.length - 1] || 0, mesmoDiaP = p[Math.min(a.length, p.length) - 1] || 0;
+  const dif = mesmoDiaP ? (hojeA - mesmoDiaP) / mesmoDiaP * 100 : null;
+  const mes = d => d.toLocaleDateString('pt-BR', { month:'long' });
+  return `<div class="panel"><div class="panel-head"><div><div class="section-title">Ritmo do mês</div>
+      <div class="section-note">acumulado de ${esc(mes(iniA))} contra ${esc(mes(iniP))}, dia a dia</div></div>
+      ${dif !== null ? `<span class="an-chip ${dif >= 0 ? 'up' : 'down'}">${dif >= 0 ? '▲' : '▼'} ${num1(Math.abs(dif))}% ${dif >= 0 ? 'à frente' : 'atrás'} no dia ${a.length}</span>` : ''}</div>
+    <div class="panel-body"><svg class="an-graf an-graf-r" viewBox="0 0 ${W} ${H}" role="img" aria-label="Ritmo do mês">
+      ${[0, max / 2, max].map(t => `<line x1="${m.l}" x2="${W - m.r}" y1="${y(t)}" y2="${y(t)}" class="sa-grade"/><text x="${m.l - 8}" y="${y(t) + 4}" text-anchor="end" class="sa-eixo">${fmt(t)}</text>`).join('')}
+      <path d="${caminho(p)}" class="an-linha-ant"/>
+      <path d="${caminho(a)}" class="an-linha"/>
+      <circle cx="${x(a.length - 1)}" cy="${y(hojeA)}" r="4" class="an-ponto"/>
+      <text x="${x(a.length - 1) + 8}" y="${y(hojeA) + 4}" class="an-rot">${esc(mes(iniA))} · ${fmt(hojeA)}</text>
+      <text x="${x(p.length - 1) + 8}" y="${y(p[p.length - 1]) + 4}" class="an-rot ant">${esc(mes(iniP))} · ${fmt(p[p.length - 1])}</text>
+      ${[1, 10, 20, n].filter(d => d <= n).map(d => `<text x="${x(d - 1)}" y="${H - 6}" text-anchor="middle" class="sa-eixo">dia ${d}</text>`).join('')}
+    </svg></div></div>`;
+}
+
+/* Lista com barra horizontal (ranking). */
+function anRanking(itens, fmt, vazio = 'Nada no período.') {
+  if (!itens.length) return `<div class="hj-vazio">${vazio}</div>`;
+  const max = Math.max(...itens.map(x => x.v), 1), tot = itens.reduce((s, x) => s + x.v, 0) || 1;
+  return `<ol class="an-rank">${itens.map(x => `<li title="${esc(x.titulo || x.rot)}">
+    <div class="an-rank-l"><span class="an-rank-n">${esc(x.rot)}</span>${x.sub ? `<span class="an-rank-s">${esc(x.sub)}</span>` : ''}</div>
+    <div class="an-rank-b"><i style="width:${(x.v / max * 100).toFixed(1)}%"></i></div>
+    <div class="an-rank-v">${fmt(x.v)}<small>${num1(x.v / tot * 100)}%</small></div></li>`).join('')}</ol>`;
+}
+function anAgrupar(ls, chaveF, valorF, rotF) {
+  const g = new Map();
+  for (const r of ls) { const k = chaveF(r); if (k == null || k === '') continue; const x = g.get(k) || g.set(k, { k, v:0, r, nfs:new Set() }).get(k); x.v += valorF(r); if (r.nf) x.nfs.add(anNF(r)); }
+  return [...g.values()].sort((a, b) => b.v - a.v).map(x => ({ ...x, ...rotF(x) }));
+}
+function anSpark(pts) {
+  const W = 120, H = 34, max = Math.max(1, ...pts.map(p => p.v));
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${(i / Math.max(1, pts.length - 1) * W).toFixed(1)},${(H - 2 - p.v / max * (H - 4)).toFixed(1)}`).join('');
+  return `<svg class="an-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${d} L${W},${H} L0,${H} Z" class="a"/><path d="${d}" class="l"/></svg>`;
+}
+
 function anResumo(ls) {
-  const sai = ls.filter(r => r.tipo_mov === 'Saída'), ant = anLinhas(true).filter(r => r.tipo_mov === 'Saída');
+  const { de, ate } = anJanela(_an.periodo);
+  const sai = ls.filter(r => r.tipo_mov === 'Saída');
+  const ant = anLinhas(true).filter(r => r.tipo_mov === 'Saída');
   const o = anSoma(sai), oa = anSoma(ant);
-  const ent = anSoma(ls.filter(r => r.tipo_mov === 'Entrada'));
-  const tr = anTransferencias(ls);
-  const un = _an.un;
-  const kpis = `<div class="kpis">
-    ${anKpi('Notas faturadas', num(o.nfs.size), anVar(o.nfs.size, oa.nfs.size), 'is-info')}
-    ${anKpi('Pedidos atendidos', num(o.peds.size), `${num(o.clis.size)} cliente(s)`)}
-    ${anKpi('Volume que saiu', AN_UNS.filter(u => o.q[u]).map(u => `${anQ(o.q[u])}<small> ${u}</small>`).join('<br>') || '0', `${num1(o.pl)} palete(s)`)}
-    ${anKpi('Valor das saídas', anR(o.valor), anVar(o.valor, oa.valor))}
-    ${anKpi('Entradas', num(ent.nfs.size) + '<small> NF</small>', anQtdTxt(ent))}
-    ${anKpi('Movimentos internos', num(tr.length), `${num(tr.filter(t => t.rota === 'liberação da quarentena').length)} liberação(ões) da quarentena`)}
+  const fat = sai.filter(anFaturado), fatA = ant.filter(anFaturado);
+  const valFat = fat.reduce((s, r) => s + (Number(r.valor) || 0), 0), valFatA = fatA.reduce((s, r) => s + (Number(r.valor) || 0), 0);
+  const nfsFat = new Set(fat.map(anNF)).size;
+  const pl = sai.reduce((s, r) => s + anPl(r), 0), plA = ant.reduce((s, r) => s + anPl(r), 0);
+  const diasCom = new Set(sai.map(r => String(r.emissao).slice(0, 10))).size || 1;
+  const sNf = anSerie(sai, 'nfs', de, ate), sPl = anSerie(sai, 'pl', de, ate), sVal = anSerie(fat, 'valor', de, ate);
+  const met = _an.met || 'nfs';
+  const fmt = anFmtMet(met);
+  const serie = anSerie(met === 'valor' ? fat : sai, met, de, ate);
+
+  const hero = (rot, valor, pe, delta, spark) => `<div class="an-hero">
+      <div class="an-hero-t">${esc(rot)}</div><div class="an-hero-v">${valor}</div>
+      <div class="an-hero-p">${pe}</div>${delta ? `<div class="an-hero-d">${delta}</div>` : ''}${spark || ''}</div>`;
+  const heros = `<div class="an-heros">
+    ${hero('Notas expedidas', num(o.nfs.size), `${num1(o.nfs.size / diasCom)} por dia com expedição`, anVar(o.nfs.size, oa.nfs.size), anSpark(sNf))}
+    ${hero('Paletes', num1(pl), `${num1(pl / diasCom)} por dia · equivalente cheio`, anVar(pl, plA), anSpark(sPl))}
+    ${hero('Faturamento', `<span title="${anR(valFat)}">${anRc(valFat)}</span>`, nfsFat ? `ticket médio ${anR(valFat / nfsFat)} por nota` : 'vendas e exportação', anVar(valFat, valFatA), anSpark(sVal))}
+    ${hero('Pedidos', num(o.peds.size), `${num(o.clis.size)} cliente(s) · ${num(new Set(sai.map(r => r.cli_uf).filter(Boolean)).size)} estado(s)`, anVar(o.peds.size, oa.peds.size))}
+    <div class="an-hero an-hero-un"><div class="an-hero-t">Volume expedido</div>
+      ${AN_UNS.map(u => `<div class="an-un"><span>${u}</span><b>${anQ(o.q[u] || 0)}</b>${anVarCurto(o.q[u] || 0, oa.q[u] || 0)}</div>`).join('')}</div>
   </div>`;
-  const graf = `<div class="an-grafs">
-    <div class="panel"><div class="panel-head"><div><div class="section-title">Notas por dia</div><div class="section-note">notas de saída emitidas</div></div></div>
-      <div class="panel-body">${anBarras(anPorDia(sai.filter((r, i, a) => a.findIndex(x => anNF(x) === anNF(r)) === i), () => 1), 'Notas por dia', v => `${num(v)} nota(s)`)}</div></div>
-    <div class="panel"><div class="panel-head"><div><div class="section-title">Volume que saiu por dia</div><div class="section-note">só ${esc(un)} — unidades não se somam</div></div>
-      <div class="seg">${AN_UNS.map(u => `<button class="${un === u ? 'active' : ''}" onclick="anSet('un','${u}')">${u}</button>`).join('')}</div></div>
-      <div class="panel-body">${anBarras(anPorDia(sai.filter(r => r.un === un), r => Number(r.quantidade) || 0), `Volume em ${un} por dia`, v => `${anQ(v)} ${un}`)}</div></div>
-  </div>`;
-  return kpis + graf + `<div class="panel"><div class="panel-head"><div><div class="section-title">Destaques do período</div><div class="section-note">o que os números dizem</div></div></div>
-    <div class="panel-body"><ul class="an-dest">${anDestaques(ls, sai, o).map(t => `<li>${t}</li>`).join('') || '<li>Pouco movimento no período para tirar conclusões.</li>'}</ul></div></div>`;
+
+  const grafDia = `<div class="panel"><div class="panel-head"><div><div class="section-title">Expedição por dia</div>
+      <div class="section-note">${met === 'valor' ? 'faturamento (vendas e exportação)' : met === 'nfs' ? 'notas de saída emitidas' : met === 'pl' ? 'paletes equivalentes' : `volume em ${met}`} · fim de semana mais claro</div></div>
+      <div class="seg">${AN_METRICAS.map(([v, t]) => `<button class="${met === v ? 'active' : ''}" onclick="anSet('met','${v}')">${t}</button>`).join('')}</div></div>
+    <div class="panel-body">${anBarrasMedia(serie, 'Expedição por dia', fmt)}</div></div>`;
+
+  // Dia da semana: média por dia trabalhado.
+  const porDow = {};
+  for (const p of sNf) { const w = new Date(p.d + 'T12:00').getDay(); if (!p.v) continue; const x = porDow[w] ||= { s:0, n:0 }; x.s += p.v; x.n++; }
+  const dow = [1, 2, 3, 4, 5, 6].map(w => ({ rot:AN_DOW[w], v:porDow[w] ? porDow[w].s / porDow[w].n : 0, sub:porDow[w] ? `${porDow[w].n} dia(s)` : '' }));
+
+  const cats = anAgrupar(sai, r => anCat(r), r => 1, x => ({ rot:x.k, v:x.nfs.size || 0 }));
+  const ufs = anAgrupar(sai, r => r.cli_uf || '—', anPl, x => ({ rot:x.k, sub:`${num(x.nfs.size)} nota(s)` })).slice(0, 10);
+  const prods = anAgrupar(sai, r => `${r.filial}|${r.codigo}`, anPl, x => ({ rot:x.r.descricao || x.r.codigo, sub:`${filialCurta(x.r.filial)} · ${num(x.nfs.size)} nota(s)` })).slice(0, 10);
+  const clis = anAgrupar(fat, r => r.cli_nome || '', r => Number(r.valor) || 0, x => ({ rot:x.k, sub:`${x.r.cli_uf || '—'} · ${num(x.nfs.size)} nota(s)` })).slice(0, 10);
+  const fils = anAgrupar(sai, r => r.filial, anPl, x => ({ rot:filialCurta(x.k), sub:`${num(x.nfs.size)} nota(s)` }));
+  const arms = anAgrupar(sai, r => r.arm || '—', anPl, x => ({ rot:x.k, sub:(nomeArmazem(x.k) || '').toLowerCase() }));
+  const p1 = v => `${num1(v)} pl`;
+
+  const bloco = (tit, nota, html) => `<div class="panel an-bloco"><div class="panel-head"><div><div class="section-title">${tit}</div><div class="section-note">${nota}</div></div></div><div class="panel-body">${html}</div></div>`;
+  return heros + grafDia + anRitmoMes(met === 'valor' || met === 'nfs' || met === 'pl' || AN_UNS.includes(met) ? met : 'nfs') +
+    `<div class="an-grade3">
+      ${bloco('Tipo de saída', 'notas por tipo (pela TES)', anRanking(cats.map(c => ({ rot:c.rot, v:c.v })), v => num(v)))}
+      ${bloco('Dia da semana', 'média de notas por dia trabalhado', anRanking(dow.filter(d => d.v), v => num1(v)))}
+      ${bloco('Por filial', 'paletes expedidos', anRanking(fils, p1))}
+    </div>
+    <div class="an-grade2">
+      ${bloco('Produtos que mais saíram', 'top 10 em paletes', anRanking(prods, p1))}
+      ${bloco('Para onde vai', 'estados, em paletes', anRanking(ufs, p1))}
+      ${bloco('Maiores clientes', 'top 10 em faturamento', anRanking(clis, anRc))}
+      ${bloco('De onde sai', 'armazém da nota, em paletes', anRanking(arms.slice(0, 8), p1))}
+    </div>
+    <div class="panel"><div class="panel-head"><div><div class="section-title">Destaques do período</div><div class="section-note">o que os números dizem</div></div></div>
+      <div class="panel-body"><ul class="an-dest">${anDestaques(ls, sai, o).map(t => `<li>${t}</li>`).join('') || '<li>Pouco movimento no período para tirar conclusões.</li>'}</ul></div></div>`;
+}
+function anVarCurto(a, b) {
+  if (!b) return '';
+  const p = (a - b) / b * 100;
+  return Math.abs(p) < 0.5 ? '' : `<em class="${p > 0 ? 'up' : 'down'}">${p > 0 ? '▲' : '▼'}${num(Math.round(Math.abs(p)))}%</em>`;
 }
 
 function anDestaques(ls, sai, o) {
   const out = [];
-  // Dia mais forte
   const porDia = {};
   for (const r of sai) (porDia[String(r.emissao).slice(0, 10)] ||= new Set()).add(anNF(r));
-  const dia = Object.entries(porDia).sort((a, b) => b[1].size - a[1].size)[0];
-  if (dia) out.push(`Dia com mais notas: <b>${saData(dia[0])}</b>, com ${num(dia[1].size)} nota(s).`);
-  // Produto e cliente que mais saíram (por unidade principal)
-  for (const u of AN_UNS) {
-    if (!o.q[u]) continue;
-    const p = {};
-    for (const r of sai) if (r.un === u) { const x = p[r.codigo] ||= { d:r.descricao, q:0 }; x.q += Number(r.quantidade) || 0; }
-    const top = Object.values(p).sort((a, b) => b.q - a.q)[0];
-    if (top) out.push(`Produto que mais saiu em ${u}: <b>${esc(top.d)}</b> — ${anQ(top.q)} ${u} (${num1(top.q / o.q[u] * 100)}% do volume em ${u}).`);
-  }
-  const c = {};
-  for (const r of sai) if (r.cli_nome) { const x = c[r.cli_nome] ||= { n:new Set(), v:0, uf:r.cli_uf }; x.n.add(anNF(r)); x.v += Number(r.valor) || 0; }
-  const topC = Object.entries(c).sort((a, b) => b[1].v - a[1].v)[0];
-  if (topC) out.push(`Maior cliente em valor: <b>${esc(topC[0])}</b>${topC[1].uf ? ` (${esc(topC[1].uf)})` : ''} — ${num(topC[1].n.size)} nota(s), ${anR(topC[1].v)}.`);
-  // Tipos de saída que não são venda
-  const bon = sai.filter(r => /BONIFIC/i.test(r.tes_desc || ''));
+  const dias = Object.entries(porDia).sort((a, b) => b[1].size - a[1].size);
+  if (dias[0]) out.push(`Dia mais forte: <b>${AN_DOW[new Date(dias[0][0] + 'T12:00').getDay()]} ${saData(dias[0][0])}</b>, com ${num(dias[0][1].size)} nota(s).`);
+  const tr = sai.filter(r => anCat(r) === 'Transferência entre filiais');
+  if (tr.length) out.push(`Transferência entre filiais: ${num(new Set(tr.map(anNF)).size)} nota(s), ${num1(tr.reduce((s, r) => s + anPl(r), 0))} palete(s).`);
+  const des = sai.filter(r => anCat(r) === 'Descarte');
+  if (des.length) out.push(`Descarte: ${num(new Set(des.map(anNF)).size)} nota(s), ${anQtdTxt(anSoma(des))}.`);
+  const bon = sai.filter(r => anCat(r) === 'Bonificação');
   if (bon.length) out.push(`Bonificação: ${num(new Set(bon.map(anNF)).size)} nota(s), ${anQtdTxt(anSoma(bon))}.`);
-  const dev = ls.filter(r => /DEVOLU/i.test(r.tes_desc || ''));
+  const dev = ls.filter(r => /DEVOLU|^DEV\b/i.test(r.tes_desc || ''));
   if (dev.length) out.push(`Devoluções: ${num(new Set(dev.map(anNF)).size)} nota(s), ${anQtdTxt(anSoma(dev))}.`);
-  // Internos
-  const tr = anTransferencias(ls);
-  const lib = tr.filter(t => t.rota === 'liberação da quarentena');
+  const tri = anTransferencias(ls);
+  const lib = tri.filter(t => t.rota === 'liberação da quarentena');
   if (lib.length) out.push(`Liberado da quarentena: ${num(lib.length)} lote(s), ${anQtdTxt(anSoma(lib.map(t => t.base)))}.`);
-  const fr = tr.filter(t => t.rota === 'fracionamento');
-  if (fr.length) out.push(`Fracionamentos: ${num(fr.length)}.`);
-  // Cobertura
   const cob = anCoberturaCalc();
   const curta = cob.filter(c => c.dias !== null && c.dias < 15);
   const risco = cob.filter(c => c.risco > 0.001);
