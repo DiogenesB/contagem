@@ -1664,8 +1664,88 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
   .modal-foot .btn { flex:1; }
 }
 
+/* ═══════════ BOLETIM DO DIA (boletim.js) ═══════════ */
+.bo-ctrl { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin:0 0 14px; max-width:1040px; }
+.bo-dia { display:flex; align-items:center; gap:6px; }
+.bo-dia .btn { min-width:34px; justify-content:center; font-size:1rem; }
+.bo-data { width:auto !important; min-height:32px !important; padding:5px 9px !important; }
+.bo { max-width:1040px; margin:0 0 32px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--sh-sm); padding:28px 32px 22px; }
+.bo-cab { border-bottom:2px solid var(--text); padding-bottom:14px; margin-bottom:16px; }
+.bo-selo { font-size:.6875rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); }
+.bo-cab h1 { font-size:1.75rem; font-weight:700; letter-spacing:-.02em; margin:4px 0 4px; line-height:1.15; text-wrap:balance; }
+.bo-meta { font-size:.8125rem; color:var(--text-3); }
+.bo-aviso { font-size:.8125rem; color:var(--text-2); background:var(--surface-2); border-left:3px solid var(--warn); border-radius:4px; padding:8px 12px; margin-bottom:10px; }
+.bo-lide { font-size:1.0625rem; line-height:1.6; color:var(--text); margin:6px 0 18px; max-width:72ch; text-wrap:pretty; }
+.bo-lide b { font-variant-numeric:tabular-nums; }
+.bo-nums { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:10px; margin-bottom:18px; }
+.bo-num { border:1px solid var(--line); border-radius:var(--r-sm); padding:12px 14px; display:flex; flex-direction:column; gap:1px; min-width:0; background:var(--bg); }
+.bo-num b { font-size:1.625rem; font-weight:650; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1.1; }
+.bo-num span { font-size:.8125rem; color:var(--text-2); }
+.bo-num small { font-size:.71875rem; color:var(--text-3); margin-top:3px; line-height:1.35; }
+.bo-dest { list-style:none; margin:0 0 22px; padding:0; display:flex; flex-direction:column; gap:6px; }
+.bo-dest li { font-size:.875rem; line-height:1.5; color:var(--text-2); padding:7px 12px; border-left:3px solid var(--line-2); background:var(--surface-2); border-radius:0 4px 4px 0; }
+.bo-dest li b { color:var(--text); }
+.bo-d-neg { border-left-color:var(--neg) !important; } .bo-d-warn { border-left-color:var(--warn) !important; }
+.bo-d-pos { border-left-color:var(--pos) !important; } .bo-d-info { border-left-color:var(--info) !important; }
+.bo-sec { margin-top:22px; }
+.bo-sec-h { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; border-bottom:1px solid var(--line); padding-bottom:6px; margin-bottom:12px; }
+.bo-sec-h h2 { font-size:1.125rem; font-weight:700; letter-spacing:-.01em; margin:0; }
+.bo-sec-h span { font-size:.8125rem; color:var(--text-3); }
+.bo-nf { border:1px solid var(--line); border-radius:var(--r-sm); margin-bottom:12px; overflow:hidden; }
+.bo-nf-h { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 14px 2px; }
+.bo-nf-h > b { font-family:var(--mono); font-size:.9375rem; }
+.bo-nf-h .mono { font-family:var(--mono); font-size:.75rem; color:var(--text-3); }
+.bo-nf-arm { margin-left:auto; font-size:.8125rem; color:var(--text-2); }
+.bo-nf-arm b { font-family:var(--mono); color:var(--text); font-size:.9375rem; }
+.bo-nf-sub { font-size:.8125rem; color:var(--text-3); padding:0 14px 8px; }
+.bo-nf-sub b { color:var(--text-2); font-weight:600; }
+.bo-nf .tbl-wrap { border-top:1px solid var(--line); }
+.bo-tbl td, .bo-tbl th { padding-top:7px; padding-bottom:7px; }
+.bo-abre { cursor:pointer; } .bo-abre:hover td { background:var(--surface-2); }
+.bo-abre td:first-child b::before { content:'▸ '; color:var(--text-3); font-weight:400; }
+.bo-abre.aberta td:first-child b::before { content:'▾ '; }
+.bo-itens td { background:var(--bg); }
+.bo-nfcol { white-space:nowrap; } .bo-nfcol .sub { font-size:.6875rem; } .bo-nw { white-space:nowrap; }
+.bo-itens ul { margin:0; padding-left:18px; font-size:.8125rem; color:var(--text-2); display:flex; flex-direction:column; gap:3px; }
+.bo-lista { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+.bo-lista li { font-size:.84375rem; line-height:1.55; color:var(--text-2); padding:8px 0; border-bottom:1px solid var(--line); }
+.bo-lista li:last-child { border-bottom:0; }
+.bo-lista li b { color:var(--text); font-weight:600; }
+.bo-lista .mono, .bo .mono { font-family:var(--mono); font-size:.8em; }
+.bo-rota { color:var(--text) !important; font-weight:600; }
+.bo-lista .tag { margin-right:4px; }
+.bo-pessoas { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:8px; margin-bottom:14px; }
+.bo-pessoa { display:flex; gap:10px; align-items:flex-start; border:1px solid var(--line); border-radius:var(--r-sm); padding:10px 12px; }
+.bo-pessoa b { font-size:.875rem; }
+.bo-pessoa .sub { font-size:.75rem; color:var(--text-3); margin-top:2px; line-height:1.45; }
+.bo-av { flex:none; width:30px; height:30px; border-radius:50%; background:var(--accent-sf, var(--surface-2)); color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:.6875rem; font-weight:700; }
+.bo-fora td { background:var(--neg-sf); }
+.bo-fora-txt { color:var(--neg); font-family:var(--sans); font-size:.6875rem; font-weight:600; margin-top:2px; }
+.bo-mais { padding:10px 0 0; text-align:center; }
+.bo-vazio { color:var(--text-3); font-size:.875rem; margin:0; padding:6px 0; }
+.bo-rod { margin-top:24px; padding-top:10px; border-top:1px solid var(--line); font-size:.75rem; color:var(--text-3); }
+@media (max-width:900px) { .bo-nums { grid-template-columns:repeat(2, minmax(0, 1fr)); } .bo { padding:18px 16px; } .bo-nf-arm { margin-left:0; width:100%; } }
+@media (max-width:520px) { .bo-cab h1 { font-size:1.375rem; } .bo-num b { font-size:1.375rem; } }
+
 @media print {
   .side, .topbar, .btn, .filters, .side-veu { display:none !important; }
+  body.bo-imprimindo #page-hoje .page-head, body.bo-imprimindo .sa-abas-bar, body.bo-imprimindo .bo-ctrl, body.bo-imprimindo #hj-corpo { display:none !important; }
+  body.bo-imprimindo .bo { border:0; box-shadow:none; padding:0; max-width:none; }
+  body.bo-imprimindo .bo-nf, body.bo-imprimindo .bo-pessoa, body.bo-imprimindo .bo-dest li, body.bo-imprimindo tr { break-inside:avoid; }
+  body.bo-imprimindo .bo-sec-h { break-after:avoid; }
+  #impressao .bo { font-size:10.5px; }
+  #impressao .bo-nums { grid-template-columns:repeat(5, minmax(0, 1fr)); gap:6px; }
+  #impressao .bo-num { padding:7px 9px; } #impressao .bo-num b { font-size:1.25rem; }
+  #impressao .bo-lide { font-size:.95rem; max-width:none; }
+  #impressao .tbl-wrap { overflow:visible !important; }
+  #impressao .bo-tbl { width:100%; font-size:9.5px; }
+  #impressao .bo-tbl td, #impressao .bo-tbl th { padding:3px 5px; }
+  #impressao .bo-tbl td.nome { min-width:0; }
+  #impressao .bo-tbl th { position:static !important; }
+  #impressao .bo-itens { display:none !important; }
+  #impressao .bo-abre td:first-child b::before { content:none; }
+  #impressao .bo-nf-arm { margin-left:auto; width:auto; }
+  #impressao .bo-pessoas { grid-template-columns:repeat(3, minmax(0, 1fr)); }
   .main { margin:0 !important; padding:0 !important; }
   body { background:#fff; color:#000; }
 }
@@ -1865,11 +1945,16 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
       <p class="page-sub" id="hj-sub">Olhando o saldo, o mapa e o que mudou…</p>
     </div>
     <div class="btn-row">
-      <button class="btn btn-sm" onclick="carregarHoje(true)">Atualizar</button>
+      <button class="btn btn-sm" onclick="hjAtualizar()">Atualizar</button>
       <button class="btn btn-sm" onclick="irPara('saldo')">Abrir o Saldo</button>
     </div>
   </div>
+  <div class="sa-abas-bar"><div class="seg" id="hj-abas" role="tablist" aria-label="Partes da tela Hoje">
+    <button data-a="fila" class="active" onclick="hjAba('fila')">Para arrumar</button>
+    <button data-a="boletim" onclick="hjAba('boletim')">Boletim do dia</button>
+  </div></div>
   <div id="hj-corpo"></div>
+  <div id="hj-boletim" hidden></div>
 </section>
 
 <!-- ══════════════════ ANALISTA ══════════════════
@@ -2856,6 +2941,7 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 <script src="./saldo-erp.js?v=10"></script>
 <script src="./inteligencia.js?v=3"></script>
 <script src="./analista.js?v=4"></script>
+<script src="./boletim.js?v=1"></script>
 <script src="./inicio.js?v=1"></script>
 <script src="./impressao.js?v=3"></script>
 <script src="./identificacao.js?v=3"></script>
