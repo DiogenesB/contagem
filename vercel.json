@@ -23,7 +23,7 @@
   ],
   "headers": [
     {
-      "source": "/(comum|fila|impressao|identificacao|saldo-mapeado|saldo-erp|inteligencia|analista|usuarios|inicio|separacao|leitor|boletim|painel-app).js",
+      "source": "/(comum|fila|impressao|identificacao|saldo-mapeado|saldo-erp|inteligencia|analista|usuarios|inicio|separacao|leitor|boletim|painel-app|pwa).js",
       "headers": [
         {
           "key": "Cache-Control",
