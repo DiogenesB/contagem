@@ -3,7 +3,7 @@
    O mesmo comportamento de app em todas as telas (operador, mapa,
    layout). O painel tem o painel-app.js, que faz isto e mais.
 
-   Uso:  <script src="./pwa.js" defer data-app="layout"
+   Uso:  <script src="/assets/js/comum/pwa.js" defer data-app="layout"
                  data-nome="Layout 3D" data-cor="--surface"
                  data-instalar="sim" data-offline="sim"></script>
      data-app       chave da tela (lembra o "agora não" de cada uma)

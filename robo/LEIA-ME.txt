@@ -1,0 +1,156 @@
+﻿ROBÔ DO SALDO — Planilha do ERP -> Saldo mapeado (automático)
+==============================================================
+
+O QUE FAZ
+  Nos horários agendados: abre a planilha do ERP escondida, atualiza a
+  consulta, confere se atualizou de verdade e manda o saldo para o
+  Saldo mapeado (igual ao botão "Geral — todos os armazéns"), já com
+  tipo de produto, fabricação e validade (a identificação do palete usa).
+  Não mexe no saldo da contagem (Validação).
+
+PRECISA DE
+  - Um computador Windows com Excel, que fique LIGADO no horário dos envios
+    e onde a planilha já atualiza do ERP.
+  - Acesso ao painel do Supabase.
+
+JEITO RÁPIDO (faz os passos 3 a 7 sozinho)
+  1. Rode o passo 1 abaixo (SQL no Supabase) e tenha a chave do passo 2.
+  2. Copie esta pasta para o computador do robô e dê dois cliques no
+     INSTALAR.bat. Ele pede a planilha (janela), a chave (cola e Enter)
+     e o horário (Enter aceita o padrão: a cada 60 min, das 6h às 19h).
+     O Windows acorda o robô a cada 5 min; é ele que confere se já está
+     na hora ou se alguém apertou "Pedir ao robô" no painel.
+     Para rodar na hora sem painel: C:\RoboSaldo\RODAR-AGORA.bat
+  3. No fim tem que aparecer "PRONTO". Se parar, ele diz o motivo; corrija
+     e rode de novo.
+  Se preferir fazer à mão, siga os passos abaixo.
+
+1. BANCO (uma vez)
+  Supabase > SQL Editor > New query > cole TODO o sql/sync-saldo-erp.sql
+  > Run. Tem que aparecer "Success. No rows returned".
+  Depois rode também o sql/migracao-saldo-historico.sql (histórico da
+  tela Saldo do painel: evolução diária e lotes parados) e o
+  sql/migracao-robo-pedido.sql (botão "Pedir ao robô" do painel).
+
+2. CHAVE SECRETA
+  Supabase > Project Settings > API Keys > "Secret keys" > copie a chave
+  sb_secret_... (ou crie uma: "Add new secret key", nome "robo-saldo").
+  Ela grava no banco sem restrição: só fica no arquivo desta pasta,
+  nunca em página, WhatsApp ou e-mail.
+
+3. PASTA C:\RoboSaldo
+  - atualizar-saldo.ps1   (este script)
+  - chave-supabase.txt    (Bloco de Notas: cole só a chave, sem espaço
+                           nem linha a mais; salve com esse nome)
+  - a planilha do ERP     (de preferência uma CÓPIA só do robô)
+  Explorer > Exibir > marque "Extensões de nomes de arquivos" para não
+  criar chave-supabase.txt.txt sem perceber.
+  Botão direito no .ps1 > Propriedades > marque "Desbloquear" > OK.
+
+4. CONFIGURAR
+  Botão direito no .ps1 > Abrir com > Bloco de Notas. No bloco
+  "CONFIGURE AQUI" ajuste:
+    $Planilha = caminho da planilha (Shift + botão direito no arquivo
+                > "Copiar como caminho", cole sem as aspas duplas)
+    $Aba      = nome da aba do saldo (se errar, o robô procura sozinho a
+                aba que tem B8_PRODUTO na primeira linha)
+  Salvar como > Codificação "UTF-8 com BOM".
+
+5. PREPARAR A PLANILHA
+  Abra a planilha à mão uma vez, Dados > Atualizar Tudo. Se o ERP pedir
+  usuário/senha, marque "Salvar senha". Confira que as colunas B8_FILIAL,
+  B1_TIPO, B8_PRODUTO, B1_DESC, B1_UM, B8_LOTECTL, B8_SALDO, B8_EMPENHO,
+  B8_LOCAL, "data de fabricação" e "data de validade" estão na linha 1.
+  Feche o Excel.
+
+6. TESTAR NA MÃO
+  Menu Iniciar > "PowerShell" > cole e Enter:
+    powershell -NoProfile -ExecutionPolicy Bypass -File "C:\RoboSaldo\atualizar-saldo.ps1" -Agora
+  Abra C:\RoboSaldo\atualizar-saldo.log: a última linha tem que ser
+  "OK: N linha(s) enviada(s)". No painel > Saldo mapeado, a data da
+  planilha passa a ser a de agora.
+
+7. AGENDAR
+  O jeito rápido (INSTALAR.bat) já faz isto. À mão:
+  a) Crie C:\RoboSaldo\rodar-oculto.vbs (Bloco de Notas) com UMA linha:
+     CreateObject("WScript.Shell").Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ""C:\RoboSaldo\atualizar-saldo.ps1""", 0, True
+  b) Menu Iniciar > "Agendador de Tarefas" > Criar Tarefa (NÃO a básica):
+    Geral:          Nome "Robô do saldo"
+                    "Executar somente quando o usuário estiver conectado"
+    Disparadores:   Novo > Diariamente, início 00:00
+                    marque "Repetir a tarefa a cada: 5 minutos"
+                    "por um período de: 1 dia" > OK
+    Ações:          Novo > Iniciar um programa
+                    Programa:   wscript.exe
+                    Argumentos: "C:\RoboSaldo\rodar-oculto.vbs"
+    Condições:      desmarque "Iniciar a tarefa somente se o computador
+                    estiver ligado à rede elétrica"
+    Configurações:  "Executar a tarefa assim que possível após uma
+                    inicialização agendada ter sido perdida";
+                    "Interromper a tarefa se ela for executada por mais
+                    de: 30 minutos"; "Se a tarefa já estiver em execução:
+                    Não iniciar uma nova instância"
+  A cada 5 min o robô só pergunta ao Supabase se é a vez dele (leva 1 s).
+  Ele atualiza de verdade a cada $IntervaloMin minutos, entre $HoraIni e
+  $HoraFim (bloco CONFIGURE AQUI), ou na hora quando alguém aperta
+  "Pedir ao robô" na tela Saldo do painel.
+  Rodar na hora pelo computador do robô: RODAR-AGORA.bat (ou, no
+  PowerShell, o comando do passo 6 com -Agora no fim).
+  Configurações do Windows > Energia: "Suspender" = Nunca, e o usuário
+  tem que ficar logado (pode bloquear a tela, não pode sair/desconectar).
+
+CUIDADOS
+  - Cada envio troca o Saldo mapeado inteiro das filiais que vieram na
+    planilha (como o "Geral"). Importar um armazém à mão no painel vale
+    até o próximo envio do robô.
+  - Não deixe a planilha do robô aberta por alguém: o robô salva o
+    arquivo depois de atualizar. Por isso, use uma cópia só dele.
+
+SE PARAR DE ATUALIZAR — veja o atualizar-saldo.log
+  - "A consulta não atualizou": ERP fora do ar ou senha da conexão
+    expirou. Abra a planilha, Dados > Atualizar Tudo, salve a senha.
+  - "Coluna ... não encontrada": a consulta mudou o nome de uma coluna.
+  - "Planilha não encontrada" / "chave não encontrada": caminho errado
+    em $Planilha ou falta o chave-supabase.txt.
+  - 401 / "Invalid API key": chave errada — use a sb_secret_.
+  - "Could not find the function importar_estoque_ref": rode o passo 1.
+  - Nada no log: a tarefa não rodou; veja o Histórico da tarefa. (Quando
+    não é a vez, o robô sai sem anotar nada: isso é normal.)
+  - Na tela Saldo, "sem sinal do robô": o computador do robô está
+    desligado, suspenso ou sem ninguém logado.
+  - "Já tem uma atualização em andamento": espere terminar (até 40 min).
+  Conferir no Supabase (SQL Editor):
+    select * from estoque_ref_sync order by quando desc limit 10;
+    select * from robo_controle;
+
+
+══════════════════════════════════════════════════════════════
+ROBÔ DAS MOVIMENTAÇÕES (planilha Mov. Estoque · MOVEST01)
+══════════════════════════════════════════════════════════════
+O QUE FAZ
+  Às 07:00 e às 12:00 abre a planilha das movimentações escondida, põe
+  nas células De/Até os últimos 3 dias, atualiza só essa consulta e
+  manda para o sistema as entradas, saídas (NF), saídas e entradas
+  internas — só PA e ME das filiais do robô do saldo. A janela é
+  trocada inteira: um movimento estornado no ERP some do sistema também.
+  Usado pela tela Analista e pela tela Hoje (por que o saldo mudou).
+
+INSTALAR (depois do robô do saldo)
+  1. Supabase > SQL Editor: rode o sql/migracao-movimentos.sql.
+  2. No computador do robô: dois cliques no INSTALAR-MOVIMENTOS.bat.
+     Ele usa a mesma pasta C:\RoboSaldo e a mesma chave, pede a
+     planilha (janela), faz a carga inicial de 60 dias e agenda às
+     07:00 e às 12:00 (Enter aceita).
+  O computador do robô precisa ter a conexão ODBC DADOS_PROTHEUS (a
+  mesma que faz a planilha atualizar na sua máquina).
+
+RODAR NA HORA
+  C:\RoboSaldo\RODAR-MOVIMENTOS.bat
+
+SE PARAR — veja C:\RoboSaldo\atualizar-movimentos.log
+  - "A consulta não atualizou": ERP fora do ar ou ODBC sem acesso.
+  - "não tem o nome 'de_emiss'": a planilha mudou; as células de data
+    da consulta precisam continuar com os nomes de_emiss e ate_emiss.
+  - "Could not find the function importar_erp_mov": rode o passo 1.
+  Conferir no Supabase:
+    select * from erp_mov_sync order by quando desc limit 10;

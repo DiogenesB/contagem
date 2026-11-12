@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Simbiose · Controle de Estoque</title>
 <meta name="description" content="Painel de estoque da Simbiose Agro: saldo, mapa, divergências, boletim do dia e expedição.">
-<link rel="manifest" href="./manifest-painel.json">
+<link rel="manifest" href="/assets/manifests/painel.json">
 <meta name="theme-color" content="#15181C">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,8 +13,8 @@
 <meta name="apple-mobile-web-app-title" content="Painel">
 <meta name="application-name" content="Painel">
 <meta name="format-detection" content="telephone=no">
-<link rel="icon" type="image/png" sizes="192x192" href="./painel-192.png">
-<link rel="apple-touch-icon" href="./painel-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/painel-192.png">
+<link rel="apple-touch-icon" href="/assets/icons/painel-180.png">
 <script>
 /* Antes de qualquer pintura, para a tela não piscar branco. */
 (function () {
@@ -3054,17 +3054,17 @@ html.sem-rede .app-offline {
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="./comum.js?v=7"></script>
-<script src="./usuarios.js?v=1"></script>
-<script src="./saldo-mapeado.js?v=18"></script>
-<script src="./saldo-erp.js?v=10"></script>
-<script src="./inteligencia.js?v=5"></script>
-<script src="./analista.js?v=4"></script>
-<script src="./boletim.js?v=2"></script>
-<script src="./painel-app.js?v=1" defer></script>
-<script src="./inicio.js?v=1"></script>
-<script src="./impressao.js?v=3"></script>
-<script src="./identificacao.js?v=3"></script>
+<script src="/assets/js/comum/comum.js?v=7"></script>
+<script src="/assets/js/comum/usuarios.js?v=1"></script>
+<script src="/assets/js/painel/saldo-mapeado.js?v=18"></script>
+<script src="/assets/js/painel/saldo-erp.js?v=10"></script>
+<script src="/assets/js/painel/inteligencia.js?v=5"></script>
+<script src="/assets/js/painel/analista.js?v=4"></script>
+<script src="/assets/js/painel/boletim.js?v=2"></script>
+<script src="/assets/js/painel/painel-app.js?v=1" defer></script>
+<script src="/assets/js/painel/inicio.js?v=1"></script>
+<script src="/assets/js/comum/impressao.js?v=3"></script>
+<script src="/assets/js/comum/identificacao.js?v=3"></script>
 <script>
 'use strict';
 

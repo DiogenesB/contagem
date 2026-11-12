@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Simbiose · Mapa do drive-in</title>
 <!-- App instalável (PWA): ícone na tela inicial, abre em tela cheia -->
-<link rel="manifest" href="./manifest-mapa.json">
+<link rel="manifest" href="/assets/manifests/mapa.json">
 <meta name="theme-color" content="#14171C">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Mapa">
-<link rel="apple-touch-icon" href="./mapa-180.png">
-<link rel="icon" type="image/png" sizes="192x192" href="./mapa-192.png">
+<link rel="apple-touch-icon" href="/assets/icons/mapa-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/mapa-192.png">
 <script>
 /* Tema antes da primeira pintura — mesma chave dos outros apps. */
 (function () {
@@ -663,12 +663,12 @@ body.com-lado .tela { max-width:none; margin:0 calc(var(--lado) + 28px) 0 0; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="./comum.js?v=7"></script>
-<script src="./usuarios.js?v=1"></script>
-<script src="./impressao.js?v=4"></script>
-<script src="./identificacao.js?v=3"></script>
-<script src="./leitor.js?v=1"></script>
-<script src="./separacao.js?v=4"></script>
+<script src="/assets/js/comum/comum.js?v=7"></script>
+<script src="/assets/js/comum/usuarios.js?v=1"></script>
+<script src="/assets/js/comum/impressao.js?v=4"></script>
+<script src="/assets/js/comum/identificacao.js?v=3"></script>
+<script src="/assets/js/comum/leitor.js?v=1"></script>
+<script src="/assets/js/mapa/separacao.js?v=4"></script>
 <script>
 let sb = null;
 let _ocupacao = {};
@@ -1754,6 +1754,6 @@ function init() {
 window.addEventListener('DOMContentLoaded', init);
 </script>
 <!-- Aviso de versão nova e de sem internet (instalar o mapa já tem o próprio botão no menu). -->
-<script src="./pwa.js?v=1" defer data-app="mapa" data-nome="O mapa" data-instalar="nao"></script>
+<script src="/assets/js/comum/pwa.js?v=1" defer data-app="mapa" data-nome="O mapa" data-instalar="nao"></script>
 </body>
 </html>

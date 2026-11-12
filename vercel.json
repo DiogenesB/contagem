@@ -1,43 +1,29 @@
 {
   "rewrites": [
-    {
-      "source": "/",
-      "destination": "/painel.html"
-    },
-    {
-      "source": "/painel",
-      "destination": "/painel.html"
-    },
-    {
-      "source": "/mobile",
-      "destination": "/mobile.html"
-    },
-    {
-      "source": "/mapa",
-      "destination": "/mapa.html"
-    },
-    {
-      "source": "/layout",
-      "destination": "/layout.html"
-    }
+    { "source": "/", "destination": "/pages/painel.html" },
+    { "source": "/painel", "destination": "/pages/painel.html" },
+    { "source": "/painel.html", "destination": "/pages/painel.html" },
+    { "source": "/mobile", "destination": "/pages/mobile.html" },
+    { "source": "/mobile.html", "destination": "/pages/mobile.html" },
+    { "source": "/mapa", "destination": "/pages/mapa.html" },
+    { "source": "/mapa.html", "destination": "/pages/mapa.html" },
+    { "source": "/layout", "destination": "/pages/layout.html" },
+    { "source": "/layout.html", "destination": "/pages/layout.html" }
   ],
   "headers": [
     {
-      "source": "/(comum|fila|impressao|identificacao|saldo-mapeado|saldo-erp|inteligencia|analista|usuarios|inicio|separacao|leitor|boletim|painel-app|pwa).js",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
-      ]
+      "source": "/assets/js/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/assets/manifests/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     },
     {
       "source": "/sw.js",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
+        { "key": "Service-Worker-Allowed", "value": "/" }
       ]
     }
   ]

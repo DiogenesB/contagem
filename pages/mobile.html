@@ -13,15 +13,15 @@
   } catch (e) { document.documentElement.setAttribute('data-tema', 'escuro'); }
 })();
 </script>
-<link rel="manifest" href="./manifest.json">
+<link rel="manifest" href="/assets/manifests/operador.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Operador">
 <meta name="application-name" content="Operador">
 <meta name="format-detection" content="telephone=no">
-<link rel="icon" type="image/png" sizes="192x192" href="./operador-192.png">
-<link rel="apple-touch-icon" href="./operador-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/operador-192.png">
+<link rel="apple-touch-icon" href="/assets/icons/operador-180.png">
 <title>Simbiose · Operador</title>
 <style>
 /* ═══════════════════════════════════════════════════════════════
@@ -1070,13 +1070,13 @@ html[data-tema="claro"] .mapa-cel.pendente { color:#FFF; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="./comum.js?v=7"></script>
-<script src="./usuarios.js?v=1"></script>
+<script src="/assets/js/comum/comum.js?v=7"></script>
+<script src="/assets/js/comum/usuarios.js?v=1"></script>
 <datalist id="lista-armazens"></datalist>
 <script>document.getElementById('lista-armazens').innerHTML = Object.entries(ARMAZENS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');</script>
-<script src="./impressao.js?v=3"></script>
-<script src="./fila.js?v=2"></script>
-<script src="./leitor.js?v=1"></script>
+<script src="/assets/js/comum/impressao.js?v=3"></script>
+<script src="/assets/js/operador/fila.js?v=2"></script>
+<script src="/assets/js/comum/leitor.js?v=1"></script>
 <script>
 'use strict';
 
@@ -2933,6 +2933,6 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <!-- App instalável: aviso de versão nova e de instalar (a falta de rede o próprio app já avisa). -->
-<script src="./pwa.js?v=1" defer data-app="operador" data-nome="o app do operador" data-offline="nao" data-baixo="68"></script>
+<script src="/assets/js/comum/pwa.js?v=1" defer data-app="operador" data-nome="o app do operador" data-offline="nao" data-baixo="68"></script>
 </body>
 </html>
