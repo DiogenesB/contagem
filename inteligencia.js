@@ -28,6 +28,8 @@ const INTEL_TIPOS = {
   'codigo-filial':   { rot:'Código de outra filial',        cor:'alt',  peso:1.0 },
   'armazem-erp':     { rot:'Transferência sem o mapa',      cor:'alt',  peso:1.1 },
   'armazem':         { rot:'Armazém diferente',             cor:'alt',  peso:1.0 },
+  'transf-faturado': { rot:'Transferido e faturado',        cor:'warn', peso:1.35 },
+  'transf-pendente': { rot:'Transferido, falta faturar',    cor:'alt',  peso:1.1 },
   'saiu-nao-baixou': { rot:'Saiu e não foi baixado',        cor:'warn', peso:1.3 },
   'sobra':           { rot:'Sobra no mapa',                 cor:'warn', peso:0.9 },
   'erp-nao-baixou':  { rot:'Saiu do mapa, ERP não baixou',  cor:'info', peso:1.0 },
@@ -169,6 +171,67 @@ function iErpTxt(e) {
   const rota = iRota(de, para, codDif);
   return `${iDia(e)}: ${rota} ${q} <b>${esc(de || '?')} → ${esc(para || '?')}</b>${codDif ? ` (vira ${esc(sai ? par.descricao : e.descricao || '')})` : ''} · doc ${esc(e.nf || '—')}${e.usuario ? ` por ${esc(e.usuario)}` : ''}`;
 }
+/* ── O caminho do lote depois de mapeado ──
+   Mapa no armazém A; o ERP transferiu parte para B (saída interna em A +
+   entrada interna em B, mesma sequência); de B saiu na nota (ou voltou
+   para A). Devolve quanto foi faturado, quanto voltou e quanto ainda está
+   em B — cada transferência casada com as saídas de B que vieram depois,
+   na ordem, sem usar a mesma nota duas vezes. */
+function iCadeia(l) {
+  const armM = l.armsMapa[0];
+  if (!armM || !_intel.erpKa) return null;
+  const desdeMapa = Math.min(...l.itens.map(r => iTs(r.created_at)).filter(Boolean), Date.now());
+  const dia0 = new Date(desdeMapa); dia0.setHours(0, 0, 0, 0);
+  const trans = [];
+  for (const s of _intel.erpKa.get(`${l.kc}|${armM}`) || []) {
+    if (s.tipo_mov !== 'Saída Interna' || iErpTs(s) < dia0.getTime()) continue;
+    const e = iPar(s);
+    if (!e || e.arm === armM) continue;
+    const codDif = normalizarCodigo(e.codigo) !== normalizarCodigo(s.codigo);
+    trans.push({ s, e, para:e.arm, kcPara:e.kc, qtd:Number(s.quantidade) || 0, ts:iErpTs(s), codDif, rota:iRota(armM, e.arm, codDif), nfs:[], voltas:[], fat:0, voltou:0 });
+  }
+  if (!trans.length) return null;
+  trans.sort((a, b) => a.ts - b.ts);
+  const usados = new Set();
+  for (const t of trans) {
+    if (t.codDif) { t.fat = t.qtd; continue; }          // fracionado: virou outro produto, o palete original acabou
+    let resta = t.qtd;
+    const depois = (_intel.erpKa.get(`${t.kcPara}|${t.para}`) || [])
+      .filter(x => !usados.has(x) && iErpTs(x) >= t.ts && (x.tipo_mov === 'Saída' || x.tipo_mov === 'Saída Interna'));
+    for (const x of depois) {
+      if (resta <= 0.001) break;
+      const q = Math.min(resta, Number(x.quantidade) || 0);
+      if (q <= 0) continue;
+      usados.add(x); resta -= q;
+      if (x.tipo_mov === 'Saída') { t.fat += q; t.nfs.push({ e:x, q }); }
+      else if (iPar(x)?.arm === armM) { t.voltou += q; t.voltas.push({ e:x, q }); }
+      else { t.fat += q; t.nfs.push({ e:x, q, interna:true }); }   // seguiu para outro armazém: saiu de B também
+    }
+    t.pend = Math.max(0, t.qtd - t.fat - t.voltou);
+  }
+  const soma = k => trans.reduce((a, t) => a + (t[k] || 0), 0);
+  const porDest = {};
+  for (const t of trans) porDest[t.para] = (porDest[t.para] || 0) + t.qtd - t.voltou;
+  const para = Object.entries(porDest).sort((a, b) => b[1] - a[1])[0][0];
+  return { armM, trans, para, fat:soma('fat'), voltou:soma('voltou'), pend:soma('pend'), nfs:trans.flatMap(t => t.nfs) };
+}
+// Vaga sugerida: a do armazém do mapa com a quantidade mais perto da que
+// saiu (de preferência uma que dê sozinha); empate vai para a boca da rua.
+function iVagasPara(itens, qtd) {
+  const vs = itens.filter(r => !r.sep && (Number(r.quantidade) || 0) > 0);
+  const lugar = r => Number(String(r.pos || '').split('-').pop()) || 9;
+  const unica = vs.filter(r => Number(r.quantidade) >= qtd - 0.001)
+    .sort((a, b) => (a.quantidade - b.quantidade) || (lugar(a) - lugar(b)))[0];
+  if (unica) return [{ r:unica, sai:qtd }];
+  const plano = []; let resta = qtd;
+  for (const r of [...vs].sort((a, b) => b.quantidade - a.quantidade)) {
+    if (resta <= 0.001) break;
+    const sai = Math.min(resta, Number(r.quantidade)); plano.push({ r, sai }); resta -= sai;
+  }
+  return plano;
+}
+const iVagasTxt = plano => plano.map(p => p.r.pos).join(', ');
+
 /* História do lote: ERP + mapa + filme, do mais novo para o mais velho. */
 function intelHistoria(l) {
   if (!l) return [];
@@ -269,6 +332,7 @@ function intelAnalisarLinha(l) {
         `${iErpTxt(docErp)}. O mapa continua com ${esc(armM)} nas vagas ${vagasTxt}.`, { quando:prova.quando });
       a.pistas.push('A transferência está lançada no ERP; o mapa é que não acompanhou.');
       if (destino) a.acoes.push({ rot:`Mudar o mapa para ${destino}`, op:'campo', campo:'armazem', novo:destino, primaria:true });
+      if (destino === 'D2') a.acoes.push({ rot:`Mandar para a separação como D2`, op:'sep-arm', qtd:l.mapa, arm:'D2', gestor:true });
       return a;
     }
     if (prova) {
@@ -312,6 +376,13 @@ function intelAnalisarLinha(l) {
     const baixavel = l.itens.filter(r => !r.sep).reduce((s, r) => s + (Number(r.quantidade) || 0), 0);
     const separado = l.itens.some(r => r.sep);
     const diaMapa = new Date(desdeMapa); diaMapa.setHours(0, 0, 0, 0);
+    // O caminho do lote: transferido para outro armazém e (talvez) faturado de lá.
+    const cad = iCadeia(l);
+    const cartao = cad && cad.fat + cad.pend > 0.001 && intelCartaoCadeia(l, cad, { base, un, sobraQ, baixavel, vagasTxt, pistaQuem, separado });
+    if (cartao) return cartao;
+    // Uma nota (ou as notas de um mesmo dia) com exatamente a diferença: foi faturado e só falta expedir no mapa.
+    const nota = iNotaExata(l, sobraQ, diaMapa.getTime());
+    if (nota) return intelCartaoNota(l, nota, { base, un, sobraQ, baixavel, vagasTxt, separado });
     const erpSai = l.armsMapa.flatMap(a => _intel.erpKa?.get(`${l.kc}|${a}`) || [])
       .filter(e => (e.tipo_mov === 'Saída' || e.tipo_mov === 'Saída Interna') && iErpTs(e) >= diaMapa.getTime());
     if (erpSai.length) {
@@ -365,6 +436,11 @@ function intelAnalisarLinha(l) {
   // ── ERP tem mais do que o mapa ──
   const faltaQ = (l.sistema || 0) - l.mapa;
   if (faltaQ > 0.001 && (l.estado === 'falta' || l.estado === 'nao-mapeado')) {
+    // Chegou por transferência de um armazém onde o mapa ainda tem esse lote a mais:
+    // quem explica (e resolve) é o cartão do armazém de origem.
+    const origens = l.armsSis.flatMap(x => _intel.erpKa?.get(`${l.kc}|${x}`) || [])
+      .filter(e => e.tipo_mov === 'Entrada Interna').map(e => iPar(e)?.arm).filter(Boolean);
+    if (origens.some(a => (_sCalc?.lista || []).some(o => o !== l && o.kc === l.kc && o.armsMapa.includes(a) && o.mapa - Math.max(0, o.sistema || 0) > 0.001))) return null;
     // A) saiu do mapa (expediu) e o ERP ainda não baixou
     const exps = (_intel.altKc?.get(l.kc) || []).filter(x => x.acao === 'expediu' && (!x.armazem || l.armsSis.includes(normalizarArmazem(x.armazem))));
     const qtdExp = exps.reduce((s, x) => s + Math.max(0, (Number(x.qtd_antes) || 0) - (Number(x.qtd_depois) || 0)), 0);
@@ -428,6 +504,107 @@ function intelAnalisarLinha(l) {
     return base('producao-nova', 30, `Falta mapear ${iQ(faltaQ, un)}`, `Sem movimento recente no ERP que explique.`, { grupo:'semPista' });
   }
   return null;
+}
+
+/* Cartão do caminho do lote: mapa → transferência no ERP → nota (ou ainda no destino). */
+function intelCartaoCadeia(l, cad, ctx) {
+  const { base, un, sobraQ, baixavel, vagasTxt, pistaQuem, separado } = ctx;
+  const { armM, para } = cad, nomeP = nomeArmazem(para) ? ` (${esc(nomeArmazem(para).toLowerCase())})` : '';
+  const q = n => iQ(Math.round(n * 1000) / 1000, un);
+  // O que ficou no destino e já foi mapeado como tal (dividido ou separado) não é mais problema.
+  const destL = (_sCalc?.lista || []).find(o => o !== l && o.kc === l.kc && o.armsMapa.includes(para));
+  const jaMapeado = Math.min(cad.pend, destL ? destL.mapa : 0);
+  cad = { ...cad, pend:Math.max(0, cad.pend - jaMapeado) };
+  if (cad.fat + cad.pend <= 0.001) return null;
+  const nfsTxt = [...new Set(cad.nfs.filter(n => !n.interna).map(n => n.e.nf).filter(Boolean))];
+  const ultT = Math.max(...cad.trans.map(t => t.ts), ...cad.nfs.map(n => iErpTs(n.e)));
+  const dentro = !iPassouTolerancia(ultT);
+  const tudoFat = cad.pend <= 0.001, nadaFat = cad.fat <= 0.001;
+  const fracionou = cad.trans.every(t => t.codDif);
+  // Passo a passo, do mapa até agora.
+  const passos = [`<b>Mapa:</b> ${q(l.mapa)} no ${esc(armM)} em ${vagasTxt}${pistaQuem ? ` — ${pistaQuem.replace(/^Mapeado por/, 'mapeado por').replace(/\.$/, '')}` : ''}.`];
+  for (const t of cad.trans) {
+    passos.push(`<b>ERP ${iDia(t.s)}:</b> ${q(t.qtd)} ${t.codDif ? `fracionado (vira ${esc(t.e.descricao || t.e.codigo)})` : t.rota === 'transferência' ? 'transferidos' : esc(t.rota)} <b>${esc(armM)} → ${esc(t.para)}</b> · doc ${esc(t.s.nf || '—')}${t.s.usuario ? ` · por <b>${esc(t.s.usuario)}</b>` : ''}.`);
+    for (const n of t.nfs) passos.push(n.interna ? `<b>ERP ${iDia(n.e)}:</b> ${q(n.q)} seguiram do ${esc(t.para)} para outro armazém · doc ${esc(n.e.nf || '—')}.`
+      : `<b>ERP ${iDia(n.e)}:</b> ${q(n.q)} saíram do ${esc(t.para)} na <b>NF ${esc(n.e.nf || '—')}</b>${n.e.tes_desc ? ` (${esc(n.e.tes_desc.toLowerCase())})` : ''}${n.e.pedido ? ` · pedido ${esc(n.e.pedido)}` : ''}${n.e.cli_nome ? ` · ${esc(n.e.cli_nome)}${n.e.cli_uf ? '/' + esc(n.e.cli_uf) : ''}` : ''}${n.e.usuario ? ` · por ${esc(n.e.usuario)}` : ''}.`);
+    for (const v of t.voltas) passos.push(`<b>ERP ${iDia(v.e)}:</b> ${q(v.q)} voltaram do ${esc(t.para)} para o ${esc(armM)}.`);
+  }
+  passos.push(`<b>Agora:</b> ERP ${q(Math.max(0, l.sistema || 0))} no ${esc(armM)}${cad.pend + jaMapeado > 0.001 ? ` e ${q(cad.pend + jaMapeado)} no ${esc(para)}` : ''}${jaMapeado > 0.001 ? ` (${q(jaMapeado)} já mapeado como ${esc(para)})` : ''}; o mapa continua com ${q(l.mapa)} no ${esc(armM)}.`);
+  const titulo = fracionou ? `Fracionado no ERP e continua inteiro no mapa`
+    : tudoFat ? `Foi para o ${esc(para)} e saiu na NF ${nfsTxt.map(esc).join(', ') || '—'}`
+    : nadaFat ? (dentro ? `Foi para o ${esc(para)} ${haQuanto(ultT)}, esperando faturar` : `Foi para o ${esc(para)} e ainda não faturou`)
+    : `${q(cad.fat)} saíram na NF ${nfsTxt.map(esc).join(', ')}; ${q(cad.pend)} ainda no ${esc(para)}`;
+  const total = cad.fat + cad.pend, bate = iPerto(total, sobraQ, 0.05);
+  const a = base(nadaFat ? 'transf-pendente' : 'transf-faturado', (bate ? 97 : 84) - (nadaFat ? 4 : 0), titulo,
+    `<ol class="iv-passos">${passos.map(x => `<li>${x}</li>`).join('')}</ol>`,
+    { quando:new Date(ultT).toISOString(), grupo:dentro ? 'aguardando' : 'arrumar' });
+  a.pistas.push(bate ? `O que saiu do ${esc(armM)} no ERP (${q(total)}) é exatamente o que o mapa tem a mais.`
+    : `O mapa tem ${q(sobraQ)} a mais no ${esc(armM)}; o caminho no ERP explica ${q(total)}.`);
+  if (cad.pend > 0.001) a.pistas.push(`O ${esc(para)}${nomeP} ainda tem ${q(cad.pend)} deste lote no ERP e ninguém mapeou como ${esc(para)}: ou o palete continua na vaga do ${esc(armM)}, ou já foi para a área de expedição.`);
+  if (separado) a.pistas.push('Parte está na área de separação — expedir por lá (mapa → Pedidos separados).');
+  if (dentro) a.pistas.push(`Vira tarefa ${fmtTS(new Date(iMaisUmDiaUtil(ultT)).toISOString())} se ninguém mexer.`);
+  const qFat = Math.min(cad.fat, sobraQ, baixavel), qPend = Math.min(cad.pend, Math.max(0, sobraQ - qFat), Math.max(0, baixavel - qFat));
+  if (qFat > 0.001) {
+    const pl = iVagasPara(l.itens, qFat);
+    a.acoes.push({ rot:`Baixar ${num(Math.round(qFat * 1000) / 1000)} ${un} de ${iVagasTxt(pl)}${nfsTxt.length ? ` (NF ${nfsTxt[0]})` : ''}`, op:'baixar', qtd:qFat, gestor:true, primaria:true });
+  }
+  if (qPend > 0.001) {
+    const pl = iVagasPara(l.itens, qPend);
+    a.acoes.push({ rot:`Separar ${num(Math.round(qPend * 1000) / 1000)} ${un} como ${para}`, op:'sep-arm', qtd:qPend, arm:para, gestor:true, primaria:!qFat && !dentro });
+    a.acoes.push({ rot:`Dividir ${iVagasTxt(pl)}: ${num(Math.round(qPend * 1000) / 1000)} ${un} vira ${para}`, op:'dividir', qtd:qPend, arm:para, gestor:true });
+  }
+  a.acoes.push({ rot:'Pedir recontagem', op:'recontagem' });
+  return a;
+}
+
+/* Notas de saída do armazém do mapa que somam exatamente a sobra.
+   Procura, nesta ordem: uma nota só; as notas de um mesmo dia; e
+   prefere a mais recente (a de hoje ganha). */
+function iNotaExata(l, sobra, desde) {
+  const nfs = l.armsMapa.flatMap(a => _intel.erpKa?.get(`${l.kc}|${a}`) || [])
+    .filter(e => e.tipo_mov === 'Saída' && iErpTs(e) >= desde);
+  if (!nfs.length || sobra <= 0.001) return null;
+  const porNF = new Map();
+  for (const e of nfs) { const k = `${e.filial}|${e.nf || e.sequencia}|${e.serie || ''}`; (porNF.get(k) || porNF.set(k, []).get(k)).push(e); }
+  const grupos = [...porNF.values()].map(es => ({ es, q:es.reduce((t, e) => t + (Number(e.quantidade) || 0), 0), dia:String(es[0].emissao).slice(0, 10) }));
+  const bate = q => Math.abs(q - sobra) <= Math.max(0.001, sobra * 0.005);
+  const recente = (a, b) => b.dia.localeCompare(a.dia);
+  const uma = grupos.filter(g => bate(g.q)).sort(recente)[0];
+  if (uma) return { notas:[uma], q:uma.q, dia:uma.dia };
+  const porDia = new Map();
+  for (const g of grupos) (porDia.get(g.dia) || porDia.set(g.dia, []).get(g.dia)).push(g);
+  const dia = [...porDia.entries()].sort((a, b) => b[0].localeCompare(a[0])).find(([, gs]) => bate(gs.reduce((t, g) => t + g.q, 0)));
+  return dia ? { notas:dia[1], q:dia[1].reduce((t, g) => t + g.q, 0), dia:dia[0] } : null;
+}
+function intelCartaoNota(l, nota, ctx) {
+  const { base, un, sobraQ, baixavel, vagasTxt, separado } = ctx;
+  const q = n => iQ(Math.round(n * 1000) / 1000, un);
+  const d = new Date(), hoje = nota.dia === `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const ts = iErpTs(nota.notas[0].es[0]);
+  const dentro = !iPassouTolerancia(ts);
+  const nums = nota.notas.map(g => g.es[0].nf || '—');
+  const e0 = nota.notas[0].es[0];
+  const clis = [...new Set(nota.notas.map(g => g.es[0].cli_nome ? `${g.es[0].cli_nome}${g.es[0].cli_uf ? '/' + g.es[0].cli_uf : ''}` : '').filter(Boolean))];
+  const quem = clis.length ? ` para ${clis.map(esc).join(' e ')}` : '';
+  const titulo = hoje ? `Faturado hoje na NF ${nums.map(esc).join(', ')}: falta expedir no mapa`
+    : dentro ? `Faturado na NF ${nums.map(esc).join(', ')} (${esc(iDia(e0))}), falta expedir no mapa`
+    : `Faturado na NF ${nums.map(esc).join(', ')} em ${esc(iDia(e0))} e continua no mapa`;
+  const a = base('saiu-nao-baixou', hoje ? 98 : 96, titulo,
+    `O mapa tem ${q(l.mapa)} no ${esc(l.armsMapa.join(', '))} em ${vagasTxt}; o ERP tem ${q(Math.max(0, l.sistema || 0))}. A diferença, ${q(sobraQ)}, é exatamente o que saiu na${nums.length > 1 ? 's notas' : ' nota'} ${nums.map(n => `<b>${esc(n)}</b>`).join(', ')}${quem}.`,
+    { quando:new Date(ts).toISOString(), grupo:dentro ? 'aguardando' : 'arrumar' });
+  a.pistas.push(...nota.notas.flatMap(g => g.es).slice(0, 4).map(iErpTxt));
+  const v = nums.length > 1;
+  a.pistas.push(hoje ? `${v ? 'As notas são de hoje e somam' : 'A nota é de hoje e tem'} a mesma quantidade que sobra no mapa: é carga faturada que ainda não saiu do drive.`
+    : `${v ? 'As notas somam' : 'A quantidade da nota é'} a mesma que sobra no mapa.`);
+  if (separado) a.pistas.push('Parte está na área de separação — expedir por lá (mapa → Pedidos separados).');
+  if (dentro) a.pistas.push(`Vira tarefa ${fmtTS(new Date(iMaisUmDiaUtil(ts)).toISOString())} se ninguém expedir.`);
+  const qB = Math.min(nota.q, sobraQ, baixavel);
+  if (qB > 0.001) {
+    const pl = intelPlanoBaixa(l.itens, qB);
+    a.acoes.push({ rot:`Expedir ${num(Math.round(qB * 1000) / 1000)} ${un} de ${iVagasTxt(pl)} (NF ${nums[0]}${v ? ` +${nums.length - 1}` : ''})`, op:'baixar', qtd:qB, gestor:true, primaria:true });
+  }
+  a.acoes.push({ rot:'Pedir recontagem', op:'recontagem' });
+  return a;
 }
 
 /* O lote certo para um "lote não existe": mesmo produto, lote
@@ -613,7 +790,7 @@ function intelVereditoHTML(l) {
     <div class="iv-txt">${a.txt}</div>
     ${a.pistas.length ? `<ul class="iv-pistas">${a.pistas.map(p => `<li>${p}</li>`).join('')}</ul>` : ''}
     ${intelHistoriaHTML(l)}
-    ${a.acoes.length ? `<div class="iv-acoes">${a.acoes.map((x, i) => `<button class="btn btn-sm${x.primaria ? ' btn-primary' : ''}" onclick="intelAcao('${intelAttr(a.id)}', ${i})">${esc(x.rot)}</button>`).join('')}
+    ${a.acoes.length ? `<div class="iv-acoes">${a.acoes.map((x, i) => intelBotao(a, x, i)).join('')}
       <button class="btn btn-sm btn-ghost" onclick="intelRecusar('${intelAttr(a.id)}')" title="Não é isso — não sugerir de novo enquanto os números forem os mesmos">Não é isso</button></div>` : ''}
   </div>`;
 }
@@ -627,9 +804,17 @@ function intelAchado(id) {
 }
 
 /* ═══════════ AÇÕES ═══════════ */
+const intelPode = x => !x.gestor || typeof ehGestor !== 'function' || ehGestor();
+function intelBotao(a, x, i) {
+  const ok = intelPode(x);
+  return `<button class="btn btn-sm${x.primaria ? ' btn-primary' : ''}"${ok ? ` onclick="intelAcao('${intelAttr(a.id)}', ${i})"` : ' disabled title="Só gestor pode aplicar"'}>${esc(x.rot)}${ok ? '' : ' · só gestor'}</button>`;
+}
 async function intelAcao(id, i) {
   const a = intelAchado(id), x = a?.acoes[i];
   if (!x) return;
+  if (!intelPode(x)) { toast('Só gestor pode aplicar esta correção.', 'warn'); return; }
+  if (x.op === 'dividir')      return intelDividir(a, x);
+  if (x.op === 'sep-arm')      return intelSepArm(a, x);
   if (x.op === 'campo')        return intelCorrigirCampo(a, x);
   if (x.op === 'baixar')       return intelBaixar(a, x);
   if (x.op === 'recontagem')   return intelRecontagem(a);
@@ -706,13 +891,84 @@ function intelPlanoBaixa(itens, qtd) {
   const vs = itens.filter(r => !r.sep && (Number(r.quantidade) || 0) > 0);
   const exata = vs.find(r => iPerto(Number(r.quantidade), qtd, 0.001));
   if (exata) return [{ r:exata, sai:Number(exata.quantidade) }];
-  const plano = []; let resta = qtd;
-  for (const r of [...vs].sort((a, b) => b.quantidade - a.quantidade)) {
-    if (resta <= 0.001) break;
-    const sai = Math.min(resta, Number(r.quantidade));
-    plano.push({ r, sai }); resta -= sai;
+  return iVagasPara(itens, qtd);
+}
+
+/* Dividir na vaga: parte do palete passa a ser de outro armazém (o ERP
+   transferiu e o palete ficou onde estava). A vaga fica com dois registros. */
+async function intelDividir(a, x) {
+  const l = a.l, un = l.un || '', arm = normalizarArmazem(x.arm);
+  const plano = iVagasPara(l.itens, x.qtd);
+  if (!plano.length) return;
+  const txt = plano.map(p => `  ${p.r.pos}: ${num(p.r.quantidade)} no ${p.r.armazem} → ${num(Math.round((p.r.quantidade - p.sai) * 1000) / 1000)} no ${p.r.armazem} + ${num(Math.round(p.sai * 1000) / 1000)} no ${arm}`).join('\n');
+  if (!confirm(`${String(a.titulo).replace(/<[^>]+>/g, '')}\n\nDividir ${l.produto} · lote ${l.lote}:\n${txt}\n\nO palete continua na mesma vaga. Fica em Alterações e dá para desfazer na tela Hoje.`)) return;
+  const mudancas = [], agora = new Date().toISOString();
+  try {
+    for (const { r, sai } of plano) {
+      const tab = r._tab || 'historico', disp = Number(r.quantidade) || 0, restou = Math.round((disp - sai) * 1000) / 1000;
+      if (restou <= 0.001) {
+        await atualizarResiliente(tab, { armazem:arm, updated_at:agora }, q => q.eq('id', r.id));
+        mudancas.push({ tab, id:r.id, pos:r.pos, antes:{ armazem:r.armazem }, depois:{ armazem:arm } });
+      } else {
+        await atualizarResiliente(tab, { quantidade:restou, updated_at:agora, feito_por:QUEM }, q => q.eq('id', r.id));
+        mudancas.push({ tab, id:r.id, pos:r.pos, antes:{ quantidade:disp }, depois:{ quantidade:restou } });
+        const novo = await inserirResiliente('historico', {
+          posicao:r.pos, codigo:normalizarCodigo(r.codigo), produto_nome:r.produto_nome, lote:r.lote, armazem:arm,
+          quantidade:Math.round(sai * 1000) / 1000, ocupacao_ativa:true, origem:'manual', usuario:QUEM || 'painel',
+          filial:r.filial ?? codigoFilialDoProduto(normalizarCodigo(r.codigo)), ciclo_id:r.ciclo_id ?? null,
+          dt_validade:r.dt_validade ?? null, dt_fabricacao:r.dt_fabricacao ?? null, created_at:agora,
+        }, { retornar:true });
+        const nid = novo?.[0]?.id;
+        if (nid != null) mudancas.push({ tab:'historico', id:nid, pos:r.pos, novo:true });
+      }
+      await registrarAlteracao({ acao:'ajustou', posicao:r.pos, codigo:r.codigo, produto_nome:r.produto_nome, lote:r.lote, armazem:arm,
+        qtd_antes:disp, qtd_depois:restou, tabela_ref:tab, ref_id:r.id, obs:`${num(sai)} ${un} do ${r.armazem} viraram ${arm} (Hoje · ${INTEL_TIPOS[a.tipo]?.rot || a.tipo})` });
+    }
+    await intelRegistrar(a, 'aplicou', { acao:x.rot, mudancas });
+    toast(`Dividido: ${num(Math.round(x.qtd * 1000) / 1000)} ${un} agora são ${arm}.`, 'ok', 4500);
+  } catch (e) {
+    if (mudancas.length) await intelRegistrar(a, 'aplicou', { acao:x.rot + ' (parcial)', mudancas });
+    erro('Não consegui dividir tudo', e);
   }
-  return plano;
+  await intelDepois();
+}
+
+/* Separar como outro armazém: o palete saiu do drive para a área de
+   expedição (o ERP já pôs no D2). Vai para a separação com o armazém novo;
+   quando a nota sair, o Hoje pede para expedir de lá. */
+async function intelSepArm(a, x) {
+  const l = a.l, un = l.un || '', arm = normalizarArmazem(x.arm);
+  const plano = iVagasPara(l.itens, x.qtd);
+  if (!plano.length) return;
+  const txt = plano.map(p => `  ${p.r.pos}: ${num(p.r.quantidade)} → ${num(Math.round((p.r.quantidade - p.sai) * 1000) / 1000)} ${un}`).join('\n');
+  if (!confirm(`${String(a.titulo).replace(/<[^>]+>/g, '')}\n\nMandar ${num(Math.round(x.qtd * 1000) / 1000)} ${un} de ${l.produto} · lote ${l.lote} para a separação como ${arm}:\n${txt}\n\nFica em Alterações e dá para desfazer na tela Hoje.`)) return;
+  const mudancas = [], agora = new Date().toISOString();
+  const saldoDest = (_sa?.ref || []).filter(s => normalizarCodigo(s.cod) === normalizarCodigo(l.cod) && chave(s.lote) === chave(l.lote) && normalizarArmazem(s.arm) === arm)
+    .reduce((t, s) => t + (Number(s.saldo) || 0), 0);
+  try {
+    for (const { r, sai } of plano) {
+      const tab = r._tab || 'historico', disp = Number(r.quantidade) || 0, restou = Math.round((disp - sai) * 1000) / 1000;
+      const novo = await inserirResiliente('separacao', {
+        codigo:normalizarCodigo(r.codigo), produto_nome:r.produto_nome, lote:r.lote || null, armazem:arm,
+        filial:r.filial ?? codigoFilialDoProduto(normalizarCodigo(r.codigo)), quantidade:Math.round(sai * 1000) / 1000, pedido:null,
+        origem_posicao:r.pos, saldo_erp_antes:saldoDest || null, foto_erp_em:_sa?.foto?.ate || null,
+        status:'separado', separado_por:QUEM, separado_em:agora,
+      }, { retornar:true });
+      const nid = novo?.[0]?.id;
+      if (nid != null) mudancas.push({ tab:'separacao', id:nid, pos:SALDO_SEP, novo:true });
+      const patch = restou > 0.001 ? { quantidade:restou } : { ocupacao_ativa:false };
+      await atualizarResiliente(tab, { ...patch, updated_at:agora, feito_por:QUEM }, q => q.eq('id', r.id));
+      mudancas.push({ tab, id:r.id, pos:r.pos, antes:{ quantidade:disp, ocupacao_ativa:true }, depois:patch });
+      await registrarAlteracao({ acao:'separou', posicao:r.pos, codigo:r.codigo, produto_nome:r.produto_nome, lote:r.lote, armazem:arm,
+        qtd_antes:disp, qtd_depois:restou, tabela_ref:'separacao', ref_id:nid, obs:`${num(sai)} ${un} para a separação como ${arm} (Hoje · ${INTEL_TIPOS[a.tipo]?.rot || a.tipo})` });
+    }
+    await intelRegistrar(a, 'aplicou', { acao:x.rot, mudancas });
+    toast(`${num(Math.round(x.qtd * 1000) / 1000)} ${un} na separação como ${arm}.`, 'ok', 4500);
+  } catch (e) {
+    if (mudancas.length) await intelRegistrar(a, 'aplicou', { acao:x.rot + ' (parcial)', mudancas });
+    erro('Não consegui mandar para a separação', e);
+  }
+  await intelDepois();
 }
 async function intelBaixar(a, x) {
   const l = a.l, un = l.un || '';
@@ -822,6 +1078,10 @@ async function intelDesfazer(decId) {
   if (!confirm(`Desfazer "${d.detalhes.acao || d.tipo}" em ${ms.length} item(ns) (${ms.map(m => m.pos).join(', ')})?`)) return;
   try {
     for (const m of ms) {
+      if (m.novo) {                                   // registro criado pela correção: some
+        const { error } = await sb.from(m.tab).delete().eq('id', m.id); if (error) throw error;
+        continue;
+      }
       await atualizarResiliente(m.tab, { ...m.antes, updated_at:new Date().toISOString() }, q => q.eq('id', m.id));
       await registrarAlteracao({ acao:'ajustou', posicao:m.pos, codigo:d.detalhes.codigo, lote:d.detalhes.lote, armazem:d.detalhes.armazem,
         tabela_ref:m.tab, ref_id:m.id, obs:`desfeito: ${d.detalhes.acao || d.tipo} (Hoje)` });
@@ -861,11 +1121,11 @@ function hjCard(a) {
     <div class="hj-top"><span class="tag ${INTEL_COR[t.cor] || 't-mute'}">${esc(t.rot)}</span>${a.grupo !== 'regras' ? intelConfHTML(a.conf) : ''}</div>
     <h3 class="hj-tit">${a.titulo}</h3>
     ${cab}
-    <p class="hj-txt">${a.txt}</p>
+    <div class="hj-txt">${a.txt}</div>
     ${a.pistas.length ? `<ul class="iv-pistas">${a.pistas.map(p => `<li>${p}</li>`).join('')}</ul>` : ''}
     ${l ? intelHistoriaHTML(l) : ''}
     <div class="iv-acoes">
-      ${a.acoes.map((x, i) => `<button class="btn btn-sm${x.primaria ? ' btn-primary' : ''}" onclick="intelAcao('${id}', ${i})">${esc(x.rot)}</button>`).join('')}
+      ${a.acoes.map((x, i) => intelBotao(a, x, i)).join('')}
       ${l ? `<button class="btn btn-sm btn-ghost" onclick="hjVerLinha('${intelAttr(l.lote || '')}')">Ver no Mapa × sistema</button>` : ''}
       <span class="hj-esp"></span>
       <button class="btn btn-sm btn-ghost" onclick="intelAdiar('${id}')" title="Some até o próximo dia útil">Adiar</button>
