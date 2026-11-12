@@ -890,6 +890,12 @@ table.sa-sub-t td { padding:6px 10px; background:transparent; white-space:nowrap
 .iv-tit { font-weight:600; font-size:.9375rem; margin-bottom:4px; }
 .iv-txt, .hj-txt { font-size:.8125rem; color:var(--text-2); line-height:1.5; margin:0; }
 .iv-pistas { margin:8px 0 0; padding-left:18px; font-size:.78rem; color:var(--text-2); line-height:1.5; }
+.iv-passos { list-style:none; counter-reset:passo; margin:4px 0 0; padding:0; display:flex; flex-direction:column; gap:5px; }
+.iv-passos li { counter-increment:passo; position:relative; padding-left:26px; font-size:.8125rem; line-height:1.5; color:var(--text-2); }
+.iv-passos li::before { content:counter(passo); position:absolute; left:0; top:1px; width:18px; height:18px; border-radius:50%; background:var(--surface-3, var(--surface-2)); color:var(--text-2); font:600 .6875rem/18px var(--mono); text-align:center; }
+.iv-passos li:last-child::before { content:'='; background:var(--accent-sf); color:var(--accent); }
+.iv-passos b { color:var(--text); font-weight:600; }
+.iv-acoes .btn:disabled { opacity:.55; cursor:not-allowed; }
 .iv-pistas li::marker { color:var(--text-3); }
 .iv-acoes { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; align-items:center; }
 .iv-conf { display:inline-flex; align-items:center; gap:6px; font-size:.75rem; color:var(--text-3); white-space:nowrap; }
@@ -2939,9 +2945,9 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 <script src="./usuarios.js?v=1"></script>
 <script src="./saldo-mapeado.js?v=18"></script>
 <script src="./saldo-erp.js?v=10"></script>
-<script src="./inteligencia.js?v=3"></script>
+<script src="./inteligencia.js?v=5"></script>
 <script src="./analista.js?v=4"></script>
-<script src="./boletim.js?v=1"></script>
+<script src="./boletim.js?v=2"></script>
 <script src="./inicio.js?v=1"></script>
 <script src="./impressao.js?v=3"></script>
 <script src="./identificacao.js?v=3"></script>
