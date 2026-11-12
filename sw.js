@@ -3,7 +3,7 @@
         cache-first no resto, API nunca passa pelo cache,
         e Background Sync para esvaziar a fila de lançamentos
         mesmo com o app fechado. */
-const CACHE = 'simbiose-v53';
+const CACHE = 'simbiose-v54';
 const CACHE_CDN = 'simbiose-cdn-v1';
 const CDNS = ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'unpkg.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 const ESSENCIAIS = ['./mobile.html', './mapa.html', './comum.js', './usuarios.js', './fila.js', './impressao.js', './leitor.js', './manifest.json', './manifest-mapa.json'];
@@ -57,7 +57,7 @@ self.addEventListener('fetch', e => {
         })
         // Sem rede: a última versão guardada desta tela (o painel abre com ?app=1 quando instalado).
         .catch(() => caches.match(req, { ignoreSearch:true }).then(r => r
-          || caches.match((url.pathname === '/' || /painel/.test(url.pathname)) ? './painel.html' : /mapa/.test(url.pathname) ? './mapa.html' : './mobile.html', { ignoreSearch:true })))
+          || caches.match((url.pathname === '/' || /painel/.test(url.pathname)) ? './painel.html' : /mapa/.test(url.pathname) ? './mapa.html' : /layout/.test(url.pathname) ? './layout.html' : './mobile.html', { ignoreSearch:true })))
     );
     return;
   }
