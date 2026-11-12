@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Simbiose · Layout 3D</title>
+<link rel="manifest" href="./manifest-layout.json">
+<meta name="theme-color" content="#101113">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Layout 3D">
+<meta name="application-name" content="Layout 3D">
+<link rel="icon" type="image/png" sizes="192x192" href="./icones/layout-192.png">
+<link rel="apple-touch-icon" href="./icones/layout-180.png">
 <script>
 /* Tema antes da primeira pintura — mesma chave dos outros apps. */
 (function () {
@@ -212,13 +221,48 @@ details[open] summary{margin-bottom:8px}
   .folha.planta.A3,.folha.planta.A4{height:calc(100vh - 4mm)}
   .ft thead{display:table-header-group}.ft tr{break-inside:avoid}
 }
+/* Celular: a cena ocupa a tela toda e o painel vira uma gaveta que sobe de baixo
+   (puxa pela alça ou toca numa aba). No computador nada muda. */
+.alca{display:none}
 @media (max-width:860px){
+  :root{--peek:calc(66px + env(safe-area-inset-bottom,0px))}
   #hint{display:none}
-  html,body{height:auto}
-  .app{height:auto}
-  .main{grid-template-columns:1fr;grid-template-rows:62vh auto}
-  .panel{overflow:visible}
-  .brand select{max-width:170px}
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+  body{-webkit-tap-highlight-color:transparent}
+  button,a,select,label{touch-action:manipulation}
+  .app{height:100dvh;padding:0;gap:0}
+  .bar{flex:none;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:8px;background:var(--surface);border-bottom:1px solid var(--line);
+    padding:calc(8px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));-webkit-overflow-scrolling:touch}
+  .bar::-webkit-scrollbar{display:none}
+  .brand{flex:none;margin-right:2px}
+  .brand h1{font-size:15px}
+  .brand select{max-width:150px}
+  .group{flex:none;flex-wrap:nowrap}
+  .btn{min-height:38px;white-space:nowrap}
+  .seg button{min-height:34px}
+  .main{display:block;position:relative;flex:1;min-height:0}
+  .viewport{position:absolute;inset:0;border:0;border-radius:0}
+  .overlay{bottom:calc(var(--peek) + 10px)}
+  .measure-tag{top:10px}
+  .side{position:fixed;left:0;right:0;bottom:0;z-index:40;height:var(--peek);border-radius:16px 16px 0 0;border-bottom:0;
+    box-shadow:0 -12px 32px rgba(0,0,0,.28);padding-bottom:env(safe-area-inset-bottom,0px);transition:height .26s cubic-bezier(.2,.8,.2,1)}
+  .side.f-meio{height:52dvh}
+  .side.f-cheio{height:calc(100dvh - 64px - env(safe-area-inset-top,0px))}
+  .side.arrasta{transition:none}
+  .alca{display:flex;justify-content:center;align-items:center;height:20px;flex:none;cursor:grab;touch-action:none}
+  .alca span{width:40px;height:5px;border-radius:3px;background:var(--grid-strong)}
+  .tabs{touch-action:none}
+  .tabs button{padding:9px 2px 11px;font-size:12.5px}
+  .side.f-peek .panel{visibility:hidden}
+  .panel{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  .fld input,.fld select,textarea,.armln input,.armfaixa select,.dlg-cx input{font-size:16px}
+  .toast{top:auto;bottom:calc(var(--peek) + 14px)}
+  .app:has(.side.f-meio) .toast{bottom:calc(52dvh + 10px)}
+  .pdf-bar{padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;gap:8px}
+  .pdf-bar h2{width:100%}
+  .pdf-area{padding:12px 8px 30px}
+  .dlg{align-items:flex-end;padding:0}
+  .dlg-cx{width:100%;border-radius:16px 16px 0 0;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
 }
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 a.btn{text-decoration:none;color:inherit}
@@ -1310,11 +1354,55 @@ function select(kind, id){
   sel = kind ? { kind, id } : null;
   if (kind) tab = 'sel';
   updateSelBox(); drawDims(); renderTabs(); renderPanel();
+  if (kind && folha === 'peek') setFolha('meio');
 }
 function selectSlot(rackId, lane, pos, level){
   sel = { kind: 'slot', rackId, lane, pos, level }; tab = 'sel';
   updateSelBox(); drawDims(); renderTabs(); renderPanel();
+  if (folha === 'peek') setFolha('meio');
 }
+
+/* ================= celular: o painel é uma gaveta ================= */
+const celLay = matchMedia('(max-width:860px)');
+const sideEl = document.querySelector('.side');
+const alca = document.createElement('div'); alca.className = 'alca'; alca.setAttribute('role', 'button'); alca.setAttribute('aria-label', 'Abrir ou fechar o painel'); alca.innerHTML = '<span></span>';
+sideEl.prepend(alca);
+let folha = 'peek', voltaIgnorar = 0;
+function setFolha(f, doVoltar = false){
+  if (!celLay.matches) f = 'peek';
+  const antes = folha;
+  folha = f; sideEl.classList.remove('f-peek', 'f-meio', 'f-cheio'); sideEl.classList.add('f-' + f); sideEl.style.height = '';
+  // O voltar do celular fecha a gaveta (em vez de sair do app).
+  if (antes === 'peek' && f !== 'peek') history.pushState({ folha: 1 }, '', location.href);
+  else if (antes !== 'peek' && f === 'peek' && !doVoltar && history.state?.folha){ voltaIgnorar++; history.back(); }
+}
+setFolha('peek');
+celLay.addEventListener?.('change', () => setFolha('peek'));
+// Arrasta pela alça (ou pelas abas): solta perto de fechado, meio ou cheio.
+let arr = null;
+function inicioArr(e){ if (!celLay.matches) return; arr = { y: e.clientY, h: sideEl.getBoundingClientRect().height, moveu: false, alvo: e.target }; }
+function moveArr(e){
+  if (!arr) return;
+  const d = arr.y - e.clientY;
+  if (!arr.moveu && Math.abs(d) < 8) return;
+  arr.moveu = true; sideEl.classList.add('arrasta');
+  sideEl.style.height = Math.max(60, Math.min(innerHeight - 60, arr.h + d)) + 'px';
+}
+function fimArr(){
+  if (!arr) return;
+  const a = arr; arr = null; sideEl.classList.remove('arrasta');
+  if (!a.moveu){ if (a.alvo.closest('.alca')) setFolha(folha === 'peek' ? 'meio' : 'peek'); return; }
+  const h = sideEl.getBoundingClientRect().height, H = innerHeight;
+  setFolha(h < H * .3 ? 'peek' : h < H * .7 ? 'meio' : 'cheio');
+  // um arrasto não vira clique na aba
+  addEventListener('click', ev => { ev.stopPropagation(); ev.preventDefault(); }, { capture: true, once: true });
+}
+[alca, document.querySelector('.tabs')].forEach(el => el.addEventListener('pointerdown', inicioArr));
+addEventListener('pointermove', moveArr);
+addEventListener('pointerup', fimArr);
+addEventListener('pointercancel', fimArr);
+// Tocar na cena com a gaveta aberta no meio não fecha (dá para girar e ver); o voltar do celular fecha.
+addEventListener('popstate', () => { if (voltaIgnorar){ voltaIgnorar--; return; } if (folha !== 'peek') setFolha('peek', true); });
 function afterChange(){
   buildReal(); armTalvezRacks();
   lastVal = validate(); refreshAllSlots(); applyHighlights(); updateSelBox(); drawDims(); renderPanel(); renderStats(); renderLaySel(); save();
@@ -2054,7 +2142,7 @@ function pintarQuem(){ $('#quem-ini').textContent = iniciais(QUEM); $('#quem-nom
 
 /* ================= barra e teclado ================= */
 document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
-document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; renderTabs(); renderPanel(); }));
+document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; renderTabs(); renderPanel(); if (folha === 'peek') setFolha('meio'); }));
 $('#laySel').addEventListener('change', e => openLayout(e.target.value));
 $('#b-fit').addEventListener('click', () => setView(view.mode));
 $('#b-undo').addEventListener('click', undo);
@@ -2105,5 +2193,6 @@ try {
 (function loop(now){ requestAnimationFrame(loop); if (anim) anim(now); controls.update(); renderer.render(scene, cam); })(performance.now());
 })();
 </script>
+<script src="./pwa.js?v=1" defer data-app="layout" data-nome="o Layout 3D" data-cor="--surface" data-baixo="70"></script>
 </body>
 </html>
