@@ -2,8 +2,19 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Simbiose · Controle de Estoque</title>
+<meta name="description" content="Painel de estoque da Simbiose Agro: saldo, mapa, divergências, boletim do dia e expedição.">
+<link rel="manifest" href="./manifest-painel.json">
+<meta name="theme-color" content="#15181C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Painel">
+<meta name="application-name" content="Painel">
+<meta name="format-detection" content="telephone=no">
+<link rel="icon" type="image/png" sizes="192x192" href="./icones/painel-192.png">
+<link rel="apple-touch-icon" href="./icones/painel-180.png">
 <script>
 /* Antes de qualquer pintura, para a tela não piscar branco. */
 (function () {
@@ -1670,6 +1681,108 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
   .modal-foot .btn { flex:1; }
 }
 
+/* ═══════════ APP NO CELULAR (PWA · painel-app.js) ═══════════
+   Só muda até 760 px de largura: no computador a tela fica igual. */
+.app-tabs, .app-ptr, .app-offline { display:none; }
+.app-aviso {
+  position:fixed; z-index:420; left:50%; bottom:22px; transform:translate(-50%, 16px); opacity:0; pointer-events:none;
+  width:min(440px, calc(100vw - 24px)); display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  padding:12px 14px; background:var(--surface); border:1px solid var(--line-2); border-left:3px solid var(--accent);
+  border-radius:var(--r-sm); box-shadow:var(--sh); font-size:.8125rem; line-height:1.45; color:var(--text-2);
+  transition:opacity .2s, transform .2s;
+}
+.app-aviso.show { opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
+.app-aviso b { color:var(--text); }
+.app-aviso-txt { flex:1 1 220px; }
+.app-aviso-bts { display:flex; gap:6px; margin-left:auto; }
+.app-ios-ico { display:inline-block; font-weight:700; color:var(--accent); }
+html.sem-rede .app-offline {
+  display:block; position:fixed; z-index:45; top:var(--top); left:0; right:0; text-align:center;
+  padding:6px 12px; font-size:.75rem; font-weight:600; background:var(--warn-sf); color:var(--warn); border-bottom:1px solid var(--warn-ln);
+}
+@media (min-width:1101px) { html.sem-rede .app-offline { left:var(--side); } html.side-mini.sem-rede .app-offline { left:var(--side-mini, 64px); } }
+
+@media (max-width:760px) {
+  :root { --tabs:58px; --safe-b:env(safe-area-inset-bottom, 0px); }
+  html { overscroll-behavior-y:contain; -webkit-text-size-adjust:100%; }
+  body { -webkit-tap-highlight-color:transparent; }
+  button, a, .nav-item, .seg button, select, label { touch-action:manipulation; }
+  .menu-btn { display:none !important; }
+  .topbar { padding-left:max(14px, env(safe-area-inset-left)); padding-right:max(10px, env(safe-area-inset-right)); }
+  .topbar-mid { min-width:0; }
+  .tb-pagina { font-size:1rem; font-weight:650; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* Abas embaixo */
+  .app-tabs {
+    display:grid; grid-template-columns:repeat(5, minmax(0, 1fr));
+    position:fixed; left:0; right:0; bottom:0; z-index:60;
+    height:calc(var(--tabs) + var(--safe-b)); padding:0 env(safe-area-inset-right) var(--safe-b) env(safe-area-inset-left);
+    background:color-mix(in srgb, var(--surface) 90%, transparent);
+    -webkit-backdrop-filter:blur(16px) saturate(1.5); backdrop-filter:blur(16px) saturate(1.5);
+    border-top:1px solid var(--line);
+  }
+  .app-tabs button {
+    appearance:none; border:0; background:none; margin:0; padding:6px 0 0; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:3px;
+    color:var(--text-3); font:500 .6875rem/1.1 var(--sans); position:relative; min-width:0;
+  }
+  .app-tabs button svg { width:23px; height:23px; flex:none; transition:transform .15s; }
+  .app-tabs button > span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  .app-tabs button.on { color:var(--accent); font-weight:600; }
+  .app-tabs button.on::before { content:''; position:absolute; top:0; left:50%; width:28px; height:3px; margin-left:-14px; border-radius:0 0 3px 3px; background:var(--accent); }
+  .app-tabs button:active svg { transform:scale(.88); }
+  .app-badge {
+    position:absolute; top:3px; left:calc(50% + 6px); min-width:17px; height:17px; padding:0 4px; border-radius:9px;
+    background:var(--neg); color:#fff; font:700 .625rem/17px var(--mono); text-align:center; box-shadow:0 0 0 2px var(--surface);
+  }
+  html.teclado .app-tabs { display:none; }
+  .main, html.side-mini .main { padding-bottom:calc(var(--tabs) + var(--safe-b) + 28px) !important; }
+  .toast, .app-aviso { bottom:calc(var(--tabs) + var(--safe-b) + 10px); }
+  html.teclado .toast, html.teclado .app-aviso { bottom:12px; }
+  .side { padding-bottom:var(--safe-b); z-index:70; }
+  .side.open ~ .side-veu { z-index:65; }
+
+  /* Toque: alvos maiores e campos que não dão zoom no iPhone */
+  input[type=text], input[type=number], input[type=date], input[type=month], input[type=search],
+  input[type=email], input[type=tel], input:not([type]), select, textarea { font-size:16px !important; min-height:42px; }
+  .btn { min-height:40px; }
+  .btn-sm { min-height:36px; }
+  .seg button { min-height:34px; }
+  .nav-item { min-height:44px; }
+
+  /* Tabelas: rolam de lado com a 1ª coluna parada */
+  .tbl-wrap { -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; scrollbar-width:thin; }
+  .tbl-wrap > table tr > :first-child { position:sticky; left:0; z-index:2; box-shadow:1px 0 0 var(--line); }
+  .tbl-wrap > table thead tr > :first-child { z-index:12; }
+
+  /* Janelas sobem de baixo, com alça */
+  .modal-bg { padding:0; align-items:flex-end; }
+  .modal, .modal.wide { width:100%; max-width:none; max-height:calc(100dvh - 24px); border-radius:16px 16px 0 0; padding-bottom:var(--safe-b); animation:folha .22s cubic-bezier(.2,.8,.2,1); }
+  .modal-head { border-radius:16px 16px 0 0; padding-top:22px; }
+  .modal-head::before { content:''; position:absolute; top:8px; left:50%; width:38px; height:4px; margin-left:-19px; border-radius:2px; background:var(--line-2); }
+  .modal-foot { border-radius:0; padding-bottom:calc(14px + var(--safe-b)); }
+  .modal-foot .btn { flex:1; min-height:44px; }
+  .dropdown { max-height:calc(100dvh - var(--top) - var(--tabs) - 24px); overflow-y:auto; }
+  .gp-dis, .sa-abas-bar .seg, .an-ctrl .seg { scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; }
+  .gp-di { scroll-snap-align:start; }
+
+  /* Puxar para atualizar */
+  .app-ptr {
+    display:flex; align-items:center; justify-content:center; position:fixed; z-index:58; top:calc(var(--top) - 34px); left:50%;
+    width:36px; height:36px; border-radius:50%; background:var(--surface); border:1px solid var(--line-2); box-shadow:var(--sh);
+    color:var(--text-3); transform:translate(-50%, 0); opacity:0; transition:opacity .15s;
+  }
+  .app-ptr svg { width:18px; height:18px; }
+  .app-ptr.vis { opacity:1; }
+  .app-ptr.pronto { color:var(--accent); border-color:var(--accent); }
+  .app-ptr.girando { transition:transform .2s, opacity .15s; }
+  .app-ptr.girando svg { animation:spin .7s linear infinite; color:var(--accent); }
+}
+@keyframes folha { from { transform:translateY(40px); opacity:.6; } to { transform:none; opacity:1; } }
+/* Aberto como app instalado: sem o "puxa e estica" do navegador. */
+@media (display-mode: standalone) { html, body { overscroll-behavior-y:none; } }
+@media (prefers-reduced-motion: reduce) { .modal, .app-aviso, .app-ptr { animation:none !important; transition:none !important; } }
+
 /* ═══════════ BOLETIM DO DIA (boletim.js) ═══════════ */
 .bo-ctrl { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin:0 0 14px; max-width:1040px; }
 .bo-dia { display:flex; align-items:center; gap:6px; }
@@ -2948,6 +3061,7 @@ html[data-tema="escuro"] .dica-flut { background:#F3F4F6; color:#15181E; }
 <script src="./inteligencia.js?v=5"></script>
 <script src="./analista.js?v=4"></script>
 <script src="./boletim.js?v=2"></script>
+<script src="./painel-app.js?v=1" defer></script>
 <script src="./inicio.js?v=1"></script>
 <script src="./impressao.js?v=3"></script>
 <script src="./identificacao.js?v=3"></script>
