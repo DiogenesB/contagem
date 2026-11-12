@@ -11,9 +11,9 @@
   "background_color": "#08090A",
   "theme_color": "#08090A",
   "icons": [
-    { "src": "./icones/operador-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./icones/operador-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./icones/operador-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "./operador-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./operador-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./operador-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "categories": ["productivity", "utilities"]
 }
