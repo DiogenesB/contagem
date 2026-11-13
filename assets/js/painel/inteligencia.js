@@ -1302,3 +1302,51 @@ function intelIniciarSegundoPlano() {
     Promise.all([carregarSaldoErp(false), intelCarregarDados(false)]).then(() => { intelCalcular(); intelContador(); }).catch(() => {});
   }, 2500);
 }
+
+/* ═══════════ DADO NOVO DO ERP: atualiza sozinho ═══════════
+   Com o painel aberto, a cada minuto olha se o robô mandou movimentações
+   (erp_mov_sync) ou saldo (estoque_ref) novos. Se mandou, relê tudo
+   e redesenha a tela aberta — a nota que entrou agora aparece no histórico
+   do lote e na causa provável sem precisar recarregar a página. */
+const _erpNovo = { mov:undefined, saldo:undefined, ocupado:false };
+async function erpVigiar() {
+  if (document.hidden || _erpNovo.ocupado || typeof sb === 'undefined') return;
+  _erpNovo.ocupado = true;
+  try {
+    const ult = (t, c) => sb.from(t).select(c).order(c, { ascending:false }).limit(1).maybeSingle().then(r => r.error ? null : r.data?.[c] || null, () => null);
+    // O saldo pela hora de importação do próprio saldo (estoque_ref_sync não é lido pelo painel).
+    const [qm, qs] = await Promise.all([ult('erp_mov_sync', 'quando'), ult('estoque_ref', 'importado_em')]);
+    const primeira = _erpNovo.mov === undefined;
+    const mudouMov = !primeira && qm && qm !== _erpNovo.mov, mudouSaldo = !primeira && qs && qs !== _erpNovo.saldo;
+    _erpNovo.mov = qm; _erpNovo.saldo = qs;
+    if (mudouMov || mudouSaldo) await erpRecarregar(mudouMov, mudouSaldo, mudouMov ? qm : qs);
+  } catch (e) {} finally { _erpNovo.ocupado = false; }
+}
+async function erpRecarregar(mov, saldo, quando) {
+  // Tudo o que guarda movimento ou saldo em memória fica velho.
+  if (typeof _mvLote !== 'undefined') { _mvLote.clear(); _mvLotePedido.clear(); }
+  if (typeof _hjErp !== 'undefined') _hjErp.quando = 0;
+  if (typeof _an !== 'undefined') _an.carregado = 0;
+  if (saldo && typeof cacheInvalidar === 'function') cacheInvalidar('saldo-erp');
+  if (typeof _bo !== 'undefined' && _bo.dados) _bo.dados.quando = 0;
+  // Não redesenha com alguém digitando, com janela ou filtro abertos.
+  const ae = document.activeElement;
+  const ocupado = (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) || document.querySelector('.modal-bg.open, #sa-pop');
+  const pag = document.querySelector('.page.active')?.id?.replace('page-', '');
+  try {
+    await intelCarregarDados(true);
+    if (!ocupado) {
+      if (pag === 'hoje') await carregarHoje(true);
+      else if (pag === 'saldo') await carregarSaldoErp(true);
+      else if (pag === 'analista' && typeof carregarAnalista === 'function') await carregarAnalista(true);
+      else { intelCalcular(); intelContador(); }
+    } else { intelCalcular(); intelContador(); }
+  } catch (e) {}
+  const hora = quando ? new Date(quando).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : '';
+  toast(`${mov ? 'Chegaram movimentações novas do ERP' : 'Chegou saldo novo do ERP'}${hora ? ` (${hora})` : ''}. ${ocupado ? 'Toque em Atualizar para ver na tela.' : 'A tela já foi atualizada.'}`, 'ok', 6000);
+}
+if (typeof window !== 'undefined' && document.getElementById('page-hoje')) {
+  setTimeout(erpVigiar, 8000);
+  setInterval(erpVigiar, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) erpVigiar(); });
+}
