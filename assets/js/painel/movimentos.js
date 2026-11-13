@@ -85,6 +85,13 @@ async function mvLoteBuscar(pares, redesenhar) {
       const r = await sb.from('estoque_ref').select('codigo, lote, armazem, filial, saldo, unidade, dt_fabricacao, dt_validade').in('lote', lotes);
       if (!r.error) ref = r.data || [];
     } catch (e) {}
+    // Fabricação/validade que o saldo já mostrou para o lote ao longo do tempo
+    // (sql/migracao-lote-fabval.sql; sem a tabela, fica só a de hoje).
+    let fvs = [];
+    try {
+      const r = await sb.from('lote_fabval').select('codigo, lote, filial, dt_fabricacao, dt_validade, primeiro_visto, ultimo_visto').in('lote', lotes).order('primeiro_visto');
+      if (!r.error) fvs = r.data || [];
+    } catch (e) {}
     for (const r of movs) mvNormaliza(r);
     for (const [c, l] of falta) {
       const cod = normalizarCodigo(c), lt = String(l).trim().toUpperCase();
@@ -96,7 +103,8 @@ async function mvLoteBuscar(pares, redesenhar) {
       const fab = saldo.map(r => r.dt_fabricacao).find(Boolean) || null;
       const val = saldo.map(r => r.dt_validade).find(Boolean) || meus.map(r => r.dt_validade).find(Boolean) || null;
       const libs = anTransferencias(meus).filter(t => t.rota === MV_LIB).sort((a, b) => String(a.emissao).localeCompare(String(b.emissao)));
-      _mvLote.set(mvLk(c, l), { fab, val, movs:meus, libs, saldo });
+      const fv = fvs.filter(r => normalizarCodigo(r.codigo) === cod && String(r.lote || '').toUpperCase() === lt);
+      _mvLote.set(mvLk(c, l), { fab, val, movs:meus, libs, saldo, fv });
     }
   } catch (e) {
     falta.forEach(([c, l]) => _mvLotePedido.delete(mvLk(c, l)));
@@ -107,13 +115,41 @@ async function mvLoteBuscar(pares, redesenhar) {
 // Depois de desenhar a tabela, busca o que falta dos lotes da página.
 function mvLoteDepois(pares, rr) { setTimeout(() => mvLoteBuscar(pares, rr), 0); }
 
+// Fabricação e validade do lote NO DIA do movimento (podem mudar de uma
+// liberação para outra). Ordem de confiança:
+//   1. o que veio no próprio movimento (validade sempre; fabricação se a
+//      consulta do ERP tiver a coluna)
+//   2. a combinação fabricação+validade que o saldo mostrou com essa mesma
+//      validade, ou a que valia naquele dia (lote_fabval)
+//   3. a de hoje no saldo — marcada como aproximada
+const mvIsoDe = ts => { const d = new Date(ts); return isNaN(d) ? '' : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const mvD10 = x => x ? String(x).slice(0, 10) : null;
+function mvFvDia(i, dia, rFab, rVal) {
+  const d = mvD10(dia) || '9999-12-31', fv = i?.fv || [];
+  let par = null, aprox = false;
+  if (rVal) {
+    const m = fv.filter(x => mvD10(x.dt_validade) === mvD10(rVal));
+    par = m.filter(x => mvIsoDe(x.primeiro_visto) <= d).at(-1) || m[0] || null;
+  }
+  if (!par && fv.length) {
+    par = fv.filter(x => mvIsoDe(x.primeiro_visto) <= d && mvIsoDe(x.ultimo_visto) >= d).at(-1)
+       || fv.filter(x => mvIsoDe(x.primeiro_visto) <= d).at(-1) || null;
+    if (!par) { par = fv[0]; aprox = true; }
+  }
+  if (!par && i) { par = { dt_fabricacao:i.fab, dt_validade:i.val }; aprox = true; }
+  return {
+    fab:rFab || par?.dt_fabricacao || null, val:rVal || par?.dt_validade || null,
+    fabAprox:!rFab && aprox, valAprox:!rVal && aprox,
+  };
+}
+const mvVenceCls = val => { if (!val) return ''; const d = Math.round((new Date(mvD10(val) + 'T12:00') - Date.now()) / 864e5); return d < 0 ? 'mv-venc' : d <= 90 ? 'mv-quase' : ''; };
 // Fabricação e validade numa célula só (validade vencendo em vermelho/amarelo).
-function mvFabVal(cod, lote, valMov) {
+function mvFabVal(cod, lote, valMov, dia, fabMov) {
   const i = mvLoteInfo(cod, lote);
-  const val = i?.val || valMov, fab = i?.fab;
-  let cls = '';
-  if (val) { const d = Math.round((new Date(String(val).slice(0, 10) + 'T12:00') - Date.now()) / 864e5); cls = d < 0 ? 'mv-venc' : d <= 90 ? 'mv-quase' : ''; }
-  return `<div class="mv-fv"><span>fab.</span> ${fab ? mvDia(fab) : (i ? '—' : '…')}</div><div class="mv-fv ${cls}"><span>val.</span> ${val ? mvDia(val) : '—'}</div>`;
+  const x = mvFvDia(i, dia, fabMov, valMov);
+  const ap = 'title="Não veio no movimento: é a do saldo do ERP de hoje, pode ter sido outra naquele dia"';
+  return `<div class="mv-fv${x.fabAprox ? ' mv-aprox' : ''}" ${x.fabAprox ? ap : ''}><span>fab.</span> ${x.fab ? mvDia(x.fab) : (i ? '—' : '…')}</div>` +
+    `<div class="mv-fv ${x.valAprox ? 'mv-aprox' : mvVenceCls(x.val)}" ${x.valAprox ? ap : ''}><span>val.</span> ${x.val ? mvDia(x.val) : '—'}</div>`;
 }
 const mvLoteBt = (cod, lote) => lote
   ? `<button class="mv-lote" title="Histórico do lote" onclick="mvHistLote('${esc(normalizarCodigo(cod))}','${esc(String(lote).replace(/'/g, ''))}')">${esc(lote)}</button>`
@@ -160,6 +196,8 @@ async function mvHistLote(cod, lote) {
     rs.forEach(mvNormaliza);
     outrosLotes = anTransferencias(rs.filter(r => r.movest !== false)).filter(t => t.rota === MV_LIB && String(t.base.lote || '').toUpperCase() !== String(lote).toUpperCase());
   } catch (e) {}
+  outrosLotes = outrosLotes.slice(-30);
+  if (outrosLotes.length) await mvLoteBuscar(outrosLotes.map(t => [t.base.codigo, t.base.lote]), null);
   const prod = i.movs.find(r => normalizarCodigo(r.codigo) === normalizarCodigo(cod)) || i.movs[0];
   $('ml-tit').textContent = `${prod?.descricao || cod} · lote ${lote}`;
   $('ml-sub').textContent = `${cod}${prod ? ' · ' + filialCurta(prod.filial) : ''}`;
@@ -169,6 +207,13 @@ async function mvHistLote(cod, lote) {
   for (const t of anTransferencias(i.movs)) ev.push({ d:t.emissao, id:(t.s || t.e).id, r:null, t });
   ev.sort((a, b) => String(a.d).localeCompare(String(b.d)) || a.id - b.id);
   const soma = f => mvQtdTxt(mvSomaUn(i.movs.filter(f)));
+  // Fabricação/validade de cada movimento, no dia dele.
+  const fvCel = (rr, dia) => { const x = rr || {}; return `<td class="mono">${mvFabVal(cod, lote, x.dt_validade, dia, x.dt_fabricacao)}</td>`; };
+  const fvEv = e => e.r ? mvFvDia(i, e.r.emissao, e.r.dt_fabricacao, e.r.dt_validade) : mvFvDia(i, e.t.emissao, (e.t.e || e.t.s).dt_fabricacao, (e.t.s || e.t.e).dt_validade);
+  const fvs = ev.map(fvEv);
+  const difs = k => [...new Set(fvs.filter(x => x[k] && !x[k + 'Aprox']).map(x => mvD10(x[k])))].sort();
+  const fabs = difs('fab'), vals = difs('val');
+  const outrasTxt = (lista, atual) => { const o = lista.filter(x => x !== mvD10(atual)); return o.length ? `<small class="mv-ml-mudou">mudou: também ${o.map(mvDia).join(', ')}</small>` : ''; };
   const un = prod?.un || '';
   const vd = i.val ? Math.round((new Date(String(i.val).slice(0, 10) + 'T12:00') - Date.now()) / 864e5) : null;
   const saldoTxt = i.saldo.filter(r => Number(r.saldo)).sort((a, b) => mvOrdemArm(normalizarArmazem(a.armazem), normalizarArmazem(b.armazem)))
@@ -178,27 +223,27 @@ async function mvHistLote(cod, lote) {
       const r = e.r, ent = r.tipo_mov === 'Entrada';
       return `<tr><td class="mono">${mvDia(r.emissao)}</td><td><span class="tag ${ent ? 't-info' : 't-mute'}">${ent ? 'entrada NF' : 'saída NF'}</span><div class="sub">${esc((r.tes_desc || '').toLowerCase())}</div></td>
         <td>${ent ? mvDePara('nota', r.arm, r.cli_nome ? 'fornecedor' : '') : mvDePara(r.arm, 'nota', r.cli_nome ? 'cliente' : '')}</td><td class="num"><b>${anQ(r.quantidade)}</b> <small class="sa-un">${esc(r.un)}</small></td>
-        <td class="mono">${esc(r.nf || '—')}${r.pedido ? `<div class="sub">ped. ${esc(r.pedido)}</div>` : ''}</td><td><div class="mv-corta">${esc(r.cli_nome || '—')}</div>${r.cli_uf ? `<div class="sub">${esc(r.cli_uf)}</div>` : ''}</td><td>${esc(mvQem(r) || '—')}</td></tr>`;
+        ${fvCel(r, r.emissao)}<td class="mono">${esc(r.nf || '—')}${r.pedido ? `<div class="sub">ped. ${esc(r.pedido)}</div>` : ''}</td><td><div class="mv-corta">${esc(r.cli_nome || '—')}</div>${r.cli_uf ? `<div class="sub">${esc(r.cli_uf)}</div>` : ''}</td><td>${esc(mvQem(r) || '—')}</td></tr>`;
     }
     const t = e.t;
     return `<tr class="${t.rota === MV_LIB ? 'mv-tl-lib' : ''}"><td class="mono">${mvDia(t.emissao)}</td><td><span class="tag ${t.rota === MV_LIB ? 't-ok' : /vencido|descarte|avaria/.test(t.rota) ? 't-neg' : !t.s || !t.e ? 't-info' : 't-mute'}">${esc(mvRotaTxt(t))}</span>${t.codDif ? `<div class="sub">vira ${esc(t.e.codigo)}</div>` : ''}</td>
       <td>${mvDePara(t.de, t.para)}</td><td class="num"><b>${anQ(t.qtd)}</b> <small class="sa-un">${esc(t.un)}</small></td>
-      <td class="mono">${esc(t.doc || '—')}</td><td class="num-zero">—</td><td>${esc(t.usuario || mvQem(t.base) || '—')}</td></tr>`;
+      ${fvCel({ dt_validade:(t.s || t.e).dt_validade, dt_fabricacao:(t.e || t.s).dt_fabricacao }, t.emissao)}<td class="mono">${esc(t.doc || '—')}</td><td class="num-zero">—</td><td>${esc(t.usuario || mvQem(t.base) || '—')}</td></tr>`;
   };
   $('ml-corpo').innerHTML = `<div class="mv-ml-kpis">
-      <div><span>Fabricação</span><b>${i.fab ? mvDia(i.fab) : '—'}</b></div>
-      <div><span>Validade</span><b class="${vd != null && vd < 0 ? 'mv-venc' : vd != null && vd <= 90 ? 'mv-quase' : ''}">${i.val ? mvDia(i.val) : '—'}</b>${vd != null ? `<small>${vd < 0 ? `vencido há ${num(-vd)} dia(s)` : `faltam ${num(vd)} dia(s)`}</small>` : ''}</div>
+      <div><span>Fabricação hoje</span><b>${i.fab ? mvDia(i.fab) : '—'}</b>${outrasTxt(fabs, i.fab)}</div>
+      <div><span>Validade hoje</span><b class="${vd != null && vd < 0 ? 'mv-venc' : vd != null && vd <= 90 ? 'mv-quase' : ''}">${i.val ? mvDia(i.val) : '—'}</b>${vd != null ? `<small>${vd < 0 ? `vencido há ${num(-vd)} dia(s)` : `faltam ${num(vd)} dia(s)`}</small>` : ''}${outrasTxt(vals, i.val)}</div>
       <div><span>Liberações da quarentena</span><b>${num(i.libs.length)}</b>${i.libs.length ? `<small>${i.libs.map(x => mvDiaCurto(x.emissao)).join(' · ')}</small>` : ''}</div>
       <div><span>Entrou por nota</span><b>${soma(r => r.tipo_mov === 'Entrada')}</b></div>
       <div><span>Saiu por nota</span><b>${soma(r => r.tipo_mov === 'Saída')}</b></div>
       <div class="mv-ml-saldo"><span>Saldo hoje no ERP</span><b>${saldoTxt}</b></div>
     </div>
-    <div class="mv-ml-sec">Tudo o que o ERP registrou deste lote <small>${num(ev.length)} movimento(s), do mais antigo ao mais novo</small></div>
-    <div class="tbl-wrap"><table class="tbl mv-tbl"><thead><tr><th>Data</th><th>Movimento</th><th>Armazém</th><th class="num">Quantidade</th><th>Doc. / NF</th><th>Cliente / fornecedor</th><th>Quem</th></tr></thead>
-      <tbody>${ev.map(linha).join('') || '<tr><td colspan="7" class="num-zero">O ERP não tem movimento deste lote.</td></tr>'}</tbody></table></div>
+    <div class="mv-ml-sec">Tudo o que o ERP registrou deste lote <small>${num(ev.length)} movimento(s), do mais antigo ao mais novo · fabricação e validade de cada dia${fvs.some(x => x.fabAprox || x.valAprox) ? ' · <i class="mv-aprox">em cinza: a de hoje, o dia não tem registro</i>' : ''}</small></div>
+    <div class="tbl-wrap"><table class="tbl mv-tbl"><thead><tr><th>Data</th><th>Movimento</th><th>Armazém</th><th class="num">Quantidade</th><th>Fabricação / validade</th><th>Doc. / NF</th><th>Cliente / fornecedor</th><th>Quem</th></tr></thead>
+      <tbody>${ev.map(linha).join('') || '<tr><td colspan="8" class="num-zero">O ERP não tem movimento deste lote.</td></tr>'}</tbody></table></div>
     <div class="mv-ml-sec">Outras liberações deste produto <small>outros lotes, últimos 180 dias</small></div>
-    ${outrosLotes.length ? `<div class="tbl-wrap"><table class="tbl mv-tbl"><thead><tr><th>Data</th><th>Lote</th><th class="num">Quantidade</th><th>Doc.</th><th>Quem</th></tr></thead>
-      <tbody>${outrosLotes.reverse().map(t => `<tr><td class="mono">${mvDia(t.emissao)}</td><td>${mvLoteBt(t.base.codigo, t.base.lote)}</td><td class="num"><b>${anQ(t.qtd)}</b> <small class="sa-un">${esc(t.un)}</small></td><td class="mono">${esc(t.doc || '—')}</td><td>${esc(t.usuario || '—')}</td></tr>`).join('')}</tbody></table></div>`
+    ${outrosLotes.length ? `<div class="tbl-wrap"><table class="tbl mv-tbl"><thead><tr><th>Data</th><th>Lote</th><th>Fabricação / validade</th><th class="num">Quantidade</th><th>Doc.</th><th>Quem</th></tr></thead>
+      <tbody>${outrosLotes.reverse().map(t => `<tr><td class="mono">${mvDia(t.emissao)}</td><td>${mvLoteBt(t.base.codigo, t.base.lote)}</td><td class="mono">${mvFabVal(t.base.codigo, t.base.lote, (t.s || t.e).dt_validade, t.emissao, (t.e || t.s).dt_fabricacao)}</td><td class="num"><b>${anQ(t.qtd)}</b> <small class="sa-un">${esc(t.un)}</small></td><td class="mono">${esc(t.doc || '—')}</td><td>${esc(t.usuario || '—')}</td></tr>`).join('')}</tbody></table></div>`
       : '<div class="hj-vazio" style="padding:4px 20px 18px">Nenhuma outra liberação deste produto nos últimos 180 dias.</div>'}`;
 }
 
@@ -227,7 +272,7 @@ function mvEntradas(rows, esc_, rr, titulo = 'Entradas') {
     <div class="tbl-wrap"><table class="tbl mv-tbl"><thead><tr>${esc_ === 'an' ? '<th>Data</th>' : ''}<th>NF</th><th>Produto</th><th>Lote</th><th>Fabricação / validade</th><th>Armazém</th><th class="num">Quantidade</th><th class="num">Paletes</th><th class="num">Valor</th><th>Fornecedor · TES</th><th>Quem lançou</th></tr></thead>
     <tbody>${p.itens.map(r => `<tr>${esc_ === 'an' ? `<td class="mono">${saData(String(r.emissao).slice(0, 10))}</td>` : ''}<td class="mono"><b>${esc(r.nf || '—')}</b>${r.serie ? `<div class="sub">série ${esc(r.serie)}</div>` : ''}</td>
       <td class="nome">${esc(r.descricao || r.codigo)}<div class="sub mono">${esc(r.codigo)}${r.tipo_prod ? ' · ' + esc(r.tipo_prod) : ''} · ${esc(filialCurta(r.filial))}</div></td>
-      <td>${mvLoteBt(r.codigo, r.lote)}</td><td class="mono">${mvFabVal(r.codigo, r.lote, r.dt_validade)}</td><td>${mvArmTxt(r.arm)}</td>
+      <td>${mvLoteBt(r.codigo, r.lote)}</td><td class="mono">${mvFabVal(r.codigo, r.lote, r.dt_validade, r.emissao, r.dt_fabricacao)}</td><td>${mvArmTxt(r.arm)}</td>
       <td class="num"><b>${anQ(r.quantidade)}</b> <small class="sa-un">${esc(r.un)}</small></td><td class="num">${Number(r.paletes) ? num1(typeof anPl === 'function' ? anPl(r) : r.paletes) : '—'}</td>
       <td class="num">${Number(r.valor) ? anR(r.valor) : '—'}</td><td><div class="mv-corta" title="${esc(r.cli_nome || '')}">${esc(r.cli_nome || '—')}</div><div class="sub mv-corta">${esc(r.tes_desc || '')}</div></td><td>${esc(mvQem(r) || '—')}</td></tr>`).join('')
       || `<tr><td colspan="11" class="num-zero">Nada com esses filtros.</td></tr>`}</tbody></table></div>
@@ -276,7 +321,7 @@ function mvInternos(rows, esc_, rr, titulo = 'Movimentos internos') {
     <div class="tbl-wrap"><table class="tbl mv-tbl"><thead><tr><th>${esc_ === 'an' ? 'Data · o quê' : 'O quê'}</th><th>Produto</th><th>Lote</th><th>Fabricação / validade</th><th>De → para</th><th class="num">Quantidade</th><th>Doc.</th><th>Quem</th></tr></thead>
     <tbody>${p.itens.map(t => `<tr><td>${esc_ === 'an' ? `<div class="mono mv-data">${saData(String(t.emissao).slice(0, 10))}</div>` : ''}<span class="tag ${/quarentena/.test(t.rota) ? 't-ok' : /vencido|descarte|avaria/.test(t.rota) ? 't-neg' : !t.s || !t.e ? 't-info' : 't-mute'}">${esc(mvRotaTxt(t))}</span></td>
       <td class="nome">${esc(t.base.descricao || t.base.codigo)}${t.codDif ? `<div class="sub">vira ${esc(t.e.descricao || t.e.codigo)}</div>` : ''}<div class="sub mono">${esc(t.base.codigo)} · ${esc(filialCurta(t.base.filial))}</div></td>
-      <td>${mvLoteBt(t.base.codigo, t.base.lote)}${mvLibTxt(t)}</td><td class="mono">${mvFabVal(t.base.codigo, t.base.lote, t.val)}</td>
+      <td>${mvLoteBt(t.base.codigo, t.base.lote)}${mvLibTxt(t)}</td><td class="mono">${mvFabVal(t.base.codigo, t.base.lote, t.val, t.emissao, (t.e || t.s).dt_fabricacao)}</td>
       <td>${mvDePara(t.de, t.para)}</td>
       <td class="num"><b>${anQ(t.qtd)}</b> <small class="sa-un">${esc(t.un)}</small></td><td class="mono">${esc(t.doc || '—')}</td><td>${esc(t.qem || '—')}</td></tr>`).join('')
       || `<tr><td colspan="9" class="num-zero">Nada com esses filtros.</td></tr>`}</tbody></table></div>

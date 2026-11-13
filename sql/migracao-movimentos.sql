@@ -46,6 +46,9 @@ create table if not exists erp_mov (
   usuario_import text,
   importado_em   timestamptz not null default now()
 );
+-- Fabricação do lote no movimento (vem se a consulta do ERP tiver a
+-- coluna "Data de Fabricação"; sem ela fica vazia).
+alter table erp_mov add column if not exists dt_fabricacao date;
 create index if not exists erp_mov_emissao on erp_mov (emissao);
 create index if not exists erp_mov_lote    on erp_mov (codigo, lote);
 create index if not exists erp_mov_pedido  on erp_mov (pedido);
@@ -80,7 +83,7 @@ begin
   where emissao between p_de and p_ate
     and (p_filiais is null or cardinality(p_filiais) = 0 or filial = any(p_filiais));
 
-  insert into erp_mov (filial, sequencia, tipo_mov, tipo_prod, codigo, descricao, quantidade, um, lote, dt_validade, armazem,
+  insert into erp_mov (filial, sequencia, tipo_mov, tipo_prod, codigo, descricao, quantidade, um, lote, dt_validade, dt_fabricacao, armazem,
                        volumes, paletes, valor, cli_cod, cli_loja, cli_nome, cli_uf, nf, serie, tipo_nf, emissao, cc, cfop,
                        tes, tes_desc, usuario, movest, numsa, pedido, usuario_import)
   select
@@ -94,6 +97,7 @@ begin
     nullif(upper(_celula_txt(l->'UM')), ''),
     upper(_celula_txt(l->'LOTE')),
     _celula_data(l->'VALIDADE'),
+    _celula_data(l->'FABRICACAO'),
     upper(regexp_replace(_celula_txt(l->'ARM'), '\s+', '', 'g')),
     _celula_num(l->'VOL'),
     _celula_num(l->'PAL'),

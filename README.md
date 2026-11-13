@@ -47,7 +47,7 @@ vercel.json            endereços e cabeçalhos da Vercel
 
 Rodar no SQL Editor, uma vez cada (todos podem rodar de novo sem estragar nada):
 `migracao-usuarios`, `migracao-identificacao`, `migracao-saldo-mapeado`, `sync-saldo-erp`, `migracao-saldo-historico`,
-`migracao-separacao`, `migracao-inteligencia`, `migracao-robo-pedido`, `migracao-movimentos`, `migracao-drive-armazem`.
+`migracao-separacao`, `migracao-inteligencia`, `migracao-robo-pedido`, `migracao-movimentos`, `migracao-drive-armazem`, `migracao-lote-fabval`.
 
 ## Robôs
 

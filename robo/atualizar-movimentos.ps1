@@ -71,7 +71,7 @@ function Sem-Acento($s) {
 $Mapa = @{
   'filial'='FILIAL'; 'sequencia'='SEQ'; 'tipo movimento'='TIPO_MOV'; 'tipo de produto'='TIPO_PROD'
   'codigo produto'='COD'; 'descricao produto'='DESC'; 'quantidade'='QTD'; 'um'='UM'; 'lote'='LOTE'
-  'data de validade'='VALIDADE'; 'armazem'='ARM'; 'volumes'='VOL'; 'pallets'='PAL'; 'valor total'='VALOR'
+  'data de validade'='VALIDADE'; 'data de fabricacao'='FABRICACAO'; 'data fabricacao'='FABRICACAO'; 'dt fabricacao'='FABRICACAO'; 'armazem'='ARM'; 'volumes'='VOL'; 'pallets'='PAL'; 'valor total'='VALOR'
   'cod. cli/forn'='CLI_COD'; 'loja cli/forn'='CLI_LOJA'; 'nome cli/forn'='CLI_NOME'; 'estado cli/forn'='CLI_UF'
   'num. nf-e'='NF'; 'serie nf'='SERIE'; 'tipo nf-e'='TIPO_NF'; 'data emissao'='EMISSAO'; 'centro de custo'='CC'
   'class. fiscal'='CFOP'; 'num. tes'='TES'; 'desc tes'='TES_DESC'; 'usuario mov.'='USUARIO'
