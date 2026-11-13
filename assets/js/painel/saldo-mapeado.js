@@ -27,9 +27,10 @@ if (typeof ACOES === 'object') Object.assign(ACOES, {
 });
 
 /* Armazéns que ficam no drive-in e por isso têm de estar no mapa.
-   48 (descarte) e CE (estoque de clientes) existem, mas não são
-   mapeados: o saldo deles não entra na comparação. */
-const ARM_MAPEADOS = ['42', '49', '85', '91', '94', '98', 'D2', 'D4', 'D5', 'D6', 'D7', 'D8'];
+   88 (controle de amostras - CQ), D3 (diferença de estoque) e CE
+   (estoque de clientes) existem, mas não são mapeados: o saldo deles
+   aparece, só não entra na comparação com o mapa. */
+const ARM_MAPEADOS = ['96', '42', '48', '49', '85', '91', '94', '98', 'D2', 'D4', 'D5', 'D6', 'D7', 'D8'];
 const armMapeado = a => ARM_MAPEADOS.includes(normalizarArmazem(a));
 
 /* ── planilha de referência ── */

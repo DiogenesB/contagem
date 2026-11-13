@@ -16,7 +16,7 @@ const AN_ABAS = [['resumo', 'Expedição'], ['saidas', 'Saídas'], ['entradas', 
 const AN_UNS = ['L', 'KG', 'DS'];
 // Armazéns de onde o produto sai para venda (o resto é quarentena,
 // retrabalho, avaria, vencido, descarte ou bloqueado).
-const AN_ARM_FORA_VENDA = ['D7', '48', '88', '91', '94', 'D4', '98', 'D6'];
+const AN_ARM_FORA_VENDA = ['D7', '48', '88', '91', '94', 'D4', '98', 'D6', 'D3'];
 
 /* ═══════════ DATAS ═══════════ */
 const anIso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

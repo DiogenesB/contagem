@@ -32,6 +32,6 @@ update lancamentos set armazem = upper(regexp_replace(armazem, '\s+', '', 'g'))
 select armazem, count(*) as itens, sum(quantidade) as quantidade
   from historico
  where ocupacao_ativa = true
-   and coalesce(armazem, '') not in ('42','48','49','85','91','94','98','CE','D2','D4','D5','D6','D7','D8')
+   and coalesce(armazem, '') not in ('96','42','48','49','85','88','91','94','98','CE','D2','D3','D4','D5','D6','D7','D8')
  group by armazem
  order by itens desc;

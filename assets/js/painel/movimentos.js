@@ -28,7 +28,7 @@ const _mv = {
   an:{ ent:{ arm:'', tes:'', q:'' }, int:{ modo:'todas', arm:'', usu:'', q:'' } },
 };
 // Armazéns na ordem em que o galpão pensa: venda, faturamento, quarentena, o resto.
-const MV_ORDEM = ['42', 'D2', '98', 'D6', '91', '94', 'D5', 'D4', 'D7', '48', '88', 'D8', '49', '85', 'CE'];
+const MV_ORDEM = ['42', 'D2', '98', 'D6', '91', '94', 'D5', 'D4', 'D7', '48', 'D8', '49', '85', '96', '88', 'D3', 'CE'];
 const mvOrdemArm = (a, b) => { const ia = MV_ORDEM.indexOf(a), ib = MV_ORDEM.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || String(a).localeCompare(String(b)); };
 const mvNomeArm = a => (typeof nomeArmazem === 'function' && nomeArmazem(a)) || '';
 const mvArmTxt = a => a && a !== '—' ? `<b class="mono">${esc(a)}</b>${mvNomeArm(a) ? ` <span class="mv-armn">${esc(mvNomeArm(a).toLowerCase())}</span>` : ''}` : '<span class="num-zero">—</span>';

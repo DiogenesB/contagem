@@ -154,8 +154,13 @@ function iRota(de, para, codDif) {
   if (codDif) return 'fracionamento';
   if (de === '98' && para !== '98') return 'liberação da quarentena';
   if (para === 'D7') return 'para vencidos';
-  if (para === '88' || para === '48') return 'descarte/avaria';
+  if (para === '48') return 'descarte';
   if (para === 'D4') return 'avaria';
+  if (para === '88') return 'amostra CQ';
+  if (para === 'D6') return 'bloqueio CQ';
+  if (para === 'D5') return 'risco shelf life';
+  if (para === 'D3') return 'diferença de estoque';
+  if (para === '96' || de === '96') return 'triangulação';
   return 'transferência';
 }
 // Uma frase sobre o movimento: nota, transferência ou fracionamento.

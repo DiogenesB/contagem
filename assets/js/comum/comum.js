@@ -460,16 +460,21 @@ const chaveLote = (cod, lote, arm) => `${chave(cod)}|${chave(lote)}|${chave(arm)
    Saldo mapeado (uma "sobra" num armazém, uma "falta" no outro).
    Vale para as duas filiais.
    ═══════════════════════════════════════════════════════════════ */
+/* Lista do ERP (NNR). Quais ficam no drive-in e entram no mapa:
+   ARM_MAPEADOS, em saldo-mapeado.js. 88 e D3 existem, mas não são mapeados. */
 const ARMAZENS = {
+  '96': 'TRIANGULAÇÃO',
   '42': 'PA ESTOQUE ABASTECIMENTO',
   '48': 'DESCARTE QUALIDADE',
   '49': 'PA AMOSTRAS',
   '85': 'DESMONTE',
-  '91': 'RETRABALHO QUALIDADE',
+  '88': 'CONTROLE DE AMOSTRAS - CQ',
+  '91': 'REVALIDAÇÃO / RETRABALHO',
   '94': 'RETRABALHO / REVALIDAÇÃO',
   '98': 'QUARENTENA',
   'CE': 'CONTROLE DE ESTOQUE DE CLIENTES',
   'D2': 'FATURAMENTO',
+  'D3': 'DIFERENÇA DE ESTOQUE',
   'D4': 'AVARIA',
   'D5': 'RISCO SHELF LIFE',
   'D6': 'BLOQUEADO CQ',
