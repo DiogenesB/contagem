@@ -12,7 +12,7 @@
 
 const _an = { rows:null, erro:null, sync:null, periodo:'30', aba:'resumo', un:'L', met:'nfs', tipo:'', busca:'', tipoMov:'', carregado:0, tesSel:null, tesMet:'valor' };
 const AN_PERIODOS = [['hoje', 'Hoje'], ['ontem', 'Ontem'], ['7', '7 dias'], ['30', '30 dias'], ['mes', 'Este mês'], ['mesant', 'Mês passado'], ['90', '90 dias']];
-const AN_ABAS = [['resumo', 'Expedição'], ['saidas', 'Saídas'], ['tes', 'Vendas por TES'], ['clientes', 'Clientes'], ['entradas', 'Entradas'], ['internos', 'Internos'], ['cobertura', 'Cobertura'], ['lista', 'Movimentos']];
+const AN_ABAS = [['resumo', 'Expedição'], ['saidas', 'Saídas'], ['entradas', 'Entradas'], ['internos', 'Entradas e saídas internas'], ['lista', 'Movimentos'], ['clientes', 'Clientes']];
 const AN_UNS = ['L', 'KG', 'DS'];
 // Armazéns de onde o produto sai para venda (o resto é quarentena,
 // retrabalho, avaria, vencido, descarte ou bloqueado).
@@ -44,6 +44,7 @@ async function carregarAnalista(forcar = false) {
     // (e o mês passado inteiro, para o "Ritmo do mês")
     const h0 = new Date(); const iniMesAnt = new Date(h0.getFullYear(), h0.getMonth() - 1, 1);
     const ini = new Date(Math.min(de.getTime() - len * 864e5, Date.now() - 31 * 864e5, iniMesAnt.getTime()));
+    if (forcar && typeof _mvLote !== 'undefined') { _mvLote.clear(); _mvLotePedido.clear(); }
     try {
       const [rows, sync] = await Promise.all([
         buscarTudo(() => sb.from('erp_mov').select('*').gte('emissao', anIso(ini)).lte('emissao', anIso(ate)).order('emissao').order('id')),
@@ -175,7 +176,7 @@ function renderAnalista() {
   _an.export = () => ls.map(r => ({ Emissão:String(r.emissao).slice(0, 10), Filial:r.filial, Tipo:r.tipo_mov, 'Tipo prod.':r.tipo_prod, Código:r.codigo,
     Produto:r.descricao, Quantidade:Number(r.quantidade) || 0, UM:r.un, Lote:r.lote, Armazém:r.arm, Paletes:Number(r.paletes) || 0, Valor:Number(r.valor) || 0,
     NF:r.nf, Série:r.serie, Pedido:r.pedido, Cliente:r.cli_nome, UF:r.cli_uf, TES:r.tes_desc, Usuário:r.usuario }));
-  corpo.innerHTML = ({ resumo:anResumo, saidas:anSaidas, tes:anTes, clientes:anClientes, entradas:anEntradas, internos:anInternos, cobertura:anCobertura, lista:anLista })[_an.aba](ls);
+  corpo.innerHTML = (({ resumo:anResumo, saidas:anSaidas, clientes:anClientes, entradas:anEntradas, internos:anInternos, lista:anLista })[_an.aba] || anResumo)(ls);
 }
 
 function anKpi(rot, valor, pe, cls = '') {
@@ -441,63 +442,7 @@ function anClientes(ls) {
 
 /* ── Entradas e Internos: as mesmas vistas da tela Hoje (movimentos.js), no período ── */
 const anEntradas = ls => mvEntradas(ls, 'an', 'an', 'Notas de entrada');
-const anInternos = ls => mvInternos(ls, 'an', 'an', 'Movimentos internos');
-
-/* ── Vendas por TES: o que foi venda de produção, revenda, bonificação,
-      exportação… e, da TES escolhida, os produtos e clientes que mais
-      saíram. "Todas as vendas" junta as TES de venda e exportação. ── */
-const AN_TES_MET = [['valor', 'Valor'], ['pl', 'Paletes'], ['nfs', 'Notas'], ['L', 'Litros'], ['KG', 'Quilos'], ['DS', 'Doses']];
-function anTesFmt(met) {
-  if (met === 'valor') return anRc;
-  if (met === 'pl') return v => num1(v) + ' pl';
-  if (met === 'nfs') return v => num(v) + (v === 1 ? ' nota' : ' notas');
-  return v => `${anQ(v)} ${met}`;
-}
-function anTesRank(rs, chave, met, rot) {
-  const valor = anValorDe(met) || (() => 0);
-  const g = anAgrupar(rs, chave, valor, rot);
-  if (met === 'nfs') for (const x of g) x.v = x.nfs.size;
-  return g.filter(x => x.v > 0).sort((a, b) => b.v - a.v);
-}
-function anTes(ls) {
-  const sai = ls.filter(r => r.tipo_mov === 'Saída');
-  if (!sai.length) return `<div class="panel"><div class="empty"><div class="empty-ico">◔</div><div class="empty-tit">Nenhuma saída no período</div></div></div>`;
-  const porTes = new Map();
-  for (const r of sai) { const k = r.tes_desc || '(sem TES)'; (porTes.get(k) || porTes.set(k, []).get(k)).push(r); }
-  const totV = sai.reduce((a, r) => a + (Number(r.valor) || 0), 0) || 1;
-  const tes = [...porTes].map(([k, rs]) => ({ k, rs, o:anSoma(rs), cat:anCat(rs[0]), pl:rs.reduce((a, r) => a + anPl(r), 0) }))
-    .sort((a, b) => b.o.valor - a.o.valor || b.o.nfs.size - a.o.nfs.size);
-  const vendas = sai.filter(anFaturado);
-  if (!_an.tesSel || (_an.tesSel !== '*' && !porTes.has(_an.tesSel)))
-    _an.tesSel = porTes.has('VENDA PRODUCAO') ? 'VENDA PRODUCAO' : vendas.length ? '*' : tes[0].k;
-  const sel = _an.tesSel, rs = sel === '*' ? vendas : porTes.get(sel), o = anSoma(rs), met = _an.tesMet, fmt = anTesFmt(met);
-  const nomeSel = sel === '*' ? 'Todas as vendas' : sel;
-  const prods = anTesRank(rs, r => `${r.filial}|${normalizarCodigo(r.codigo)}`, met,
-    x => ({ rot:x.r.descricao || x.r.codigo, sub:`${x.r.codigo} · ${num(x.nfs.size)} nota(s)`, titulo:`${x.r.descricao} (${x.r.codigo})` })).slice(0, 15);
-  const clis = anTesRank(rs, r => anCli(r), met,
-    x => ({ rot:x.r.cli_nome || x.r.cli_cod || '—', sub:`${x.r.cli_uf || '—'} · ${num(x.nfs.size)} nota(s)`, titulo:x.r.cli_nome })).slice(0, 15);
-  const valorDia = anValorDe(met);
-  const dia = met === 'nfs'
-    ? (() => { const m = new Map(anPorDia([], () => 0).map(p => [p.d, new Set()])); for (const r of rs) { const k = String(r.emissao).slice(0, 10); if (m.has(k)) m.get(k).add(anNF(r)); } return [...m].map(([d, st]) => ({ d, v:st.size })); })()
-    : anPorDia(rs, valorDia);
-  const colsU = u => AN_UNS.map(x => `<td class="num">${u.q[x] ? anQ(u.q[x]) : '<span class="num-zero">—</span>'}</td>`).join('');
-  const linha = (k, rot, x, cat) => `<tr class="mv-click${sel === k ? ' on' : ''}" onclick="_an.tesSel='${k.replace(/'/g, "\\'")}';renderAnalista()">
-      <td><b>${esc(rot)}</b>${cat ? `<div class="sub">${esc(cat)}</div>` : ''}</td><td class="num">${num(x.o.nfs.size)}</td><td class="num">${num(x.o.clis.size)}</td>${colsU(x.o)}
-      <td class="num">${num1(x.pl)}</td><td class="num">${anR(x.o.valor)}</td><td class="num">${num1(x.o.valor / totV * 100)}%</td></tr>`;
-  const tVendas = { o:anSoma(vendas), pl:vendas.reduce((a, r) => a + anPl(r), 0) };
-  return `<div class="panel"><div class="panel-head"><div><div class="section-title">Saídas por TES</div>
-      <div class="section-note">o tipo de saída de cada nota · clique numa linha para ver os produtos e os clientes dela</div></div></div>
-    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>TES</th><th class="num">Notas</th><th class="num">Clientes</th>${AN_UNS.map(u => `<th class="num">${u}</th>`).join('')}<th class="num">Paletes</th><th class="num">Valor</th><th class="num">% valor</th></tr></thead>
-    <tbody>${vendas.length ? linha('*', 'Todas as vendas', tVendas, 'venda + exportação') : ''}${tes.map(x => linha(x.k, x.k, x, x.cat)).join('')}</tbody></table></div></div>
-  <div class="panel-head mv-tes-tit" style="margin:4px 0 10px"><div><div class="section-title">${esc(nomeSel)}</div>
-      <div class="section-note">${num(o.nfs.size)} nota(s) · ${num(o.peds.size)} pedido(s) · ${num(o.clis.size)} cliente(s) · ${anQtdTxt(o)} · ${num1(rs.reduce((a, r) => a + anPl(r), 0))} paletes · ${anR(o.valor)}</div></div>
-    <div class="seg">${AN_TES_MET.filter(([m]) => !AN_UNS.includes(m) || o.q[m]).map(([m, t]) => `<button class="${met === m ? 'active' : ''}" onclick="_an.tesMet='${m}';renderAnalista()">${t}</button>`).join('')}</div></div>
-  <div class="an-grafs">
-    <div class="panel an-bloco"><div class="panel-head"><div><div class="section-title">Produtos que mais saíram</div><div class="section-note">por ${esc(AN_TES_MET.find(([m]) => m === met)[1].toLowerCase())} · top 15</div></div></div><div class="panel-body">${anRanking(prods, fmt)}</div></div>
-    <div class="panel an-bloco"><div class="panel-head"><div><div class="section-title">Clientes que mais compraram</div><div class="section-note">por ${esc(AN_TES_MET.find(([m]) => m === met)[1].toLowerCase())} · top 15</div></div></div><div class="panel-body">${anRanking(clis, fmt)}</div></div>
-  </div>
-  <div class="panel"><div class="panel-head"><div><div class="section-title">Dia a dia</div><div class="section-note">${esc(nomeSel)}</div></div></div><div class="panel-body">${anBarras(dia, 'Dia a dia de ' + nomeSel, met === 'valor' ? anRc : met === 'nfs' ? num : met === 'pl' ? num1 : anQ)}</div></div>`;
-}
+const anInternos = ls => mvInternos(ls, 'an', 'an', 'Entradas e saídas internas');
 
 /* ── Cobertura: quantos dias o estoque dura no ritmo dos últimos 30 dias,
       e o que vence antes de sair (consumindo do lote que vence primeiro). ── */
@@ -535,31 +480,6 @@ function anCoberturaCalc() {
   }
   return out;
 }
-function anCobertura() {
-  if (!_sa?.ok) return '<div class="skeleton">carregando o saldo do ERP…</div>';
-  const cob = anCoberturaCalc();
-  const ordem = [...cob].sort((a, b) => (b.risco > 0) - (a.risco > 0) || (a.dias ?? 1e9) - (b.dias ?? 1e9));
-  const parados = cob.filter(c => !c.porDia).sort((a, b) => b.disp - a.disp);
-  const p = fatiar('an-cob', ordem.filter(c => c.porDia), _an.tipo + ordem.length);
-  const fimTxt = d => { if (d === null) return '—'; const f = new Date(Date.now() + d * 864e5); return saData(anIso(f)); };
-  return `<div class="aviso a-info"><span class="aviso-ico">◔</span><div><b>Como ler</b>
-    Ritmo = média das notas de saída dos últimos 30 dias. Estoque = saldo livre (sem empenho) e dentro da validade, nos armazéns de venda — fora quarentena, retrabalho, avaria, vencidos, descarte e bloqueado.
-    "Vence antes de sair" consome primeiro o lote que vence primeiro (FEFO).</div></div>
-  <div class="panel"><div class="panel-head"><div><div class="section-title">Cobertura do estoque</div><div class="section-note">produtos com saída nos últimos 30 dias</div></div></div>
-    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Produto</th><th class="num">Estoque livre</th><th class="num">Sai por dia</th><th class="num">Dura</th><th>Acaba em</th><th class="num">Vence antes de sair</th></tr></thead>
-    <tbody>${p.itens.map(c => `<tr><td class="nome">${esc(c.l.desc)}<div class="sub mono">${esc(c.l.cod)} · ${esc(filialCurta(c.l.filial))}</div></td>
-      <td class="num">${anQ(c.disp)} <small class="sa-un">${esc(c.l.un)}</small></td><td class="num">${anQ(c.porDia)}</td>
-      <td class="num"><b class="${c.dias < 15 ? 'sa-warn' : ''}">${num(Math.round(c.dias))} dia(s)</b></td><td class="mono">${fimTxt(c.dias)}</td>
-      <td class="num">${c.risco > 0.001 ? `<span class="num-neg"><b>${anQ(c.risco)}</b> ${esc(c.l.un)}</span><div class="sub">lote ${esc(c.loteRisco?.lote || '—')} vence ${saData(c.loteRisco?.val)}</div>` : '<span class="num-zero">—</span>'}</td></tr>`).join('') ||
-      '<tr><td colspan="6" class="num-zero">Nenhum produto com saída nos últimos 30 dias.</td></tr>'}</tbody></table></div>
-    ${barraPag('an-cob', p, 'produto(s)')}</div>
-  <div class="panel"><div class="panel-head"><div><div class="section-title">Com estoque e sem saída em 30 dias</div><div class="section-note">${num(parados.length)} produto(s), pelo estoque livre</div></div></div>
-    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Produto</th><th class="num">Estoque livre</th><th>Vence primeiro</th></tr></thead>
-    <tbody>${parados.slice(0, 30).map(c => { const v = [...c.lotes].filter(l => l.val).sort((a, b) => a.val.localeCompare(b.val))[0];
-      return `<tr><td class="nome">${esc(c.l.desc)}<div class="sub mono">${esc(c.l.cod)} · ${esc(filialCurta(c.l.filial))}</div></td><td class="num">${anQ(c.disp)} <small class="sa-un">${esc(c.l.un)}</small></td>
-      <td class="mono">${v ? `${saData(v.val)} · ${esc(v.lote)}` : '—'}</td></tr>`; }).join('') || '<tr><td colspan="3" class="num-zero">—</td></tr>'}</tbody></table></div></div>`;
-}
-
 /* ── Lista ── */
 function anLista(ls) {
   const q = (_an.busca || '').trim().toUpperCase();
