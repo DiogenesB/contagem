@@ -26,7 +26,7 @@ assets/
     comum/             usado por mais de uma tela
                        comum.js · usuarios.js · impressao.js · identificacao.js · leitor.js · pwa.js
     painel/            só do painel
-                       painel-app.js · inicio.js · saldo-mapeado.js · saldo-erp.js · inteligencia.js · analista.js · boletim.js
+                       painel-app.js · inicio.js · saldo-mapeado.js · saldo-erp.js · inteligencia.js · analista.js · boletim.js · movimentos.js
     mapa/              só do mapa: separacao.js
     operador/          só do app do operador: fila.js
   icons/               ícones dos apps (painel-*, operador-*, mapa-*, layout-*)

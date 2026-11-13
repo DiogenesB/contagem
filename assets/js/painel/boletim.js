@@ -24,29 +24,38 @@ const BO_ACAO = {
 };
 const BO_UNS = ['L', 'KG', 'DS'];
 
-/* ═══════════ ABA ═══════════ */
-try { _bo.aba = localStorage.getItem('hj.aba') === 'boletim' ? 'boletim' : 'fila'; } catch (e) {}
+/* ═══════════ ABAS ═══════════
+   Entradas e Internos (o que o ERP registrou no dia, movimentos.js),
+   Para arrumar (a fila da inteligência) e Boletim do dia. */
+const HJ_ABAS = ['entradas', 'internos', 'fila', 'boletim'];
+const hjErpAba = () => _bo.aba === 'entradas' || _bo.aba === 'internos';
+try { const a = localStorage.getItem('hj.aba2'); _bo.aba = HJ_ABAS.includes(a) ? a : 'entradas'; } catch (e) { _bo.aba = 'entradas'; }
 function hjAba(a) {
-  _bo.aba = a === 'boletim' ? 'boletim' : 'fila';
-  try { localStorage.setItem('hj.aba', _bo.aba); } catch (e) {}
+  _bo.aba = HJ_ABAS.includes(a) ? a : 'entradas';
+  try { localStorage.setItem('hj.aba2', _bo.aba); } catch (e) {}
   hjPintarAba();
   if (_bo.aba === 'boletim') boCarregar(false);
+  else if (hjErpAba() && typeof hjErpCarregar === 'function') hjErpCarregar(false);
 }
 function hjPintarAba() {
-  document.querySelectorAll('#hj-abas button').forEach(b => b.classList.toggle('active', b.dataset.a === _bo.aba));
-  const f = $('hj-corpo'), b = $('hj-boletim');
-  if (f) f.hidden = _bo.aba === 'boletim';
+  document.querySelectorAll('#hj-abas button').forEach(b => { const on = b.dataset.a === _bo.aba; b.classList.toggle('active', on); b.setAttribute('aria-selected', on); });
+  const f = $('hj-corpo'), b = $('hj-boletim'), e = $('hj-erp');
+  if (f) f.hidden = _bo.aba !== 'fila';
   if (b) b.hidden = _bo.aba !== 'boletim';
+  if (e) e.hidden = !hjErpAba();
 }
 function hjAtualizar() {
-  if (_bo.aba === 'boletim') boCarregar(true); else carregarHoje(true);
+  if (_bo.aba === 'boletim') boCarregar(true);
+  else if (hjErpAba()) hjErpCarregar(true);
+  else carregarHoje(true);
 }
-// Abrir a tela Hoje também carrega o boletim, se for a aba escolhida.
+// Abrir a tela Hoje também carrega a aba escolhida.
 if (typeof carregarHoje === 'function') {
   const _carregarHojeFila = carregarHoje;
   carregarHoje = async function (forcar = false) {
     hjPintarAba();
     if (_bo.aba === 'boletim') boCarregar(forcar);
+    else if (hjErpAba() && typeof hjErpCarregar === 'function') hjErpCarregar(forcar);
     return _carregarHojeFila(forcar);
   };
 }

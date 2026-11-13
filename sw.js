@@ -3,7 +3,7 @@
         cache-first no resto, API nunca passa pelo cache,
         e Background Sync para esvaziar a fila de lançamentos
         mesmo com o app fechado. */
-const CACHE = 'simbiose-v55';
+const CACHE = 'simbiose-v56';
 const CACHE_CDN = 'simbiose-cdn-v1';
 const CDNS = ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'unpkg.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 const ESSENCIAIS = ['./mobile.html', './mapa.html', '/assets/js/comum/comum.js', '/assets/js/comum/usuarios.js', '/assets/js/operador/fila.js', '/assets/js/comum/impressao.js', '/assets/js/comum/leitor.js', '/assets/manifests/operador.json', '/assets/manifests/mapa.json'];

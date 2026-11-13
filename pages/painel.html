@@ -1848,7 +1848,7 @@ html.sem-rede .app-offline {
 
 @media print {
   .side, .topbar, .btn, .filters, .side-veu { display:none !important; }
-  body.bo-imprimindo #page-hoje .page-head, body.bo-imprimindo .sa-abas-bar, body.bo-imprimindo .bo-ctrl, body.bo-imprimindo #hj-corpo { display:none !important; }
+  body.bo-imprimindo #page-hoje .page-head, body.bo-imprimindo .sa-abas-bar, body.bo-imprimindo .bo-ctrl, body.bo-imprimindo #hj-corpo, body.bo-imprimindo #hj-erp { display:none !important; }
   body.bo-imprimindo .bo { border:0; box-shadow:none; padding:0; max-width:none; }
   body.bo-imprimindo .bo-nf, body.bo-imprimindo .bo-pessoa, body.bo-imprimindo .bo-dest li, body.bo-imprimindo tr { break-inside:avoid; }
   body.bo-imprimindo .bo-sec-h { break-after:avoid; }
@@ -1867,6 +1867,53 @@ html.sem-rede .app-offline {
   #impressao .bo-pessoas { grid-template-columns:repeat(3, minmax(0, 1fr)); }
   .main { margin:0 !important; padding:0 !important; }
   body { background:#fff; color:#000; }
+}
+/* ═══════════ MOVIMENTAÇÕES DO ERP (movimentos.js: Hoje e Analista) ═══════════ */
+.mv-dia { max-width:none; }
+.mv-dia-t { font-size:.8125rem; color:var(--text-2); margin-left:4px; }
+.mv-dia-t b { color:var(--text); font-weight:600; }
+.mv-dia-n { font-size:.75rem; color:var(--text-3); }
+.mv-modo { margin:0 0 10px; }
+.mv-carts { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:10px; margin:0 0 16px; }
+.mv-cart {
+  display:flex; flex-direction:column; gap:3px; text-align:left; cursor:pointer; min-width:0;
+  padding:11px 13px; border-radius:9px; background:var(--surface); border:1px solid var(--line);
+  color:var(--text-2); font:inherit; font-size:.75rem; transition:border-color .12s, background .12s;
+}
+.mv-cart:hover { border-color:var(--line-2); background:var(--surface-2); }
+.mv-cart.on { border-color:var(--accent); background:var(--accent-sf); box-shadow:inset 3px 0 0 var(--accent); }
+.mv-cart-t { font-size:.75rem; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mv-cart-t b { color:var(--text); font-size:.9375rem; }
+.mv-cart > b { color:var(--text); font-size:.875rem; font-weight:600; font-variant-numeric:tabular-nums; }
+.mv-cart small { font-variant-numeric:tabular-nums; }
+.mv-cart-r { color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mv-armn { font-size:.6875rem; color:var(--text-3); }
+.mv-filtro { display:flex; align-items:center; gap:8px 10px; flex-wrap:wrap; margin:0 0 12px; }
+.mv-filtro > span { font-size:.6875rem; text-transform:uppercase; letter-spacing:.04em; color:var(--text-3); }
+.mv-chips { display:flex; gap:6px; flex-wrap:wrap; }
+.mv-chip {
+  display:inline-flex; align-items:center; gap:6px; cursor:pointer; font:inherit; font-size:.75rem;
+  padding:4px 10px; border-radius:100px; background:var(--surface-2); border:1px solid var(--line); color:var(--text-2);
+}
+.mv-chip span { color:var(--text-3); font-variant-numeric:tabular-nums; }
+.mv-chip:hover { border-color:var(--line-2); color:var(--text); }
+.mv-chip.on { background:var(--accent-sf); border-color:var(--accent-ln); color:var(--text); }
+.mv-busca { width:min(280px, 100%) !important; }
+.mv-tbl td { vertical-align:top; }
+.mv-tbl td.mono { white-space:nowrap; }
+.mv-tbl td.nome { min-width:220px; }
+.mv-corta { max-width:230px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mv-tbl .mv-armn { display:block; white-space:nowrap; }
+tr.mv-click { cursor:pointer; }
+tr.mv-click:hover td { background:var(--surface-2); }
+tr.mv-click.on td { background:var(--accent-sf); }
+.an-tes-cab { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; margin:0 0 16px; }
+@media (max-width:900px) {
+  .mv-carts { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+  .mv-cart { padding:10px 11px; }
+  .mv-busca { width:100% !important; }
+  .mv-dia-t { flex-basis:100%; margin:4px 0 0; }
+  .bo-dia.mv { flex-wrap:wrap; }
 }
 </style>
 </head>
@@ -2069,10 +2116,13 @@ html.sem-rede .app-offline {
     </div>
   </div>
   <div class="sa-abas-bar"><div class="seg" id="hj-abas" role="tablist" aria-label="Partes da tela Hoje">
-    <button data-a="fila" class="active" onclick="hjAba('fila')">Para arrumar</button>
-    <button data-a="boletim" onclick="hjAba('boletim')">Boletim do dia</button>
+    <button data-a="entradas" role="tab" class="active" onclick="hjAba('entradas')">Entradas</button>
+    <button data-a="internos" role="tab" onclick="hjAba('internos')">Internos</button>
+    <button data-a="fila" role="tab" onclick="hjAba('fila')">Para arrumar</button>
+    <button data-a="boletim" role="tab" onclick="hjAba('boletim')">Boletim do dia</button>
   </div></div>
-  <div id="hj-corpo"></div>
+  <div id="hj-erp"></div>
+  <div id="hj-corpo" hidden></div>
   <div id="hj-boletim" hidden></div>
 </section>
 
@@ -3059,8 +3109,9 @@ html.sem-rede .app-offline {
 <script src="/assets/js/painel/saldo-mapeado.js?v=18"></script>
 <script src="/assets/js/painel/saldo-erp.js?v=10"></script>
 <script src="/assets/js/painel/inteligencia.js?v=5"></script>
-<script src="/assets/js/painel/analista.js?v=4"></script>
-<script src="/assets/js/painel/boletim.js?v=2"></script>
+<script src="/assets/js/painel/analista.js?v=5"></script>
+<script src="/assets/js/painel/boletim.js?v=3"></script>
+<script src="/assets/js/painel/movimentos.js?v=1"></script>
 <script src="/assets/js/painel/painel-app.js?v=1" defer></script>
 <script src="/assets/js/painel/inicio.js?v=1"></script>
 <script src="/assets/js/comum/impressao.js?v=3"></script>
@@ -3196,6 +3247,11 @@ const PAG_RENDER = {
   'an-int':   () => renderAnalista(),
   'an-cob':   () => renderAnalista(),
   'an-lis':   () => renderAnalista(),
+  'an-tes':   () => renderAnalista(),
+  'mv-ent-an': () => renderAnalista(),
+  'mv-int-an': () => renderAnalista(),
+  'mv-ent-hj': () => hjErpRender(),
+  'mv-int-hj': () => hjErpRender(),
 };
 /* De quem é a rolagem que precisa voltar ao topo ao virar a página. */
 const PAG_ALVO = {
@@ -3203,6 +3259,7 @@ const PAG_ALVO = {
   saldo:'s-tabela', alteracoes:'alt-lista', mapa:'m-tbody', transfer:'t-tbody', kpi:'k-tbody', vkpi:'v-kpi-tbody',
   'sa-pla':'sa-corpo', 'sa-val':'sa-corpo', 'sa-div':'sa-corpo', 'sa-reg':'sa-corpo', 'sa-par':'sa-corpo', 'sa-evo':'sa-corpo', hoje:'hj-corpo',
   'an-sai':'an-corpo', 'an-cli':'an-corpo', 'an-ent':'an-corpo', 'an-int':'an-corpo', 'an-cob':'an-corpo', 'an-lis':'an-corpo',
+  'an-tes':'an-corpo', 'mv-ent-an':'an-corpo', 'mv-int-an':'an-corpo', 'mv-ent-hj':'hj-erp', 'mv-int-hj':'hj-erp',
 };
 
 function pagEstado(k) {
