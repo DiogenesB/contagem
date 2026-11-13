@@ -25,6 +25,7 @@ const _intel = { mov:null, alt:null, dec:null, erp:null, erroMov:null, erroDec:n
 const INTEL_TIPOS = {
   'lote-digitado':   { rot:'Lote digitado errado',          cor:'neg',  peso:1.2 },
   'produto-trocado': { rot:'Produto trocado',               cor:'neg',  peso:1.2 },
+  'codigo-errado':   { rot:'Código errado na vaga',         cor:'neg',  peso:1.2 },
   'codigo-filial':   { rot:'Código de outra filial',        cor:'alt',  peso:1.0 },
   'armazem-erp':     { rot:'Transferência sem o mapa',      cor:'alt',  peso:1.1 },
   'armazem':         { rot:'Armazém diferente',             cor:'alt',  peso:1.0 },
@@ -353,15 +354,34 @@ function intelAnalisarLinha(l) {
     return a;
   }
 
-  // ── lote não existe: procura o lote certo ──
-  if (l.estado === 'lote') {
-    const cand = intelMelhorLote(l);
+  // ── lote não existe para este produto: o mais comum é o CÓDIGO errado
+  //    (o mesmo lote existe em outro produto, quase sempre a mesma linha
+  //    em outra embalagem); depois, o lote digitado errado. ──
+  if (l.estado === 'lote' || l.estado === 'sem-saldo') {
+    const prod = intelMelhorProduto(l);
+    const cand = l.estado === 'lote' ? intelMelhorLote(l) : null;
+    if (prod && prod.conf >= 45 && (!cand || prod.conf >= cand.conf - 5)) {
+      const nome = nomeCurtoSaldo(prod.desc);
+      const a = base('codigo-errado', prod.conf, `Código errado: este lote é do ${esc(nome)}`,
+        `No mapa está <b>${esc(l.prodMapa || l.produto)}</b> (${esc(l.cod)}) com o lote <b>${esc(l.lote)}</b> — ${iQ(l.mapa, un)} em ${vagasTxt}. ` +
+        `Esse lote não existe para este produto, mas existe no ERP para <b>${esc(nome)}</b> (${esc(prod.cod)}) no ${esc(prod.arm)} com ${iQ(prod.saldo, prod.un || un)}` +
+        `${prod.falta > 0.001 ? (prod.falta < prod.saldo - 0.001 ? `, dos quais ${iQ(prod.falta, prod.un || un)} ainda sem vaga` : ' e nada dele no mapa') : ', já todo no mapa'}.`);
+      a.pistas.push(...prod.pistas);
+      if (cand && cand.conf >= 30) a.pistas.push(`Outra possibilidade (${Math.round(cand.conf)}%): lote digitado errado, o certo seria <b>${esc(cand.lote)}</b>.`);
+      if (pistaQuem) a.pistas.push(pistaQuem);
+      a.acoes.push({ rot:`Trocar o produto para ${nome}`, op:'campo', campo:'codigo', novo:prod.cod, primaria:true });
+      if (cand && cand.conf >= 30) a.acoes.push({ rot:`Trocar o lote para ${cand.lote}`, op:'campo', campo:'lote', novo:cand.lote });
+      a.acoes.push({ rot:'Pedir recontagem', op:'recontagem' });
+      return a;
+    }
     if (cand && cand.conf >= 45) {
       const a = base('lote-digitado', cand.conf, `Lote digitado errado: o certo deve ser ${esc(cand.lote)}`,
         `No mapa está <b>${esc(l.lote)}</b> (${iQ(l.mapa, un)} em ${vagasTxt}). Esse lote não existe para este produto. O ERP tem <b>${esc(cand.lote)}</b> no ${esc(cand.arm)} com ${iQ(cand.saldo, un)}${cand.falta < cand.saldo - 0.001 ? `, dos quais ${iQ(cand.falta, un)} ainda sem vaga` : ' e nada dele no mapa'}.`);
       a.pistas.push(...cand.pistas);
+      if (prod && prod.conf >= 30) a.pistas.push(`Outra possibilidade (${Math.round(prod.conf)}%): código errado — o lote ${esc(l.lote)} é do <b>${esc(nomeCurtoSaldo(prod.desc))}</b> (${esc(prod.cod)}) no ${esc(prod.arm)}.`);
       if (pistaQuem) a.pistas.push(pistaQuem);
       a.acoes.push({ rot:`Trocar o lote para ${cand.lote}`, op:'campo', campo:'lote', novo:cand.lote, primaria:true });
+      if (prod && prod.conf >= 30) a.acoes.push({ rot:`Trocar o produto para ${nomeCurtoSaldo(prod.desc)}`, op:'campo', campo:'codigo', novo:prod.cod });
       a.acoes.push({ rot:'Pedir recontagem', op:'recontagem' });
       return a;
     }
@@ -639,6 +659,47 @@ function intelMelhorLote(l) {
   const [m, seg] = res;
   if (seg && m.conf - seg.conf < 10) { m.conf -= 15; m.pistas.push(`Outro candidato parecido: ${esc(seg.lote)} — confira a etiqueta.`); }
   m.conf = Math.max(5, Math.min(97, m.conf));
+  return m;
+}
+
+// O mesmo número de lote em OUTRO produto: escolheram o código errado na
+// vaga. Pesa mais quando é no mesmo armazém, o produto é da mesma linha
+// (mesmo nome em outra embalagem: FLYCONTROL 10 L × 12 L), os códigos
+// são vizinhos e esse lote do outro produto ainda tem saldo sem vaga.
+const iFamilia = t => String(t || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9 ]+/g, ' ')
+  .split(/\s+/).filter(w => w.length >= 3 && !/^\d/.test(w) && !['DE', 'DM', 'COM', 'PARA'].includes(w));
+function intelMelhorProduto(l) {
+  const porK = intelLinhasPorK();
+  const cod = normalizarCodigo(l.cod);
+  const gem = new Set((typeof gemeosDoProduto === 'function' ? gemeosDoProduto(cod) : []).map(normalizarCodigo));
+  const meuNome = iFamilia(l.prodMapa || l.produto);
+  const cands = (_sa?.ref || []).filter(r => chave(r.lote) === chave(l.lote) && r.saldo > 0
+    && normalizarCodigo(r.cod) !== cod && !gem.has(normalizarCodigo(r.cod)) && (typeof daFilial !== 'function' || daFilial(r.filial)));
+  const res = [];
+  for (const c of cands) {
+    const linhaC = porK.get(`${iKc(c.cod, c.lote)}|${c.arm}`);
+    const falta = linhaC ? Math.max(0, (linhaC.sistema || 0) - linhaC.mapa) : c.saldo;
+    let s = 0; const pistas = [];
+    if (l.armsMapa.includes(c.arm)) { s += 25; pistas.push(`Mesmo lote e mesmo armazém (${esc(c.arm)}).`); }
+    else { s += 8; pistas.push(`Mesmo lote, mas no ${esc(c.arm)} (o mapa diz ${esc(l.armsMapa.join(', '))}).`); }
+    const nome = iFamilia(c.desc), comum = meuNome.filter(w => nome.includes(w));
+    if (comum.length) { s += 15; pistas.push(`Mesmo produto em outra embalagem/versão (${esc(comum.slice(0, 2).join(' '))}).`); }
+    const nA = Number(cod), nB = Number(normalizarCodigo(c.cod));
+    if (nA && nB && Math.abs(nA - nB) <= 3) { s += 5; pistas.push(`Códigos vizinhos (${esc(cod)} × ${esc(normalizarCodigo(c.cod))}).`); }
+    if (falta > 0.001) {
+      if (iPerto(l.mapa, falta, 0.02)) { s += 20; pistas.push(`O que falta mapear desse lote (${iQ(falta, c.un)}) é exatamente o que está na vaga.`); }
+      else if (l.mapa <= falta + 0.001) { s += 10; pistas.push(`Esse lote tem ${iQ(falta, c.un)} sem vaga — cabe o que está no mapa.`); }
+      else { s -= 8; pistas.push(`Só ${iQ(falta, c.un)} desse lote está sem vaga (o mapa tem ${iQ(l.mapa, l.un)}).`); }
+    } else { s -= 25; pistas.push(`Mas esse lote do ${esc(nomeCurtoSaldo(c.desc))} já está todo no mapa.`); }
+    res.push({ cod:normalizarCodigo(c.cod), desc:c.desc, arm:c.arm, saldo:c.saldo, un:c.un, falta, conf:50 + s, pistas });
+  }
+  // O mesmo produto em vários armazéns vira um candidato só (o melhor).
+  res.sort((a, b) => b.conf - a.conf);
+  const vistos = new Set(), uni = res.filter(x => !vistos.has(x.cod) && vistos.add(x.cod));
+  if (!uni.length) return null;
+  const [m, seg] = uni;
+  if (seg && m.conf - seg.conf < 10) { m.conf -= 12; m.pistas.push(`O lote também existe no ${esc(nomeCurtoSaldo(seg.desc))} (${esc(seg.cod)}) — confira a etiqueta.`); }
+  m.conf = Math.max(5, Math.min(96, m.conf));
   return m;
 }
 

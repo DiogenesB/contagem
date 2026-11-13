@@ -1040,7 +1040,7 @@ function linhaLote(l, sub = false) {
   const aberta = _abertas.has(l.k);
   const s = SITUACOES[l.estado];
   return `
-    <tr class="linha-saldo e-${s.cor}${aberta ? ' aberta' : ''}${sub ? ' sub' : ''}" onclick="alternarLinhaSaldo(${i})">
+    <tr class="linha-saldo e-${s.cor}${aberta ? ' aberta' : ''}${sub ? ' sub' : ''}" data-k="${esc(l.k)}" onclick="alternarLinhaSaldo(${i}, this)">
       <td class="nome strong">
         <span class="seta">${aberta ? '▾' : '▸'}</span>${esc(sub ? '' : l.produto)}
         <span class="est-rot c-${s.cor}">${s.rot}</span>
@@ -1171,7 +1171,7 @@ function linhaProduto(g) {
   const resumo = ORDEM_SIT.filter(e => cont[e]).map(e => `${cont[e]} ${SITUACOES[e].rot.toLowerCase()}`).join(' · ');
   const arms = [...new Set(g.lotes.flatMap(l => [...l.armsMapa, ...l.armsSis]))].sort();
   return `
-    <tr class="linha-saldo e-${s.cor}${aberta ? ' aberta' : ''}" onclick="alternarLinhaSaldo(${i})">
+    <tr class="linha-saldo e-${s.cor}${aberta ? ' aberta' : ''}" data-k="${esc(g.k)}" onclick="alternarLinhaSaldo(${i}, this)">
       <td class="nome strong"><span class="seta">${aberta ? '▾' : '▸'}</span>${esc(g.produto)}
         <div class="sub s-mute">${resumo}</div></td>
       <td class="mono">${esc(g.cod)}</td>
@@ -1190,11 +1190,20 @@ function linhaProduto(g) {
 /* ═══════════════════════════════════════════════════════════════
    INTERAÇÃO
    ═══════════════════════════════════════════════════════════════ */
-function alternarLinhaSaldo(i) {
+function alternarLinhaSaldo(i, el) {
   const l = _sReg[i];
   if (!l) return;
+  if (getSelection()?.toString()) return;      // estava selecionando texto
+  const k = l.k, top0 = el?.getBoundingClientRect().top;
+  const wrap = el?.closest('.tbl-wrap'), sl = wrap?.scrollLeft || 0;
   if (_abertas.has(l.k)) _abertas.delete(l.k); else _abertas.add(l.k);
   renderSaldo();
+  // A linha clicada fica no mesmo lugar da tela (e a tabela na mesma rolagem de lado).
+  const w2 = $('s-tabela')?.querySelector('.tbl-wrap') || $('s-tabela');
+  if (w2 && sl) w2.scrollLeft = sl;
+  if (top0 == null) return;
+  const novo = [...($('s-tabela')?.querySelectorAll('tr[data-k]') || [])].find(tr => tr.dataset.k === k);
+  if (novo) { const d = novo.getBoundingClientRect().top - top0; if (Math.abs(d) > 1) window.scrollBy(0, d); }
 }
 function setSituacaoSaldo(s) { _situacao = s; renderSaldo(); }
 function filtrarArmSaldo(a) { if (!a) _sArmSel.clear(); else if (_sArmSel.has(a)) _sArmSel.delete(a); else _sArmSel.add(a); renderSaldo(); }

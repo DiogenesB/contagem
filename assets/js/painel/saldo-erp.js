@@ -581,7 +581,9 @@ function renderSaldoErp() {
   $('sa-abas').innerHTML = SA_ABAS.map(([id, rot]) =>
     `<button role="tab" aria-selected="${_sa.aba === id}" class="${_sa.aba === id ? 'active' : ''}" onclick="saAba('${id}')">${esc(rot)}` +
     `${n[id] ? ` <span class="sa-n${id === 'validade' || id === 'divergencias' ? ' neg' : ''}">${num(n[id])}</span>` : ''}</button>`).join('');
-  $('sa-abas').querySelector('.active')?.scrollIntoView({ block:'nearest', inline:'nearest' });
+  // Só a barra de abas rola de lado até a aba ativa (no celular). O
+  // scrollIntoView rolava a PÁGINA para cima a cada clique numa linha.
+  saAbaVisivel();
 
   // Divergências: a tela antiga do Saldo mapeado, com os filtros dela.
   $('sa-geral').hidden = naDiv;
@@ -732,7 +734,7 @@ function saPlanilha(lista) {
       <thead><tr>${cols.map(saTh).join('')}</tr></thead>
       <tbody>${p.itens.map((l, i) => {
         const aberto = _sa.abertosL.has(l.k);
-        return `<tr class="sa-lin${aberto ? ' aberto' : ''}" onclick="saAbrirLote(${i})" title="Clique para ver onde está no mapa">${cols.map(c =>
+        return `<tr class="sa-lin${aberto ? ' aberto' : ''}" data-k="${esc(l.k)}" onclick="saAbrirLote(${i}, this)" title="Clique para ver onde está no mapa">${cols.map(c =>
           `<td class="${c.tipo === 'num' ? 'num' : c.cls || ''}">${c.td ? c.td(l) : esc(c.v(l) ?? '—')}</td>`).join('')}</tr>` +
           (aberto ? `<tr class="sa-det"><td colspan="${cols.length}">${saDetalheLote(l)}</td></tr>` : '');
       }).join('') || vazio('Nenhum lote com esses filtros', Object.keys(_sa.f).length ? 'Tire algum filtro ali em cima.' : '', cols.length)}</tbody>
@@ -772,7 +774,7 @@ function saPlanilhaProdutos(lista) {
       <tbody>${saOrdenarLista(x.ls).map(l => `<tr><td>${saMapaInd(l)}</td><td class="mono">${esc(l.lote || '—')}</td><td>${saArm(l.arm)}</td><td class="mono">${SA_COL.val.td(l)}</td>
         <td class="num">${SA_COL.saldo.td(l)}</td><td class="num">${SA_COL.mapa.td(l)}</td><td class="num">${SA_COL.emp.td(l)}</td><td class="num">${SA_COL.falta.td(l)}</td><td class="num">${SA_COL.mais.td(l)}</td>
         <td>${saSitTag(l)}</td><td>${saVagas(l)}</td></tr>`).join('')}</tbody></table></td></tr>` : '';
-    return `<tr class="sa-prod${aberto ? ' aberto' : ''}" onclick="saAbrirProduto(${i})">
+    return `<tr class="sa-prod${aberto ? ' aberto' : ''}" data-k="${esc(x.k)}" onclick="saAbrirProduto(${i}, this)">
       <td class="nome"><span class="sa-seta">${aberto ? '▾' : '▸'}</span>${esc(x.l.desc)}<div class="sub mono">${esc(x.l.cod)} · ${esc(x.l.tipo)}</div></td>
       <td>${badgeFilial(x.l.filial, x.l.cod)}</td><td>${esc(x.l.un)}</td>
       <td class="num">${num(x.ls.length)}${x.venc ? `<div class="sub num-neg">${num(x.venc)} vencido(s)</div>` : ''}</td>
@@ -790,11 +792,31 @@ function saPlanilhaProdutos(lista) {
       <tbody>${linhas || vazio('Nenhum produto com esses filtros', '', 12)}</tbody>
     </table></div>${barraPag('sa-pla', p, 'produto(s)')}`;
 }
-function saAbrirLote(i) {
+function saAbaVisivel() {
+  const at = $('sa-abas')?.querySelector('.active'); if (!at) return;
+  let cx = at.parentElement;
+  while (cx && cx !== document.body && cx.scrollWidth <= cx.clientWidth + 1) cx = cx.parentElement;
+  if (!cx || cx === document.body) return;
+  const a = at.getBoundingClientRect(), c = cx.getBoundingClientRect();
+  if (a.left < c.left || a.right > c.right) cx.scrollLeft += a.left - c.left - (c.width - a.width) / 2;
+}
+// Abrir/fechar uma linha redesenha a tabela: mantém a linha clicada no mesmo
+// lugar da tela e a rolagem de lado da tabela (no celular).
+function saManterLugar(el, redesenhar) {
+  const wrap = el?.closest('.tbl-wrap'), sl = wrap?.scrollLeft || 0;
+  const k = el?.dataset.k, top0 = el?.getBoundingClientRect().top;
+  redesenhar();
+  const w2 = $('sa-corpo')?.querySelector('.tbl-wrap');
+  if (w2 && sl) w2.scrollLeft = sl;
+  if (k == null || top0 == null) return;
+  const novo = [...($('sa-corpo')?.querySelectorAll('tr[data-k]') || [])].find(tr => tr.dataset.k === k);
+  if (novo) { const d = novo.getBoundingClientRect().top - top0; if (Math.abs(d) > 1) window.scrollBy(0, d); }
+}
+function saAbrirLote(i, el) {
   const l = _sa.regLote?.[i]; if (!l) return;
   if (getSelection()?.toString()) return;      // estava selecionando texto
   _sa.abertosL.has(l.k) ? _sa.abertosL.delete(l.k) : _sa.abertosL.add(l.k);
-  renderSaldoErp();
+  saManterLugar(el, renderSaldoErp);
 }
 /* Onde o lote está: as vagas com a quantidade de cada uma e o que as
    Divergências dizem dele. */
@@ -835,10 +857,11 @@ function saVerNasDivergencias(lote) {
   if (typeof renderSaldo === 'function') renderSaldo();
   $('sa-div')?.scrollIntoView({ block:'start', behavior:'smooth' });
 }
-function saAbrirProduto(i) {
+function saAbrirProduto(i, el) {
   const x = _sa.regProd?.[i]; if (!x) return;
+  if (getSelection()?.toString()) return;
   _sa.abertos.has(x.k) ? _sa.abertos.delete(x.k) : _sa.abertos.add(x.k);
-  renderSaldoErp();
+  saManterLugar(el, renderSaldoErp);
 }
 
 /* ── janelinha de filtro da coluna ── */
