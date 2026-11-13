@@ -3,7 +3,7 @@
         cache-first no resto, API nunca passa pelo cache,
         e Background Sync para esvaziar a fila de lançamentos
         mesmo com o app fechado. */
-const CACHE = 'simbiose-v61';
+const CACHE = 'simbiose-v62';
 const CACHE_CDN = 'simbiose-cdn-v1';
 const CDNS = ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'unpkg.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 const ESSENCIAIS = ['./mobile.html', './mapa.html', '/assets/js/comum/comum.js', '/assets/js/comum/usuarios.js', '/assets/js/operador/fila.js', '/assets/js/comum/impressao.js', '/assets/js/comum/leitor.js', '/assets/manifests/operador.json', '/assets/manifests/mapa.json'];
@@ -58,6 +58,18 @@ self.addEventListener('fetch', e => {
         // Sem rede: a última versão guardada desta tela (o painel abre com ?app=1 quando instalado).
         .catch(() => caches.match(req, { ignoreSearch:true }).then(r => r
           || caches.match((url.pathname === '/' || /painel/.test(url.pathname)) ? './painel.html' : /mapa/.test(url.pathname) ? './mapa.html' : /layout/.test(url.pathname) ? './layout.html' : './mobile.html', { ignoreSearch:true })))
+    );
+    return;
+  }
+
+  // Scripts e manifestos: rede primeiro (o ?v= novo de um deploy nunca fica
+  // preso numa cópia velha); a cópia guardada só vale sem internet.
+  if (url.pathname.startsWith('/assets/js/') || url.pathname.startsWith('/assets/manifests/')) {
+    e.respondWith(
+      fetch(req).then(res => {
+        if (res.ok) { const copia = res.clone(); caches.open(CACHE).then(c => c.put(req, copia)); }
+        return res;
+      }).catch(() => caches.match(req).then(r => r || caches.match(req, { ignoreSearch:true })))
     );
     return;
   }
