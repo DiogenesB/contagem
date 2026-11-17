@@ -891,26 +891,27 @@ function buscarProdutos(termo, limite = 8) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SEPARAÇÃO FATURADA: baixa sozinha
-   O item separado (mapa → Pedidos separados) sai do drive-in, mas
-   continua contando como mapeado até alguém clicar "Expedir". Quando
-   a nota do pedido já está no ERP e ninguém expediu, o lote fica
-   contado duas vezes: na separação e (já) fora do saldo do ERP.
-   Aqui: NF de saída (erp_mov) do MESMO pedido e do MESMO código,
-   emitida a partir de 3 dias antes da separação → o item é expedido
-   automaticamente, com registro em Alterações. A quantidade da nota
-   cobre os itens na ordem em que foram separados.
-   Devolve os ids baixados.
+   SEPARAÇÃO FATURADA: avisa, não baixa
+   O item separado (mapa → Pedidos separados) sai do drive-in e conta
+   como mapeado até o separador apertar "Expedir". Quando a nota do
+   pedido já está no ERP, o lote não pode contar duas vezes — mas a
+   saída continua sendo do separador: ele confirma o que saiu e o que
+   ainda vai pegar da área de separação.
+   Aqui só se descobre a nota: NF de saída (erp_mov) do MESMO pedido e
+   do MESMO código, emitida a partir de 3 dias antes da separação. A
+   quantidade da nota cobre os itens na ordem em que foram separados.
+   Devolve Map id do item → { nf, emissao, outroLote }. Não grava nada.
    ═══════════════════════════════════════════════════════════════ */
 const sepPedNum = p => String(p ?? '').trim().replace(/^0+/, '');
-async function sepBaixarFaturadas(itens) {
+async function sepNotasDoPedido(itens) {
   const abertos = (itens || []).filter(r => r && r.status !== 'expedido' && r.status !== 'retornado' && sepPedNum(r.pedido));
-  const baixados = new Set();
-  if (!abertos.length || typeof sb === 'undefined') return baixados;
+  const achou = new Map();
+  if (!abertos.length || typeof sb === 'undefined') return achou;
   try {
     const peds = [...new Set(abertos.map(r => sepPedNum(r.pedido)))];
     const variantes = [...new Set(peds.flatMap(p => [p, p.padStart(6, '0'), p.padStart(7, '0'), p.padStart(9, '0')]))];
-    const desde = new Date(Math.min(...abertos.map(r => new Date(r.separado_em || r.created_at).getTime() || Date.now())) - 3 * 864e5).toISOString().slice(0, 10);
+    const dia = r => new Date((new Date(r.separado_em || r.created_at).getTime() || Date.now()) - 3 * 864e5).toISOString().slice(0, 10);
+    const desde = abertos.map(dia).sort()[0];
     const [nfs, ja] = await Promise.all([
       buscarTudo(() => sb.from('erp_mov').select('codigo, lote, quantidade, nf, pedido, emissao, tipo_mov, movest')
         .eq('tipo_mov', 'Saída').in('pedido', variantes).gte('emissao', desde)),
@@ -926,27 +927,17 @@ async function sepBaixarFaturadas(itens) {
       (notas.get(k) || notas.set(k, []).get(k)).push(n);
     }
     for (const r of ja) { const k = kp(r.pedido, r.codigo); if (disp.has(k)) disp.set(k, disp.get(k) - (Number(r.quantidade) || 0)); }
-    const agora = new Date().toISOString();
     for (const r of [...abertos].sort((a, b) => String(a.separado_em).localeCompare(String(b.separado_em)))) {
       const k = kp(r.pedido, r.codigo), q = Number(r.quantidade) || 0;
-      const ns = (notas.get(k) || []).filter(n => String(n.emissao) >= new Date(new Date(r.separado_em || r.created_at).getTime() - 3 * 864e5).toISOString().slice(0, 10));
+      const ns = (notas.get(k) || []).filter(n => String(n.emissao) >= dia(r));
       if (!ns.length || (disp.get(k) || 0) < q - 0.001) continue;
       disp.set(k, disp.get(k) - q);
-      const nf = [...new Set(ns.map(n => n.nf))].join(', ');
-      const outroLote = !ns.some(n => String(n.lote || '').toUpperCase() === String(r.lote || '').toUpperCase());
-      const { data, error } = await sb.from('separacao')
-        .update({ status:'expedido', finalizado_por:`automático · NF ${nf}`, finalizado_em:agora, updated_at:agora })
-        .eq('id', r.id).eq('status', 'separado').select('id');
-      if (error || !data?.length) continue;           // outra tela já baixou
-      baixados.add(r.id);
-      try {
-        await sb.from('alteracoes').insert({
-          quem:'automático', acao:'expediu', posicao:'SEPARAÇÃO', codigo:r.codigo || null, produto_nome:r.produto_nome || null,
-          lote:r.lote || null, armazem:r.armazem || null, qtd_antes:q, qtd_depois:0, tabela_ref:'separacao', ref_id:r.id,
-          obs:`pedido ${r.pedido} faturado na NF ${nf}${outroLote ? ' (a nota saiu com outro lote)' : ''}: saiu da separação sozinho`,
-        });
-      } catch (e) {}
+      achou.set(r.id, {
+        nf:[...new Set(ns.map(n => n.nf))].join(', '),
+        emissao:ns.map(n => String(n.emissao).slice(0, 10)).sort().pop(),
+        outroLote:!ns.some(n => String(n.lote || '').toUpperCase() === String(r.lote || '').toUpperCase()),
+      });
     }
   } catch (e) { console.warn('separação faturada:', e.message || e); }
-  return baixados;
+  return achou;
 }

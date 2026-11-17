@@ -27,6 +27,7 @@ const SEP_LUGAR = 'SEPARAÇÃO';
 let _sep       = [];        // itens com status 'separado'
 let _sepOk     = true;      // a tabela existe?
 let _vista     = 'drive';   // 'drive' | 'sep'
+let _sepAvisou = false;
 let _sepFiltro = 'todos';   // 'todos' | 'parados' | 'faturado'
 let _sepQ      = '';
 let _sepDlg    = null;      // { modo, item, pos?, max }
@@ -39,10 +40,13 @@ async function carregarSeparacao() {
   try {
     const { data, error } = await sb.from('separacao').select('*').eq('status', 'separado').order('separado_em');
     if (error) throw error;
-    // Pedido já faturado (NF no ERP) e ninguém expediu: sai da lista sozinho (comum.js).
-    const baixados = typeof sepBaixarFaturadas === 'function' ? await sepBaixarFaturadas(data || []) : new Set();
-    if (baixados.size) toast(`${baixados.size} item(ns) da separação já faturado(s): expedido(s) automaticamente.`, 'ok', 5000);
-    _sep = (data || []).filter(r => !baixados.has(r.id));
+    _sep = data || [];
+    // Pedido já faturado (NF no ERP): não sai sozinho — fica marcado para o
+    // separador confirmar o que saiu (comum.js, sepNotasDoPedido).
+    const notas = typeof sepNotasDoPedido === 'function' ? await sepNotasDoPedido(_sep) : new Map();
+    for (const r of _sep) r._nf = notas.get(r.id) || null;
+    const nNf = _sep.filter(r => r._nf).length;
+    if (nNf && !_sepAvisou) { _sepAvisou = true; toast(`${nNf} item(ns) da separação já faturado(s): confira e aperte "OK, saiu" em Pedidos separados.`, 'ok', 6000); }
     _sepOk = true;
     await marcarFaturados();
   } catch (e) {
@@ -55,7 +59,7 @@ async function carregarSeparacao() {
 
 /* Compara cada item com a planilha do ERP importada depois dele. */
 async function marcarFaturados() {
-  for (const r of _sep) { r._faturado = false; r._dias = diasDesde(r.separado_em); }
+  for (const r of _sep) { r._faturado = !!r._nf; r._dias = diasDesde(r.separado_em); }
   if (!_sep.length) return;
   let ref = [];
   try {
@@ -139,7 +143,7 @@ function renderSeparados() {
   const q = _sepQ.trim().toUpperCase();
   const parados = _sep.filter(r => r._dias > SEP_DIAS_PARADO).length;
   const fat = _sep.filter(r => r._faturado).length;
-  $('sep-filtro').innerHTML = [['todos', 'Todos', _sep.length], ['parados', `Parados há +${SEP_DIAS_PARADO} dias`, parados], ['faturado', 'Parece faturado', fat]]
+  $('sep-filtro').innerHTML = [['todos', 'Todos', _sep.length], ['parados', `Parados há +${SEP_DIAS_PARADO} dias`, parados], ['faturado', 'Faturado', fat]]
     .map(([v, t, n]) => `<button class="${_sepFiltro === v ? 'on' : ''}" onclick="filtrarSep('${v}')">${t} <span class="sep-n">${num(n)}</span></button>`).join('');
 
   const lista = _sep.filter(r => sepCasa(r, q) &&
@@ -167,7 +171,7 @@ function renderSeparados() {
     return `<div class="sep-grupo">
       <div class="sep-gcab">
         <div><b>${p ? `Pedido ${esc(p)}` : 'Sem pedido'}</b><span>${num(itens.length)} item(ns) · ${totais(itens)}</span></div>
-        ${itens.length > 1 ? `<button class="bt" onclick="expedirGrupoSep('${esc(p)}')">Expedir ${p ? 'o pedido' : 'todos'}</button>` : ''}
+        ${itens.length > 1 ? `<button class="bt${itens.every(r => r._nf) ? ' destaque' : ''}" onclick="expedirGrupoSep('${esc(p)}')">${itens.every(r => r._nf) ? 'OK, saiu o pedido' : `Expedir ${p ? 'o pedido' : 'todos'}`}</button>` : ''}
       </div>
       <div class="sep-itens">${itens.map(sepItemHTML).join('')}</div>
     </div>`;
@@ -184,9 +188,10 @@ function sepItemHTML(r) {
     <div class="ficha-meta">${esc(normalizarCodigo(r.codigo))} ${seloFilial(r.filial || r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')}</div>
     <div class="sep-info">Saiu de <b>${esc(r.origem_posicao || '—')}</b> · ${esc(r.separado_por || 'sem nome')} · ${r._dias ? `há ${r._dias} dia(s)` : 'hoje'}
       ${parado ? `<span class="sep-tag t-warn">parado há ${r._dias} dias</span>` : ''}
-      ${r._faturado ? `<span class="sep-tag t-pos" title="A planilha do ERP importada depois da separação mostra o saldo deste lote caído">parece faturado</span>` : ''}</div>
+      ${r._nf ? `<span class="sep-tag t-pos" title="Nota de saída do pedido no ERP${r._nf.emissao ? ' em ' + esc(r._nf.emissao.split('-').reverse().join('/')) : ''}${r._nf.outroLote ? ' — saiu com outro lote, confira a etiqueta' : ''}">faturado · NF ${esc(r._nf.nf)}${r._nf.outroLote ? ' · outro lote' : ''}</span>`
+        : r._faturado ? `<span class="sep-tag t-pos" title="A planilha do ERP importada depois da separação mostra o saldo deste lote caído">parece faturado</span>` : ''}</div>
     <div class="ficha-acoes">
-      <button class="bt destaque" onclick="abrirSaidaSep(${Number(r.id)},'expedir')">Expedir</button>
+      <button class="bt destaque" onclick="abrirSaidaSep(${Number(r.id)},'expedir')">${r._nf ? 'OK, saiu' : 'Expedir'}</button>
       <button class="bt" onclick="abrirSaidaSep(${Number(r.id)},'retornar')">Retornar ao depósito</button>
     </div>
   </div>`;

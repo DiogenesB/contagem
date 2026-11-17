@@ -324,12 +324,12 @@ async function carregarOcupacaoSaldo() {
   try {
     const { data, error } = await sb.from('separacao')
       .select('id, codigo, produto_nome, lote, armazem, quantidade, filial, pedido, status, separado_em, created_at, saldo_erp_antes, foto_erp_em').eq('status', 'separado');
-    // Pedido já faturado (NF no ERP) e ninguém expediu: sai da separação sozinho.
-    const baixados = !error && data?.length && typeof sepBaixarFaturadas === 'function' ? await sepBaixarFaturadas(data) : new Set();
-    const ficam = (data || []).filter(r => !baixados.has(r.id));
-    if (!error && ficam.length) {
-      comFilial(ficam);
-      m[SALDO_SEP] = ficam.map(r => ({ ...r, posicao:SALDO_SEP, origem:r.pedido ? `pedido ${r.pedido}` : 'separado', created_at:r.separado_em, _tab:'separacao', sep:true }));
+    // Pedido já faturado (NF no ERP): continua na separação até o separador
+    // confirmar a saída, mas não conta mais como mapeado (o ERP já tirou).
+    const notas = !error && data?.length && typeof sepNotasDoPedido === 'function' ? await sepNotasDoPedido(data) : new Map();
+    if (!error && data?.length) {
+      comFilial(data);
+      m[SALDO_SEP] = data.map(r => ({ ...r, posicao:SALDO_SEP, origem:r.pedido ? `pedido ${r.pedido}` : 'separado', created_at:r.separado_em, _tab:'separacao', sep:true, _nf:notas.get(r.id) || null }));
     }
   } catch { /* tabela ainda não criada */ }
   _sOcup = m;
@@ -337,7 +337,7 @@ async function carregarOcupacaoSaldo() {
 }
 
 /* Separado que o saldo do ERP já tirou (a foto do ERP depois da
-   separação caiu pelo menos isso), mas a nota ainda não chegou nas
+   separação caiu pelo menos isso) ou com a NF do pedido já nas
    movimentações: não conta como mapeado — senão o lote aparece duas
    vezes (separação + o que o ERP já não tem). Continua na lista de
    separados e na tela Hoje, para expedir. */
@@ -345,7 +345,7 @@ function sepMarcarForaDoErp() {
   const itens = _sOcup?.[SALDO_SEP];
   if (!itens?.length) return;
   const ref = linhasDeReferencia();
-  for (const r of itens) r._foraDoErp = false;
+  for (const r of itens) r._foraDoErp = !!r._nf;           // a nota do pedido já saiu
   if (!ref.length) return;
   const kla = (c, l, a) => `${chave(normalizarCodigo(c))}|${chave(l)}|${normalizarArmazem(a)}`;
   const saldo = new Map(), foto = {};
