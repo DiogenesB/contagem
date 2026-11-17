@@ -128,7 +128,7 @@ SE PARAR DE ATUALIZAR — veja o atualizar-saldo.log
 ROBÔ DAS MOVIMENTAÇÕES (planilha Mov. Estoque · MOVEST01)
 ══════════════════════════════════════════════════════════════
 O QUE FAZ
-  Às 07:00 e às 12:00 abre a planilha das movimentações escondida, põe
+  A cada hora, das 6h às 20h, abre a planilha das movimentações escondida, põe
   nas células De/Até os últimos 3 dias, atualiza só essa consulta e
   manda para o sistema as entradas, saídas (NF), saídas e entradas
   internas — só PA e ME das filiais do robô do saldo. A janela é
@@ -139,8 +139,11 @@ INSTALAR (depois do robô do saldo)
   1. Supabase > SQL Editor: rode o sql/migracao-movimentos.sql.
   2. No computador do robô: dois cliques no INSTALAR-MOVIMENTOS.bat.
      Ele usa a mesma pasta C:\RoboSaldo e a mesma chave, pede a
-     planilha (janela), faz a carga inicial de 60 dias e agenda às
-     07:00 e às 12:00 (Enter aceita).
+     planilha (janela), faz a carga inicial de 60 dias e agenda sozinho
+     (sem perguntas): o Agendador confere a cada 5 min e o robô manda a
+     cada 60 min, das 6h às 20h — nunca junto com o robô do saldo.
+     Para mudar: $IntervaloMin, $HoraIni e $HoraFim no começo do
+     C:\RoboSaldo\atualizar-movimentos.ps1.
   O computador do robô precisa ter a conexão ODBC DADOS_PROTHEUS (a
   mesma que faz a planilha atualizar na sua máquina).
 
@@ -148,6 +151,9 @@ RODAR NA HORA
   C:\RoboSaldo\RODAR-MOVIMENTOS.bat
 
 SE PARAR — veja C:\RoboSaldo\atualizar-movimentos.log
+  - Nada no log no horário: abra o Agendador de Tarefas e veja se a
+    tarefa "Robô das movimentações" existe e está Habilitada; ou rode
+    o INSTALAR-MOVIMENTOS.bat de novo até o fim (aparece PRONTO).
   - "A consulta não atualizou": ERP fora do ar ou ODBC sem acesso.
   - "não tem o nome 'de_emiss'": a planilha mudou; as células de data
     da consulta precisam continuar com os nomes de_emiss e ate_emiss.

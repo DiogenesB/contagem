@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    SIMBIOSE · ANALISTA (movimentações do ERP)
 
-   Lê a tabela erp_mov (robô das movimentações, 07:00 e 12:00) e
+   Lê a tabela erp_mov (robô das movimentações, a cada hora das 6h às 20h) e
    mostra o período escolhido: notas faturadas, pedidos, clientes,
    volume por unidade, entradas, transferências internas, quem lançou
    e a cobertura do estoque (quantos dias o saldo dura no ritmo de
@@ -173,7 +173,8 @@ function renderAnalista() {
   if (!corpo || !_an.rows) return;
   const { de, ate } = anJanela(_an.periodo);
   $('an-sub').innerHTML = `Movimentações do ERP de <b>${saData(anIso(de))}</b> a <b>${saData(anIso(ate))}</b>` +
-    (_an.sync ? ` · última atualização ${esc(fmtTS(_an.sync.quando))} (${esc(haQuanto(new Date(_an.sync.quando).getTime()))})` : '') + '.';
+    (_an.sync ? ` · última atualização ${esc(fmtTS(_an.sync.quando))} (${esc(haQuanto(new Date(_an.sync.quando).getTime()))})` : '') + '.' +
+    (typeof mvRoboAtrasado === 'function' && _an.sync ? mvRoboAtrasado(_an.sync.quando).replace(/^ · /, ' ') : '');
   const hojeIso = anIso(new Date());
   $('an-ctrl').innerHTML = `<div class="seg">${AN_PERIODOS.map(([v, t]) => `<button class="${_an.periodo === v ? 'active' : ''}" onclick="anPeriodo('${v}')">${t}</button>`).join('')}</div>
     <div class="an-intervalo${_an.periodo === 'x' ? ' on' : ''}" role="group" aria-label="Período de … até …">
@@ -190,7 +191,7 @@ function renderAnalista() {
   }
   if (!_an.rows.length) {
     corpo.innerHTML = `<div class="empty"><div class="empty-ico">◔</div><div class="empty-tit">Nenhuma movimentação ainda</div>
-      <div class="empty-sub">O robô das movimentações manda às 07:00 e às 12:00. Para mandar agora: C:\\RoboSaldo\\RODAR-MOVIMENTOS.bat no computador do robô.</div></div>`;
+      <div class="empty-sub">O robô das movimentações manda a cada hora, das 6h às 20h. Para mandar agora: C:\\RoboSaldo\\RODAR-MOVIMENTOS.bat no computador do robô.</div></div>`;
     return;
   }
   const ls = anLinhas();

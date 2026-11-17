@@ -328,6 +328,16 @@ function mvInternos(rows, esc_, rr, titulo = 'Movimentos internos') {
     ${barraPag(`mv-int-${esc_}`, p, 'movimento(s)')}</div>${(mvLoteDepois(p.itens.map(t => [t.base.codigo, t.base.lote]), rr), '')}`;
 }
 
+/* O robô das movimentações manda a cada hora, das 6h às 20h. Mais de
+   2 h sem envio nesse horário (em dia útil) = o robô parou. */
+function mvRoboAtrasado(quando) {
+  if (!quando) return '';
+  const agora = new Date(), h = agora.getHours(), dia = agora.getDay();
+  const min = (agora - new Date(quando)) / 60e3;
+  if (dia === 0 || dia === 6 || h < 8 || h >= 21 || min < 120) return '';
+  return ` · <span class="mv-robo-atraso" title="Confira o computador do robô: ligado, com a tarefa 'Robô das movimentações' no Agendador. Para mandar agora: C:\\RoboSaldo\\RODAR-MOVIMENTOS.bat">o robô das movimentações não manda há ${esc(haQuanto(new Date(quando).getTime()).replace(/^há /, ''))}</span>`;
+}
+
 /* ═══════════ HOJE: abas Entradas e Internos (um dia) ═══════════ */
 const _hjErp = { dia:null, todas:null, dias:[], erro:null, carregando:null, quando:0 };
 async function hjErpCarregar(forcar = false) {
@@ -369,9 +379,9 @@ function hjErpRender() {
       <button class="btn btn-sm" onclick="hjErpDia('${ant || ''}')" ${ant ? '' : 'disabled'} title="Dia anterior com movimento" aria-label="Dia anterior">‹</button>
       <input type="date" class="bo-data" value="${dia}" max="${hoje}" onchange="hjErpDia(this.value)" aria-label="Dia">
       <button class="btn btn-sm" onclick="hjErpDia('${prox || ''}')" ${prox ? '' : 'disabled'} title="Próximo dia com movimento" aria-label="Próximo dia">›</button>
-      <span class="mv-dia-t"><b>${esc(boDiaLongo(dia))}</b>${dia === hoje ? ' · hoje (o robô manda às 07:00 e 12:00)' : ''}</span>
+      <span class="mv-dia-t"><b>${esc(boDiaLongo(dia))}</b>${dia === hoje ? ' · hoje (o robô manda a cada hora, das 6h às 20h)' : ''}</span>
     </div>
-    <div class="mv-dia-n">${num(nEnt)} entrada(s) · ${num(nInt)} movimento(s) interno(s)${_hjErp.sync ? ` · ERP até ${esc(fmtTS(_hjErp.sync))}` : ''}</div>
+    <div class="mv-dia-n">${num(nEnt)} entrada(s) · ${num(nInt)} movimento(s) interno(s)${_hjErp.sync ? ` · ERP até ${esc(fmtTS(_hjErp.sync))}` : ''}${mvRoboAtrasado(_hjErp.sync)}</div>
   </div>`;
   el.innerHTML = cab + (_bo.aba === 'internos' ? mvInternos(rows, 'hj', 'hj', 'Movimentos internos do dia') : mvEntradas(rows, 'hj', 'hj', 'Entradas do dia'));
 }

@@ -3,7 +3,7 @@
 
    Um "jornalzinho" do dia escolhido, montado só com o que já está no
    banco:
-     ERP (robô das movimentações, 07:00 e 12:00) — notas de entrada e
+     ERP (robô das movimentações, a cada hora) — notas de entrada e
        em qual armazém entraram, notas de saída, transferências internas
        e quem lançou;
      mapa (painel, mapa, celular) — quem guardou, moveu, expediu,
@@ -231,7 +231,7 @@ function boRender() {
   const sync = D.sync?.quando ? `ERP até ${esc(fmtTS(D.sync.quando))}` : 'ERP sem envio do robô';
   const avisos = [];
   if (D.erroErp) avisos.push('As notas e transferências do ERP não chegam: rode o <code>sql/migracao-movimentos.sql</code> e instale o robô das movimentações.');
-  else if (dia === boHoje() && D.sync?.quando) avisos.push(`O robô manda o ERP às 07:00 e às 12:00 — o que foi lançado no ERP depois de ${esc(boHora(D.sync.quando))} entra no próximo envio.`);
+  else if (dia === boHoje() && D.sync?.quando) avisos.push(`O robô manda o ERP a cada hora, das 6h às 20h — o que foi lançado no ERP depois de ${esc(boHora(D.sync.quando))} entra no próximo envio.`);
   if (D.erroAlt) avisos.push('Não consegui ler as alterações do mapa (' + esc(D.erroAlt.message || '') + ').');
 
   const kpi = (v, t, p, cls = '') => `<div class="bo-num ${cls}"><b>${v}</b><span>${t}</span>${p ? `<small>${p}</small>` : ''}</div>`;

@@ -2,7 +2,8 @@
 #  INSTALADOR DO ROBÔ DAS MOVIMENTAÇÕES
 #  Usa a pasta C:\RoboSaldo e a chave que o INSTALAR.bat (robô do
 #  saldo) já deixou. Pede a planilha Mov. Estoque, testa, faz a carga
-#  inicial (60 dias) e agenda às 07:00 e às 12:00.
+#  inicial (60 dias) e agenda: o Agendador chama a cada 5 min e o robô
+#  manda a cada 60 min, das 6h às 20h (sem perguntas no fim).
 #  Antes: rode o sql/migracao-movimentos.sql no Supabase.
 #  Como usar: duplo clique no INSTALAR-MOVIMENTOS.bat (mesma pasta).
 # ═══════════════════════════════════════════════════════════════
@@ -134,7 +135,7 @@ try {
   $antes = if (Test-Path $arqLog) { @(Get-Content $arqLog -Encoding UTF8).Count } else { 0 }
   # A carga inicial (60 dias) só na primeira instalação; depois, a janela normal.
   if (Test-Path (Join-Path $Pasta 'movimentos-carga-inicial.ok')) { Write-Host '   (já tem histórico: só os últimos dias)' }
-  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $robo
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $robo -Agora
   $novas = if (Test-Path $arqLog) { @(Get-Content $arqLog -Encoding UTF8 | Select-Object -Skip $antes | Where-Object { "$_".Trim() }) } else { @() }
   $ult = $novas | Select-Object -Last 1
   if ($ult -match 'OK:') { Ok $ult }
@@ -144,33 +145,33 @@ try {
     Aviso 'mande essas linhas para quem cuida do sistema, corrija e rode o instalador de novo.'
   }
 
-  # ── 5. Agendamento: 07:00 e 12:00 ──
+  # ── 5. Agendamento: a cada 5 min (como o robô do saldo); o robô decide se é a vez ──
   Titulo '5/5  Agendamento no Windows'
-  $h1 = Pergunta 'Primeiro horário (HH:MM)' '07:00'
-  $h2 = Pergunta 'Segundo horário (HH:MM)' '12:00'
+  $rodar = Join-Path $Pasta 'RODAR-MOVIMENTOS.bat'
+  "@echo off`r`nchcp 65001 >nul`r`necho Atualizando as movimentacoes... (pode levar alguns minutos)`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"$robo`" -Agora`r`necho.`r`npowershell -NoProfile -Command `"Get-Content '$Pasta\atualizar-movimentos.log' -Encoding UTF8 -Tail 4`"`r`npause" |
+    Set-Content -Path $rodar -Encoding ASCII
+  Ok "atalho para rodar na hora: $rodar"
+
+  # Lançador sem janela; o True faz o wscript ESPERAR o robô (o Agendador não abre outro por cima).
   $vbs = Join-Path $Pasta 'rodar-mov-oculto.vbs'
   $vb = 'CreateObject("WScript.Shell").Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ""' + $robo + '""", 0, True'
   [IO.File]::WriteAllText($vbs, $vb, [Text.Encoding]::ASCII)
   $acao = New-ScheduledTaskAction -Execute 'wscript.exe' -Argument "`"$vbs`""
-  # Mais um gatilho: ao entrar no Windows (o PC desligado às 07:00 não deixa o dia sem movimentos).
-  $logon = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
-  $logon.Delay = 'PT3M'
-  $gats = @((New-ScheduledTaskTrigger -Daily -At $h1), (New-ScheduledTaskTrigger -Daily -At $h2), $logon)
+  $gat  = New-ScheduledTaskTrigger -Daily -At '00:02'
+  $rep  = New-ScheduledTaskTrigger -Once -At '00:02' -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 1)
+  $gat.Repetition = $rep.Repetition
   $conf = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
             -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 40) -StartWhenAvailable
   $quem = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
-  Register-ScheduledTask -TaskName 'Robô das movimentações' -Action $acao -Trigger $gats -Settings $conf -Principal $quem `
-    -Description 'Manda as movimentações do ERP (Mov. Estoque) para o sistema (C:\RoboSaldo).' -Force | Out-Null
+  Register-ScheduledTask -TaskName 'Robô das movimentações' -Action $acao -Trigger $gat -Settings $conf -Principal $quem `
+    -Description 'Confere a cada 5 min se é hora de mandar as movimentações do ERP (Mov. Estoque) para o sistema (C:\RoboSaldo).' -Force | Out-Null
+  $t = Get-ScheduledTask -TaskName 'Robô das movimentações'
+  if ($t.State -eq 'Disabled') { Enable-ScheduledTask -TaskName 'Robô das movimentações' | Out-Null }
   $info = Get-ScheduledTaskInfo -TaskName 'Robô das movimentações'
-  Ok "agendado: todo dia às $h1, às $h2 e 3 min depois de entrar no Windows · próxima: $($info.NextRunTime)"
-
-  $rodar = Join-Path $Pasta 'RODAR-MOVIMENTOS.bat'
-  "@echo off`r`nchcp 65001 >nul`r`necho Atualizando as movimentacoes... (pode levar alguns minutos)`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"$robo`"`r`necho.`r`npowershell -NoProfile -Command `"Get-Content '$Pasta\atualizar-movimentos.log' -Encoding UTF8 -Tail 4`"`r`npause" |
-    Set-Content -Path $rodar -Encoding ASCII
-  Ok "atalho para rodar na hora: $rodar"
+  Ok "agendado: confere a cada 5 min; manda a cada 60 min das 6h às 20h · próxima conferência: $($info.NextRunTime)"
 
   Write-Host ''
-  Write-Host '  PRONTO. As movimentações chegam às 07:00 e às 12:00 (tela Analista e tela Hoje).' -ForegroundColor Green
+  Write-Host '  PRONTO. As movimentações chegam sozinhas a cada hora, das 6h às 20h (tela Analista e tela Hoje).' -ForegroundColor Green
   Write-Host "  Log: $Pasta\atualizar-movimentos.log" -ForegroundColor DarkGray
 }
 catch {

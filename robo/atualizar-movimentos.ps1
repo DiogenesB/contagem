@@ -8,12 +8,13 @@
 #     (a função troca a janela inteira: estorno no ERP some daqui também)
 #  5. Salva a cópia (só com a janela), fecha e anota no log
 #
-#  Quem chama: Agendador do Windows, às 07:00, às 12:00 e quando o
-#  usuário entra no Windows (se o PC estava desligado às 07:00).
-#  Na mão: RODAR-MOVIMENTOS.bat (ou este script com -Dias 60).
+#  Quem chama: Agendador do Windows a cada 5 min (como o robô do saldo).
+#  O próprio script decide se é a vez: das $HoraIni às $HoraFim, a cada
+#  $IntervaloMin min, e nunca com o Excel do robô do saldo aberto.
+#  Na mão: RODAR-MOVIMENTOS.bat (= este script com -Agora; -Dias 60 refaz o histórico).
 # ═══════════════════════════════════════════════════════════════
 
-param([int]$Dias = 0)   # 0 = o padrão abaixo (na primeira vez, a carga inicial)
+param([int]$Dias = 0, [switch]$Agora)   # Dias 0 = o padrão abaixo (na 1ª vez, a carga inicial) · -Agora = roda já
 
 # ─────────────── CONFIGURE AQUI ───────────────
 $Planilha     = 'C:\RoboSaldo\planilha-mov.xlsx'   # cópia só do robô
@@ -25,6 +26,9 @@ $Filiais      = @('010001', '020006', '090010')
 $Tipos        = @('PA', 'ME')
 $DiasPadrao   = 3      # janela de cada rodada (pega lançamento atrasado e estorno)
 $DiasInicial  = 60     # primeira vez: histórico
+$IntervaloMin = 60     # de quanto em quanto tempo manda (o Agendador chama a cada 5 min)
+$HoraIni      = 6      # manda das 6h...
+$HoraFim      = 20     # ...até as 20h
 # ──────────────────────────────────────────────
 
 $ErrorActionPreference = 'Stop'
@@ -32,6 +36,21 @@ $ErrorActionPreference = 'Stop'
 $Pasta  = Split-Path -Parent $Log
 $ArqPid = Join-Path $Pasta 'excel-mov.pid'
 $ArqIni = Join-Path $Pasta 'movimentos-carga-inicial.ok'
+
+# ── Portão: é a minha vez? (o Agendador chama a cada 5 min) ──
+# Conta da última TENTATIVA: se der erro, não abre o Excel a cada 5 min.
+$ArqTent = Join-Path $Pasta 'movimentos-ultima-tentativa.txt'
+if (-not $Agora -and $Dias -le 0) {
+  $h = (Get-Date).Hour
+  if ($h -lt $HoraIni -or $h -ge $HoraFim) { exit 0 }
+  if ((Test-Path $ArqTent) -and ((Get-Date) - (Get-Item $ArqTent).LastWriteTime).TotalMinutes -lt $IntervaloMin) { exit 0 }
+  # O robô do saldo está com o Excel aberto agora: tenta na próxima conferência.
+  $pidSaldo = Join-Path $Pasta 'excel-robo.pid'
+  if (Test-Path $pidSaldo) {
+    try { $p = Get-Process -Id ([int](Get-Content $pidSaldo -Raw).Trim()) -ErrorAction Stop; if ($p.ProcessName -eq 'EXCEL') { exit 0 } } catch {}
+  }
+}
+Set-Content -Path $ArqTent -Value (Get-Date -Format s)
 
 function Anotar($msg) {
   $msg = ("$msg" -replace '\s*[\r\n]+\s*', ' ').Trim()
