@@ -142,7 +142,8 @@ function intelIndexar() {
 /* ── leitura dos movimentos do ERP ── */
 const iPed = p => String(p || '').replace(/\D/g, '').replace(/^0+/, '');
 // Só tem a data (sem hora): conta como o fim do expediente daquele dia.
-const iErpTs = e => new Date(`${String(e.emissao).slice(0, 10)}T18:00:00`).getTime();
+// A emissão não tem hora: conta 18:00 do dia, mas nunca no futuro (senão "há -5h").
+const iErpTs = e => Math.min(new Date(`${String(e.emissao).slice(0, 10)}T18:00:00`).getTime(), Date.now());
 const iDia = e => typeof saData === 'function' ? saData(String(e.emissao).slice(0, 10)) : String(e.emissao).slice(0, 10);
 // O par da transferência: mesma sequência, tipo oposto.
 function iPar(e) {
@@ -415,15 +416,38 @@ function intelAnalisarLinha(l) {
       const ultT = Math.max(...erpSai.map(iErpTs), ...saidas.map(m => iTs(m.quando)));
       const qtdB = Math.min(sobraQ, somaE, baixavel);
       const dentro = !iPassouTolerancia(ultT);
-      const nf = erpSai.every(e => e.tipo_mov === 'Saída');
-      const a = base('saiu-nao-baixou', iPerto(somaE, sobraQ, 0.05) ? 96 : 85,
-        dentro ? `${nf ? 'Faturado' : 'Transferido no ERP'} ${haQuanto(ultT)}, esperando baixar no mapa` : `${nf ? 'Faturado' : 'Transferido no ERP'} e continua no mapa`,
-        `O mapa continua com ${iQ(l.mapa, un)} em ${vagasTxt}${l.sistema ? `, e o ERP tem ${iQ(l.sistema, un)}` : ''}.`,
+      // Para onde foi: nota (cliente, TES, pedido) ou transferência (armazém de destino).
+      const notas = erpSai.filter(e => e.tipo_mov === 'Saída');
+      const transf = erpSai.filter(e => e.tipo_mov === 'Saída Interna').map(e => ({ e, para:iPar(e)?.arm || null }));
+      const destinos = [...new Set(transf.map(t => t.para).filter(Boolean))];
+      const qN = notas.reduce((s, e) => s + (Number(e.quantidade) || 0), 0);
+      const qT = transf.reduce((s, t) => s + (Number(t.e.quantidade) || 0), 0);
+      const tes = [...new Set(notas.map(e => String(e.tes_desc || 'venda').toLowerCase()))];
+      const clis = [...new Set(notas.map(e => e.cli_nome).filter(Boolean))];
+      const armTxt = a => `${esc(a)}${nomeArmazem(a) ? ` (${esc(nomeArmazem(a).toLowerCase())})` : ''}`;
+      const ondeTxt = [
+        ...notas.map(e => `<b>${iQ(e.quantidade, un)}</b> na NF <b>${esc(e.nf || '—')}</b> (${esc(String(e.tes_desc || 'saída').toLowerCase())}${e.pedido ? `, pedido ${esc(e.pedido)}` : ''}) para <b>${esc(e.cli_nome || 'cliente não informado')}</b>${e.cli_uf ? '/' + esc(e.cli_uf) : ''} em ${iDia(e)}`),
+        ...transf.map(t => `<b>${iQ(t.e.quantidade, un)}</b> transferido do ${esc(t.e.arm)} para o <b>${t.para ? armTxt(t.para) : '?'}</b> (doc ${esc(t.e.nf || '—')}${t.e.usuario ? `, por ${esc(t.e.usuario)}` : ''}) em ${iDia(t.e)}`),
+      ];
+      const titulo = !transf.length
+        ? `Faturado${tes.length === 1 ? ` (${esc(tes[0])})` : ''}${clis.length === 1 ? ` para ${esc(clis[0])}` : clis.length > 1 ? ` para ${clis.length} clientes` : ''}${dentro ? ` ${haQuanto(ultT)}, falta baixar no mapa` : ', e continua no mapa'}`
+        : !notas.length && destinos.length === 1
+          ? `Transferido no ERP para o ${armTxt(destinos[0])}${dentro ? ` ${haQuanto(ultT)}` : ''}: o mapa ficou no ${esc(l.armsMapa.join(', '))}`
+          : `Saiu no ERP (nota e transferência)${dentro ? ` ${haQuanto(ultT)}` : ''}, falta acertar o mapa`;
+      const a = base('saiu-nao-baixou', iPerto(somaE, sobraQ, 0.05) ? 96 : 85, titulo,
+        `Saiu do ${esc(l.armsMapa.join(', '))}: ${ondeTxt.join('; ')}. O mapa continua com ${iQ(l.mapa, un)} em ${vagasTxt}${l.sistema ? `, e o ERP tem ${iQ(l.sistema, un)}` : ', e o ERP não tem mais nada'}.`,
         { quando:new Date(ultT).toISOString(), grupo:dentro ? 'aguardando' : 'arrumar' });
-      a.pistas.push(...erpSai.slice(-3).map(iErpTxt));
       a.pistas.push(iPerto(somaE, sobraQ, 0.05) ? 'A quantidade que saiu no ERP é a mesma que sobra no mapa.' : `Sobra no mapa ${iQ(sobraQ, un)}; saiu no ERP ${iQ(somaE, un)}.`);
+      if (notas.length) a.pistas.push(`Faturado: o produto saiu do galpão — ${qN >= sobraQ - 0.001 ? 'baixe do mapa' : 'baixe do mapa o que saiu'}.`);
+      if (transf.length) a.pistas.push(`Transferido: o palete pode continuar na mesma vaga, só que agora é ${destinos.map(armTxt).join(', ') || 'outro armazém'} — mude o armazém no mapa em vez de baixar.`);
       if (separado) a.pistas.push('Parte está na área de separação — expedir por lá (mapa → Pedidos separados).');
-      if (qtdB > 0.001) a.acoes.push({ rot:`Baixar ${num(Math.round(qtdB * 1000) / 1000)} ${un} do mapa`, op:'baixar', qtd:qtdB, primaria:true });
+      if (dentro) a.pistas.push(`Vira tarefa ${fmtTS(new Date(iMaisUmDiaUtil(ultT)).toISOString())} se ninguém acertar.`);
+      const qMudar = Math.min(sobraQ, qT, baixavel), qBaixar = Math.min(Math.max(0, sobraQ - qMudar), qN, baixavel - qMudar);
+      if (transf.length && destinos.length === 1 && qMudar > 0.001)
+        a.acoes.push({ rot:`Mudar ${num(Math.round(qMudar * 1000) / 1000)} ${un} para o ${destinos[0]}`, op:'dividir', qtd:qMudar, arm:destinos[0], primaria:true, gestor:true });
+      if (notas.length && qBaixar > 0.001)
+        a.acoes.push({ rot:`Baixar ${num(Math.round(qBaixar * 1000) / 1000)} ${un} do mapa (saiu na NF ${notas.map(e => e.nf).filter(Boolean).slice(-2).join(', ')})`, op:'baixar', qtd:qBaixar, primaria:!a.acoes.length });
+      if (!a.acoes.length && qtdB > 0.001) a.acoes.push({ rot:`Baixar ${num(Math.round(qtdB * 1000) / 1000)} ${un} do mapa`, op:'baixar', qtd:qtdB, primaria:true });
       a.acoes.push({ rot:'Pedir recontagem', op:'recontagem' });
       return a;
     }
@@ -431,14 +455,30 @@ function intelAnalisarLinha(l) {
       const ult = saidas[saidas.length - 1].quando;
       const qtdB = Math.min(sobraQ, somaSai, baixavel);
       const dentro = !iPassouTolerancia(iTs(ult));
+      // Só a foto do saldo do ERP mostrou a queda: a nota/transferência ainda
+      // não chegou nas movimentações. Outro armazém subindo no mesmo horário
+      // com a mesma quantidade = transferência para lá.
+      const subiu = [];
+      for (const m of saidas) for (const [ka, ms] of _intel.porKa || []) {
+        if (!ka.startsWith(`${l.kc}|`) || l.armsMapa.includes(ka.split('|').pop())) continue;
+        for (const x of ms) if (x.delta > 0 && Math.abs(iTs(x.quando) - iTs(m.quando)) < 3 * 3600e3 && iPerto(x.delta, -m.delta, 0.05)) subiu.push({ arm:ka.split('|').pop(), q:x.delta, quando:x.quando });
+      }
+      const para = [...new Set(subiu.map(x => x.arm))];
+      const queda = saidas.slice(-3).map(m => `${fmtTS(m.quando)}: ${esc(normalizarArmazem(m.armazem))} de ${iQ(m.saldo_antes, un)} para ${iQ(m.saldo_depois, un)}`).join('; ');
+      const ultMov = typeof _erpNovo !== 'undefined' && _erpNovo.mov ? fmtTS(_erpNovo.mov) : null;
       const a = base('saiu-nao-baixou', iPerto(somaSai, sobraQ, 0.05) ? 92 : 78,
-        dentro ? `Saiu no ERP ${haQuanto(iTs(ult))}, esperando baixar no mapa` : `Saiu no ERP e continua no mapa`,
-        `O ERP baixou ${iQ(somaSai, un)} deste lote no ${esc(l.armsMapa.join(', '))} (última em <b>${fmtTS(ult)}</b>). O mapa continua com ${iQ(l.mapa, un)} em ${vagasTxt}${l.sistema ? `, e o ERP tem ${iQ(l.sistema, un)}` : ''}.`,
+        para.length === 1 ? `Transferido no ERP para o ${esc(para[0])}${nomeArmazem(para[0]) ? ` (${esc(nomeArmazem(para[0]).toLowerCase())})` : ''}: o mapa ficou no ${esc(l.armsMapa.join(', '))}`
+          : dentro ? `Saiu do estoque no ERP ${haQuanto(iTs(ult))}, esperando baixar no mapa` : `Saiu do estoque no ERP e continua no mapa`,
+        `A foto do saldo do ERP mostra o lote caindo ${iQ(somaSai, un)} (${queda})` +
+        (para.length ? ` e o <b>${para.map(esc).join(', ')}</b> subindo a mesma quantidade na mesma hora — foi transferido para lá.` : '. Nenhum outro armazém subiu: saiu do estoque (nota de saída, bonificação ou consumo).') +
+        ` O documento ainda não chegou nas movimentações do ERP${ultMov ? ` (último envio do robô: ${ultMov})` : ''}; quando chegar, este cartão mostra a NF, o cliente ou o destino.` +
+        ` O mapa continua com ${iQ(l.mapa, un)} em ${vagasTxt}${l.sistema ? `, e o ERP tem ${iQ(l.sistema, un)}` : ''}.`,
         { quando:ult, grupo:dentro ? 'aguardando' : 'arrumar' });
       a.pistas.push(iPerto(somaSai, sobraQ, 0.05) ? 'A quantidade que saiu no ERP é a mesma que sobra no mapa.' : `Sobra no mapa ${iQ(sobraQ, un)}; saiu no ERP ${iQ(somaSai, un)}.`);
       if (separado) a.pistas.push('Parte está na área de separação — expedir por lá (mapa → Pedidos separados).');
       if (dentro) a.pistas.push(`Vira tarefa ${fmtTS(new Date(iMaisUmDiaUtil(iTs(ult))).toISOString())} se ninguém baixar.`);
-      if (qtdB > 0.001) a.acoes.push({ rot:`Baixar ${num(Math.round(qtdB * 1000) / 1000)} ${un} do mapa`, op:'baixar', qtd:qtdB, primaria:true });
+      if (para.length === 1 && qtdB > 0.001) a.acoes.push({ rot:`Mudar ${num(Math.round(qtdB * 1000) / 1000)} ${un} para o ${para[0]}`, op:'dividir', qtd:qtdB, arm:para[0], primaria:true, gestor:true });
+      else if (qtdB > 0.001) a.acoes.push({ rot:`Baixar ${num(Math.round(qtdB * 1000) / 1000)} ${un} do mapa`, op:'baixar', qtd:qtdB, primaria:true });
       a.acoes.push({ rot:'Pedir recontagem', op:'recontagem' });
       return a;
     }
