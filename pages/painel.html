@@ -1869,6 +1869,10 @@ html.sem-rede .app-offline {
   body { background:#fff; color:#000; }
 }
 /* ═══════════ MOVIMENTAÇÕES DO ERP (movimentos.js: Hoje e Analista) ═══════════ */
+.an-intervalo { display:inline-flex; align-items:center; gap:6px 10px; flex-wrap:wrap; padding:3px 10px; border:1px solid var(--line); border-radius:9px; background:var(--surface); font-size:.75rem; color:var(--text-3); }
+.an-intervalo.on { border-color:var(--accent-ln); background:var(--accent-sf); color:var(--text-2); }
+.an-intervalo label { display:inline-flex; align-items:center; gap:6px; }
+.an-intervalo .bo-data { min-height:30px !important; padding:3px 7px !important; font-size:.8125rem; }
 .mv-dia { max-width:none; }
 .mv-dia-t { font-size:.8125rem; color:var(--text-2); margin-left:4px; }
 .mv-dia-t b { color:var(--text); font-weight:600; }
@@ -3136,12 +3140,12 @@ tr.mv-tl-lib td { background:var(--pos-sf); }
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="/assets/js/comum/comum.js?v=8"></script>
+<script src="/assets/js/comum/comum.js?v=9"></script>
 <script src="/assets/js/comum/usuarios.js?v=1"></script>
-<script src="/assets/js/painel/saldo-mapeado.js?v=20"></script>
-<script src="/assets/js/painel/saldo-erp.js?v=11"></script>
+<script src="/assets/js/painel/saldo-mapeado.js?v=21"></script>
+<script src="/assets/js/painel/saldo-erp.js?v=12"></script>
 <script src="/assets/js/painel/inteligencia.js?v=8"></script>
-<script src="/assets/js/painel/analista.js?v=7"></script>
+<script src="/assets/js/painel/analista.js?v=8"></script>
 <script src="/assets/js/painel/boletim.js?v=3"></script>
 <script src="/assets/js/painel/movimentos.js?v=4"></script>
 <script src="/assets/js/painel/painel-app.js?v=1" defer></script>

@@ -20,8 +20,12 @@ const AN_ARM_FORA_VENDA = ['D7', '48', '88', '91', '94', 'D4', '98', 'D6', 'D3']
 
 /* ═══════════ DATAS ═══════════ */
 const anIso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+// Período livre ("de … até …"): _an.periodo = 'x', com _an.de e _an.ate (aaaa-mm-dd).
+const anDataDe = iso => { const [y, m, d] = String(iso).split('-').map(Number); return new Date(y, m - 1, d); };
+const anPerKey = () => _an.periodo === 'x' ? `x${_an.de}${_an.ate}` : _an.periodo;
 function anJanela(p) {
   const h = new Date(); h.setHours(0, 0, 0, 0);
+  if (p === 'x' && _an.de && _an.ate) return { de:anDataDe(_an.de), ate:anDataDe(_an.ate) };
   const menos = n => { const d = new Date(h); d.setDate(d.getDate() - n); return d; };
   if (p === 'hoje')   return { de:h, ate:h };
   if (p === 'ontem')  return { de:menos(1), ate:menos(1) };
@@ -63,6 +67,18 @@ async function carregarAnalista(forcar = false) {
   renderAnalista();
 }
 function anPeriodo(p) { _an.periodo = p; _an.carregado = 0; carregarAnalista(true); }
+// "De … até …": qualquer intervalo de datas (troca as duas se vierem invertidas).
+function anIntervalo(campo, v) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v || '')) return;
+  const j = anJanela(_an.periodo);
+  let de = campo === 'de' ? v : (_an.periodo === 'x' ? _an.de : anIso(j.de));
+  let ate = campo === 'ate' ? v : (_an.periodo === 'x' ? _an.ate : anIso(j.ate));
+  const hoje = anIso(new Date());
+  if (ate > hoje) ate = hoje;
+  if (de > ate) [de, ate] = [ate, de];
+  Object.assign(_an, { periodo:'x', de, ate });
+  _an.carregado = 0; carregarAnalista(true);
+}
 function anAba(a) { _an.aba = a; renderAnalista(); }
 function anSet(campo, v) { _an[campo] = v; renderAnalista(); }
 
@@ -158,7 +174,12 @@ function renderAnalista() {
   const { de, ate } = anJanela(_an.periodo);
   $('an-sub').innerHTML = `Movimentações do ERP de <b>${saData(anIso(de))}</b> a <b>${saData(anIso(ate))}</b>` +
     (_an.sync ? ` · última atualização ${esc(fmtTS(_an.sync.quando))} (${esc(haQuanto(new Date(_an.sync.quando).getTime()))})` : '') + '.';
+  const hojeIso = anIso(new Date());
   $('an-ctrl').innerHTML = `<div class="seg">${AN_PERIODOS.map(([v, t]) => `<button class="${_an.periodo === v ? 'active' : ''}" onclick="anPeriodo('${v}')">${t}</button>`).join('')}</div>
+    <div class="an-intervalo${_an.periodo === 'x' ? ' on' : ''}" role="group" aria-label="Período de … até …">
+      <label>De <input type="date" class="bo-data" value="${anIso(de)}" max="${hojeIso}" onchange="anIntervalo('de', this.value)"></label>
+      <label>até <input type="date" class="bo-data" value="${anIso(ate)}" max="${hojeIso}" onchange="anIntervalo('ate', this.value)"></label>
+    </div>
     <div class="seg">${[['', 'PA e ME'], ['PA', 'PA'], ['ME', 'ME']].map(([v, t]) => `<button class="${_an.tipo === v ? 'active' : ''}" onclick="anSet('tipo','${v}')">${t}</button>`).join('')}</div>`;
   $('an-abas').innerHTML = AN_ABAS.map(([id, rot]) => `<button role="tab" aria-selected="${_an.aba === id}" class="${_an.aba === id ? 'active' : ''}" onclick="anAba('${id}')">${rot}</button>`).join('');
 
@@ -404,7 +425,7 @@ function anSaidas(ls) {
   for (const r of sai) { const k = `${r.filial}|${r.codigo}`; (porProd.get(k) || porProd.set(k, []).get(k)).push(r); }
   const totU = anSoma(sai).q;
   const prods = [...porProd.values()].map(rs => ({ r:rs[0], o:anSoma(rs) })).sort((a, b) => (b.o.q[b.r.un] || 0) / (totU[b.r.un] || 1) - (a.o.q[a.r.un] || 0) / (totU[a.r.un] || 1));
-  const p = fatiar('an-sai', prods, _an.periodo + _an.tipo + prods.length);
+  const p = fatiar('an-sai', prods, anPerKey() + _an.tipo + prods.length);
   const colsU = u => AN_UNS.map(x => `<td class="num">${u.q[x] ? anQ(u.q[x]) : '<span class="num-zero">—</span>'}</td>`).join('');
   return `<div class="panel"><div class="panel-head"><div><div class="section-title">Saídas por tipo</div><div class="section-note">pela TES da nota</div></div></div>
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Tipo</th><th class="num">Notas</th><th class="num">Pedidos</th>${AN_UNS.map(u => `<th class="num">${u}</th>`).join('')}<th class="num">Paletes</th><th class="num">Valor</th></tr></thead>
@@ -427,7 +448,7 @@ function anClientes(ls) {
   const uf = new Map();
   for (const r of sai) { const k = r.cli_uf || '—'; (uf.get(k) || uf.set(k, []).get(k)).push(r); }
   const ufs = [...uf].map(([k, rs]) => ({ k, o:anSoma(rs) })).sort((a, b) => b.o.valor - a.o.valor);
-  const p = fatiar('an-cli', clis, _an.periodo + _an.tipo + clis.length);
+  const p = fatiar('an-cli', clis, anPerKey() + _an.tipo + clis.length);
   const colsU = u => AN_UNS.map(x => `<td class="num">${u.q[x] ? anQ(u.q[x]) : '<span class="num-zero">—</span>'}</td>`).join('');
   return `<div class="an-duas">
   <div class="panel"><div class="panel-head"><div><div class="section-title">Clientes</div><div class="section-note">${num(clis.length)} no período, pelo valor</div></div></div>
@@ -485,7 +506,7 @@ function anLista(ls) {
   const q = (_an.busca || '').trim().toUpperCase();
   const f = ls.filter(r => (!_an.tipoMov || r.tipo_mov === _an.tipoMov) &&
     (!q || [r.codigo, r.descricao, r.lote, r.nf, r.pedido, r.cli_nome, r.usuario].some(v => String(v || '').toUpperCase().includes(q))));
-  const p = fatiar('an-lis', [...f].reverse(), _an.periodo + _an.tipo + _an.tipoMov + q + f.length);
+  const p = fatiar('an-lis', [...f].reverse(), anPerKey() + _an.tipo + _an.tipoMov + q + f.length);
   return `<div class="panel"><div class="panel-head">
       <div class="an-filtros"><input type="search" placeholder="Produto, lote, NF, pedido, cliente ou usuário" value="${esc(_an.busca)}" oninput="_an.busca=this.value;clearTimeout(_an.t);_an.t=setTimeout(renderAnalista,300)" aria-label="Buscar">
       <div class="seg">${[['', 'Todos'], ['Saída', 'Saídas'], ['Entrada', 'Entradas'], ['Saída Interna', 'Saída int.'], ['Entrada Interna', 'Entrada int.']].map(([v, t]) => `<button class="${_an.tipoMov === v ? 'active' : ''}" onclick="anSet('tipoMov','${v}')">${t}</button>`).join('')}</div></div>

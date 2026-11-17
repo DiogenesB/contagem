@@ -663,12 +663,12 @@ body.com-lado .tela { max-width:none; margin:0 calc(var(--lado) + 28px) 0 0; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="/assets/js/comum/comum.js?v=8"></script>
+<script src="/assets/js/comum/comum.js?v=9"></script>
 <script src="/assets/js/comum/usuarios.js?v=1"></script>
 <script src="/assets/js/comum/impressao.js?v=4"></script>
 <script src="/assets/js/comum/identificacao.js?v=3"></script>
 <script src="/assets/js/comum/leitor.js?v=1"></script>
-<script src="/assets/js/mapa/separacao.js?v=4"></script>
+<script src="/assets/js/mapa/separacao.js?v=5"></script>
 <script>
 let sb = null;
 let _ocupacao = {};
@@ -695,8 +695,15 @@ async function carregar(silencioso = false) {
         .eq('status', 'pendente').eq('ocupacao_ativa', true).not('posicao', 'is', null)),
     ]);
 
+    // Lançamento pendente na vaga = a contagem de agora; a linha antiga do
+    // histórico com o mesmo produto+lote ainda não foi desativada. Somar
+    // as duas dobrava o saldo da vaga (o painel já fazia assim).
+    const chavesPend = new Set(pend.map(r => `${r.posicao}|${chave(r.codigo)}|${chave(r.lote)}`));
     _ocupacao = {};
-    for (const r of hist) (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'historico',   pend:false, _busca:chaveBusca(r) });
+    for (const r of hist) {
+      if (chavesPend.has(`${r.posicao}|${chave(r.codigo)}|${chave(r.lote)}`)) continue;
+      (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'historico', pend:false, _busca:chaveBusca(r) });
+    }
     for (const r of pend) (_ocupacao[r.posicao] ||= []).push({ ...r, _tab:'lancamentos', pend:true,  _busca:chaveBusca(r) });
 
     construir();

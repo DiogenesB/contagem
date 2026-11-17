@@ -289,6 +289,7 @@ function saCruzarMapa() {
   const qtd = new Map(), vagas = new Map(), itensK = new Map();
   for (const [pos, itens] of Object.entries(ocup || {}))
     for (const it of itens) {
+      if (it._foraDoErp) continue;          // separado que o ERP já baixou (ver sepMarcarForaDoErp)
       const k = kc(it.codigo, it.lote);
       const ka = `${k}|${normalizarArmazem(it.armazem)}`;
       qtd.set(ka, (qtd.get(ka) || 0) + (Number(it.quantidade) || 0));

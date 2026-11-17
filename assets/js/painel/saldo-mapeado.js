@@ -323,13 +323,54 @@ async function carregarOcupacaoSaldo() {
   // mapeados, num lugar só chamado SEPARAÇÃO.
   try {
     const { data, error } = await sb.from('separacao')
-      .select('id, codigo, produto_nome, lote, armazem, quantidade, filial, pedido, separado_em').eq('status', 'separado');
-    if (!error && data?.length) {
-      comFilial(data);
-      m[SALDO_SEP] = data.map(r => ({ ...r, posicao:SALDO_SEP, origem:r.pedido ? `pedido ${r.pedido}` : 'separado', created_at:r.separado_em, _tab:'separacao', sep:true }));
+      .select('id, codigo, produto_nome, lote, armazem, quantidade, filial, pedido, status, separado_em, created_at, saldo_erp_antes, foto_erp_em').eq('status', 'separado');
+    // Pedido já faturado (NF no ERP) e ninguém expediu: sai da separação sozinho.
+    const baixados = !error && data?.length && typeof sepBaixarFaturadas === 'function' ? await sepBaixarFaturadas(data) : new Set();
+    const ficam = (data || []).filter(r => !baixados.has(r.id));
+    if (!error && ficam.length) {
+      comFilial(ficam);
+      m[SALDO_SEP] = ficam.map(r => ({ ...r, posicao:SALDO_SEP, origem:r.pedido ? `pedido ${r.pedido}` : 'separado', created_at:r.separado_em, _tab:'separacao', sep:true }));
     }
   } catch { /* tabela ainda não criada */ }
   _sOcup = m;
+  sepMarcarForaDoErp();
+}
+
+/* Separado que o saldo do ERP já tirou (a foto do ERP depois da
+   separação caiu pelo menos isso), mas a nota ainda não chegou nas
+   movimentações: não conta como mapeado — senão o lote aparece duas
+   vezes (separação + o que o ERP já não tem). Continua na lista de
+   separados e na tela Hoje, para expedir. */
+function sepMarcarForaDoErp() {
+  const itens = _sOcup?.[SALDO_SEP];
+  if (!itens?.length) return;
+  const ref = linhasDeReferencia();
+  for (const r of itens) r._foraDoErp = false;
+  if (!ref.length) return;
+  const kla = (c, l, a) => `${chave(normalizarCodigo(c))}|${chave(l)}|${normalizarArmazem(a)}`;
+  const saldo = new Map(), foto = {};
+  for (const s of ref) {
+    const a = normalizarArmazem(s.armazem), k = kla(s.codigo, s.lote, a);
+    saldo.set(k, (saldo.get(k) || 0) + (Number(s.saldo) || 0));
+    if (s.importado_em && (!foto[a] || s.importado_em > foto[a])) foto[a] = s.importado_em;
+  }
+  const grupos = new Map();
+  for (const r of itens) {
+    const a = normalizarArmazem(r.armazem), base = r.foto_erp_em || r.separado_em;
+    if (!foto[a] || !base || foto[a] <= base) continue;      // a foto do ERP ainda é de antes da separação
+    const k = kla(r.codigo, r.lote, a), g = `${k}|${r.saldo_erp_antes ?? '-'}`;
+    (grupos.get(g) || grupos.set(g, { k, antes:r.saldo_erp_antes, itens:[] }).get(g)).itens.push(r);
+  }
+  for (const { k, antes, itens:its } of grupos.values()) {
+    const atual = saldo.get(k) || 0;
+    if (antes === null || antes === undefined) { if (!saldo.has(k)) its.forEach(r => { r._foraDoErp = true; }); continue; }
+    const caiu = Number(antes) - atual;
+    let acum = 0;
+    for (const r of its.sort((a, b) => String(a.separado_em).localeCompare(String(b.separado_em)))) {
+      acum += Number(r.quantidade) || 0;
+      if (caiu >= acum - 0.001) r._foraDoErp = true;
+    }
+  }
 }
 const SALDO_SEP = 'SEPARAÇÃO';
 
@@ -371,6 +412,7 @@ async function carregarSaldoMapa(forcar = false) {
       (forcar || _referencia === null) ? carregarRef().then(r => { _refLinhas = r; }) : null,
     ]);
     _referencia = true;
+    sepMarcarForaDoErp();
     await carregarMovimentos();
     renderSaldo();
   } catch (e) {
@@ -420,6 +462,7 @@ function calcularSaldoCompleto() {
   let semFilial = 0;
   for (const [pos, itens] of Object.entries(_sOcup)) {
     for (const r of itens) {
+      if (r._foraDoErp) continue;            // separado que o ERP já baixou: não conta duas vezes
       const cod = sCod(r.codigo);
       const f = sFil(r.filial) || filialCod[cod] || sFil(codigoFilialDoProduto(cod)) || null;
       if (!sPassaFilial(f)) { if (!f) semFilial++; continue; }

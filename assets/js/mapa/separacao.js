@@ -39,7 +39,10 @@ async function carregarSeparacao() {
   try {
     const { data, error } = await sb.from('separacao').select('*').eq('status', 'separado').order('separado_em');
     if (error) throw error;
-    _sep = data || [];
+    // Pedido já faturado (NF no ERP) e ninguém expediu: sai da lista sozinho (comum.js).
+    const baixados = typeof sepBaixarFaturadas === 'function' ? await sepBaixarFaturadas(data || []) : new Set();
+    if (baixados.size) toast(`${baixados.size} item(ns) da separação já faturado(s): expedido(s) automaticamente.`, 'ok', 5000);
+    _sep = (data || []).filter(r => !baixados.has(r.id));
     _sepOk = true;
     await marcarFaturados();
   } catch (e) {
