@@ -1271,9 +1271,17 @@ table.mini .acao { text-align:right; }
    outro. A busca varre todos sempre; o escopo só esconde. Antes
    era preciso trocar de aba para descobrir se o saldo estava lá. */
 .pav-sec { margin-bottom:26px; }
-.m-ext { margin:0 0 14px; }
-.m-ext .btn { gap:8px; }
-.m-ext .btn.m-ext-on { border-color:var(--pos); box-shadow:inset 3px 0 0 var(--pos); }
+.m-ext-sec { margin-bottom:18px; }
+.m-ext-cel { width:100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px; text-align:left; cursor:pointer; font:inherit;
+  min-height:46px; padding:10px 14px; border-radius:8px; border:1px dashed var(--line-2); background:var(--surface); color:var(--text-2); font-size:.8125rem; }
+.m-ext-cel:hover { border-color:var(--accent); }
+.m-ext-cel.ok    { border:1px solid var(--pos);  background:var(--pos-sf);  box-shadow:inset 4px 0 0 var(--pos); }
+.m-ext-cel.multi { border:1px solid var(--warn); background:var(--warn-sf); box-shadow:inset 4px 0 0 var(--warn); }
+.m-ext-cel.pend  { border:1px solid var(--alt, var(--accent)); box-shadow:inset 4px 0 0 var(--alt, var(--accent)); }
+.m-ext-cel.hit   { box-shadow:0 0 0 2px var(--accent), inset 4px 0 0 var(--accent); }
+.m-ext-cel.apagada { opacity:.35; }
+.m-ext-it b { color:var(--text); font-weight:600; }
+.m-ext-livre { color:var(--text-3); }
 .pav-sec[hidden] { display:none; }
 .pav-cab {
   display:flex; align-items:center; gap:10px; flex-wrap:wrap;
@@ -5319,11 +5327,12 @@ function construirMapa() {
                   hitEl:cab.querySelector('.pav-hits'), dis:porDi });
   }
 
-  // Área externa: fora do drive e do pavilhão.
-  const ext = document.createElement('div');
-  ext.className = 'm-ext';
-  const nExt = itensDaVaga(AREA_EXTERNA).length;
-  ext.innerHTML = `<button class="btn btn-sm${nExt ? ' m-ext-on' : ''}" onclick="abrirVaga(AREA_EXTERNA)"><b>Área externa</b> <span class="sub">fora do drive-in e do pavilhão · ${nExt ? `${num(nExt)} item(ns)` : 'livre'}</span></button>`;
+  // Área externa: fora do drive e do pavilhão — um bloco próprio no topo
+  // do mapa, pintado e achado pela busca como as vagas (renderMapa).
+  const ext = document.createElement('section');
+  ext.className = 'pav-sec m-ext-sec';
+  ext.innerHTML = `<div class="pav-cab"><span class="pav-nome">Área externa</span><span class="pav-meta" id="m-ext-meta"></span></div>
+    <button type="button" class="m-ext-cel" id="m-ext-cel" onclick="abrirVaga(AREA_EXTERNA)"></button>`;
   box.prepend(ext);
 
   box.dataset.vista = _mvista;
@@ -5542,6 +5551,23 @@ function renderMapa() {
     if (el.className !== cls) el.className = cls;
     if (el.style.background !== fundo) el.style.background = fundo;
 
+  }
+
+  // Área externa
+  const extCel = $('m-ext-cel');
+  if (extCel) {
+    let itensE = itensDaVaga(AREA_EXTERNA);
+    if (arm) itensE = itensE.filter(r => r.armazem === arm);
+    const achouE = acertou(AREA_EXTERNA, itensE, ts);
+    if (achouE) achados++;
+    const tot = {};
+    for (const r of itensE) { const u = unidadeDe(r.codigo, r.produto_nome) || 'un'; tot[u] = (tot[u] || 0) + (Number(r.quantidade) || 0); }
+    $('m-ext-meta').textContent = `fora do drive-in e do pavilhão · ${itensE.length ? `${num(itensE.length)} item(ns) · ${Object.entries(tot).map(([u, v]) => `${num(v)} ${u}`).join(' + ')}` : 'livre'}`;
+    extCel.className = 'm-ext-cel' + (itensE.length ? (itensE.length > 1 ? ' multi' : itensE.some(r => r.pend) ? ' pend' : ' ok') : '') +
+      (achouE ? ' hit' : '') + ((q && !achouE) || (estado === 'pend' && !itensE.some(r => r.pend)) || (estado === 'multi' && itensE.length < 2) ? ' apagada' : '');
+    extCel.innerHTML = itensE.length
+      ? itensE.slice(0, 6).map(r => `<span class="m-ext-it"><b>${esc(r.produto_nome || r.codigo)}</b> <span class="mono">${esc(r.lote || '—')}</span> · arm. ${esc(r.armazem || '—')} · <b>${qtdUn(r.quantidade, r.codigo, r.produto_nome)}</b></span>`).join('') + (itensE.length > 6 ? `<span class="m-ext-it">+${itensE.length - 6}</span>` : '')
+      : '<span class="m-ext-livre">Livre — clique para guardar um produto aqui</span>';
   }
 
   const soLinha = $('m-so-result').classList.contains('active');
