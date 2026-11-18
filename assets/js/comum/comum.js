@@ -584,17 +584,35 @@ function diasDesde(ts) {
    REDE
    ═══════════════════════════════════════════════════════════════ */
 /* Paginação: o PostgREST corta em 1.000 linhas sem avisar.
-   Tudo que pode passar disso passa por aqui. */
+   Tudo que pode passar disso passa por aqui.
+   SEM ORDEM FIXA A PAGINAÇÃO DUPLICA E PERDE LINHAS: cada página é uma
+   consulta separada (LIMIT/OFFSET) e o banco pode devolver as linhas em
+   outra ordem em cada uma — a mesma vaga vinha nas páginas 1 e 2 (saldo
+   em dobro no mapa) e outra não vinha em nenhuma. Por isso toda busca
+   termina ordenada pelo id (depois da ordem que a consulta já pedir), e
+   o que repetir o id sai. Tabela sem coluna id: fica só a ordem pedida. */
+const _semColunaId = new Set(['estoque_ref_dia', 'estoque_ref_lote']);   // chave composta, sem id
 async function buscarTudo(construir, tamanho = 1000) {
   const out = [];
+  let comId = true;
   for (let de = 0; ; de += tamanho) {
-    const { data, error } = await construir().range(de, de + tamanho - 1);
+    const q = construir();
+    const tab = String(q?.url?.pathname || '').split('/').pop();
+    if (tab && _semColunaId.has(tab)) comId = false;
+    const { data, error } = await (comId && typeof q.order === 'function' ? q.order('id', { ascending:true }) : q).range(de, de + tamanho - 1);
+    if (error && comId && (error.code === '42703' || /column .*\bid\b.* does not exist|failed to parse order/i.test(error.message || ''))) {
+      if (tab) _semColunaId.add(tab);
+      comId = false; out.length = 0; de = -tamanho;      // recomeça sem a ordem pelo id
+      continue;
+    }
     if (error) throw error;
     if (!data?.length) break;
     out.push(...data);
     if (data.length < tamanho) break;
   }
-  return out;
+  if (!out.length || out[0]?.id === undefined) return out;
+  const vistos = new Set();
+  return out.filter(r => r.id === undefined || r.id === null || (!vistos.has(r.id) && vistos.add(r.id)));
 }
 
 const _colunasIgnoradas = {};
