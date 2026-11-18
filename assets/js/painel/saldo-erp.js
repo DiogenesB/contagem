@@ -287,12 +287,14 @@ function saCruzarMapa() {
   const kc = (cod, lote) => `${chave(normalizarCodigo(cod))}|${chave(lote)}`;
   // mapa: produto+lote+armazém → quantidade; produto+lote → vagas
   const qtd = new Map(), vagas = new Map(), itensK = new Map();
+  const naExterna = new Set();             // lote+armazém com item na ÁREA EXTERNA (compara mesmo se o armazém não é mapeado)
   for (const [pos, itens] of Object.entries(ocup || {}))
     for (const it of itens) {
       if (it._foraDoErp) continue;          // separado que o ERP já baixou (ver sepMarcarForaDoErp)
       const k = kc(it.codigo, it.lote);
       const ka = `${k}|${normalizarArmazem(it.armazem)}`;
       qtd.set(ka, (qtd.get(ka) || 0) + (Number(it.quantidade) || 0));
+      if (typeof AREA_EXTERNA !== 'undefined' && pos === AREA_EXTERNA) naExterna.add(ka);
       const v = vagas.get(k) || vagas.set(k, []).get(k);
       if (!v.includes(pos)) v.push(pos);
       (itensK.get(k) || itensK.set(k, []).get(k)).push({ pos, qtd:Number(it.quantidade) || 0,
@@ -340,7 +342,7 @@ function saCruzarMapa() {
     r._busca = null;                       // a busca também acha pela vaga
     r.noMapa = qtd.get(ka) || 0;
     r.pctMapa = r.saldo > 0 ? Math.min(100, r.noMapa / r.saldo * 100) : null;
-    const mapeavel = typeof armMapeado === 'function' ? armMapeado(r.arm) : true;
+    const mapeavel = (typeof armMapeado === 'function' ? armMapeado(r.arm) : true) || naExterna.has(ka);
     r.linhaDiv = null;
     if (!mapeavel) {
       r.falta = null; r.mais = null; r.sitRot = SA_NAO_MAPEAVEL; r.sitCls = 't-mute'; r.mapaEst = 'na';

@@ -59,7 +59,13 @@ const TODAS_POSICOES = (() => {
           for (const lg of lugares) out.push(`${di}-${ln}-${an}-${lg}`);
   return out;
 })();
-const linhaDaPosicao = p => String(p || '').split('-').slice(0, 2).join('-');
+/* ÁREA EXTERNA: um lugar do mapa fora do drive-in e do pavilhão (um
+   produto que fica lá fora). Vale como posição em todas as telas. O
+   armazém do item continua o do ERP: se for um armazém que não é
+   mapeado (ex.: 88), só o lote que está aqui entra na comparação. */
+const AREA_EXTERNA = 'ÁREA EXTERNA';
+TODAS_POSICOES.push(AREA_EXTERNA);
+const linhaDaPosicao = p => p === AREA_EXTERNA ? AREA_EXTERNA : String(p || '').split('-').slice(0, 2).join('-');
 
 /* ═══════════════════════════════════════════════════════════════
    CATÁLOGO DE PRODUTOS

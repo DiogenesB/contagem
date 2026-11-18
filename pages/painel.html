@@ -1271,6 +1271,9 @@ table.mini .acao { text-align:right; }
    outro. A busca varre todos sempre; o escopo só esconde. Antes
    era preciso trocar de aba para descobrir se o saldo estava lá. */
 .pav-sec { margin-bottom:26px; }
+.m-ext { margin:0 0 14px; }
+.m-ext .btn { gap:8px; }
+.m-ext .btn.m-ext-on { border-color:var(--pos); box-shadow:inset 3px 0 0 var(--pos); }
 .pav-sec[hidden] { display:none; }
 .pav-cab {
   display:flex; align-items:center; gap:10px; flex-wrap:wrap;
@@ -3141,10 +3144,10 @@ tr.mv-tl-lib td { background:var(--pos-sf); }
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="/assets/js/comum/comum.js?v=12"></script>
+<script src="/assets/js/comum/comum.js?v=13"></script>
 <script src="/assets/js/comum/usuarios.js?v=1"></script>
 <script src="/assets/js/painel/saldo-mapeado.js?v=23"></script>
-<script src="/assets/js/painel/saldo-erp.js?v=13"></script>
+<script src="/assets/js/painel/saldo-erp.js?v=14"></script>
 <script src="/assets/js/painel/inteligencia.js?v=10"></script>
 <script src="/assets/js/painel/analista.js?v=9"></script>
 <script src="/assets/js/painel/boletim.js?v=4"></script>
@@ -5316,6 +5319,13 @@ function construirMapa() {
                   hitEl:cab.querySelector('.pav-hits'), dis:porDi });
   }
 
+  // Área externa: fora do drive e do pavilhão.
+  const ext = document.createElement('div');
+  ext.className = 'm-ext';
+  const nExt = itensDaVaga(AREA_EXTERNA).length;
+  ext.innerHTML = `<button class="btn btn-sm${nExt ? ' m-ext-on' : ''}" onclick="abrirVaga(AREA_EXTERNA)"><b>Área externa</b> <span class="sub">fora do drive-in e do pavilhão · ${nExt ? `${num(nExt)} item(ns)` : 'livre'}</span></button>`;
+  box.prepend(ext);
+
   box.dataset.vista = _mvista;
   aplicarEscopoMapa();
   renderMapa();
@@ -5671,6 +5681,7 @@ function renderListaMapa(q, arm) {
   // Buscando, a lista mostra o que achou no galpão inteiro; parada,
   // mostra o escopo. É o oposto de antes, que só via um drive-in.
   let posicoes = Object.keys(_ocupacao).sort().filter(p => {
+    if (p === AREA_EXTERNA) return true;
     const di = p.split('-')[0];
     const pav = PAV_DO_DI[di];
     return q ? true : noEscopo(pav, di);
@@ -5725,7 +5736,7 @@ function abrirVaga(pos) {
   if (!itens.length) { abrirModalVaga(null, pos); return; }
 
   $('mvl-titulo').textContent = pos;
-  $('mvl-sub').textContent = `${itens.length} item(ns) · linha ${linhaDaPosicao(pos)}`;
+  $('mvl-sub').textContent = pos === AREA_EXTERNA ? `${itens.length} item(ns) · fora do drive-in e do pavilhão` : `${itens.length} item(ns) · linha ${linhaDaPosicao(pos)}`;
   $('mvl-body').innerHTML = itens.map(r => `
     <div class="panel" style="margin:0 0 10px">
       <div class="panel-body">

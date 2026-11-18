@@ -183,6 +183,13 @@ select:hover, .bt:hover { border-color:var(--line-2); }
   display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;
 }
 .cel:hover, .cel:focus-visible { box-shadow:0 0 0 2px var(--accent); z-index:2; position:relative; }
+/* Área externa: um lugar só, fora do drive-in e do pavilhão */
+.ext-sec { margin:0 0 16px; }
+.cel.cel-ext { width:auto; height:auto; min-height:44px; padding:8px 14px; gap:4px 12px; flex-wrap:wrap; justify-content:flex-start;
+  font-family:var(--sans, inherit); font-size:.8125rem; color:var(--text-2); }
+.cel.cel-ext .ext-t { font-weight:700; letter-spacing:.02em; color:inherit; }
+.cel.cel-ext .ext-s { font-size:.6875rem; opacity:.8; }
+.cel.cel-ext .ext-n { margin-left:auto; font-family:var(--mono); font-size:.75rem; font-weight:600; }
 .cel.ok    { background:var(--pos);  border-color:var(--pos);  color:var(--cel-fg); }
 .cel.multi { background:var(--warn); border-color:var(--warn); color:var(--cel-fg); }
 .cel.pend  { background:var(--alt);  border-color:var(--alt);  color:var(--cel-fg); }
@@ -663,7 +670,7 @@ body.com-lado .tela { max-width:none; margin:0 calc(var(--lado) + 28px) 0 0; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="/assets/js/comum/comum.js?v=12"></script>
+<script src="/assets/js/comum/comum.js?v=13"></script>
 <script src="/assets/js/comum/usuarios.js?v=1"></script>
 <script src="/assets/js/comum/impressao.js?v=4"></script>
 <script src="/assets/js/comum/identificacao.js?v=3"></script>
@@ -790,6 +797,12 @@ function construir() {
   colunas.className = 'colunas';
   colunas.appendChild(frag);
   $('mapa').innerHTML = '';
+  // Área externa: fora do drive e do pavilhão, sempre no topo.
+  const ext = document.createElement('section');
+  ext.className = 'ext-sec';
+  ext.innerHTML = `<button class="cel cel-ext" data-pos="${AREA_EXTERNA}"><span class="ext-t">Área externa</span><span class="ext-s">fora do drive-in e do pavilhão</span><span class="ext-n"></span></button>`;
+  _celExt = ext.querySelector('.cel-ext');
+  $('mapa').appendChild(ext);
   $('mapa').appendChild(colunas);
   pintar();
 }
@@ -803,6 +816,21 @@ function acertou(pos, itens, ts) {
   return ts.some(t => casaTermo(pos, itens, t));
 }
 
+let _celExt = null;
+function pintarExterna(ts) {
+  if (!_celExt) return 0;
+  const itens = _ocupacao[AREA_EXTERNA] || [];
+  let cls = 'cel cel-ext', hit = 0;
+  if (itens.length) cls += itens.length > 1 ? ' multi' : itens.some(r => r.pend) ? ' pend' : ' ok';
+  if (acertou(AREA_EXTERNA, itens, ts)) { cls += ' achou'; hit = 1; }
+  else if (_q) cls += ' fora';
+  if (_posAberta === AREA_EXTERNA) cls += ' aberta';
+  if (_sel && _sel.de === AREA_EXTERNA) cls += ' origem';
+  if (_celExt.className !== cls) _celExt.className = cls;
+  _celExt.querySelector('.ext-n').textContent = itens.length ? `${itens.length} item(ns)` : 'livre';
+  _celExt.title = itens.length ? itens.map(r => `${r.produto_nome || r.codigo} · lote ${r.lote || '—'} · ${qtdUn(r.quantidade, r.codigo, r.produto_nome)}`).join(' | ') : 'Área externa — livre';
+  return hit;
+}
 function pintar() {
   const ts = termos(_q);
   let total = 0, ocup = 0, achados = 0;
@@ -853,6 +881,7 @@ function pintar() {
     if (el) el.textContent = `${num(v.o)}/${num(v.t)} ocupadas`;
   }
 
+  achados += pintarExterna(ts);
   $('k-total').textContent = num(total);
   $('k-ocup').textContent  = num(ocup);
   $('k-livre').textContent = num(total - ocup);
@@ -868,7 +897,7 @@ function renderLista(ts) {
   const dis = Object.keys(MAPA_POSICOES[_pav]).filter(d => !_di || d === _di);
   const linhas = [];
   for (const pos of Object.keys(_ocupacao).sort()) {
-    if (!dis.includes(pos.split('-')[0])) continue;
+    if (pos !== AREA_EXTERNA && !dis.includes(pos.split('-')[0])) continue;
     const itens = _ocupacao[pos];
     if (ts.length && !acertou(pos, itens, ts)) continue;
     for (const r of itens) linhas.push({ ...r, pos });
@@ -938,6 +967,16 @@ function fichaHTML(pos, r) {
 
 function htmlVaga(pos) {
   const itens = _ocupacao[pos] || [];
+  if (pos === AREA_EXTERNA) return `<div class="lado-cab"><div><div class="t">Área externa</div>
+      <div class="s">Fora do drive-in e do pavilhão · ${itens.length ? `${itens.length} item(ns)` : 'livre'}</div></div>
+      <button class="lado-x" onclick="fecharLado()" aria-label="Fechar">✕</button></div>
+    <div class="lado-corpo">
+      ${itens.length ? itens.map(r => fichaHTML(pos, r)).join('')
+        : `<div class="vazio" style="padding:12px"><div class="vazio-t">Nada na área externa</div><div class="vazio-s">Guarde aqui o que fica fora do drive-in e do pavilhão.</div></div>`}
+      <div class="lado-acoes">
+        <button class="bt destaque" onclick="abrirForm('${esc(pos)}')">Guardar produto na área externa</button>
+      </div>
+    </div>`;
   const [di, ln, an, lg] = pos.split('-');
   return `<div class="lado-cab"><div><div class="t">${esc(pos)}</div>
       <div class="s">Drive-in ${esc(di)} · linha ${esc(ln)} · andar ${esc(an)} · vaga ${esc(lg)} · ${itens.length ? `${itens.length} lote(s)` : 'livre'}</div></div>
