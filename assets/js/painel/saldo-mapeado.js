@@ -312,12 +312,21 @@ async function carregarRef() {
 /* Só o que está ocupando vaga no mapa. Lançamento de contagem ainda
    pendente NÃO entra: o saldo mapeado é o mapa, não a contagem. */
 async function carregarOcupacaoSaldo() {
-  const hist = await buscarTudo(() => sb.from('historico')
-    .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, origem, ciclo_id, created_at, filial')
-    .eq('ocupacao_ativa', true).not('posicao', 'is', null));
+  const [hist, pend] = await Promise.all([
+    buscarTudo(() => sb.from('historico')
+      .select('*')                      // inclui guardado_por/guardado_em, se o SQL da trilha já rodou
+      .eq('ocupacao_ativa', true).not('posicao', 'is', null)),
+    // Contagem pendente de validação: o Mapa já mostra, o Mapa × sistema
+    // também conta. Ela substitui a linha antiga do mesmo produto+lote na vaga.
+    buscarTudo(() => sb.from('lancamentos')
+      .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, ciclo_id, created_at, filial, usuario')
+      .eq('status', 'pendente').eq('ocupacao_ativa', true).not('posicao', 'is', null)).catch(() => []),
+  ]);
   const m = {};
-  comFilial(hist);
-  for (const r of hist) (m[r.posicao] ||= []).push({ ...r, _tab:'historico' });
+  comFilial(hist); comFilial(pend);
+  const chavesPend = new Set(pend.map(r => `${r.posicao}|${chave(r.codigo)}|${chave(r.lote)}`));
+  for (const r of hist) if (!chavesPend.has(`${r.posicao}|${chave(r.codigo)}|${chave(r.lote)}`)) (m[r.posicao] ||= []).push({ ...r, _tab:'historico' });
+  for (const r of pend) (m[r.posicao] ||= []).push({ ...r, _tab:'lancamentos', pend:true });
   // Pedidos separados (mapa.html → aba Pedidos separados): saíram do
   // drive-in mas continuam no armazém do ERP até faturar — contam como
   // mapeados, num lugar só chamado SEPARAÇÃO.

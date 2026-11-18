@@ -3141,11 +3141,11 @@ tr.mv-tl-lib td { background:var(--pos-sf); }
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="/assets/js/comum/comum.js?v=11"></script>
+<script src="/assets/js/comum/comum.js?v=12"></script>
 <script src="/assets/js/comum/usuarios.js?v=1"></script>
-<script src="/assets/js/painel/saldo-mapeado.js?v=22"></script>
-<script src="/assets/js/painel/saldo-erp.js?v=12"></script>
-<script src="/assets/js/painel/inteligencia.js?v=9"></script>
+<script src="/assets/js/painel/saldo-mapeado.js?v=23"></script>
+<script src="/assets/js/painel/saldo-erp.js?v=13"></script>
+<script src="/assets/js/painel/inteligencia.js?v=10"></script>
 <script src="/assets/js/painel/analista.js?v=9"></script>
 <script src="/assets/js/painel/boletim.js?v=4"></script>
 <script src="/assets/js/painel/movimentos.js?v=5"></script>
@@ -5241,7 +5241,7 @@ async function carregarMapa() {
   try {
     const [hist, pend, naoConf] = await Promise.all([
       buscarTudo(() => sb.from('historico')
-        .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, origem, ciclo_id, created_at, filial')
+        .select('*')                      // inclui guardado_por/guardado_em, se o SQL da trilha já rodou
         .eq('ocupacao_ativa', true).not('posicao', 'is', null)),
       buscarTudo(() => sb.from('lancamentos')
         .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, ciclo_id, created_at, filial, usuario')
@@ -5700,7 +5700,7 @@ function renderListaMapa(q, arm) {
       <td class="num strong">${num(r.quantidade)}</td>
       <td>${r.pend ? '<span class="tag t-alt">Aguardando validação</span>'
             : `<span class="tag t-mute">${esc(r.origem || 'manual')}</span>`}</td>
-      <td class="mono">${fmtDia(r.created_at)}</td>
+      <td class="mono">${fmtDia(r.guardado_em || r.created_at)}${!r.pend && quemGuardou(r).quem ? `<div class="sub">${esc(quemGuardou(r).quem)}</div>` : ''}</td>
       <td class="acao">
         <button class="btn btn-sm" onclick="editarVaga('${esc(r.pos)}','${esc(r.id)}','${esc(r._tab)}')">Editar</button>
         <button class="btn btn-sm btn-danger" onclick="liberar('${esc(r.id)}','${esc(r._tab)}','${esc(r.pos)}')">Liberar</button>
@@ -5733,6 +5733,7 @@ function abrirVaga(pos) {
           <div>
             <div class="strong">${esc(r.produto_nome || r.codigo)}</div>
             <div class="section-note">${esc(r.codigo)} ${badgeFilial(r.filial, r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')} · ${qtdUn(r.quantidade, r.codigo, r.produto_nome)}</div>
+            ${r.pend ? '<div class="section-note">aguardando validação</div>' : quemGuardouTxt(r) ? `<div class="section-note">${esc(quemGuardouTxt(r))}</div>` : ''}
           </div>
           <div class="btn-row">
             <button class="btn btn-sm" onclick="identificacaoVaga('${esc(pos)}','${esc(r.id)}','${esc(r._tab)}')">⎙ Identificação</button>

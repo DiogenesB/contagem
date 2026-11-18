@@ -663,7 +663,7 @@ body.com-lado .tela { max-width:none; margin:0 calc(var(--lado) + 28px) 0 0; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="/assets/js/comum/comum.js?v=11"></script>
+<script src="/assets/js/comum/comum.js?v=12"></script>
 <script src="/assets/js/comum/usuarios.js?v=1"></script>
 <script src="/assets/js/comum/impressao.js?v=4"></script>
 <script src="/assets/js/comum/identificacao.js?v=3"></script>
@@ -688,7 +688,7 @@ async function carregar(silencioso = false) {
   try {
     const [hist, pend] = await Promise.all([
       buscarTudo(() => sb.from('historico')
-        .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, origem, created_at')
+        .select('*')                      // inclui guardado_por/guardado_em, se o SQL da trilha já rodou
         .eq('ocupacao_ativa', true).not('posicao', 'is', null)),
       buscarTudo(() => sb.from('lancamentos')
         .select('id, posicao, codigo, produto_nome, lote, armazem, quantidade, created_at, usuario')
@@ -923,7 +923,8 @@ function fichaHTML(pos, r) {
   return `<div class="ficha${r.pend ? ' pend' : ''}" style="--c:${corItem(r)}">
     <div class="ficha-nome">${esc(r.produto_nome || r.codigo)}</div>
     <div class="ficha-meta">${esc(r.codigo)} ${seloFilial(r.filial || r.codigo)} · lote ${esc(r.lote || '—')} · arm. ${esc(r.armazem || '—')}${r.pend ? ' · aguardando validação' : ''}</div>
-    <div class="ficha-qtd">${num(r.quantidade)}<small>${esc(unDe(r))}</small><small>· há ${diasDesde(r.created_at)} dia(s)</small></div>
+    <div class="ficha-qtd">${num(r.quantidade)}<small>${esc(unDe(r))}</small><small>· há ${diasDesde(r.guardado_em || r.created_at)} dia(s)</small></div>
+    ${!r.pend && quemGuardou(r).quem ? `<div class="ficha-meta">guardado por <b>${esc(quemGuardou(r).quem)}</b> em ${fmtDia(quemGuardou(r).em)}</div>` : ''}
     <div class="ficha-acoes">
       <button class="bt destaque" onclick="abrirExpedicao('${esc(pos)}','${esc(r.id)}','${r._tab}')">Expedir</button>
       <button class="bt" onclick="iniciarMover('${esc(pos)}','${esc(r.id)}','${r._tab}')">Mover</button>

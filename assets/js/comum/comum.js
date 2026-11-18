@@ -506,6 +506,16 @@ function fmtTS(ts) {
   return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 }
 function fmtDia(ts) { return ts ? new Date(ts).toLocaleDateString('pt-BR') : '—'; }
+/* Quem pôs o item na vaga e quando (historico.guardado_por, que o banco
+   preenche pela trilha — sql/migracao-trilha.sql). Sem a coluna ainda:
+   o usuário que criou a linha, se não for o genérico "painel". */
+function quemGuardou(r) {
+  if (!r) return { quem:'', em:null };
+  const u = String(r.usuario || '').trim();
+  const quem = r.guardado_por || (u && !['painel', 'sem nome'].includes(u) ? u : '');
+  return { quem, em:r.guardado_em || r.created_at || null };
+}
+const quemGuardouTxt = r => { const g = quemGuardou(r); return g.em ? `${g.quem ? `guardado por ${g.quem}` : 'guardado'} em ${fmtDia(g.em)}` : (g.quem ? `guardado por ${g.quem}` : ''); };
 function mesLabel(ym) {
   const [y, m] = ym.split('-');
   return new Date(+y, +m - 1, 1).toLocaleDateString('pt-BR', { month:'long', year:'numeric' });

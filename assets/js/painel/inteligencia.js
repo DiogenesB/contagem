@@ -26,6 +26,7 @@ const INTEL_TIPOS = {
   'lote-digitado':   { rot:'Lote digitado errado',          cor:'neg',  peso:1.2 },
   'produto-trocado': { rot:'Produto trocado',               cor:'neg',  peso:1.2 },
   'codigo-errado':   { rot:'Código errado na vaga',         cor:'neg',  peso:1.2 },
+  'mapeado-depois':  { rot:'Mapeado depois da leitura do ERP', cor:'info', peso:0.5 },
   'codigo-filial':   { rot:'Código de outra filial',        cor:'alt',  peso:1.0 },
   'armazem-erp':     { rot:'Transferência sem o mapa',      cor:'alt',  peso:1.1 },
   'armazem':         { rot:'Armazém diferente',             cor:'alt',  peso:1.0 },
@@ -77,7 +78,8 @@ async function intelCarregarDados(forcar = false) {
   if (_intel.carregando) return _intel.carregando;
   if (!forcar && _intel.mov && Date.now() - _intel.quando < 120000) return;
   _intel.carregando = (async () => {
-    const desde = new Date(Date.now() - 45 * 864e5).toISOString();
+    // 120 dias de filme do saldo, trilha e movimentos do ERP (a história do lote).
+    const desde = new Date(Date.now() - 120 * 864e5).toISOString();
     const desdeDec = new Date(Date.now() - 180 * 864e5).toISOString();
     const tenta = p => p.then(d => ({ d }), e => ({ e }));
     const [mov, alt, dec, erp] = await Promise.all([
@@ -366,6 +368,8 @@ function intelAnalisarLinha(l) {
   if (l.estado === 'lote' || l.estado === 'sem-saldo') {
     const prod = intelMelhorProduto(l);
     const cand = l.estado === 'lote' ? intelMelhorLote(l) : null;
+    // Guardado depois da última leitura do ERP: espera (a não ser que o código errado seja quase certo).
+    if (!(prod && prod.conf >= 80)) { const d = intelDepoisDaFoto(l, base, un, vagasTxt, l.mapa); if (d) return d; }
     if (prod && prod.conf >= 45 && (!cand || prod.conf >= cand.conf - 5)) {
       const nome = nomeCurtoSaldo(prod.desc);
       const a = base('codigo-errado', prod.conf, `Código errado: este lote é do ${esc(nome)}`,
@@ -396,6 +400,8 @@ function intelAnalisarLinha(l) {
   // ── mapa tem mais do que o ERP (inclui lote sem par e sem saldo) ──
   const sobraQ = l.mapa - Math.max(0, l.sistema || 0);
   if (sobraQ > 0.001 && (l.estado === 'sobra' || l.estado === 'lote' || l.estado === 'sem-saldo')) {
+    const depois = intelDepoisDaFoto(l, base, un, vagasTxt, sobraQ);
+    if (depois) return depois;
     const desdeMapa = Math.min(...l.itens.map(r => iTs(r.created_at)).filter(Boolean), Date.now());
     const saidas = l.armsMapa.flatMap(a => _intel.porKa?.get(`${l.kc}|${a}`) || []).filter(m => m.delta < 0 && iTs(m.quando) >= desdeMapa - 864e5);
     const somaSai = saidas.reduce((s, m) => s - m.delta, 0);
@@ -705,6 +711,34 @@ function intelMelhorLote(l) {
   if (seg && m.conf - seg.conf < 10) { m.conf -= 15; m.pistas.push(`Outro candidato parecido: ${esc(seg.lote)} — confira a etiqueta.`); }
   m.conf = Math.max(5, Math.min(97, m.conf));
   return m;
+}
+
+/* Guardado no mapa DEPOIS da última leitura do saldo do ERP naquele
+   armazém: o ERP ainda não viu essa mercadoria (produção nova, entrada
+   recente). Não é erro: espera a próxima leitura. Vale quando o que foi
+   guardado depois da leitura cobre a diferença. Conta a data em que a
+   linha foi criada (mover de vaga não é mercadoria nova). */
+function intelDepoisDaFoto(l, base, un, vagasTxt, qAlvo) {
+  const arm = l.armsMapa[0];
+  const foto = (typeof _refInfo !== 'undefined' && _refInfo?.porArm?.[arm]?.quando) || l.foto || null;
+  if (!foto) return null;
+  const novos = l.itens.filter(r => !r.sep && iTs(r.created_at) > iTs(foto));
+  const q = novos.reduce((s, r) => s + (Number(r.quantidade) || 0), 0);
+  if (!novos.length || q < qAlvo - Math.max(0.001, qAlvo * 0.0002)) return null;
+  const ult = novos.reduce((a, r) => iTs(r.created_at) > iTs(a.created_at) ? r : a, novos[0]);
+  const quem = [...new Set(novos.map(r => typeof quemGuardou === 'function' ? quemGuardou(r).quem : '').filter(Boolean))];
+  const hm = t => new Date(t).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  const mesmoDia = new Date(foto).toDateString() === new Date(ult.created_at).toDateString();
+  const ent = (_intel.erpKa?.get(`${l.kc}|${arm}`) || []).filter(e => /Entrada/.test(e.tipo_mov) && String(e.emissao).slice(0, 10) >= new Date(foto).toISOString().slice(0, 10));
+  const a = base('mapeado-depois', 80, `Mapeado depois da última leitura do ERP (${mesmoDia ? hm(foto) : fmtTS(foto)}): aguarde a próxima`,
+    `${iQ(q, un)} ${novos.length > 1 ? `foram guardados em ${novos.length} vagas` : `foi guardado em ${esc(novos[0].pos)}`} ` +
+    `${mesmoDia ? `às ${hm(ult.created_at)}` : `em ${fmtTS(ult.created_at)}`}${quem.length ? ` por <b>${quem.map(esc).join(', ')}</b>` : ''}, ` +
+    `e o saldo do ERP do ${esc(arm)} foi lido ${mesmoDia ? `às ${hm(foto)}` : `em ${fmtTS(foto)}`}. ` +
+    `${l.sistema == null ? 'Por isso o ERP ainda não mostra este lote' : `Por isso o ERP ainda mostra ${iQ(l.sistema, un)}`}. Na próxima leitura do saldo a conta se acerta sozinha — se continuar diferente, este cartão volta a procurar a causa.`,
+    { grupo:'aguardando', quando:new Date(ult.created_at).toISOString() });
+  if (ent.length) a.pistas.push(`O ERP já registrou a entrada: ${ent.slice(-2).map(iErpTxt).join('; ')}.`);
+  else a.pistas.push('Produção nova ou entrada que ainda não aparece no ERP.');
+  return a;
 }
 
 // O mesmo número de lote em OUTRO produto: escolheram o código errado na

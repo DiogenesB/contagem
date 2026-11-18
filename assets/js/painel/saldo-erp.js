@@ -296,7 +296,7 @@ function saCruzarMapa() {
       const v = vagas.get(k) || vagas.set(k, []).get(k);
       if (!v.includes(pos)) v.push(pos);
       (itensK.get(k) || itensK.set(k, []).get(k)).push({ pos, qtd:Number(it.quantidade) || 0,
-        arm:normalizarArmazem(it.armazem) || '—', desde:it.created_at, sep:!!it.sep });
+        arm:normalizarArmazem(it.armazem) || '—', desde:it.guardado_em || it.created_at, quem:it.pend ? '' : quemGuardou(it).quem, pend:!!it.pend, sep:!!it.sep });
     }
   for (const v of vagas.values()) v.sort();
   for (const v of itensK.values()) v.sort((a, b) => a.pos.localeCompare(b.pos, 'pt-BR', { numeric:true }));
@@ -828,7 +828,7 @@ function saDetalheLote(l) {
       <div class="sa-vaga">
         <div class="sa-vaga-pos">${esc(x.pos)}</div>
         <div class="sa-vaga-q"><b>${saQ(x.qtd)}</b> ${esc(l.un)} · arm. ${esc(x.arm)}${x.arm !== l.arm && l.arm !== '—' ? ' <span class="tag t-alt">outro armazém</span>' : ''}</div>
-        <div class="sa-vaga-d">${x.sep ? 'área de separação' : x.desde ? `desde ${fmtDia(x.desde)}` : ''}</div>
+        <div class="sa-vaga-d">${x.sep ? 'área de separação' : x.pend ? 'contagem aguardando validação' : x.desde ? `desde ${fmtDia(x.desde)}${x.quem ? ` · ${esc(x.quem)}` : ''}` : ''}</div>
         ${x.sep ? '' : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();irParaVaga('${esc(x.pos)}')">Ver no mapa</button>`}
       </div>`).join('')}</div>`
     : `<div class="sa-det-vazio">Este lote não está em nenhuma vaga do mapa.</div>`;
