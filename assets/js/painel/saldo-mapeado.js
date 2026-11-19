@@ -854,7 +854,21 @@ function calcularSaldoCompleto() {
     if (pl) a.mapPl += m.qtd / pl;
   }
 
-  _sCalc = { lista, arms, foraSis, foraMapa, semFilial, zerados:zerados.n,
+  // ── área externa: os lotes que têm item lá (de qualquer armazém) ──
+  const ext = { lotes:0, ok:0, div:0, sisPl:0, achPl:0, plLa:0, itens:0, semPl:0 };
+  if (typeof AREA_EXTERNA !== 'undefined') for (const l of lista) {
+    if (!l.vagas.has(AREA_EXTERNA)) continue;
+    ext.lotes++;
+    if (l.estado === 'ok') ext.ok++; else ext.div++;
+    const la = l.itens.filter(r => r.pos === AREA_EXTERNA);
+    ext.itens += la.length;
+    if (l.palete) {
+      ext.sisPl += (l.sistema || 0) / l.palete; ext.achPl += l.achado / l.palete;
+      ext.plLa += la.reduce((t, r) => t + (Number(r.quantidade) || 0), 0) / l.palete;
+    } else ext.semPl++;
+  }
+
+  _sCalc = { lista, arms, ext, foraSis, foraMapa, semFilial, zerados:zerados.n,
              tipos:[...new Set(Object.values(tipoCod))].sort() };
   return _sCalc;
 }
@@ -866,7 +880,8 @@ function filtrarSaldo(calc) {
   const ts   = termos($('s-busca')?.value.trim().toUpperCase() || '');
   const tipo = $('s-tipo')?.value || '';
   let base = calc.lista;
-  if (_sArmSel.size) base = base.filter(l => [l.arm, ...l.armsMapa, ...l.armsSis].some(a => _sArmSel.has(a)));
+  if (_sArmSel.size) base = base.filter(l => [l.arm, ...l.armsMapa, ...l.armsSis].some(a => _sArmSel.has(a))
+    || (_sArmSel.has(S_EXT) && l.vagas.has(AREA_EXTERNA)));
   if (tipo)        base = base.filter(l => l.tipo === tipo);
   if (ts.length)   base = base.filter(l => ts.some(x =>
     [l.produto, l.cod, l.lote, ...l.armsMapa, ...l.armsSis, ...l.vagas].join(' ').toUpperCase().includes(x)));
@@ -964,6 +979,29 @@ function renderResumoSaldo(base) {
   $('s-kpis').innerHTML = cards.join('');
 }
 
+/* A área externa entra nos filtros de armazém com esta chave: marca os
+   lotes que têm item lá, seja qual for o armazém do lote. */
+const S_EXT = '__externa';
+function nomeFiltroArm(a) { return a === S_EXT ? 'área externa' : a; }
+
+function cardExternaSaldo(e) {
+  const marc = _sArmSel.has(S_EXT);
+  const cls = ['s-arm', 's-arm-ext', marc ? 'sel' : '', _sArmSel.size && !marc ? 'apagado' : '', !e.lotes ? 'vazio' : ''].join(' ');
+  const p = e.sisPl ? e.achPl / e.sisPl * 100 : (e.lotes ? e.ok / e.lotes * 100 : null);   // sem palete: % de lotes ok
+  return `<div class="${cls}" ${e.lotes ? `onclick="filtrarArmSaldo(S_EXT)"` : ''} title="Lotes com item na área externa (fora do drive-in), de qualquer armazém — a comparação com o ERP é do lote inteiro · clique para filtrar">
+    <div class="s-arm-top">
+      <span class="s-arm-cod">ÁREA EXTERNA</span>
+      <span class="s-arm-nome">fora do drive-in</span>
+      ${e.lotes ? `<label class="s-arm-tg" onclick="event.stopPropagation()" title="Mostrar só os lotes da área externa">
+        <input type="checkbox" ${marc ? 'checked' : ''} onchange="alternarArmSaldo(S_EXT, this.checked)"></label>` : ''}
+    </div>
+    ${p !== null ? `<div class="s-barra"><i style="width:${Math.min(100, p).toFixed(1)}%"></i></div>` : ''}
+    <div class="s-arm-pe">${!e.lotes ? 'nada guardado lá agora'
+      : `${p !== null ? `<b>${num1(p)}%</b> · ` : ''}${num(e.ok)}/${num(e.lotes)} lotes ok${e.sisPl || e.achPl ? ` · ${num1(e.achPl)} de ${num1(e.sisPl)} pl` : ''}${e.div ? ` · <span class="s-neg">${num(e.div)} div.</span>` : ''}`}</div>
+    <div class="s-arm-foto">${e.itens ? `${num(e.itens)} item(ns) lá${e.plLa ? ` · ${num1(e.plLa)} pl` : ''}` : 'só entra na conta o lote que for colocado lá'}</div>
+  </div>`;
+}
+
 function renderArmazensSaldo(calc) {
   const lista = Object.values(calc.arms)
     .filter(a => a.fisico || a.lotes)
@@ -988,13 +1026,18 @@ function renderArmazensSaldo(calc) {
       ${_refInfo?.porArm?.[a.arm]?.quando ? `<div class="s-arm-foto${diasDesde(_refInfo.porArm[a.arm].quando) >= 2 ? ' velha' : ''}">planilha de ${fmtTS(_refInfo.porArm[a.arm].quando)}</div>` : (a.fisico ? '<div class="s-arm-foto">sem planilha</div>' : '')}
     </div>`;
   };
-  $('s-arms').innerHTML = lista.map(card).join('');
+  // A área externa vem logo depois dos armazéns mapeados.
+  const html = lista.map(card);
+  const ultMapeado = lista.reduce((u, a, i) => (a.fisico && !a.fora ? i : u), -1);
+  if (calc.ext && typeof AREA_EXTERNA !== 'undefined') html.splice(ultMapeado + 1, 0, cardExternaSaldo(calc.ext));
+  $('s-arms').innerHTML = html.join('');
 
   const naoFis = lista.filter(a => !a.fisico && a.lotes);
   const fora   = lista.filter(a => a.fisico && a.fora && a.lotes);
   $('s-arm-nota').innerHTML =
     `${lista.filter(a => a.fisico && !a.fora).length} armazém(ns) mapeado(s)` +
-    (_sArmSel.size ? ` · mostrando ${[..._sArmSel].sort().join(', ')} <a href="#" onclick="ligarTodosArmSaldo();return false">mostrar todos</a>` : ' · mostrando todos') +
+    (calc.ext?.lotes ? ` · ${num(calc.ext.lotes)} lote(s) na área externa` : '') +
+    (_sArmSel.size ? ` · mostrando ${[..._sArmSel].sort().map(nomeFiltroArm).join(', ')} <a href="#" onclick="ligarTodosArmSaldo();return false">mostrar todos</a>` : ' · mostrando todos') +
     (naoFis.length ? ` · ${naoFis.length} do ERP em armazém não mapeado (não entram)` : '') +
     ' · marque um ou vários para filtrar';
 }
@@ -1045,7 +1088,7 @@ function chipsSaldo() {
   const q = $('s-busca').value.trim();
   if (q) c.push(chip('busca', q, `$('s-busca').value='';renderSaldo()`));
   if (_situacao !== 'todas') c.push(chip('situação', SITUACOES[_situacao]?.rot || 'Divergentes', `setSituacaoSaldo('todas')`));
-  if (_sArmSel.size) c.push(chip('armazém', [..._sArmSel].sort().map(a => `${a} ${nomeArmazem(a) || ''}`.trim()).join(', '), `ligarTodosArmSaldo()`));
+  if (_sArmSel.size) c.push(chip('armazém', [..._sArmSel].sort().map(a => a === S_EXT ? 'ÁREA EXTERNA' : `${a} ${nomeArmazem(a) || ''}`.trim()).join(', '), `ligarTodosArmSaldo()`));
   const t = $('s-tipo')?.value;
   if (t) c.push(chip('tipo', t, `$('s-tipo').value='';renderSaldo()`));
   $('s-chips').innerHTML = c.join('');
