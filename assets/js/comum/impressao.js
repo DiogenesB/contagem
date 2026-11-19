@@ -54,6 +54,15 @@ table.p-tab th { text-align:left; border-bottom:1.2px solid #000; padding:3px 5p
 table.p-tab td { border-bottom:1px solid #ddd; padding:3px 5px; }
 table.p-tab .num { text-align:right; font-variant-numeric:tabular-nums; }
 table.p-tab .forte { font-family:var(--mono, monospace); font-weight:700; }
+table.p-tab td { vertical-align:middle; }
+table.p-tab .p-bc { padding-top:4px; padding-bottom:4px; }
+table.p-tab .p-bc svg { display:block; max-width:100%; }
+table.p-tab.p-tab-bc { table-layout:fixed; }
+table.p-tab.p-tab-bc td { overflow:hidden; }
+table.p-tab.p-tab-bc .forte { white-space:nowrap; font-size:8.5pt; }
+table.p-tab .p-bc small { display:block; font-family:var(--mono, monospace); font-size:7pt; color:#000; letter-spacing:.04em; margin-top:1px; }
+table.p-tab .p-sub { display:block; font-size:7.5pt; color:#444; margin-top:1px; }
+table.p-tab .p-lote { font-family:var(--mono, monospace); font-weight:700; }
 table.p-tab tr.tot td { border-top:1.5px solid #000; font-weight:700; }
 .pg-por-1 .p-lh { font-size:15pt; }
 .pg-por-1 table.p-tab { font-size:11pt; }
@@ -130,6 +139,79 @@ function caixaImpressao() {
   return el;
 }
 
+/* ── CODE 128 ────────────────────────────────────────────────────
+   O mesmo tipo de código do ERP: todo leitor de mão, coletor e app
+   de celular lê sem configurar nada. Usa o conjunto B (letras,
+   números, traço) e passa para o C (pares de dígitos) quando há
+   uma sequência grande de números — o código fica mais curto e as
+   barras mais largas, o que facilita a leitura de longe. */
+const C128 = [
+  '212222','222122','222221','121223','121322','131222','122213','122312','132212','221213',
+  '221312','231212','112232','122132','122231','113222','123122','123221','223211','221132',
+  '221231','213212','223112','312131','311222','321122','321221','312212','322112','322211',
+  '212123','212321','232121','111323','131123','131321','112313','132113','132311','211313',
+  '231113','231311','112133','112331','132131','113123','113321','133121','313121','211331',
+  '231131','213113','213311','213131','311123','311321','331121','312113','312311','332111',
+  '314111','221411','431111','111224','111422','121124','121421','141122','141221','112214',
+  '112412','122114','122411','142112','142211','241211','221114','413111','241112','134111',
+  '111242','121142','121241','114212','124112','124211','411212','421112','421211','212141',
+  '214121','412121','111143','111341','131141','114113','114311','411113','411311','113141',
+  '114131','311141','411131','211412','211214','211232','2331112',
+];
+const C128_START_B = 104, C128_START_C = 105, C128_PARA_C = 99, C128_PARA_B = 100, C128_STOP = 106;
+
+/* Texto → valores do Code 128 (com início, verificador e fim). */
+function code128Valores(texto) {
+  const s = String(texto);
+  for (const ch of s) {
+    const c = ch.charCodeAt(0);
+    if (c < 32 || c > 126) throw new Error(`caractere "${ch}" não cabe no código de barras`);
+  }
+  const digitosDesde = i => { let n = 0; while (i + n < s.length && s[i + n] >= '0' && s[i + n] <= '9') n++; return n; };
+  const vals = [];
+  let set = null, i = 0;
+  while (i < s.length) {
+    const n = digitosDesde(i);
+    // Vale passar para o C: 4+ dígitos no começo ou no fim, 6+ no meio.
+    const vaiC = n >= 4 && (i === 0 || i + n === s.length || n >= 6);
+    if (vaiC) {
+      if (n % 2) {                       // ímpar: um dígito vai no B antes
+        if (set !== 'B') { vals.push(set ? C128_PARA_B : C128_START_B); set = 'B'; }
+        vals.push(s.charCodeAt(i) - 32); i++;
+      }
+      if (set !== 'C') { vals.push(set ? C128_PARA_C : C128_START_C); set = 'C'; }
+      const fim = i + (n - (n % 2 ? 1 : 0));
+      for (; i < fim; i += 2) vals.push(Number(s.slice(i, i + 2)));
+    } else {
+      if (set !== 'B') { vals.push(set ? C128_PARA_B : C128_START_B); set = 'B'; }
+      vals.push(s.charCodeAt(i) - 32); i++;
+    }
+  }
+  if (!vals.length) vals.push(C128_START_B);
+  let soma = vals[0];
+  for (let k = 1; k < vals.length; k++) soma += vals[k] * k;
+  vals.push(soma % 103, C128_STOP);
+  return vals;
+}
+
+/* SVG vetorial: barras em múltiplos exatos do módulo e margem branca
+   de 10 módulos dos dois lados (sem ela, leitor nenhum lê). */
+function code128SVG(texto, { larguraMax = 150, altura = 18, moduloMax = 0.6, moduloMin = 0.33 } = {}) {
+  const padrao = code128Valores(texto).map(v => C128[v]).join('');
+  const quieta = 10;
+  const total = quieta * 2 + [...padrao].reduce((a, d) => a + Number(d), 0);
+  const mod = Math.max(moduloMin, Math.min(moduloMax, larguraMax / total));
+  let x = quieta, barras = '';
+  [...padrao].forEach((d, k) => {
+    const w = Number(d);
+    if (k % 2 === 0) barras += `<rect x="${x}" y="0" width="${w}" height="1"/>`;
+    x += w;
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} 1" preserveAspectRatio="none"
+    width="${(total * mod).toFixed(2)}mm" height="${altura}mm" shape-rendering="crispEdges" role="img" aria-label="${esc(texto)}">
+    <rect width="${total}" height="1" fill="#fff"/><g fill="#000">${barras}</g></svg>`;
+}
+
 /* ═══════════ LINHAS ═══════════ */
 function posicoesDaLinha(pav, di, ln) {
   const linhas = MAPA_POSICOES[pav]?.[di]?.[ln];
@@ -192,9 +274,25 @@ function itensDaLinhaImp(alvo) {
   const out = [];
   for (const pos of alvo.posicoes) {
     const [, , an, lg] = pos.split('-');
-    for (const r of IMP.ocupacaoDe(pos)) out.push({ vaga:`${an}.${lg}`, r });
+    for (const r of IMP.ocupacaoDe(pos)) out.push({ vaga:`${an}.${lg}`, pos, r });
   }
   return out;
+}
+
+/* Código de barras (Code 128) do produto e do lote na folha da linha:
+   a pessoa bipa direto do papel. Com 4 linhas por folha não cabe —
+   aí sai só o texto. */
+const IMP_BC = {
+  1:{ altura:9, cod:36, lote:52 },   // altura e largura máxima em mm
+  2:{ altura:7, cod:36, lote:52 },
+};
+function bcImp(texto, por, tipo) {
+  const cfg = IMP_BC[por];
+  if (!cfg || !texto || typeof code128SVG !== 'function') return '';
+  try {
+    return code128SVG(String(texto).trim(),
+      { altura:cfg.altura, larguraMax:cfg[tipo], moduloMin:0.19, moduloMax:0.4 });
+  } catch (e) { return ''; }
 }
 
 function ocupadasDaLinhaImp(alvo) {
@@ -211,8 +309,10 @@ function cascaDaLinha(alvo, continuacao, por) {
       <span class="p-titulo">${di}-${ln}${continuacao ? ' <small>(continuação)</small>' : ''}</span>
       <span>${pav ? nomeDoPavilhao(pav) + ' · ' : ''}${ocupadasDaLinhaImp(alvo)}/${posicoes.length} vagas ocupadas</span>
     </div>
-    <table class="p-tab"><thead><tr>
-      <th>Vaga</th><th>Produto</th><th>Lote</th><th>Arm.</th><th class="num">Quantidade</th>
+    <table class="p-tab${IMP_BC[por] ? ' p-tab-bc' : ''}">${IMP_BC[por]
+      ? '<colgroup><col style="width:12%"><col style="width:26%"><col style="width:21%"><col style="width:12%"><col style="width:29%"></colgroup>' : ''}<thead><tr>${IMP_BC[por]
+      ? '<th>Posição</th><th>Produto</th><th>Código de barras</th><th>Lote</th><th>Código de barras</th>'
+      : '<th>Vaga</th><th>Produto</th><th>Lote</th><th>Arm.</th><th class="num">Quantidade</th>'}
     </tr></thead><tbody></tbody></table>
     ${por === 1 ? '<div class="p-assina"><span>Conferido por</span><span>Data</span></div>' : ''}`;
   return d;
@@ -222,8 +322,18 @@ function nomeDoPavilhao(p) {
   return p === 'simbiose' ? 'Simbiose' : p === 'bioma' ? 'Bioma' : 'Simbiose + Bioma';
 }
 
-function trDoItem({ vaga, r }) {
+function trDoItem({ vaga, pos, r }, por) {
   const tr = document.createElement('tr');
+  if (IMP_BC[por]) {
+    const cod = normalizarCodigo(r.codigo);
+    tr.innerHTML = `
+    <td class="forte">${esc(pos)}</td>
+    <td>${esc(r.produto_nome || r.codigo)}<span class="p-sub">arm. ${esc(r.armazem || '—')} · ${num(r.quantidade)} ${esc(unidadeDe(r.codigo, r.produto_nome) || '')}</span></td>
+    <td class="p-bc">${bcImp(cod, por, 'cod')}<small>${esc(cod)}</small></td>
+    <td class="p-lote" style="word-break:break-all">${esc(r.lote || '—')}</td>
+    <td class="p-bc">${r.lote ? bcImp(r.lote, por, 'lote') + `<small>${esc(r.lote)}</small>` : '—'}</td>`;
+    return tr;
+  }
   tr.innerHTML = `
     <td class="forte">${vaga}</td>
     <td>${esc(r.produto_nome || r.codigo)}</td>
@@ -268,7 +378,7 @@ function paginarLinhas(raiz, alvos, titulo, sub, por) {
   const estourou = () => corpo.scrollHeight > corpo.clientHeight + 1;
   // Teto de segurança para o caso de a medição do navegador voltar
   // zerada, o que acontece em alguns contextos de impressão.
-  const teto = { 1:30, 2:14, 4:7 }[por] || 26;
+  const teto = { 1:16, 2:8, 4:7 }[por] || 26;   // com código de barras a linha é mais alta
   abrirPagina();
 
   for (const alvo of alvos) {
@@ -288,7 +398,7 @@ function paginarLinhas(raiz, alvos, titulo, sub, por) {
       let postas = 0;
       while (i < itens.length) {
         if (postas >= teto) break;
-        const tr = trDoItem(itens[i]);
+        const tr = trDoItem(itens[i], por);
         tbody.appendChild(tr);
         if (estourou()) {
           tbody.removeChild(tr);
@@ -398,6 +508,7 @@ function montarDialogo() {
             <button type="button" data-por="4">4</button>
           </div>
         </label>
+        <small style="display:block;margin:-8px 0 14px;font-size:.6875rem;color:var(--text-3,#888)">Com 1 ou 2 linhas por página sai o código de barras do produto e do lote; com 4, só o texto.</small>
         <label class="imp-chk"><input type="checkbox" id="imp-vazias">
           <span>Incluir linhas sem nenhuma ocupação</span></label>
         <div class="imp-conta" id="imp-conta"></div>
