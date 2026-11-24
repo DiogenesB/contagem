@@ -564,9 +564,10 @@ function intelAnalisarLinha(l) {
       return a;
     }
     // C) empenhado: pode estar separado fora do drive
-    if (l.empenho > 0 && l.empenho >= faltaQ * 0.98) {
+    const empLivre = l.empLivre ?? l.empenho;      // tira o que a área de separação já mostra
+    if (empLivre > 0 && empLivre >= faltaQ * 0.98) {
       const a = base('empenhado', 60, `Falta ${iQ(faltaQ, un)} no mapa, mas está empenhado`,
-        `O ERP tem ${iQ(l.empenho, un)} empenhado deste lote — pode já estar separado para um pedido, fora do drive.`,
+        `O ERP tem ${iQ(empLivre, un)} empenhado deste lote${l.sepQ ? ` além do que já está na separação (${iQ(l.sepQ, un)})` : ''} — pode já estar separado para um pedido, fora do drive.`,
         { grupo:'semPista' });
       a.acoes.push({ rot:'Pedir recontagem', op:'recontagem' });
       return a;

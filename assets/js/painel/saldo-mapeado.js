@@ -339,45 +339,101 @@ async function carregarOcupacaoSaldo() {
     if (!error && data?.length) {
       comFilial(data);
       m[SALDO_SEP] = data.map(r => ({ ...r, posicao:SALDO_SEP, origem:r.pedido ? `pedido ${r.pedido}` : 'separado', created_at:r.separado_em, _tab:'separacao', sep:true, _nf:notas.get(r.id) || null }));
-    }
+      _sepMov = await sepMovDosLotes(data);
+    } else _sepMov = [];
   } catch { /* tabela ainda não criada */ }
   _sOcup = m;
   sepMarcarForaDoErp();
 }
 
-/* Separado que o saldo do ERP já tirou (a foto do ERP depois da
-   separação caiu pelo menos isso) ou com a NF do pedido já nas
-   movimentações: não conta como mapeado — senão o lote aparece duas
-   vezes (separação + o que o ERP já não tem). Continua na lista de
-   separados e na tela Hoje, para expedir. */
+/* Movimentos do ERP (erp_mov) dos lotes separados, desde a foto do
+   saldo tirada na hora da separação. Servem para saber se o saldo do
+   lote caiu por causa DESTE pedido ou por notas de outros pedidos. */
+let _sepMov = null;                       // null = não deu para ler (usa a regra antiga)
+async function sepMovDosLotes(itens) {
+  const lotes = [...new Set(itens.map(r => String(r.lote || '').trim()).filter(Boolean))];
+  if (!lotes.length) return [];
+  const desde = itens.map(r => r.foto_erp_em || r.separado_em || r.created_at).filter(Boolean).sort()[0];
+  const dia = desde ? new Date(new Date(desde).getTime() - 864e5).toISOString().slice(0, 10) : '2000-01-01';
+  try {
+    return await buscarTudo(() => sb.from('erp_mov')
+      .select('codigo, lote, armazem, quantidade, tipo_mov, pedido, nf, emissao, movest')
+      .in('lote', lotes).gte('emissao', dia));
+  } catch (e) { console.warn('movimentos dos separados:', e.message || e); return null; }
+}
+/* Dia (AAAA-MM-DD, horário de Brasília) de um carimbo de data e hora. */
+function sepDiaLocal(ts) {
+  const d = new Date(ts); if (isNaN(d)) return '';
+  return new Date(d.getTime() - 3 * 36e5).toISOString().slice(0, 10);
+}
+
+/* Separado continua contando no saldo mapeado (num lugar só, a
+   SEPARAÇÃO) até o ERP tirar. Deixa de contar quando:
+     · a nota de saída DO PEDIDO aparece nos movimentos (certeza); ou
+     · o lote sumiu do ERP; ou
+     · o saldo do lote caiu depois da separação e a queda NÃO se explica
+       por notas de outros pedidos e transferências do mesmo lote.
+   Antes só olhava a queda do saldo: se outro pedido do mesmo lote fosse
+   faturado, o separado sumia do saldo sem ter saído (pedido 15479).
+   Cada item fica com _sepMotivo e _sepErp para a aba Separados. */
 function sepMarcarForaDoErp() {
   const itens = _sOcup?.[SALDO_SEP];
   if (!itens?.length) return;
   const ref = linhasDeReferencia();
-  for (const r of itens) r._foraDoErp = !!r._nf;           // a nota do pedido já saiu
+  for (const r of itens) {
+    r._foraDoErp = !!r._nf;                                  // a nota do pedido já saiu
+    r._sepMotivo = r._nf ? 'nf' : null;
+    r._sepErp = null;
+  }
   if (!ref.length) return;
   const kla = (c, l, a) => `${chave(normalizarCodigo(c))}|${chave(l)}|${normalizarArmazem(a)}`;
-  const saldo = new Map(), foto = {};
+  const saldo = new Map(), emp = new Map(), foto = {};
   for (const s of ref) {
     const a = normalizarArmazem(s.armazem), k = kla(s.codigo, s.lote, a);
     saldo.set(k, (saldo.get(k) || 0) + (Number(s.saldo) || 0));
+    emp.set(k, (emp.get(k) || 0) + (Number(s.empenho) || 0));
     if (s.importado_em && (!foto[a] || s.importado_em > foto[a])) foto[a] = s.importado_em;
   }
+  // Movimentos por lote+armazém: { dia, pedido, sinal } (saída +, entrada −)
+  const movs = new Map();
+  for (const m of _sepMov || []) {
+    if (m.movest === false) continue;
+    const t = String(m.tipo_mov || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const sinal = t.startsWith('said') ? 1 : t.startsWith('entr') ? -1 : 0;
+    if (!sinal) continue;
+    const k = kla(m.codigo, m.lote, m.armazem);
+    (movs.get(k) || movs.set(k, []).get(k)).push({ dia:String(m.emissao || '').slice(0, 10), ped:sepPedNum(m.pedido), q:sinal * (Number(m.quantidade) || 0) });
+  }
+
   const grupos = new Map();
   for (const r of itens) {
-    const a = normalizarArmazem(r.armazem), base = r.foto_erp_em || r.separado_em;
+    const a = normalizarArmazem(r.armazem), k = kla(r.codigo, r.lote, a);
+    r._sepErp = { saldo:saldo.has(k) ? saldo.get(k) : null, emp:emp.get(k) || 0, foto:foto[a] || null };
+    const base = r.foto_erp_em || r.separado_em;
     if (!foto[a] || !base || foto[a] <= base) continue;      // a foto do ERP ainda é de antes da separação
-    const k = kla(r.codigo, r.lote, a), g = `${k}|${r.saldo_erp_antes ?? '-'}`;
-    (grupos.get(g) || grupos.set(g, { k, antes:r.saldo_erp_antes, itens:[] }).get(g)).itens.push(r);
+    const g = `${k}|${r.saldo_erp_antes ?? '-'}|${base}`;
+    (grupos.get(g) || grupos.set(g, { k, antes:r.saldo_erp_antes, base, itens:[] }).get(g)).itens.push(r);
   }
-  for (const { k, antes, itens:its } of grupos.values()) {
+  for (const { k, antes, base, itens:its } of grupos.values()) {
+    if (antes === null || antes === undefined) {
+      if (!saldo.has(k)) its.forEach(r => { if (!r._foraDoErp) { r._foraDoErp = true; r._sepMotivo = 'sumiu'; } });
+      continue;
+    }
     const atual = saldo.get(k) || 0;
-    if (antes === null || antes === undefined) { if (!saldo.has(k)) its.forEach(r => { r._foraDoErp = true; }); continue; }
     const caiu = Number(antes) - atual;
+    // O que outros pedidos e transferências tiraram (ou puseram) desde o
+    // dia da foto. No mesmo dia não dá para saber a hora da nota, então
+    // conta como "de outro" — na dúvida o separado continua no saldo.
+    const peds = new Set(its.map(r => sepPedNum(r.pedido)).filter(Boolean));
+    const d0 = sepDiaLocal(base);
+    const outros = _sepMov === null ? 0
+      : (movs.get(k) || []).filter(m => m.dia >= d0 && !(m.ped && peds.has(m.ped))).reduce((t, m) => t + m.q, 0);
+    const nosso = caiu - outros;
     let acum = 0;
     for (const r of its.sort((a, b) => String(a.separado_em).localeCompare(String(b.separado_em)))) {
       acum += Number(r.quantidade) || 0;
-      if (caiu >= acum - 0.001) r._foraDoErp = true;
+      r._sepErp.caiu = caiu; r._sepErp.outros = outros;
+      if (!r._foraDoErp && nosso >= acum - 0.001) { r._foraDoErp = true; r._sepMotivo = saldo.has(k) ? 'caiu' : 'sumiu'; }
     }
   }
 }
@@ -799,8 +855,11 @@ function calcularSaldoCompleto() {
       l.dicas.push({ t:`${sQtd(nc.qtd, un)} em vaga não confirmada (${pos.slice(0, 4).map(esc).join(', ')}${pos.length > 4 ? '…' : ''})` +
         (Math.abs(nc.qtd - falta) < 0.001 ? ' — <b>cobre exatamente a falta</b>.' : '.') + ' Decida na aba Mapa.', c:'info' });
     }
-    if (l.empenho > 0 && falta > 0) {
-      l.dicas.push({ t:`${sQtd(l.empenho, un)} empenhado no ERP — pode já estar separado fora do drive.`, c:'info' });
+    // O empenho que a área de separação já mostra não explica falta.
+    l.sepQ = l.itens.filter(r => r.sep).reduce((t, r) => t + (Number(r.quantidade) || 0), 0);
+    l.empLivre = Math.max(0, l.empenho - l.sepQ);
+    if (l.empLivre > 0.001 && falta > 0) {
+      l.dicas.push({ t:`${sQtd(l.empLivre, un)} empenhado no ERP${l.sepQ ? ` além dos ${sQtd(l.sepQ, un)} que já estão na separação` : ''} — pode estar separado fora do drive.`, c:'info' });
     }
     if (mv?.n) {
       l.dicas.push({ t:`${mv.n} mexida(s) no mapa depois da planilha deste armazém (última ${fmtTS(mv.ultimo)}) — pode ser saída ou entrada posterior.`, c:'warn', mexida:true });

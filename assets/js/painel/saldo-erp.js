@@ -42,6 +42,7 @@ const SA_REGRAS = [
 const SA_ABAS = [
   ['planilha',     'Planilha'],
   ['divergencias', 'Mapa × sistema'],
+  ['separados',    'Separados'],
   ['totais',       'Totais'],
   ['validade',     'Validade'],
   ['divididos',    'Lote em 2+ armazéns'],
@@ -173,6 +174,8 @@ const SA_COLS = [
   { id:'saldo',  rot:'Sistema', tipo:'num', v:l => l.saldo, td:l => l.soMapa ? '<span class="num-zero" title="Sem saldo no sistema neste armazém">0</span>' : `<b>${saQ(l.saldo)}</b> <small class="sa-un">${esc(l.un)}</small>` },
   { id:'mapa',   rot:'Mapeado', tipo:'num', v:l => l.noMapa, td:l => l.falta == null && !l.noMapa ? '<span class="num-zero">—</span>' : `<b>${saQ(l.noMapa)}</b>${l.soMapa ? ` <small class="sa-un">${esc(l.un)}</small>` : ''}` },
   { id:'emp',    rot:'Empenhado',   tipo:'num',  v:l => l.emp, td:l => l.emp ? `<span class="sa-emp">${saQ(l.emp)}</span>` : '<span class="num-zero">—</span>' },
+  { id:'sep',    rot:'Separado',    tipo:'num',  v:l => l.sepQtd || 0,
+    td:l => l.sepQtd ? `<span class="sa-sepq" title="Na área de separação, ainda no saldo do ERP · pedido ${esc((l.sepPeds || []).join(', ') || '—')}">${saQ(l.sepQtd)}</span>` : '<span class="num-zero">—</span>' },
   { id:'livre',  rot:'Livre',       tipo:'num',  v:l => l.saldo - l.emp, td:l => saQ(l.saldo - l.emp), oculta:true },
   { id:'pl',     rot:'Paletes',     tipo:'num',  v:l => l.pl, td:l => saPl(l.pl), oculta:true },
   { id:'cx',     rot:'Caixas',      tipo:'num',  v:l => l.cx, td:l => l.cx == null ? '—' : saQ(l.cx), oculta:true },
@@ -186,7 +189,14 @@ const SA_COLS = [
 const SA_COL = Object.fromEntries(SA_COLS.map(c => [c.id, c]));
 const LS_COLS = 'saldo.colunas.v2';   // v2: sistema × mapeado, empenhado e "a mais" visíveis
 let _saVisiveis = (() => {
-  try { const v = JSON.parse(localStorage.getItem(LS_COLS) || 'null'); if (Array.isArray(v) && v.length) return new Set(v); } catch { /* sem storage */ }
+  try {
+    const v = JSON.parse(localStorage.getItem(LS_COLS) || 'null');
+    if (Array.isArray(v) && v.length) {
+      // Coluna nova "Separado": aparece uma vez para quem já tinha escolhido as colunas.
+      if (!v.includes('sep') && !localStorage.getItem('saldo.colunas.sep')) { v.push('sep'); localStorage.setItem('saldo.colunas.sep', '1'); }
+      return new Set(v);
+    }
+  } catch { /* sem storage */ }
   return new Set(SA_COLS.filter(c => !c.oculta).map(c => c.id));
 })();
 function saGravarColunas() { try { localStorage.setItem(LS_COLS, JSON.stringify([..._saVisiveis])); } catch { /* sem storage */ } }
@@ -288,6 +298,7 @@ function saCruzarMapa() {
   // mapa: produto+lote+armazém → quantidade; produto+lote → vagas
   const qtd = new Map(), vagas = new Map(), itensK = new Map();
   const naExterna = new Set();             // lote+armazém com item na ÁREA EXTERNA (compara mesmo se o armazém não é mapeado)
+  const sepQ = new Map();                  // lote+armazém → { q, peds } do que está separado e ainda no ERP
   for (const [pos, itens] of Object.entries(ocup || {}))
     for (const it of itens) {
       if (it._foraDoErp) continue;          // separado que o ERP já baixou (ver sepMarcarForaDoErp)
@@ -295,10 +306,15 @@ function saCruzarMapa() {
       const ka = `${k}|${normalizarArmazem(it.armazem)}`;
       qtd.set(ka, (qtd.get(ka) || 0) + (Number(it.quantidade) || 0));
       if (typeof AREA_EXTERNA !== 'undefined' && pos === AREA_EXTERNA) naExterna.add(ka);
+      if (it.sep) {
+        const x = sepQ.get(ka) || sepQ.set(ka, { q:0, peds:[] }).get(ka);
+        x.q += Number(it.quantidade) || 0;
+        if (it.pedido && !x.peds.includes(it.pedido)) x.peds.push(it.pedido);
+      }
       const v = vagas.get(k) || vagas.set(k, []).get(k);
       if (!v.includes(pos)) v.push(pos);
       (itensK.get(k) || itensK.set(k, []).get(k)).push({ pos, qtd:Number(it.quantidade) || 0,
-        arm:normalizarArmazem(it.armazem) || '—', desde:it.guardado_em || it.created_at, quem:it.pend ? '' : quemGuardou(it).quem, pend:!!it.pend, sep:!!it.sep });
+        arm:normalizarArmazem(it.armazem) || '—', desde:it.guardado_em || it.created_at, quem:it.pend ? '' : quemGuardou(it).quem, pend:!!it.pend, sep:!!it.sep, ped:it.pedido || '' });
     }
   for (const v of vagas.values()) v.sort();
   for (const v of itensK.values()) v.sort((a, b) => a.pos.localeCompare(b.pos, 'pt-BR', { numeric:true }));
@@ -341,6 +357,8 @@ function saCruzarMapa() {
     r.itensMapa = itensK.get(k) || [];
     r._busca = null;                       // a busca também acha pela vaga
     r.noMapa = qtd.get(ka) || 0;
+    r.sepQtd = sepQ.get(ka)?.q || 0;
+    r.sepPeds = sepQ.get(ka)?.peds || [];
     r.pctMapa = r.saldo > 0 ? Math.min(100, r.noMapa / r.saldo * 100) : null;
     const mapeavel = (typeof armMapeado === 'function' ? armMapeado(r.arm) : true) || naExterna.has(ka);
     r.linhaDiv = null;
@@ -578,7 +596,7 @@ function renderSaldoErp() {
   // Abas com contagem
   const nDiv = (typeof _sCalc !== 'undefined' && _sCalc?.lista) ? _sCalc.lista.filter(l => l.estado !== 'ok').length : 0;   // = o botão Divergentes da aba
   const n = {
-    divergencias: nDiv, validade: venc.length, divididos: div, armazem: fora,
+    divergencias: nDiv, separados: saSepItens().length, validade: venc.length, divididos: div, armazem: fora,
     parados: _sa.lotes ? saParados(lista).filter(p => p.dias >= _sa.parado && !(_sa.semD7 && p.l.arm === 'D7')).length : null,
   };
   $('sa-abas').innerHTML = SA_ABAS.map(([id, rot]) =>
@@ -597,8 +615,88 @@ function renderSaldoErp() {
   saChips();
 
   // A planilha mostra também o que só está no mapa (saldo 0 no sistema).
-  ({ planilha:saPlanilha, totais:saTotais, validade:saValidade, divididos:saDivTab, armazem:saArmTab, evolucao:saEvolucao, parados:saParadosTab })[_sa.aba](
+  ({ planilha:saPlanilha, separados:saSeparados, totais:saTotais, validade:saValidade, divididos:saDivTab, armazem:saArmTab, evolucao:saEvolucao, parados:saParadosTab })[_sa.aba](
     _sa.aba === 'planilha' ? saFiltradas('', true) : lista);
+}
+
+/* ═══════════ SEPARADOS ═══════════
+   Os pedidos que estão na área de separação (mapa.html → Pedidos
+   separados) e o que cada item é para o saldo: ainda no ERP (conta
+   como mapeado, no lugar SEPARAÇÃO) ou já baixado (nota do pedido,
+   saldo que caiu ou lote que sumiu) esperando o OK do separador. */
+function saSepItens() {
+  const itens = (typeof _sOcup !== 'undefined' && typeof SALDO_SEP !== 'undefined' && _sOcup?.[SALDO_SEP]) || [];
+  const ts = termos($('sa-busca')?.value || '');
+  return itens.filter(r => daFilial(r.filial) && (!ts.length || ts.some(t =>
+    [r.produto_nome, r.codigo, normalizarCodigo(r.codigo), r.lote, r.armazem, r.pedido, r.separado_por].join(' ').toUpperCase().includes(t))));
+}
+function saSepSit(r) {
+  const e = r._sepErp || {};
+  const un = unidadeDe(r.codigo, r.produto_nome) || '';
+  if (r._sepMotivo === 'nf') return { cls:'t-ok', rot:`Faturado · NF ${r._nf?.nf || ''}`.trim(), conta:false,
+    txt:`O ERP já tirou${r._nf?.emissao ? ` (nota de ${saData(r._nf.emissao)})` : ''}${r._nf?.outroLote ? ' — a nota saiu com <b>outro lote</b>, confira' : ''}. Falta o separador dar o OK, saiu.` };
+  if (r._sepMotivo === 'caiu') return { cls:'t-warn', rot:'ERP já tirou', conta:false,
+    txt:`O saldo do lote caiu ${saQ(e.caiu)} ${esc(un)} depois da separação${e.outros > 0.001 ? ` e notas de outros pedidos explicam só ${saQ(e.outros)}` : ' sem nota de outro pedido que explique'}. A nota deste pedido ainda não apareceu nos movimentos.` };
+  if (r._sepMotivo === 'sumiu') return { cls:'t-warn', rot:'Lote saiu do ERP', conta:false,
+    txt:`Este lote não está mais no armazém ${esc(r.armazem || '—')} do ERP.` };
+  if (e.saldo === null && e.foto) return { cls:'t-neg', rot:'Não achei no ERP', conta:true,
+    txt:`O ERP não tem este lote no armazém ${esc(r.armazem || '—')}. Confira o armazém da separação.` };
+  const antesDaFoto = e.foto && (r.foto_erp_em || r.separado_em) && e.foto <= (r.foto_erp_em || r.separado_em);
+  return { cls:'t-info', rot:'Aguardando faturar', conta:true,
+    txt:'Ainda está no saldo do ERP: conta como mapeado, na SEPARAÇÃO.' +
+      (e.emp > 0.001 ? ` Lote com ${saQ(e.emp)} ${esc(un)} empenhado no ERP.` : '') +
+      (antesDaFoto ? ' <span class="sa-mute">(a foto do ERP ainda é de antes da separação)</span>' : '') };
+}
+function saSeparados() {
+  $('sa-ctrl').innerHTML = `<span class="sa-mute">Pedidos na área de separação e como cada item entra no saldo.</span>
+    <a class="btn btn-ghost btn-sm" href="./mapa.html?vista=sep" target="_blank" rel="noopener">Abrir separados no mapa</a>`;
+  const itens = saSepItens().map(r => ({ r, s:saSepSit(r), un:unidadeDe(r.codigo, r.produto_nome) || '' }));
+  const grupos = new Map();
+  for (const x of itens) {
+    const k = sepPedNum(x.r.pedido) || '';
+    (grupos.get(k) || grupos.set(k, []).get(k)).push(x);
+  }
+  const gs = [...grupos.entries()].sort((a, b) => String(a[1][0].r.separado_em).localeCompare(String(b[1][0].r.separado_em)));
+  const somaUn = xs => { const o = {}; xs.forEach(x => { o[x.un || '?'] = (o[x.un || '?'] || 0) + (Number(x.r.quantidade) || 0); });
+    return Object.keys(o).sort(saOrdUn).map(u => `${saQ(o[u])} ${esc(u)}`).join(' · ') || '—'; };
+  const contam = itens.filter(x => x.s.conta), baixados = itens.filter(x => !x.s.conta);
+
+  _sa.export = () => itens.map(({ r, s, un }) => ({ Pedido:r.pedido || '', Codigo:normalizarCodigo(r.codigo), Produto:r.produto_nome || '', Lote:r.lote || '',
+    Armazem:r.armazem || '', Quantidade:Number(r.quantidade) || 0, UM:un, 'Separado em':fmtTS(r.separado_em), 'Separado por':r.separado_por || '',
+    Situacao:s.rot, 'Conta no saldo mapeado':s.conta ? 'sim' : 'não', 'Saldo ERP do lote':r._sepErp?.saldo ?? '', 'Empenho ERP do lote':r._sepErp?.emp ?? '' }));
+
+  const linha = ({ r, s, un }) => {
+    const e = r._sepErp || {}, d = diasDesde(r.separado_em);
+    return `<tr>
+      <td class="nome">${esc(r.produto_nome || r.codigo)}<div class="sub mono">${esc(normalizarCodigo(r.codigo))}${r.origem_posicao ? ` · veio de ${esc(r.origem_posicao)}` : ''}</div></td>
+      <td class="mono">${esc(r.lote || '—')}</td>
+      <td>${saArm(normalizarArmazem(r.armazem) || '—')}</td>
+      <td class="num"><b>${saQ(r.quantidade)}</b> <small class="sa-un">${esc(un)}</small></td>
+      <td class="num">${e.saldo == null ? '<span class="num-zero">—</span>' : `${saQ(e.saldo)}${e.emp ? `<div class="sub">empenho ${saQ(e.emp)}</div>` : ''}`}</td>
+      <td><span class="tag ${s.cls}">${esc(s.rot)}</span><div class="sub sa-sep-txt">${s.txt}</div></td>
+      <td class="num">${s.conta ? '<span class="num-pos">sim</span>' : '<span class="num-zero">não</span>'}</td>
+      <td>${esc(fmtTS(r.separado_em))}<div class="sub${d >= 2 ? ' sa-warn' : ''}">${d >= 1 ? `há ${num(d)} d` : 'hoje'}${r.separado_por ? ` · ${esc(r.separado_por)}` : ''}</div></td>
+    </tr>`;
+  };
+  const cab = (ped, xs) => {
+    const nNf = xs.filter(x => x.r._sepMotivo === 'nf').length, nConta = xs.filter(x => x.s.conta).length;
+    const sit = nNf === xs.length ? '<span class="tag t-ok">faturado · falta o OK</span>'
+      : nConta === xs.length ? '<span class="tag t-info">aguardando faturar</span>'
+      : !nConta ? '<span class="tag t-warn">ERP já tirou · falta o OK</span>' : '<span class="tag t-alt">em parte: parte já saiu do ERP</span>';
+    return `<tr class="sa-sep-ped"><td colspan="8"><b>${ped ? `Pedido ${esc(ped)}` : 'Sem número de pedido'}</b>
+      <span class="sa-mute"> · ${num(xs.length)} item(ns) · ${somaUn(xs)}</span> ${sit}</td></tr>`;
+  };
+  $('sa-corpo').innerHTML = !itens.length
+    ? `<div class="empty"><div class="empty-tit">Nada na área de separação</div><div class="empty-sub">${$('sa-busca')?.value.trim() || $('filtro-filial').value ? 'Com a busca ou a filial escolhida não sobrou nenhum item.' : 'Os pedidos separados no mapa aparecem aqui até o separador confirmar a saída.'}</div></div>`
+    : `<div class="sa-sep-res">
+        <div><b>${num(gs.length)}</b> pedido(s) · <b>${num(itens.length)}</b> item(ns)</div>
+        <div><span class="tag t-info">contam no saldo</span> ${num(contam.length)} · ${somaUn(contam)}</div>
+        <div><span class="tag t-mute">ERP já tirou</span> ${num(baixados.length)}${baixados.length ? ` · ${somaUn(baixados)} — esperando o OK do separador` : ''}</div>
+      </div>
+      <div class="tbl-wrap"><table class="sa-grade sa-sep-t">
+        <thead><tr><th>Produto</th><th>Lote</th><th>Armazém</th><th class="num">Separado</th><th class="num">Saldo ERP do lote</th><th>Situação</th><th class="num">No saldo</th><th>Separado em</th></tr></thead>
+        <tbody>${gs.map(([ped, xs]) => cab(ped, xs) + xs.map(linha).join('')).join('')}</tbody>
+      </table></div>`;
 }
 
 /* "Atualizar" relê do banco tudo o que a tela mostra (saldo, mapa e
@@ -830,8 +928,8 @@ function saDetalheLote(l) {
       <div class="sa-vaga">
         <div class="sa-vaga-pos">${esc(x.pos)}</div>
         <div class="sa-vaga-q"><b>${saQ(x.qtd)}</b> ${esc(l.un)} · arm. ${esc(x.arm)}${x.arm !== l.arm && l.arm !== '—' ? ' <span class="tag t-alt">outro armazém</span>' : ''}</div>
-        <div class="sa-vaga-d">${x.sep ? 'área de separação' : x.pend ? 'contagem aguardando validação' : x.desde ? `desde ${fmtDia(x.desde)}${x.quem ? ` · ${esc(x.quem)}` : ''}` : ''}</div>
-        ${x.sep ? '' : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();irParaVaga('${esc(x.pos)}')">Ver no mapa</button>`}
+        <div class="sa-vaga-d">${x.sep ? `área de separação${x.ped ? ` · pedido ${esc(x.ped)}` : ''}` : x.pend ? 'contagem aguardando validação' : x.desde ? `desde ${fmtDia(x.desde)}${x.quem ? ` · ${esc(x.quem)}` : ''}` : ''}</div>
+        ${x.sep ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();saAba('separados')">Ver separados</button>` : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();irParaVaga('${esc(x.pos)}')">Ver no mapa</button>`}
       </div>`).join('')}</div>`
     : `<div class="sa-det-vazio">Este lote não está em nenhuma vaga do mapa.</div>`;
   const resumo = l.mapaEst === 'na'
