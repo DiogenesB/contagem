@@ -292,7 +292,7 @@ async function carregarRef() {
   try {
     // select('*'): tipo e empenho só existem depois da migração; pedir
     // a coluna pelo nome derrubava a leitura inteira antes dela.
-    const linhas = await buscarTudo(() => sb.from('estoque_ref').select('*'));
+    const linhas = refSemFantasma(await buscarTudo(() => sb.from('estoque_ref').select('*')));
     const porArm = {};
     for (const l of linhas) {
       const a = normalizarArmazem(l.armazem) || '—';

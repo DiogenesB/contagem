@@ -608,6 +608,24 @@ function diasDesde(ts) {
    termina ordenada pelo id (depois da ordem que a consulta já pedir), e
    o que repetir o id sai. Tabela sem coluna id: fica só a ordem pedida. */
 const _semColunaId = new Set(['estoque_ref_dia', 'estoque_ref_lote']);   // chave composta, sem id
+/* Linha "fantasma" do saldo do ERP: o robô troca a foto por filial, então
+   quando uma filial zera de vez (ex.: 090010 devolveu o último lote) a
+   linha antiga dela fica no banco. Toda foto do robô é inteira e sai com
+   o mesmo carimbo de hora, então a linha do robô mais velha que a última
+   foto dele é sobra. Importação manual (por armazém) não entra na regra.
+   (O sql/migracao-robo-filial-zerada.sql corrige na origem.) */
+function refSemFantasma(linhas) {
+  const ult = {};
+  for (const l of linhas) {
+    const o = String(l.importado_por || '');
+    if (/^rob[oô]/i.test(o) && l.importado_em && (!ult[o] || l.importado_em > ult[o])) ult[o] = l.importado_em;
+  }
+  return linhas.filter(l => {
+    const u = ult[String(l.importado_por || '')];
+    return !u || !l.importado_em || new Date(u) - new Date(l.importado_em) < 10 * 60e3;
+  });
+}
+
 async function buscarTudo(construir, tamanho = 1000) {
   const out = [];
   let comId = true;
